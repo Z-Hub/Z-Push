@@ -111,6 +111,13 @@ class HierarchyCache {
     public function AddFolder($folder) {
         ZLog::Write(LOGLEVEL_DEBUG, "HierarchyCache: AddFolder() serverid: {$folder->serverid} displayname: {$folder->displayname}");
 
+        // on update the $folder does most of the times not contain a type
+        // we copy the value in this case to the new $folder object
+        if (isset($this->cacheById[$folder->serverid]) && (!isset($folder->type) || $folder->type == false) && isset($this->cacheById[$folder->serverid]->type)) {
+            $folder->type = $this->cacheById[$folder->serverid]->type;
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("HierarchyCache: AddFolder() is an update: used type '%s' from old object", $folder->type));
+        }
+
         // add/update
         $this->cacheById[$folder->serverid] = $folder;
         $this->changed = true;
