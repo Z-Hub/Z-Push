@@ -1,0 +1,135 @@
+Installing Z-Push
+======================
+
+Requirements
+------------
+
+Z-Push 2 runs only on PHP 5.1 or later
+A PEAR dependency as in previous versions does not exist in Z-Push 2.
+
+The PHP version requirement is met in these distributions and versions (or later).
+
+Debian      4.0 (etch)
+Ubuntu      8.04 (hardy heron)
+RHEL/CentOS 5.5
+Fedora      5 (bordeaux)
+OpenSuse    10.1
+Slackware   12.0
+Gentoo      2006.1
+FreeBSD     6.1
+OpenBSD     4.0
+Mandriva    2007
+
+
+Additional informations can be found in the Zarafa Administrator Manual:
+http://doc.zarafa.com/trunk/Administrator_Manual/en-US/html/_zpush.html
+
+
+How to install
+--------------
+
+To install Z-Push, simply untar the z-push tar, e.g. with:
+   tar -xzvf z-push-[version]-{buildnr}.tar.gz
+   
+The tar contains a folder with the structure:
+    z-push-[version]-{buildnr}
+    
+The contents of this folder should be copied to /usr/share/z-push.
+Case this folder does not exist yet, create it with:
+    mkdir /usr/share/z-push
+
+    cp -R z-push-[version]-{buildnr}/* /usr/share/z-push/
+
+Now, edit the config.php file in the directory to reflect your local system.
+For MAPI use with Zarafa, you do not need to change any settings. It should work as-is.
+Please also set your timezone in the config.php file.
+
+The state directory is by default /var/lib/z-push, the log directory /var/log/z-push.
+Make sure that these directories exist and are writeable for your webserver
+process, so either change the owner of these directories to the UID of
+your apache process or make the directory world writeable:
+
+    chmod 777 /var/lib/z-push
+    chmod 777 /var/log/z-push
+
+Now, you must configure Apache to redirect the URL
+'Microsoft-Server-ActiveSync' to the index.php file in the Z-Push
+directory. This can be done by adding the line:
+
+    Alias /Microsoft-Server-ActiveSync /usr/share/z-push/index.php
+
+to your httpd.conf file. Make sure that you are adding the line to the
+correct part of your Apache configuration, taking care of virtual hosts and
+other Apache configurations.
+
+*WARNING* You CANNOT simply rename the z-push directory to
+Microsoft-Server-ActiveSync. This will cause Apache to send redirects to the
+PDA, which will definitely break your PDA synchronisation.
+
+Lastly, make sure that PHP has the following settings:
+
+    php_flag magic_quotes_gpc off
+    php_flag register_globals off
+    php_flag magic_quotes_runtime off
+    php_flag short_open_tag on
+
+You can set this in the httpd.conf, in php.ini or in an .htaccess file in
+the root of z-push. If you don't set this up correctly, you will not be
+able to login correctly via z-push.
+
+Z-Push writes files to your file system like logs or data from the
+FileStateMachine (which is default). In order to make this possible,
+you either need to disable the php-safe-mode in php.ini or .htaccess with
+    php_admin_flag safe_mode off
+or configure it accordingly, so Z-Push is allowed to write to the 
+log & state directories. 
+
+After doing this, you should be able to synchronize from your PDA.
+
+
+Update to newer Z-Push versions
+-------------------------------
+
+Upgrading to a newer Z-Push version follows the same path as the initial 
+installation.
+
+Please observe the published release notes of the new Z-Push version.
+For some releases it is necessary to e.g. resynchronize the mobile.
+
+
+Setting up your mobile device
+-----------------------------
+
+This is simply a case of adding an 'exchange server' to your activesync
+server list, specifying the IP address of the Z-Push apache server,
+disabling SSL, unless you have already setup SSL on your Apache server,
+setting the correct username & password (the domain is ignored, you can
+simply specify 'domain' or some other random string), and then going through
+the standard activesync settings.
+
+Once you have done this, you should be able to synchronise your mobile
+simply by clicking the 'Sync' button in ActiveSync on your mobile.
+
+
+Troubleshooting
+---------------
+
+Most problems will be caused by incorrect Apache settings. To test whether
+your Apache setup is working correctly, you can simply type the Z-Push URL
+in your browser, to see if apache is correctly redirecting your request to
+z-push. You can simply use:
+
+    http://<serverip>/Microsoft-Server-ActiveSync
+
+If correctly configured, you should see a username/password request and
+when you specify a valid username & password, you should see a Z-Push
+information page, saying that this kind of requests are not supported.
+Without authentication credentials, Z-Push displays general information.
+
+If not, then check your PHP and Apache settings.
+
+If you have other synchronisation problems, you can increase the LOGLEVEL
+parameter in the config e.g. to LOGLEVEL_DEBUG or LOGLEVEL_WBXML.
+
+The z-push.log file will then collect detailed debug information from your
+synchronisation.
