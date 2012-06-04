@@ -1138,10 +1138,20 @@ class BackendZarafa implements IBackend, ISearchProvider {
         $searchRestriction = $this->getSearchRestriction($cpo->GetSearchFreeText());
         $searchRange = explode('-', $cpo->GetSearchRange());
         $searchFolderId = $cpo->GetSearchFolderid();
+        $searchFolders = array();
+        // search only in required folders
+        if (!empty($searchFolderId)) {
+            $searchFolderEntryId = mapi_msgstore_entryidfromsourcekey($this->store, hex2bin($searchFolderId));
+            $searchFolders[] = $searchFolderEntryId;
+        }
+        // if no folder was required then search in the entire store
+        else {
+            $tmp = mapi_getprops($this->store, array(PR_ENTRYID,PR_DISPLAY_NAME,PR_IPM_SUBTREE_ENTRYID));
+            $searchFolders[] = $tmp[PR_IPM_SUBTREE_ENTRYID];
+        }
         $items = array();
 
-        $tmp = mapi_getprops($this->store, array(PR_ENTRYID,PR_DISPLAY_NAME,PR_IPM_SUBTREE_ENTRYID));
-        mapi_folder_setsearchcriteria($searchFolder, $searchRestriction, array($tmp[PR_IPM_SUBTREE_ENTRYID]), RECURSIVE_SEARCH);
+        mapi_folder_setsearchcriteria($searchFolder, $searchRestriction, $searchFolders, RECURSIVE_SEARCH);
 
         $table = mapi_folder_getcontentstable($searchFolder);
         $searchStart = time();
