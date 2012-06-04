@@ -493,8 +493,39 @@ class ImportChangesICS implements IImportChanges {
             return false;
         }
 
-        if (! mapi_importhierarchychanges_importfolderchange($this->importer, array(PR_SOURCE_KEY => hex2bin($id), PR_PARENT_SOURCE_KEY => hex2bin($parent), PR_DISPLAY_NAME => $displayname)))
-            throw new StatusException(sprintf("ImportChangesICS->ImportFolderChange('%s','%s','%s'): Error, unable import folder change", Utils::PrintAsString($folder->serverid), $folder->parentid, $displayname), SYNC_FSSTATUS_UNKNOWNERROR);
+        // update folder
+        $entryid = mapi_msgstore_entryidfromsourcekey($this->store, hex2bin($id));
+        if (!$entryid)
+            throw new StatusException(sprintf("ImportChangesICS->ImportFolderChange('%s','%s','%s'): Error, unable to open folder (no entry id): 0x%X", Utils::PrintAsString($folder->serverid), $folder->parentid, $displayname, mapi_last_hresult()), SYNC_FSSTATUS_PARENTNOTFOUND);
+
+        $folder = mapi_msgstore_openentry($this->store, $entryid);
+        if (!$folder)
+            throw new StatusException(sprintf("ImportChangesICS->ImportFolderChange('%s','%s','%s'): Error, unable to open folder (open entry): 0x%X", Utils::PrintAsString($folder->serverid), $folder->parentid, $displayname, mapi_last_hresult()), SYNC_FSSTATUS_PARENTNOTFOUND);
+
+        $props =  mapi_getprops($folder, array(PR_SOURCE_KEY, PR_PARENT_SOURCE_KEY, PR_DISPLAY_NAME, PR_CONTAINER_CLASS));
+        if (!isset($props[PR_SOURCE_KEY]) || !isset($props[PR_PARENT_SOURCE_KEY]) || !isset($props[PR_DISPLAY_NAME]) || !isset($props[PR_CONTAINER_CLASS]))
+            throw new StatusException(sprintf("ImportChangesICS->ImportFolderChange('%s','%s','%s'): Error, folder data not available: 0x%X", Utils::PrintAsString($folder->serverid), $folder->parentid, $displayname, mapi_last_hresult()), SYNC_FSSTATUS_SERVERERROR);
+
+        if ($parent == "0") {
+            $parentprops = mapi_getprops($this->store, array(PR_IPM_SUBTREE_ENTRYID));
+            $parentfentryid = $parentprops[PR_IPM_SUBTREE_ENTRYID];
+            $mapifolder = mapi_msgstore_openentry($this->store, $parentfentryid);
+
+            $rootfolderprops = mapi_getprops($mapifolder, array(PR_SOURCE_KEY));
+            $parent = bin2hex($rootfolderprops[PR_SOURCE_KEY]);
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ImportChangesICS->ImportFolderChange(): resolved AS parent '0' to sourcekey '%s'", $parent));
+        }
+
+        // In theory the parent id could change, which means that the folder was moved.
+        // It is unknown if any device supports this, so we do currently not implement it (no known device is able to do this)
+        if (bin2hex($props[PR_PARENT_SOURCE_KEY]) !== $parent)
+            throw new StatusException(sprintf("ImportChangesICS->ImportFolderChange('%s','%s','%s'): Folder was moved to another location, which is currently not supported. Please report this to the Z-Push dev team together with the WBXML log and your device details (model, firmware etc).", Utils::PrintAsString($folder->serverid), $folder->parentid, $displayname, mapi_last_hresult()), SYNC_FSSTATUS_UNKNOWNERROR);
+
+        $props = array(PR_DISPLAY_NAME => $displayname);
+        mapi_setprops($folder, $props);
+        mapi_savechanges($folder);
+        if (mapi_last_hresult())
+            throw new StatusException(sprintf("ImportChangesICS->ImportFolderChange('%s','%s','%s'): Error, mapi_savechanges() failed: 0x%X", Utils::PrintAsString($folder->serverid), $folder->parentid, $displayname, mapi_last_hresult()), SYNC_FSSTATUS_SERVERERROR);
 
         ZLog::Write(LOGLEVEL_DEBUG, "Imported changes for folder: $id");
         return $id;
