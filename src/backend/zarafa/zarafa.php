@@ -1150,8 +1150,13 @@ class BackendZarafa implements IBackend, ISearchProvider {
             $searchFolders[] = $tmp[PR_IPM_SUBTREE_ENTRYID];
         }
         $items = array();
+        $flags = 0;
+        // if subfolders are required, do a recursive search
+        if ($cpo->GetSearchDeepTraversal()) {
+            $flags |= SEARCH_RECURSIVE;
+        }
 
-        mapi_folder_setsearchcriteria($searchFolder, $searchRestriction, $searchFolders, RECURSIVE_SEARCH);
+        mapi_folder_setsearchcriteria($searchFolder, $searchRestriction, $searchFolders, $flags);
 
         $table = mapi_folder_getcontentstable($searchFolder);
         $searchStart = time();
