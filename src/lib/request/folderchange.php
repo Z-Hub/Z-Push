@@ -146,6 +146,10 @@ class FolderChange extends RequestProcessor {
            $status = $stex->getCode();
         }
 
+        // set $newsynckey in case of an error
+        if (!isset($newsynckey))
+            $newsynckey = $synckey;
+
         if ($status == SYNC_FSSTATUS_SUCCESS) {
             try {
                 // Configure importer with last state
