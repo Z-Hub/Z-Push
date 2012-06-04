@@ -1026,7 +1026,6 @@ class MAPIProvider {
         if(isset($appointment->recurrence)) {
             // Set PR_ICON_INDEX to 1025 to show correct icon in category view
             $props[$appointmentprops["icon"]] = 1025;
-            $props[$appointmentprops["recurrencetype"]] = $appointment->recurrence->type;
 
             //if there aren't any exceptions, use the 'old style' set recurrence
             $noexceptions = true;
@@ -1034,6 +1033,9 @@ class MAPIProvider {
             $recurrence = new Recurrence($this->store, $mapimessage);
             $recur = array();
             $this->setRecurrence($appointment, $recur);
+
+            // set the recurrence type to that of the MAPI
+            $props[$appointmentprops["recurrencetype"]] = $recur["recurrencetype"];
 
             $starttime = $this->gmtime($localstart);
             $endtime = $this->gmtime($localend);
@@ -1980,6 +1982,8 @@ class MAPIProvider {
 
         //set the default value of numoccur
         $recur["numoccur"] = 0;
+        //a place holder for recurrencetype property
+        $recur["recurrencetype"] = 0;
 
         switch($message->recurrence->type) {
             case 0:
@@ -1990,36 +1994,43 @@ class MAPIProvider {
                     $recur["subtype"] = 0;
 
                 $recur["everyn"] = $message->recurrence->interval * (60 * 24);
+                $recur["recurrencetype"] = 1;
                 break;
             case 1:
                 $recur["type"] = 11;
                 $recur["subtype"] = 1;
                 $recur["everyn"] = $message->recurrence->interval;
+                $recur["recurrencetype"] = 2;
                 break;
             case 2:
                 $recur["type"] = 12;
                 $recur["subtype"] = 2;
                 $recur["everyn"] = $message->recurrence->interval;
+                $recur["recurrencetype"] = 3;
                 break;
             case 3:
                 $recur["type"] = 12;
                 $recur["subtype"] = 3;
                 $recur["everyn"] = $message->recurrence->interval;
+                $recur["recurrencetype"] = 3;
                 break;
             case 4:
                 $recur["type"] = 13;
                 $recur["subtype"] = 1;
                 $recur["everyn"] = $message->recurrence->interval * 12;
+                $recur["recurrencetype"] = 4;
                 break;
             case 5:
                 $recur["type"] = 13;
                 $recur["subtype"] = 2;
                 $recur["everyn"] = $message->recurrence->interval * 12;
+                $recur["recurrencetype"] = 4;
                 break;
             case 6:
                 $recur["type"] = 13;
                 $recur["subtype"] = 3;
                 $recur["everyn"] = $message->recurrence->interval * 12;
+                $recur["recurrencetype"] = 4;
                 break;
         }
 
