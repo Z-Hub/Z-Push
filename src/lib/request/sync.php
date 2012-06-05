@@ -812,9 +812,9 @@ class Sync extends RequestProcessor {
                             while(1) {
                                 try {
                                     $progress = $exporter->Synchronize();
-                                    $n++;
                                     if(!is_array($progress))
                                         break;
+                                    $n++;
                                 }
                                 catch (SyncObjectBrokenException $mbe) {
                                     $brokenSO = $mbe->GetSyncObject();
@@ -836,6 +836,13 @@ class Sync extends RequestProcessor {
                                 }
 
                             }
+
+                            // $progress is not an array when exporting the last message
+                            // so we get the number to display from the streamimporter
+                            if (isset($streamimporter)) {
+                                $n = $streamimporter->GetImportedMessages();
+                            }
+
                             self::$encoder->endTag();
                             self::$topCollector->AnnounceInformation(sprintf("Outgoing %d objects%s", $n, ($n >= $windowSize)?" of ".$changecount:""), true);
                         }

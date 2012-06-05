@@ -45,6 +45,7 @@ class ImportChangesStream implements IImportChanges {
     private $encoder;
     private $objclass;
     private $seenObjects;
+    private $importedMsgs;
 
     /**
      * Constructor of the StreamImporter
@@ -59,6 +60,7 @@ class ImportChangesStream implements IImportChanges {
         $this->objclass = $class;
         $this->classAsString = (is_object($class))?get_class($class):'';
         $this->seenObjects = array();
+        $this->importedMsgs = 0;
     }
 
     /**
@@ -88,6 +90,7 @@ class ImportChangesStream implements IImportChanges {
             return true;
         }
 
+        $this->importedMsgs++;
         $this->seenObjects[] = $id;
 
         // checks if the next message may cause a loop or is broken
@@ -121,6 +124,7 @@ class ImportChangesStream implements IImportChanges {
      * @return boolean
      */
     public function ImportMessageDeletion($id) {
+        $this->importedMsgs++;
         $this->encoder->startTag(SYNC_REMOVE);
             $this->encoder->startTag(SYNC_SERVERENTRYID);
                 $this->encoder->content($id);
@@ -143,6 +147,8 @@ class ImportChangesStream implements IImportChanges {
     public function ImportMessageReadFlag($id, $flags) {
         if(!($this->objclass instanceof SyncMail))
             return false;
+
+        $this->importedMsgs++;
 
         $this->encoder->startTag(SYNC_MODIFY);
             $this->encoder->startTag(SYNC_SERVERENTRYID);
@@ -215,6 +221,16 @@ class ImportChangesStream implements IImportChanges {
         $this->encoder->endTag();
 
         return true;
+    }
+
+    /**
+     * Returns the number of messages which were changed, deleted and had changed read status
+     *
+     * @access public
+     * @return int
+     */
+    public function GetImportedMessages() {
+        return $this->importedMsgs;
     }
 }
 ?>
