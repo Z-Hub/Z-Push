@@ -439,7 +439,6 @@ class LoopDetection extends InterProcessData {
                 }
 
                 if (empty($brokenmsgs) && isset($loopdata[self::$devid][self::$user][$brokenkey])) {
-                    ZLog::Write(LOGLEVEL_DEBUG, "LoopDetection->GetSyncedButBeforeIgnoredMessages: loopdata". print_r($loopdata[self::$devid][self::$user],1));
                     unset($loopdata[self::$devid][self::$user][$brokenkey]);
                     ZLog::Write(LOGLEVEL_DEBUG, sprintf("LoopDetection->GetSyncedButBeforeIgnoredMessages('%s'): removed folder from tracking of ignored messages", $folderid));
                 }
