@@ -161,6 +161,17 @@ class BackendSearchLDAP implements ISearchProvider {
     }
 
     /**
+     * Searches for the emails on the server
+     *
+     * @param ContentParameter $cpo
+     *
+     * @return array
+     */
+    public function GetMailboxSearchResults($cpo) {
+        return array();
+    }
+
+    /**
      * Disconnects from LDAP
      *
      * @access public
