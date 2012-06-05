@@ -1135,7 +1135,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
      */
     public function GetMailboxSearchResults($cpo) {
         $searchFolder = $this->getSearchFolder();
-        $searchRestriction = $this->getSearchRestriction($cpo->GetSearchFreeText());
+        $searchRestriction = $this->getSearchRestriction($cpo);
         $searchRange = explode('-', $cpo->GetSearchRange());
         $searchFolderId = $cpo->GetSearchFolderid();
         $searchFolders = array();
@@ -1175,6 +1175,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
 
         $cnt = count($rows);
         $items['searchtotal'] = $cnt;
+        $items["range"] = $cpo->GetSearchRange();
         for ($i = 0; $i < $cnt; $i++) {
             $items[$i]['class'] = 'Email';
             $items[$i]['longid'] = bin2hex($rows[$i][PR_PARENT_SOURCE_KEY]) . ":" . bin2hex($rows[$i][PR_SOURCE_KEY]);
@@ -1578,10 +1579,14 @@ class BackendZarafa implements IBackend, ISearchProvider {
     /**
      * Creates a search restriction
      *
-     * @param string $searchText
+     * @param ContentParameter $cpo
      * @return array
      */
-    private function getSearchRestriction($searchText) {
+    private function getSearchRestriction($cpo) {
+        $searchText = $cpo->GetSearchFreeText();
+
+        $searchGreater = $cpo->GetSearchValueGreater();
+        $searchLess = $cpo->GetSearchValueLess();
         // only search emails
         $mapiquery =
 //             array (RES_AND,
@@ -1647,6 +1652,28 @@ class BackendZarafa implements IBackend, ISearchProvider {
 //                 ) // RES_OR
             );// RES_AND
 
+        if (isset($searchGreater)) {
+            $mapiquery = array(RES_AND,
+                            array($mapiquery,
+                            array (RES_AND,
+                                array(
+                                    array(RES_EXIST, array(ULPROPTAG => PR_MESSAGE_DELIVERY_TIME)),
+                                    array(RES_PROPERTY, array(RELOP => RELOP_GE, ULPROPTAG => PR_MESSAGE_DELIVERY_TIME, VALUE => array(PR_MESSAGE_DELIVERY_TIME => strtotime($searchGreater)))),
+                                )
+                            ) // RES_AND
+            ));
+        }
+        if (isset($searchLess)) {
+            $mapiquery = array(RES_AND,
+                            array($mapiquery,
+                            array (RES_AND,
+                                array(
+                                    array(RES_EXIST, array(ULPROPTAG => PR_MESSAGE_DELIVERY_TIME)),
+                                    array(RES_PROPERTY, array(RELOP => RELOP_LE, ULPROPTAG => PR_MESSAGE_DELIVERY_TIME, VALUE => array(PR_MESSAGE_DELIVERY_TIME => strtotime($searchLess)))),
+                                )
+                            ) // RES_AND
+            ));
+        }
         return $mapiquery;
     }
 }

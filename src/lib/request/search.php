@@ -301,12 +301,16 @@ class Search extends RequestProcessor {
                     self::$encoder->content($storestatus);
                     self::$encoder->endTag();
 
+                    if (isset($rows['range'])) {
+                        $searchrange = $rows['range'];
+                        unset($rows['range']);
+                    }
+                    if (isset($rows['searchtotal'])) {
+                        $searchtotal = $rows['searchtotal'];
+                        unset($rows['searchtotal']);
+                    }
                     if ($searchname == ISearchProvider::SEARCH_GAL) {
                         if (is_array($rows) && !empty($rows)) {
-                            $searchrange = $rows['range'];
-                            unset($rows['range']);
-                            $searchtotal = $rows['searchtotal'];
-                            unset($rows['searchtotal']);
                             foreach ($rows as $u) {
                                 self::$encoder->startTag(SYNC_SEARCH_RESULT);
                                     self::$encoder->startTag(SYNC_SEARCH_PROPERTIES);
@@ -373,20 +377,9 @@ class Search extends RequestProcessor {
                                     self::$encoder->endTag();//result
                                 self::$encoder->endTag();//properties
                             }
-
-                            if ($searchtotal > 0) {
-                                self::$encoder->startTag(SYNC_SEARCH_RANGE);
-                                self::$encoder->content($searchrange);
-                                self::$encoder->endTag();
-
-                                self::$encoder->startTag(SYNC_SEARCH_TOTAL);
-                                self::$encoder->content($searchtotal);
-                                self::$encoder->endTag();
-                            }
                         }
                     }
                     elseif ($searchname == ISearchProvider::SEARCH_MAILBOX) {
-                        unset($rows['searchtotal']);
                         foreach ($rows as $u) {
                             self::$encoder->startTag(SYNC_SEARCH_RESULT);
                                 self::$encoder->startTag(SYNC_FOLDERTYPE);
@@ -407,8 +400,18 @@ class Search extends RequestProcessor {
                                 self::$encoder->endTag();//result
                             self::$encoder->endTag();//properties
                         }
-// ZLog::Write(LOGLEVEL_DEBUG, "results for $searchname ".print_r($rows, 1));
-
+                    }
+                    // it seems that android 4 requires range and searchtotal
+                    // or it won't display the search results
+                    if (isset($searchrange)) {
+                        self::$encoder->startTag(SYNC_SEARCH_RANGE);
+                        self::$encoder->content($searchrange);
+                        self::$encoder->endTag();
+                    }
+                    if (isset($searchtotal) && $searchtotal > 0) {
+                        self::$encoder->startTag(SYNC_SEARCH_TOTAL);
+                        self::$encoder->content($searchtotal);
+                        self::$encoder->endTag();
                     }
 
                 self::$encoder->endTag();//store
