@@ -103,6 +103,8 @@ class BackendZarafa implements IBackend, ISearchProvider {
         $this->changesSinkFolders = array();
         $this->changesSinkStores = array();
         $this->wastebasket = false;
+
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendZarafa using PHP-MAPI version: %s", phpversion("mapi")));
     }
 
     /**
