@@ -1587,95 +1587,39 @@ class BackendZarafa implements IBackend, ISearchProvider {
     private function getSearchRestriction($cpo) {
         $searchText = $cpo->GetSearchFreeText();
 
-        $searchGreater = $cpo->GetSearchValueGreater();
-        $searchLess = $cpo->GetSearchValueLess();
-        // only search emails
-        $mapiquery =
-//             array (RES_AND,
-//                 array(
-//                     array (RES_AND,
-//                          array(
-//                             array(RES_EXIST, array(ULPROPTAG => PR_MESSAGE_CLASS)),
-//                             array(RES_CONTENT, array(FUZZYLEVEL => (FL_SUBSTRING | FL_IGNORECASE), ULPROPTAG => PR_MESSAGE_CLASS, VALUE => array(PR_MESSAGE_CLASS => "IPM.Note"))),
-//                         ),
-//                     ), // RES_AND
-//                 ),
-                array (RES_OR,
-                    array (
-                        array (RES_AND,
-                             array(
-                                array(RES_EXIST, array(ULPROPTAG => PR_BODY)),
-                                array(RES_CONTENT, array(FUZZYLEVEL => (FL_SUBSTRING | FL_IGNORECASE), ULPROPTAG => PR_BODY, VALUE => array(PR_BODY => u2w($searchText)))),
-                            ),
-                        ), // RES_AND
-                        array (RES_AND,
-                            array(
-                                array(RES_EXIST, array(ULPROPTAG => PR_SUBJECT)),
-                                array(RES_CONTENT, array(FUZZYLEVEL => (FL_SUBSTRING | FL_IGNORECASE), ULPROPTAG => PR_SUBJECT, VALUE => array(PR_SUBJECT => u2w($searchText)))),
-                            ),
-                        ), // RES_AND
-                        array (RES_AND,
-                            array(
-                                array(RES_EXIST, array(ULPROPTAG => PR_DISPLAY_TO)),
-                                array(RES_CONTENT, array(FUZZYLEVEL => (FL_SUBSTRING | FL_IGNORECASE), ULPROPTAG => PR_DISPLAY_TO, VALUE => array(PR_DISPLAY_TO => u2w($searchText)))),
-                            ),
-                        ), // RES_AND
-                        array (RES_AND,
-                            array(
-                                array(RES_EXIST, array(ULPROPTAG => PR_DISPLAY_CC)),
-                                array(RES_CONTENT, array(FUZZYLEVEL => (FL_SUBSTRING | FL_IGNORECASE), ULPROPTAG => PR_DISPLAY_CC, VALUE => array(PR_DISPLAY_CC => u2w($searchText)))),
-                            ),
-                        ), // RES_AND
-                        array (RES_AND,
-                            array(
-                                array(RES_EXIST, array(ULPROPTAG => PR_SENDER_NAME)),
-                                array(RES_CONTENT, array(FUZZYLEVEL => (FL_SUBSTRING | FL_IGNORECASE), ULPROPTAG => PR_SENDER_NAME, VALUE => array(PR_SENDER_NAME => u2w($searchText)))),
-                            ),
-                        ), // RES_AND
-                        array (RES_AND,
-                            array(
-                                array(RES_EXIST, array(ULPROPTAG => PR_SENDER_EMAIL_ADDRESS)),
-                                array(RES_CONTENT, array(FUZZYLEVEL => (FL_SUBSTRING | FL_IGNORECASE), ULPROPTAG => PR_SENDER_EMAIL_ADDRESS, VALUE => array(PR_SENDER_EMAIL_ADDRESS => u2w($searchText)))),
-                            ),
-                        ), // RES_AND
-                        array (RES_AND,
-                            array(
-                                array(RES_EXIST, array(ULPROPTAG => PR_SENT_REPRESENTING_NAME)),
-                                array(RES_CONTENT, array(FUZZYLEVEL => (FL_SUBSTRING | FL_IGNORECASE), ULPROPTAG => PR_SENT_REPRESENTING_NAME, VALUE => array(PR_SENT_REPRESENTING_NAME => u2w($searchText)))),
-                            ),
-                        ), // RES_AND
-                        array (RES_AND,
-                            array(
-                                array(RES_EXIST, array(ULPROPTAG => PR_SENT_REPRESENTING_EMAIL_ADDRESS)),
-                                array(RES_CONTENT, array(FUZZYLEVEL => (FL_SUBSTRING | FL_IGNORECASE), ULPROPTAG => PR_SENT_REPRESENTING_EMAIL_ADDRESS, VALUE => array(PR_SENT_REPRESENTING_EMAIL_ADDRESS => u2w($searchText)))),
-                            ),
-                        ), // RES_AND
-                    )
-//                 ) // RES_OR
-            );// RES_AND
+        $searchGreater = strtotime($cpo->GetSearchValueGreater());
+        $searchLess = strtotime($cpo->GetSearchValueLess());
 
-        if (isset($searchGreater)) {
-            $mapiquery = array(RES_AND,
-                            array($mapiquery,
-                            array (RES_AND,
-                                array(
-                                    array(RES_EXIST, array(ULPROPTAG => PR_MESSAGE_DELIVERY_TIME)),
-                                    array(RES_PROPERTY, array(RELOP => RELOP_GE, ULPROPTAG => PR_MESSAGE_DELIVERY_TIME, VALUE => array(PR_MESSAGE_DELIVERY_TIME => strtotime($searchGreater)))),
-                                )
-                            ) // RES_AND
-            ));
+        // split the search on whitespache and look for every word
+        $searchText = preg_split("/\W+/", $searchText);
+        $searchProps = array(PR_BODY, PR_SUBJECT, PR_DISPLAY_TO, PR_DISPLAY_CC, PR_SENDER_NAME, PR_SENDER_EMAIL_ADDRESS, PR_SENT_REPRESENTING_NAME, PR_SENT_REPRESENTING_EMAIL_ADDRESS);
+        $resAnd = array();
+        foreach($searchText as $term) {
+            $resOr = array();
+
+            foreach($searchProps as $property) {
+                array_push($resOr,
+                    array(RES_CONTENT,
+                        array(
+                            FUZZYLEVEL => FL_SUBSTRING|FL_IGNORECASE,
+                            ULPROPTAG => $property,
+                            VALUE => u2w($term)
+                        )
+                    )
+                );
+            }
+            array_push($resAnd, array(RES_OR, $resOr));
         }
-        if (isset($searchLess)) {
-            $mapiquery = array(RES_AND,
-                            array($mapiquery,
-                            array (RES_AND,
-                                array(
-                                    array(RES_EXIST, array(ULPROPTAG => PR_MESSAGE_DELIVERY_TIME)),
-                                    array(RES_PROPERTY, array(RELOP => RELOP_LE, ULPROPTAG => PR_MESSAGE_DELIVERY_TIME, VALUE => array(PR_MESSAGE_DELIVERY_TIME => strtotime($searchLess)))),
-                                )
-                            ) // RES_AND
-            ));
+
+        // add time range restrictions
+        if ($searchGreater) {
+            array_push($resAnd, array(RES_PROPERTY, array(RELOP => RELOP_GE, ULPROPTAG => PR_MESSAGE_DELIVERY_TIME, VALUE => array(PR_MESSAGE_DELIVERY_TIME => $searchGreater)))); // RES_AND;
         }
+        if ($searchLess) {
+            array_push($resAnd, array(RES_PROPERTY, array(RELOP => RELOP_LE, ULPROPTAG => PR_MESSAGE_DELIVERY_TIME, VALUE => array(PR_MESSAGE_DELIVERY_TIME => $searchLess))));
+        }
+        $mapiquery = array(RES_AND, $resAnd);
+
         return $mapiquery;
     }
 }
