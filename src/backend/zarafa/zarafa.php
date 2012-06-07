@@ -844,9 +844,10 @@ class BackendZarafa implements IBackend, ISearchProvider {
     public function MeetingResponse($requestid, $folderid, $response) {
         // Use standard meeting response code to process meeting request
         $reqentryid = mapi_msgstore_entryidfromsourcekey($this->store, hex2bin($folderid), hex2bin($requestid));
-        if ($reqentryid)
-            $mapimessage = mapi_msgstore_openentry($this->store, $reqentryid);
+        if (!$reqentryid)
+            throw new StatusException(sprintf("BackendZarafa->MeetingResponse('%s', '%s', '%s'): Error, unable to entryid of the message 0x%X", $requestid, $folderid, $response, mapi_last_hresult()), SYNC_MEETRESPSTATUS_MAILBOXERROR);
 
+        $mapimessage = mapi_msgstore_openentry($this->store, $reqentryid);
         if(!$mapimessage)
             throw new StatusException(sprintf("BackendZarafa->MeetingResponse('%s','%s', '%s'): Error, unable to open request message for response 0x%X", $requestid, $folderid, $response, mapi_last_hresult()), SYNC_MEETRESPSTATUS_MAILBOXERROR);
 
