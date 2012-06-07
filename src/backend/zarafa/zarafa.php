@@ -1196,6 +1196,33 @@ class BackendZarafa implements IBackend, ISearchProvider {
     */
     public function TerminateSearch($pid) {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->TerminateSearch(): terminating search for pid %d", $pid));
+        $storeProps = mapi_getprops($this->store, array(PR_STORE_SUPPORT_MASK, PR_FINDER_ENTRYID));
+        if (($storeProps[PR_STORE_SUPPORT_MASK] & STORE_SEARCH_OK) != STORE_SEARCH_OK) {
+            ZLog::Write(LOGLEVEL_WARN, "Store doesn't support search folders. Public store doesn't have FINDER_ROOT folder");
+            return false;
+        }
+
+        $finderfolder = mapi_msgstore_openentry($this->store, $storeProps[PR_FINDER_ENTRYID]);
+        if(mapi_last_hresult() != NOERROR) {
+            ZLog::Write(LOGLEVEL_WARN, sprintf("Unable to open search folder (0x%X)", mapi_last_hresult()));
+            return false;
+        }
+
+        $hierarchytable = mapi_folder_gethierarchytable($finderfolder);
+        mapi_table_restrict($hierarchytable,
+            array(RES_CONTENT,
+                array(
+                    FUZZYLEVEL      => FL_PREFIX,
+                    ULPROPTAG       => PR_DISPLAY_NAME,
+                    VALUE           => array(PR_DISPLAY_NAME=>"Z-Push Search Folder ".$pid)
+                )
+            ),
+            TBL_BATCH);
+
+        $folders = mapi_table_queryallrows($hierarchytable, array(PR_ENTRYID, PR_DISPLAY_NAME, PR_LAST_MODIFICATION_TIME));
+        foreach($folders as $folder) {
+            mapi_folder_deletefolder($finderfolder, $folder[PR_ENTRYID]);
+        }
         return true;
     }
 
@@ -1571,7 +1598,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
      * @return mapiFolderObject
      */
     private function createSearchFolder($searchFolderRoot) {
-        $folderName = "Z-Push Search Folder";
+        $folderName = "Z-Push Search Folder ".@getmypid();
         $searchFolders = mapi_folder_gethierarchytable($searchFolderRoot);
         $restriction = array(
             RES_CONTENT,
