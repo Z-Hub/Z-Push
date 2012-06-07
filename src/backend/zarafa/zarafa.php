@@ -943,7 +943,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
     /**
      * The folder should be considered by the sink.
      * Folders which were not initialized should not result in a notification
-     * of IBacken->ChangesSink().
+     * of IBackend->ChangesSink().
      *
      * @param string        $folderid
      *
@@ -960,7 +960,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
         // add entryid to the monitored folders
         $this->changesSinkFolders[$entryid] = $folderid;
 
-        // check if this store is already monitores, else advise it
+        // check if this store is already monitored, else advise it
         if (!in_array($this->store, $this->changesSinkStores)) {
             mapi_msgstore_advise($this->store, null, fnevObjectModified | fnevObjectCreated | fnevObjectMoved | fnevObjectDeleted, $this->changesSink);
             $this->changesSinkStores[] = $this->store;
@@ -989,7 +989,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
                 $notifications[] = $this->changesSinkFolders[$sinknotif['parentid']];
             }
             // deletes and moves
-            else if (isset($sinknotif['oldparentid']) && array_key_exists($sinknotif['oldparentid'], $this->changesSinkFolders)) {
+            if (isset($sinknotif['oldparentid']) && array_key_exists($sinknotif['oldparentid'], $this->changesSinkFolders)) {
                 $notifications[] = $this->changesSinkFolders[$sinknotif['oldparentid']];
             }
         }
