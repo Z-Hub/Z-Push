@@ -264,6 +264,26 @@ class LoopDetection extends InterProcessData {
     }
 
     /**
+     * Gets the PID of an outdated search process
+     *
+     * Returns false if there isn't any process
+     *
+     * @access public
+     * @return boolean
+     *
+     */
+    public function ProcessLoopDetectionGetOutdatedSearchPID() {
+        $stack = $this->getProcessStack();
+        if (count($stack) > 1) {
+            $se = $stack[0];
+            if ($se['cc'] == ZPush::COMMAND_SEARCH) {
+                return $se['pid'];
+            }
+        }
+        return false;
+    }
+
+    /**
      * Inserts or updates the current process entry on the stack
      *
      * @access private

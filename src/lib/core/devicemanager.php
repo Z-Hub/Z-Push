@@ -167,6 +167,12 @@ class DeviceManager {
             }
         }
 
+        // remove old search data
+        $oldpid = $this->loopdetection->ProcessLoopDetectionGetOutdatedSearchPID();
+        if ($oldpid) {
+            ZPush::GetBackend()->GetSearchProvider()->TerminateSearch($oldpid);
+        }
+
         // we terminated this process
         if ($this->loopdetection)
             $this->loopdetection->ProcessLoopDetectionTerminate();
