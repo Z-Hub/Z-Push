@@ -1188,6 +1188,18 @@ class BackendZarafa implements IBackend, ISearchProvider {
     }
 
     /**
+    * Terminates a search for a given PID
+    *
+    * @param int $pid
+    *
+    * @return boolean
+    */
+    public function TerminateSearch($pid) {
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->TerminateSearch(): terminating search for pid %d", $pid));
+        return true;
+    }
+
+    /**
      * Disconnects from the current search provider
      *
      * @access public

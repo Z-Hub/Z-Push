@@ -101,6 +101,16 @@ class SearchProvider implements ISearchProvider{
         return array();
     }
 
+    /**
+    * Terminates a search for a given PID
+    *
+    * @param int $pid
+    *
+    * @return boolean
+    */
+    public function TerminateSearch($pid) {
+        return true;
+    }
 
     /**
      * Disconnects from the current search provider

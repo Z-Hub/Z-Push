@@ -172,6 +172,17 @@ class BackendSearchLDAP implements ISearchProvider {
     }
 
     /**
+    * Terminates a search for a given PID
+    *
+    * @param int $pid
+    *
+    * @return boolean
+    */
+    public function TerminateSearch($pid) {
+        return true;
+    }
+
+    /**
      * Disconnects from LDAP
      *
      * @access public

@@ -86,6 +86,16 @@ interface ISearchProvider {
     public function GetMailboxSearchResults($cpo);
 
     /**
+    * Terminates a search for a given PID
+    *
+    * @param int $pid
+    *
+    * @return boolean
+    */
+    public function TerminateSearch($pid);
+
+
+    /**
      * Disconnects from the current search provider
      *
      * @access public
