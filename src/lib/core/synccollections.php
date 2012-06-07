@@ -490,16 +490,19 @@ class SyncCollections implements Iterator {
                 ZPush::GetTopCollector()->AnnounceInformation(sprintf("Sink %d/%ds on %s", ($now-$started), $lifetime, $checkClasses));
                 $notifications = ZPush::GetBackend()->ChangesSink($nextInterval);
 
+                $validNotifications = false;
                 foreach ($notifications as $folderid) {
                     // check if the notification on the folder is within our filter
                     if ($this->CountChange($folderid)) {
                         ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->CheckForChanges(): Notification received on folder '%s'", $folderid));
-                        return true;
+                        $validNotifications = true;
                     }
                     else {
                         ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->CheckForChanges(): Notification received on folder '%s', but it is not relevant", $folderid));
                     }
                 }
+                if ($validNotifications)
+                    return true;
             }
             // use polling mechanism
             else {
