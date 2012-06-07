@@ -264,7 +264,8 @@ include_once('version.php');
         }
 
         // Announce exception to process loop detection
-        ZPush::GetDeviceManager()->AnnounceProcessException($ex);
+        if (ZPush::GetDeviceManager(false))
+            ZPush::GetDeviceManager()->AnnounceProcessException($ex);
 
         // Announce exception if the TopCollector if available
         ZPush::GetTopCollector()->AnnounceInformation(get_class($ex), true);
