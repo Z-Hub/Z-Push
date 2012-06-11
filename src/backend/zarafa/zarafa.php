@@ -1050,9 +1050,8 @@ class BackendZarafa implements IBackend, ISearchProvider {
         $querycnt = mapi_table_getrowcount($table);
         //do not return more results as requested in range
         $querylimit = (($rangeend + 1) < $querycnt) ? ($rangeend + 1) : $querycnt;
-        $items['range'] = $rangestart.'-'.($querylimit - 1);
+        $items['range'] = ($querylimit > 0) ? $rangestart.'-'.($querylimit - 1) : '0-0';
         $items['searchtotal'] = $querycnt;
-
         if ($querycnt > 0)
             $abentries = mapi_table_queryrows($table, array(PR_ACCOUNT, PR_DISPLAY_NAME, PR_SMTP_ADDRESS, PR_BUSINESS_TELEPHONE_NUMBER, PR_GIVEN_NAME, PR_SURNAME, PR_MOBILE_TELEPHONE_NUMBER, PR_HOME_TELEPHONE_NUMBER, PR_TITLE, PR_COMPANY_NAME, PR_OFFICE_LOCATION), $rangestart, $querylimit);
 
