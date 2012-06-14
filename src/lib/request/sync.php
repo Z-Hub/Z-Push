@@ -397,10 +397,10 @@ class Sync extends RequestProcessor {
                                 default:
                                     // get the importer
                                     if ($this->importer == false)
-                                        $status = $this->getImporter($sc, $spa, &$actiondata);
+                                        $status = $this->getImporter($sc, $spa, $actiondata);
 
                                     if ($status == SYNC_STATUS_SUCCESS)
-                                        $this->importMessage($spa, &$actiondata, $element[EN_TAG], $message, $clientid, $serverid);
+                                        $this->importMessage($spa, $actiondata, $element[EN_TAG], $message, $clientid, $serverid);
 
                                     break;
                             }
