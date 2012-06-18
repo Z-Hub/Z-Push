@@ -67,6 +67,8 @@ class SyncCollections implements Iterator {
     private $globalWindowSize;
     private $lastSyncTime;
 
+    private $waitingTime = 0;
+
 
     /**
      * Constructor
@@ -446,6 +448,9 @@ class SyncCollections implements Iterator {
         $started = time();
         $endat = time() + $lifetime;
         while(($now = time()) < $endat) {
+            // how long are we waiting for changes
+            $this->waitingTime = $now-$started;
+
             $nextInterval = $interval;
             // we should not block longer than the lifetime
             if ($endat - $now < $nextInterval)
@@ -508,7 +513,7 @@ class SyncCollections implements Iterator {
             else {
                 ZPush::GetTopCollector()->AnnounceInformation(sprintf("Polling %d/%ds on %s", ($now-$started), $lifetime, $checkClasses));
                 if ($this->CountChanges($onlyPingable)) {
-                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->CheckForChanges(): FOUND CHANGES", print_r($this->changes,1)));
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->CheckForChanges(): Found changes polling"));
                     return true;
                 }
                 else {
@@ -606,6 +611,17 @@ class SyncCollections implements Iterator {
      */
     public function GetChangedFolderIds() {
         return $this->changes;
+    }
+
+    /**
+     * Indicates if the process did wait in a sink, polling or before running a
+     * regular export to find changes
+     *
+     * @access public
+     * @return array
+     */
+    public function WaitedForChanges() {
+        return ($this->waitingTime > 1);
     }
 
     /**
