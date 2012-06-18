@@ -425,7 +425,7 @@ class DeviceManager {
             // reset the flags so the message is always streamed with <Add>
             $message->flags = false;
 
-            // track the borken message to the message
+            // track the broken message in the loop detection
             $this->loopdetection->SetBrokenMessage($folderid, $id);
         }
         return false;
