@@ -75,7 +75,7 @@ class MAPIProvider {
      * @access public
      * @return SyncObject
      */
-    public function GetMessage($mapimessage, $contentparameters) {
+    public function GetMessage($mapimessage, $contentparameters, $flags = false) {
         // Gets the Sync object from a MAPI object according to its message class
 
         $props = mapi_getprops($mapimessage, array(PR_MESSAGE_CLASS));
@@ -85,15 +85,15 @@ class MAPIProvider {
             $messageclass = "IPM";
 
         if(strpos($messageclass,"IPM.Contact") === 0)
-            return $this->getContact($mapimessage, $contentparameters);
+            return $this->getContact($mapimessage, $contentparameters, $flags);
         else if(strpos($messageclass,"IPM.Appointment") === 0)
-            return $this->getAppointment($mapimessage, $contentparameters);
+            return $this->getAppointment($mapimessage, $contentparameters, $flags);
         else if(strpos($messageclass,"IPM.Task") === 0)
-            return $this->getTask($mapimessage, $contentparameters);
+            return $this->getTask($mapimessage, $contentparameters, $flags);
         else if(strpos($messageclass,"IPM.StickyNote") === 0)
-            return $this->getNote($mapimessage, $contentparameters);
+            return $this->getNote($mapimessage, $contentparameter, $flagss);
         else
-            return $this->getEmail($mapimessage, $contentparameters);
+            return $this->getEmail($mapimessage, $contentparameters, $flags);
     }
 
     /**
@@ -105,7 +105,7 @@ class MAPIProvider {
      * @access private
      * @return SyncContact
      */
-    private function getContact($mapimessage, $contentparameters) {
+    private function getContact($mapimessage, $contentparameters, $flags) {
         $message = new SyncContact();
 
         // Standard one-to-one mappings first
@@ -147,7 +147,7 @@ class MAPIProvider {
      * @access private
      * @return SyncTask
      */
-    private function getTask($mapimessage, $contentparameters) {
+    private function getTask($mapimessage, $contentparameters, $flags) {
         $message = new SyncTask();
 
         // Standard one-to-one mappings first
@@ -192,7 +192,7 @@ class MAPIProvider {
      * @access private
      * @return SyncAppointment
      */
-    private function getAppointment($mapimessage, $contentparameters) {
+    private function getAppointment($mapimessage, $contentparameters, $flags) {
         $message = new SyncAppointment();
 
         // Standard one-to-one mappings first
@@ -291,7 +291,14 @@ class MAPIProvider {
         }
 
         if (!isset($message->nativebodytype)) $message->nativebodytype = $this->getNativeBodyType($messageprops);
+/*
+        $message->responserequested = 1;
+        $message->responsetype = 1;
+        $message->meetingstatus = 0;
 
+        $message->organizername = "mark";
+        $message->organizeremail = "mark@z62.de";
+*/
         return $message;
     }
 
@@ -467,8 +474,15 @@ class MAPIProvider {
      * @access private
      * @return SyncEmail
      */
-    private function getEmail($mapimessage, $contentparameters) {
+    private function getEmail($mapimessage, $contentparameters, $flags) {
         $message = new SyncMail();
+
+        // if it is not a new message, only return flags as nothing else
+        // might change for an email
+//         if ($flags != SYNC_NEW_MESSAGE) {
+//             $this->setFlag($mapimessage, $message);
+//             return $message;
+//         }
 
         $this->getPropsFromMAPI($message, $mapimessage, MAPIMapping::GetEmailMapping());
 
@@ -714,7 +728,7 @@ class MAPIProvider {
             $message->importance = IMPORTANCE_NORMAL;
 
         //TODO contentclass and nativebodytype and internetcpid
-        $message->internetcpid = (defined('STORE_INTERNET_CPID')) ? constant('STORE_INTERNET_CPID') : INTERNET_CPID_WINDOWS1252;
+        if (!isset($message->internetcpid)) $message->internetcpid = (defined('STORE_INTERNET_CPID')) ? constant('STORE_INTERNET_CPID') : INTERNET_CPID_WINDOWS1252;
         $this->setFlag($mapimessage, $message);
         $message->contentclass = DEFAULT_EMAIL_CONTENTCLASS;
         if (!isset($message->nativebodytype)) $message->nativebodytype = $this->getNativeBodyType($messageprops);
@@ -731,7 +745,7 @@ class MAPIProvider {
     * @access private
     * @return SyncNote
     */
-    private function getNote($mapimessage, $contentparameters) {
+    private function getNote($mapimessage, $contentparameters, $flags) {
         $message = new SyncNote();
 
         // Standard one-to-one mappings first
@@ -2129,7 +2143,9 @@ class MAPIProvider {
         if (Request::GetProtocolVersion() >= 12.0) {
             $message->asbody = new SyncBaseBody();
             $message->asbody->type = $bpReturnType;
-            $message->asbody->data = ($bpReturnType == SYNC_BODYPREFERENCE_RTF) ? base64_encode($body) : w2u($body);
+            $message->asbody->data = ($bpReturnType == SYNC_BODYPREFERENCE_RTF) ? base64_encode($body) :
+                (isset($message->internetcpid) && $message->internetcpid == INTERNET_CPID_WINDOWS1252 && $bpReturnType == SYNC_BODYPREFERENCE_HTML) ?
+                   windows1252_to_utf8($body, "", true) : w2u($body);
             $message->asbody->estimatedDataSize = strlen($message->asbody->data);
             $message->asbody->truncated = 0;
         }
@@ -2346,6 +2362,8 @@ class MAPIProvider {
         $message->flag = new SyncMailFlags();
 
         $this->getPropsFromMAPI($message->flag, $mapimessage, MAPIMapping::GetMailFlagsMapping());
+        $message->flag->flagtype = "Flag for follow up";
+//         $message->flag->subject = "123";
     }
 
     /**
