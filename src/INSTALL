@@ -20,6 +20,8 @@ FreeBSD     6.1
 OpenBSD     4.0
 Mandriva    2007
 
+If your distribution is not listed here, you can check which PHP version
+is default for it at http://distrowatch.com/.
 
 Additional informations can be found in the Zarafa Administrator Manual:
 http://doc.zarafa.com/trunk/Administrator_Manual/en-US/html/_zpush.html
@@ -28,29 +30,34 @@ http://doc.zarafa.com/trunk/Administrator_Manual/en-US/html/_zpush.html
 How to install
 --------------
 
-To install Z-Push, simply untar the z-push tar, e.g. with:
+To install Z-Push, simply untar the z-push archive, e.g. with:
    tar -xzvf z-push-[version]-{buildnr}.tar.gz
    
-The tar contains a folder with the structure:
+The tar contains a folder which has the following structure:
     z-push-[version]-{buildnr}
     
 The contents of this folder should be copied to /usr/share/z-push.
-Case this folder does not exist yet, create it with:
-    mkdir /usr/share/z-push
+In a case that /usr/share/z-push does not exist yet, create it with:
+    mkdir -p /usr/share/z-push
 
     cp -R z-push-[version]-{buildnr}/* /usr/share/z-push/
 
-Now, edit the config.php file in the directory to reflect your local system.
-For MAPI use with Zarafa, you do not need to change any settings. It should work as-is.
+Edit the config.php file in the Z-Push directory to fit your needs.
+If you pretend to use Z-Push with Zarafa backend and Zarafa is installed
+on the same server, it should work out of the box without changing anything.
 Please also set your timezone in the config.php file.
 
-The state directory is by default /var/lib/z-push, the log directory /var/log/z-push.
+The parameters and their roles are also explained in the config.php file.
+
+By default the state directory is /var/lib/z-push, the log directory /var/log/z-push.
 Make sure that these directories exist and are writeable for your webserver
 process, so either change the owner of these directories to the UID of
-your apache process or make the directory world writeable:
+your apache process or make the directories world writeable:
 
     chmod 777 /var/lib/z-push
     chmod 777 /var/log/z-push
+    
+For the default webserver user please refer to your distribution's manual.
 
 Now, you must configure Apache to redirect the URL
 'Microsoft-Server-ActiveSync' to the index.php file in the Z-Push
@@ -61,10 +68,16 @@ directory. This can be done by adding the line:
 to your httpd.conf file. Make sure that you are adding the line to the
 correct part of your Apache configuration, taking care of virtual hosts and
 other Apache configurations.
+Another possibility is to add this line to z-push.conf file inside the directory
+which contents are automatically processed during the webserver start (by
+default it is conf.d inside the /etc/apache2 or /etc/httpd depending on your
+distribution).
+
+You have to reload your webserver after making these configurations.
 
 *WARNING* You CANNOT simply rename the z-push directory to
 Microsoft-Server-ActiveSync. This will cause Apache to send redirects to the
-PDA, which will definitely break your PDA synchronisation.
+mobile device, which will definitely break your mobile device synchronisation.
 
 Lastly, make sure that PHP has the following settings:
 
@@ -82,9 +95,18 @@ FileStateMachine (which is default). In order to make this possible,
 you either need to disable the php-safe-mode in php.ini or .htaccess with
     php_admin_flag safe_mode off
 or configure it accordingly, so Z-Push is allowed to write to the 
-log & state directories. 
+log and state directories. 
 
-After doing this, you should be able to synchronize from your PDA.
+After doing this, you should be able to synchronize with your mobile device.
+
+
+Upgrading from Z-Push 1.X versions
+------------------------------------
+
+The easiest way to upgrade is to follow the steps for a new installation. The states
+of Z-Push 1.X are not compatible and there is no upgrade path, but as this version 
+implements a fully automatic resynchronisation of devices it should not affect the
+users and work without the user interaction.
 
 
 Update to newer Z-Push versions
@@ -101,14 +123,19 @@ Setting up your mobile device
 -----------------------------
 
 This is simply a case of adding an 'exchange server' to your activesync
-server list, specifying the IP address of the Z-Push apache server,
+server list, specifying the IP address of the Z-Push's apache server,
 disabling SSL, unless you have already setup SSL on your Apache server,
-setting the correct username & password (the domain is ignored, you can
+setting the correct username and password (the domain is ignored, you can
 simply specify 'domain' or some other random string), and then going through
 the standard activesync settings.
 
 Once you have done this, you should be able to synchronise your mobile
 simply by clicking the 'Sync' button in ActiveSync on your mobile.
+
+*NOTE* using the synchronisation without SSL is not recommended because
+your private data is transmitted in clear text over the net. Configuring
+SSL on Apache is beyond of the scope of this document. Please refer to
+Apache documention available at http://httpd.apache.org/docs/
 
 
 Troubleshooting
@@ -122,14 +149,23 @@ z-push. You can simply use:
     http://<serverip>/Microsoft-Server-ActiveSync
 
 If correctly configured, you should see a username/password request and
-when you specify a valid username & password, you should see a Z-Push
-information page, saying that this kind of requests are not supported.
-Without authentication credentials, Z-Push displays general information.
+when you specify a valid username and password, you should see a Z-Push
+information page, saying that this kind of requests is not supported.
+Without authentication credentials Z-Push displays general information.
 
-If not, then check your PHP and Apache settings.
+If not then check your PHP and Apache settings and Apache error logs.
 
 If you have other synchronisation problems, you can increase the LOGLEVEL
 parameter in the config e.g. to LOGLEVEL_DEBUG or LOGLEVEL_WBXML.
 
 The z-push.log file will then collect detailed debug information from your
 synchronisation.
+
+*NOTE* This setting will set Z-Push to log the detailed information for
+*every* user on the system. You can set a different log level for particular
+users by adding them comma separated to $specialLogUsers in the config.php
+ e.g. $specialLogUsers = array("user1", "user2", "user3");
+ 
+ *NOTE* Be aware that if you are using LOGLEVEL_DEBUG and LOGLEVEL_WBXML
+ Z-Push will be quite talkative, so it is advisable to use log-rotate
+ on the log file.
