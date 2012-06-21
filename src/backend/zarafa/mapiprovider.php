@@ -75,7 +75,7 @@ class MAPIProvider {
      * @access public
      * @return SyncObject
      */
-    public function GetMessage($mapimessage, $contentparameters, $flags = false) {
+    public function GetMessage($mapimessage, $contentparameters) {
         // Gets the Sync object from a MAPI object according to its message class
 
         $props = mapi_getprops($mapimessage, array(PR_MESSAGE_CLASS));
@@ -85,15 +85,15 @@ class MAPIProvider {
             $messageclass = "IPM";
 
         if(strpos($messageclass,"IPM.Contact") === 0)
-            return $this->getContact($mapimessage, $contentparameters, $flags);
+            return $this->getContact($mapimessage, $contentparameters);
         else if(strpos($messageclass,"IPM.Appointment") === 0)
-            return $this->getAppointment($mapimessage, $contentparameters, $flags);
+            return $this->getAppointment($mapimessage, $contentparameters);
         else if(strpos($messageclass,"IPM.Task") === 0)
-            return $this->getTask($mapimessage, $contentparameters, $flags);
+            return $this->getTask($mapimessage, $contentparameters);
         else if(strpos($messageclass,"IPM.StickyNote") === 0)
-            return $this->getNote($mapimessage, $contentparameter, $flagss);
+            return $this->getNote($mapimessage, $contentparameters);
         else
-            return $this->getEmail($mapimessage, $contentparameters, $flags);
+            return $this->getEmail($mapimessage, $contentparameters);
     }
 
     /**
@@ -105,7 +105,7 @@ class MAPIProvider {
      * @access private
      * @return SyncContact
      */
-    private function getContact($mapimessage, $contentparameters, $flags) {
+    private function getContact($mapimessage, $contentparameters) {
         $message = new SyncContact();
 
         // Standard one-to-one mappings first
@@ -147,7 +147,7 @@ class MAPIProvider {
      * @access private
      * @return SyncTask
      */
-    private function getTask($mapimessage, $contentparameters, $flags) {
+    private function getTask($mapimessage, $contentparameters) {
         $message = new SyncTask();
 
         // Standard one-to-one mappings first
@@ -192,7 +192,7 @@ class MAPIProvider {
      * @access private
      * @return SyncAppointment
      */
-    private function getAppointment($mapimessage, $contentparameters, $flags) {
+    private function getAppointment($mapimessage, $contentparameters) {
         $message = new SyncAppointment();
 
         // Standard one-to-one mappings first
@@ -291,14 +291,7 @@ class MAPIProvider {
         }
 
         if (!isset($message->nativebodytype)) $message->nativebodytype = $this->getNativeBodyType($messageprops);
-/*
-        $message->responserequested = 1;
-        $message->responsetype = 1;
-        $message->meetingstatus = 0;
 
-        $message->organizername = "mark";
-        $message->organizeremail = "mark@z62.de";
-*/
         return $message;
     }
 
@@ -474,15 +467,8 @@ class MAPIProvider {
      * @access private
      * @return SyncEmail
      */
-    private function getEmail($mapimessage, $contentparameters, $flags) {
+    private function getEmail($mapimessage, $contentparameters) {
         $message = new SyncMail();
-
-        // if it is not a new message, only return flags as nothing else
-        // might change for an email
-//         if ($flags != SYNC_NEW_MESSAGE) {
-//             $this->setFlag($mapimessage, $message);
-//             return $message;
-//         }
 
         $this->getPropsFromMAPI($message, $mapimessage, MAPIMapping::GetEmailMapping());
 
@@ -745,7 +731,7 @@ class MAPIProvider {
     * @access private
     * @return SyncNote
     */
-    private function getNote($mapimessage, $contentparameters, $flags) {
+    private function getNote($mapimessage, $contentparameters) {
         $message = new SyncNote();
 
         // Standard one-to-one mappings first
@@ -2362,8 +2348,6 @@ class MAPIProvider {
         $message->flag = new SyncMailFlags();
 
         $this->getPropsFromMAPI($message->flag, $mapimessage, MAPIMapping::GetMailFlagsMapping());
-        $message->flag->flagtype = "Flag for follow up";
-//         $message->flag->subject = "123";
     }
 
     /**
