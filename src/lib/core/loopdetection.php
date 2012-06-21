@@ -215,7 +215,7 @@ class LoopDetection extends InterProcessData {
                 // look for FolderSync command with previous failed commands
                 if ($se['cc'] == ZPush::COMMAND_FOLDERSYNC && !empty($seenFailed) && $se['id'] != self::GetProcessIdentifier()) {
                     // a full folderresync was already triggered
-                    if (isset($se['stat']) && $se['stat']['hierarchy'] == SYNC_FSSTATUS_SYNCKEYERROR) {
+                    if (isset($se['stat']) && isset($se['stat']['hierarchy']) && $se['stat']['hierarchy'] == SYNC_FSSTATUS_SYNCKEYERROR) {
                         ZLog::Write(LOGLEVEL_DEBUG, "LoopDetection->ProcessLoopDetectionIsHierarchyResyncRequired(): a full FolderReSync was already requested. Resetting fail counter.");
                         $seenFailed = array();
                     }
