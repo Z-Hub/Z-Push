@@ -48,6 +48,9 @@
  *
  */
 
+if (!function_exists("mapi_prop_tag"))
+    throw new FatalMisconfigurationException("PHP-MAPI extension is not available");
+
 define('PR_ACKNOWLEDGEMENT_MODE'                      ,mapi_prop_tag(PT_LONG,        0x0001));
 define('PR_ALTERNATE_RECIPIENT_ALLOWED'               ,mapi_prop_tag(PT_BOOLEAN,     0x0002));
 define('PR_AUTHORIZING_USERS'                         ,mapi_prop_tag(PT_BINARY,      0x0003));
