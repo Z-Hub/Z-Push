@@ -284,7 +284,7 @@ class FreeBusyPublish {
         }
 
         // Open updater for this user
-        if(isset($fbsupport)) {
+        if(isset($fbsupport) && $fbsupport) {
             $updaters = mapi_freebusysupport_loadupdate($fbsupport, Array($this->entryid));
 
             $updater = $updaters[0];
@@ -297,6 +297,8 @@ class FreeBusyPublish {
             // We're finished
             mapi_freebusysupport_close($fbsupport);
         }
+        else
+            ZLog::Write(LOGLEVEL_WARN, "FreeBusyPublish is not available");
     }
 
     /**
