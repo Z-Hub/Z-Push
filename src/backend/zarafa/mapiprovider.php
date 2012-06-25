@@ -2208,6 +2208,11 @@ class MAPIProvider {
             if ($bpo->GetTruncationSize() != false && $bpReturnType != SYNC_BODYPREFERENCE_MIME && $message->asbody->estimatedDataSize > $bpo->GetTruncationSize()) {
                 $message->asbody->data = Utils::Utf8_truncate($message->asbody->data, $bpo->GetTruncationSize());
                 $message->asbody->truncated = 1;
+
+            }
+            // set the preview or windows phones won't show the preview of an email
+            if (Request::GetProtocolVersion() >= 14.0) {
+                $message->asbody->preview = Utils::Utf8_truncate(MAPIUtils::readPropStream($mapimessage, PR_BODY), $bpo->GetPreview());
             }
         }
         else {
