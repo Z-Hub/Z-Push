@@ -759,6 +759,11 @@ class Sync extends RequestProcessor {
                                 $data = false;
                                 try {
                                     $fetchstatus = SYNC_STATUS_SUCCESS;
+
+                                    // if this is an additional folder the backend has to be setup correctly
+                                    if (!self::$backend->Setup(ZPush::GetAdditionalSyncFolderStore($spa->GetFolderId())))
+                                        throw new StatusException(sprintf("HandleSync(): could not Setup() the backend to fetch in folder id '%s'", $spa->GetFolderId()), SYNC_STATUS_OBJECTNOTFOUND);
+
                                     $data = self::$backend->Fetch($spa->GetFolderId(), $id, $spa->GetCPO());
 
                                     // check if the message is broken
