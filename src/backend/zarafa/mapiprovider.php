@@ -2133,7 +2133,6 @@ class MAPIProvider {
                 (isset($message->internetcpid) && $message->internetcpid == INTERNET_CPID_WINDOWS1252 && $bpReturnType == SYNC_BODYPREFERENCE_HTML) ?
                    windows1252_to_utf8($body, "", true) : w2u($body);
             $message->asbody->estimatedDataSize = strlen($message->asbody->data);
-            $message->asbody->truncated = 0;
         }
         else {
             $message->body = str_replace("\n","\r\n", w2u(str_replace("\r", "", $body)));
