@@ -61,10 +61,10 @@ class SyncSendMail extends SyncObject {
                     SYNC_COMPOSEMAIL_CLIENTID                             => array (  self::STREAMER_VAR      => "clientid"),
 
                     SYNC_COMPOSEMAIL_SAVEINSENTITEMS                      => array (  self::STREAMER_VAR      => "saveinsent",
-                                                                                      self::STREAMER_TYPE     => self::STREAMER_TYPE_SEND_EMPTY),
+                                                                                      self::STREAMER_PROP     => self::STREAMER_TYPE_SEND_EMPTY),
 
                     SYNC_COMPOSEMAIL_REPLACEMIME                          => array (  self::STREAMER_VAR      => "replacemime",
-                                                                                      self::STREAMER_TYPE     => self::STREAMER_TYPE_SEND_EMPTY),
+                                                                                      self::STREAMER_PROP     => self::STREAMER_TYPE_SEND_EMPTY),
 
                     SYNC_COMPOSEMAIL_ACCOUNTID                            => array (  self::STREAMER_VAR      => "accountid"),
 

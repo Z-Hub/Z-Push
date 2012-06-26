@@ -223,11 +223,11 @@ class SyncProvisioning extends SyncObject {
                                                                                     self::STREAMER_CHECKS   => array(   self::STREAMER_CHECK_ONEVALUEOF => array(0,1) )),
 
                     SYNC_PROVISION_UNAPPROVEDINROMAPPLIST               => array (  self::STREAMER_VAR      => "unapprovedinromapplist",
-                                                                                    self::STREAMER_TYPE     => self::STREAMER_TYPE_SEND_EMPTY,
+                                                                                    self::STREAMER_PROP     => self::STREAMER_TYPE_SEND_EMPTY,
                                                                                     self::STREAMER_ARRAY    => SYNC_PROVISION_APPNAME),  //TODO check
 
                     SYNC_PROVISION_APPROVEDAPPLIST                      => array (  self::STREAMER_VAR      => "approvedapplist",
-                                                                                    self::STREAMER_TYPE     => self::STREAMER_TYPE_SEND_EMPTY,
+                                                                                    self::STREAMER_PROP     => self::STREAMER_TYPE_SEND_EMPTY,
                                                                                     self::STREAMER_ARRAY    => SYNC_PROVISION_HASH), //TODO check
             );
         }
