@@ -389,7 +389,7 @@ define("SYNC_RESOLVERECIPIENTS_MAXCERTIFICATES","ResolveRecipients:MaxCertificat
 define("SYNC_RESOLVERECIPIENTS_MAXAMBIGUOUSRECIPIENTS","ResolveRecipients:MaxAmbiguousRecipients");
 define("SYNC_RESOLVERECIPIENTS_CERTIFICATECOUNT","ResolveRecipients:CertificateCount");
 define("SYNC_RESOLVERECIPIENTS_AVAILABILITY","ResolveRecipients:Availability"); //14.0
-define("SYNC_RESOLVERECIPIENTS_STARTIME","ResolveRecipients:StartTime"); //14.0
+define("SYNC_RESOLVERECIPIENTS_STARTTIME","ResolveRecipients:StartTime"); //14.0
 define("SYNC_RESOLVERECIPIENTS_ENDTIME","ResolveRecipients:EndTime"); //14.0
 define("SYNC_RESOLVERECIPIENTS_MERGEDFREEBUSY","ResolveRecipients:MergedFreeBusy"); //14.0
 define("SYNC_RESOLVERECIPIENTS_PICTURE","ResolveRecipients:Picture"); //post 14.0
@@ -564,7 +564,7 @@ define("SYNC_SETTINGS_GET", "Settings:Get");
 define("SYNC_SETTINGS_SET", "Settings:Set");
 define("SYNC_SETTINGS_OOF", "Settings:Oof");
 define("SYNC_SETTINGS_OOFSTATE", "Settings:OofState");
-define("SYNC_SETTINGS_STARTIME", "Settings:StartTime");
+define("SYNC_SETTINGS_STARTTIME", "Settings:StartTime");
 define("SYNC_SETTINGS_ENDTIME", "Settings:EndTime");
 define("SYNC_SETTINGS_OOFMESSAGE", "Settings:OofMessage");
 define("SYNC_SETTINGS_APPLIESTOINTERVAL", "Settings:AppliesToInternal");

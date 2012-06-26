@@ -58,7 +58,7 @@ class SyncOOF extends SyncObject {
             SYNC_SETTINGS_OOFSTATE      => array (  self::STREAMER_VAR      => "oofstate",
                                                     self::STREAMER_CHECKS   => array(   array(   self::STREAMER_CHECK_ONEVALUEOF => array(0,1,2) ))),
 
-            SYNC_SETTINGS_STARTIME      => array (  self::STREAMER_VAR      => "startime",
+            SYNC_SETTINGS_STARTTIME      => array (  self::STREAMER_VAR      => "starttime",
                                                     self::STREAMER_TYPE     => self::STREAMER_TYPE_DATE),
 
             SYNC_SETTINGS_ENDTIME       => array (  self::STREAMER_VAR      => "endtime",

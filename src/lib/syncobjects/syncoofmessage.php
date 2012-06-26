@@ -59,10 +59,10 @@ class SyncOOFMessage extends SyncObject {
             SYNC_SETTINGS_APPLIESTOINTERVAL             => array (  self::STREAMER_VAR      => "appliesToInternal",
                                                                     self::STREAMER_TYPE     => self::STREAMER_TYPE_SEND_EMPTY),
 
-            SYNC_SETTINGS_APPLIESTOEXTERNALKNOWN        => array (  self::STREAMER_VAR      => "aplliesToExternal",
+            SYNC_SETTINGS_APPLIESTOEXTERNALKNOWN        => array (  self::STREAMER_VAR      => "appliesToExternal",
                                                                     self::STREAMER_TYPE     => self::STREAMER_TYPE_SEND_EMPTY),
 
-            SYNC_SETTINGS_APPLIESTOEXTERNALUNKNOWN      => array (  self::STREAMER_VAR      => "aplliesToExternalUnknown",
+            SYNC_SETTINGS_APPLIESTOEXTERNALUNKNOWN      => array (  self::STREAMER_VAR      => "appliesToExternalUnknown",
                                                                     self::STREAMER_TYPE     => self::STREAMER_TYPE_SEND_EMPTY),
 
             SYNC_SETTINGS_ENABLED                       => array (  self::STREAMER_VAR      => "enabled"),
