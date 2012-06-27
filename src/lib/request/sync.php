@@ -95,10 +95,15 @@ class Sync extends RequestProcessor {
                     }
 
                     // SyncKey
-                    if(!self::$decoder->getElementStartTag(SYNC_SYNCKEY))
-                        return false;
-                    $synckey = self::$decoder->getElementContent();
-                    if(!self::$decoder->getElementEndTag())
+                    if(self::$decoder->getElementStartTag(SYNC_SYNCKEY)) {
+                        $synckey = "0";
+                        if (($synckey = self::$decoder->getElementContent()) !== false) {
+                            if(!self::$decoder->getElementEndTag()) {
+                                return false;
+                            }
+                        }
+                    }
+                    else
                         return false;
 
                     // FolderId
