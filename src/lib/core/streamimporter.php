@@ -101,9 +101,18 @@ class ImportChangesStream implements IImportChanges {
 
         if ($message->flags === false || $message->flags === SYNC_NEWMESSAGE)
             $this->encoder->startTag(SYNC_ADD);
-        else
-            $this->encoder->startTag(SYNC_MODIFY);
+        else {
+            // on update of an SyncEmail we only export the flags
+            if($message instanceof SyncMail && isset($message->flag) && $message->flag instanceof SyncMailFlags) {
+                $newmessage = new SyncMail();
+                $newmessage->flag = $message->flag;
+                $message = $newmessage;
+                unset($newmessage);
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("ImportChangesStream->ImportMessageChange('%s'): SyncMail message updated. Message content is striped, only flags are streamed.", $id));
+            }
 
+            $this->encoder->startTag(SYNC_MODIFY);
+        }
             $this->encoder->startTag(SYNC_SERVERENTRYID);
                 $this->encoder->content($id);
             $this->encoder->endTag();
