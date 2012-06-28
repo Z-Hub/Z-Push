@@ -2129,9 +2129,12 @@ class MAPIProvider {
         if (Request::GetProtocolVersion() >= 12.0) {
             $message->asbody = new SyncBaseBody();
             $message->asbody->type = $bpReturnType;
-            $message->asbody->data = ($bpReturnType == SYNC_BODYPREFERENCE_RTF) ? base64_encode($body) :
-                (isset($message->internetcpid) && $message->internetcpid == INTERNET_CPID_WINDOWS1252 && $bpReturnType == SYNC_BODYPREFERENCE_HTML) ?
-                   windows1252_to_utf8($body, "", true) : w2u($body);
+            if ($bpReturnType == SYNC_BODYPREFERENCE_RTF)
+                $message->asbody->data = base64_encode($body);
+            elseif (isset($message->internetcpid) && $message->internetcpid == INTERNET_CPID_WINDOWS1252 && $bpReturnType == SYNC_BODYPREFERENCE_HTML)
+                $message->asbody->data = windows1252_to_utf8($body, "", true);
+            else
+                $message->asbody->data = w2u($body);
             $message->asbody->estimatedDataSize = strlen($message->asbody->data);
         }
         else {
