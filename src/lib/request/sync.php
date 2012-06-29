@@ -812,7 +812,7 @@ class Sync extends RequestProcessor {
                         }
 
                         // Stream outgoing changes
-                        if($status == SYNC_STATUS_SUCCESS && $sc->GetParameter($spa, "getchanges") === true && $windowSize > 0) {
+                        if($status == SYNC_STATUS_SUCCESS && $sc->GetParameter($spa, "getchanges") == true && $windowSize > 0) {
                             self::$topCollector->AnnounceInformation(sprintf("Streaming data of %d objects", (($changecount > $windowSize)?$windowSize:$changecount)));
 
                             // Output message changes per folder
