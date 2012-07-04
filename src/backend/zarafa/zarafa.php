@@ -1360,7 +1360,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
             $oofmessage = new SyncOOFMessage();
             $oofmessage->appliesToInternal = "";
             $oofmessage->enabled = $oof->oofstate;
-            $oofmessage->replymessage = w2u(isset($oofprops[PR_EC_OUTOFOFFICE_MSG]) ? $oofprops[PR_EC_OUTOFOFFICE_MSG] : "");
+            $oofmessage->replymessage = (isset($oofprops[PR_EC_OUTOFOFFICE_MSG])) ? w2u($oofprops[PR_EC_OUTOFOFFICE_MSG]) : "";
             $oofmessage->bodytype = $oof->bodytype;
             unset($oofmessage->appliesToExternal, $oofmessage->appliesToExternalUnknown);
             $oof->oofmessage[] = $oofmessage;
@@ -1370,8 +1370,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
         }
 
         //unset body type for oof in order not to stream it
-        unset($oof->bodyType);
-
+        unset($oof->bodytype);
     }
 
     /**
