@@ -692,7 +692,7 @@ class DeviceManager {
      */
     private function announceAcceptedMessage($folderid, $id) {
         if ($this->device->RemoveIgnoredMessage($folderid, $id)) {
-            ZLog::Write(LOGLEVEL_INFO, sprintf("DeviceManager->announceAcceptedMessage('%s', '%s'): cleared previosily ignored message as message is sucessfully streamed",$folderid, $id));
+            ZLog::Write(LOGLEVEL_INFO, sprintf("DeviceManager->announceAcceptedMessage('%s', '%s'): cleared previously ignored message as message is sucessfully streamed",$folderid, $id));
             return true;
         }
         return false;
