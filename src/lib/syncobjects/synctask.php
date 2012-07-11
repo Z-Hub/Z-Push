@@ -146,6 +146,11 @@ class SyncTask extends SyncObject {
      */
     public function Check($logAsDebug = false) {
         $ret = parent::Check($logAsDebug);
+
+        // semantic checks general "turn off switch"
+        if (defined("DO_SEMANTIC_CHECKS") && DO_SEMANTIC_CHECKS === false)
+            return $ret;
+
         if (!$ret)
             return false;
 

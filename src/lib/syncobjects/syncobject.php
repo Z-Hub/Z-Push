@@ -219,6 +219,12 @@ abstract class SyncObject extends Streamer {
      * @return boolean
      */
     public function Check($logAsDebug = false) {
+        // semantic checks general "turn off switch"
+        if (defined("DO_SEMANTIC_CHECKS") && DO_SEMANTIC_CHECKS === false) {
+            ZLog::Write(LOGLEVEL_DEBUG, "SyncObject->Check(): semantic checks disabled. Check your config for 'DO_SEMANTIC_CHECKS'.");
+            return true;
+        }
+
         $defaultLogLevel = LOGLEVEL_WARN;
 
         // in some cases non-false checks should not provoke a WARN log but only a DEBUG log
