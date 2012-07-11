@@ -68,6 +68,13 @@ include('version.php');
             throw new FatalException("Function pcntl_signal() is not available. Please install package 'php5-pcntl' (or similar) on your system.");
 
         $zpt = new ZPushTop();
+
+        // check if help was requested from CLI
+        if (in_array('-h', $argv) || in_array('--help', $argv)) {
+            echo $zpt->UsageInstructions();
+            exit(1);
+        }
+
         if ($zpt->IsAvailable()) {
             pcntl_signal(SIGINT, array($zpt, "SignalHandler"));
             $zpt->run();
@@ -87,6 +94,12 @@ include('version.php');
  * Z-Push-Top
  */
 class ZPushTop {
+    // show options
+    const SHOW_DEFAULT = 0;
+    const SHOW_ACTIVE_ONLY = 1;
+    const SHOW_UNKNOWN_ONLY = 2;
+    const SHOW_TERM_DEFAULT_TIME = 5; // 5 secs
+
     private $topCollector;
     private $starttime;
     private $action;
@@ -98,9 +111,11 @@ class ZPushTop {
     private $terminate;
     private $scrSize;
     private $pingInterval;
+    private $showPush;
+    private $showTermSec;
 
-    private $linesUpdate = array();
     private $linesActive = array();
+    private $linesOpen = array();
     private $linesUnknown = array();
     private $linesTerm = array();
     private $pushConn = 0;
@@ -125,6 +140,9 @@ class ZPushTop {
         $this->doingTail = false;
         $this->wide = false;
         $this->terminate = false;
+        $this->showPush = true;
+        $this->showOption = self::SHOW_DEFAULT;
+        $this->showTermSec = self::SHOW_TERM_DEFAULT_TIME;
         $this->scrSize = array('width' => 80, 'height' => 24);
         $this->pingInterval = (defined('PING_INTERVAL') && PING_INTERVAL > 0) ? PING_INTERVAL : 12;
 
@@ -215,8 +233,8 @@ class ZPushTop {
      * @return
      */
     private function processData($data) {
-        $this->linesUpdate = array();
         $this->linesActive = array();
+        $this->linesOpen = array();
         $this->linesUnknown = array();
         $this->linesTerm = array();
         $this->pushConn = 0;
@@ -245,6 +263,10 @@ class ZPushTop {
                         $line["time"] = $this->currenttime - $line['start'];
                         if ($line['push'] === true) $this->pushConn += 1;
 
+                        // ignore push connections
+                        if ($line['push'] === true && ! $this->showPush)
+                            continue;
+
                         if ($this->filter !== false) {
                             $f = $this->filter;
                             if (!($line["pid"] == $f || $line["ip"] == $f || strtolower($line['command']) == strtolower($f) || preg_match("/.*?$f.*?/i", $line['user']) ||
@@ -254,13 +276,17 @@ class ZPushTop {
 
                         $lastUpdate = $this->currenttime - $line["update"];
                         if ($this->currenttime - $line["update"] < 2)
-                            $this->linesUpdate[$line["update"].$line["pid"]] = $line;
+                            $this->linesActive[$line["update"].$line["pid"]] = $line;
                         else if (($line['push'] === true  && $lastUpdate > ($this->pingInterval+2)) || ($line['push'] !== true  && $lastUpdate > 4))
                             $this->linesUnknown[$line["update"].$line["pid"]] = $line;
                         else
-                            $this->linesActive[$line["update"].$line["pid"]] = $line;
+                            $this->linesOpen[$line["update"].$line["pid"]] = $line;
                     }
                     else {
+                        // do not show terminated + expired connections
+                        if ($line['ended'] + $this->showTermSec < $this->currenttime)
+                            continue;
+
                         if ($this->filter !== false) {
                             $f = $this->filter;
                             if (!($line['pid'] == $f || $line['ip'] == $f || strtolower($line['command']) == strtolower($f) || preg_match("/.*?$f.*?/i", $line['user']) ||
@@ -276,8 +302,8 @@ class ZPushTop {
         }
 
         // sort by execution time
-        krsort($this->linesUpdate);
         krsort($this->linesActive);
+        krsort($this->linesOpen);
         krsort($this->linesUnknown);
         krsort($this->linesTerm);
     }
@@ -301,6 +327,7 @@ class ZPushTop {
         $this->scrPrintAt($lc,0, "\033[4m". $this->getLine(array('pid'=>'PID', 'ip'=>'IP', 'user'=>'USER', 'command'=>'COMMAND', 'time'=>'TIME', 'devagent'=>'AGENT', 'devid'=>'DEVID', 'addinfo'=>'Additional Information')). str_repeat(" ",20)."\033[0m"); $lc++;
 
         // print help text if requested
+        $hl = 0;
         if ($this->helpexpire > $this->currenttime) {
             $help = $this->scrHelp();
             $linesAvail -= count($help);
@@ -311,53 +338,81 @@ class ZPushTop {
             }
         }
 
-        $toPrintUpdate = $linesAvail;
         $toPrintActive = $linesAvail;
+        $toPrintOpen = $linesAvail;
         $toPrintUnknown = $linesAvail;
+        $toPrintTerm = $linesAvail;
 
-        // TODO this could be optimized to use the max amount of lines available on the screen
-        if (count($this->linesUpdate) + count($this->linesActive) + count($this->linesUnknown) > $linesAvail) {
-            $toPrintUpdate = $linesAvail/3;
-            $toPrintActive = $linesAvail/3;
-            $toPrintUnknown = $linesAvail/3;
+        // default view: show all unknown, no terminated and half active+open
+        if (count($this->linesActive) + count($this->linesOpen) + count($this->linesUnknown) > $linesAvail) {
+            $toPrintUnknown = count($this->linesUnknown);
+            $toPrintActive = count($this->linesActive);
+            $toPrintOpen = $linesAvail-$toPrintUnknown-$toPrintActive;
+            $toPrintTerm = 0;
         }
 
-        $linesprinted = 0;
-        foreach ($this->linesUpdate as $time=>$l) {
-            $this->scrPrintAt($lc,0, "\033[01m" . $this->getLine($l)  ."\033[0m");
-            $lc++;
-            $linesprinted++;
-            if ($linesprinted >= $toPrintUpdate)
-                break;
+        if ($this->showOption == self::SHOW_ACTIVE_ONLY) {
+            $toPrintActive = $linesAvail;
+            $toPrintOpen = 0;
+            $toPrintUnknown = 0;
+            $toPrintTerm = 0;
+        }
+
+        if ($this->showOption == self::SHOW_UNKNOWN_ONLY) {
+            $toPrintActive = 0;
+            $toPrintOpen = 0;
+            $toPrintUnknown = $linesAvail;
+            $toPrintTerm = 0;
         }
 
         $linesprinted = 0;
         foreach ($this->linesActive as $time=>$l) {
+            if ($linesprinted >= $toPrintActive)
+                break;
+
+            $this->scrPrintAt($lc,0, "\033[01m" . $this->getLine($l)  ."\033[0m");
+            $lc++;
+            $linesprinted++;
+        }
+
+        $linesprinted = 0;
+        foreach ($this->linesOpen as $time=>$l) {
+            if ($linesprinted >= $toPrintOpen)
+                break;
+
             $this->scrPrintAt($lc,0, $this->getLine($l));
             $lc++;
             $linesprinted++;
-            if ($linesprinted >= $toPrintActive)
-                break;
         }
 
         $linesprinted = 0;
         foreach ($this->linesUnknown as $time=>$l) {
+            if ($linesprinted >= $toPrintUnknown)
+                break;
+
             $color = "0;31m";
             if ($l['push'] == false && $time - $l["start"] > 30)
                 $color = "1;31m";
             $this->scrPrintAt($lc,0, "\033[0". $color . $this->getLine($l)  ."\033[0m");
             $lc++;
             $linesprinted++;
-            if ($linesprinted >= $toPrintUnknown)
-                break;
         }
 
+        if ($toPrintTerm > 0)
+            $toPrintTerm = $linesAvail - $lc +6;
+
+        $linesprinted = 0;
         foreach ($this->linesTerm as $time=>$l){
+            if ($linesprinted >= $toPrintTerm)
+                break;
+
             $this->scrPrintAt($lc,0, "\033[01;30m" . $this->getLine($l)  ."\033[0m");
             $lc++;
-            if ($lc > $linesAvail+6)
-                break;
+            $linesprinted++;
         }
+
+        // add the lines used when displaying the help text
+        $lc += $hl;
         $this->scrPrintAt($lc,0, "\033[K"); $lc++;
         $this->scrPrintAt($lc,0, "Colorscheme: \033[01mActive  \033[0mOpen  \033[01;31mUnknown  \033[01;30mTerminated\033[0m");
 
@@ -371,16 +426,29 @@ class ZPushTop {
             $this->statusexpire = $this->currenttime+1;
         }
 
+
+        $str = "";
+        if (! $this->showPush)
+            $str .= "\033[00;32mPush: \033[01;32mNo\033[0m   ";
+
+        if ($this->showOption == self::SHOW_ACTIVE_ONLY)
+            $str .= "\033[01;32mActive only\033[0m   ";
+
+        if ($this->showOption == self::SHOW_UNKNOWN_ONLY)
+            $str .= "\033[01;32mUnknown only\033[0m   ";
+
+        if ($this->showTermSec != self::SHOW_TERM_DEFAULT_TIME)
+            $str .= "\033[01;32mTerminated: ". $this->showTermSec. "s\033[0m   ";
+
         if ($this->filter !== false || ($this->status !== false && $this->statusexpire > $this->currenttime)) {
-            $str = "";
             // print filter in green
             if ($this->filter !== false)
-                $str = "\033[00;32mFilter: \033[01;32m$this->filter\033[0m   ";
+                $str .= "\033[00;32mFilter: \033[01;32m$this->filter\033[0m   ";
             // print status in red
             if ($this->status !== false)
                 $str .= "\033[00;31m$this->status\033[0m";
-            $this->scrPrintAt(5,0, $str);
         }
+        $this->scrPrintAt(5,0, $str);
 
         $this->scrPrintAt(4,0,"Action: \033[01m".$this->action . "\033[0m");
     }
@@ -425,6 +493,29 @@ class ZPushTop {
                     else {
                         $this->filter = $cmds[1];
                         $this->status = false;
+                    }
+                }
+                else if ($cmds[0] == "option" || $cmds[0] == "o") {
+                    if (!isset($cmds[1]) || $cmds[1] == "") {
+                        $this->status = sprintf("Option value needs to be specified. See 'help' or 'h' for instructions", $cmds[1]);
+                        $this->statusexpire = $this->currenttime+5;
+                    }
+                    else if ($cmds[1] == "p" || $cmds[1] == "push" || $cmds[1] == "ping")
+                        $this->showPush = !$this->showPush;
+                    else if ($cmds[1] == "a" || $cmds[1] == "active")
+                        $this->showOption = self::SHOW_ACTIVE_ONLY;
+                    else if ($cmds[1] == "u" || $cmds[1] == "unknown")
+                        $this->showOption = self::SHOW_UNKNOWN_ONLY;
+                    else if ($cmds[1] == "d" || $cmds[1] == "default") {
+                        $this->showOption = self::SHOW_DEFAULT;
+                        $this->showTermSec = self::SHOW_TERM_DEFAULT_TIME;
+                        $this->showPush = true;
+                    }
+                    else if (is_numeric($cmds[1]))
+                        $this->showTermSec = $cmds[1];
+                    else {
+                        $this->status = sprintf("Option '%s' unknown", $cmds[1]);
+                        $this->statusexpire = $this->currenttime+5;
                     }
                 }
                 else if ($cmds[0] == "reset" || $cmds[0] == "r") {
@@ -496,6 +587,26 @@ class ZPushTop {
     }
 
     /**
+     * Returns usage instructions
+     *
+     * @return string
+     * @access public
+     */
+    public function UsageInstructions() {
+        $help = "Usage:\n\tz-push-top.php\n\n" .
+                "  Z-Push-Top is a live top-like overview of what Z-Push is doing. It does not have specific command line options.\n\n".
+                "  When Z-Push-Top is running you can specify certain actions and options which can be executed (listed below).\n".
+                "  This help information can also be shown inside Z-Push-Top by hitting 'help' or 'h'.\n\n";
+        $scrhelp = $this->scrHelp();
+        unset($scrhelp[0]);
+
+        $help .= implode("\n", $scrhelp);
+        $help .= "\n\n";
+        return $help;
+    }
+
+
+    /**
      * Prints a 'help' text at the end of the page
      *
      * @access private
@@ -514,6 +625,13 @@ class ZPushTop {
         $h[] = "  ".$this->scrAsBold("l:STR")." or ".$this->scrAsBold("log:STR")."\tIssues 'less +G' on the logfile, after grepping on the optional STR.";
         $h[] = "  ".$this->scrAsBold("t:STR")." or ".$this->scrAsBold("tail:STR")."\tIssues 'tail -f' on the logfile, grepping for optional STR.";
         $h[] = "  ".$this->scrAsBold("r")." or ".$this->scrAsBold("reset")."\t\tResets 'wide' or 'filter'.";
+        $h[] = "  ".$this->scrAsBold("o:")." or ".$this->scrAsBold("option:")."\t\tSets display options. Valid options specified below";
+        $h[] = "  ".$this->scrAsBold("  p")." or ".$this->scrAsBold("push")."\t\tLists/not lists active and open push connections.";
+        $h[] = "  ".$this->scrAsBold("  a")." or ".$this->scrAsBold("action")."\t\tLists only active connections.";
+        $h[] = "  ".$this->scrAsBold("  u")." or ".$this->scrAsBold("unknown")."\tLists only unknown connections.";
+        $h[] = "  ".$this->scrAsBold("  10")." or ".$this->scrAsBold("20")."\t\tLists terminated connections for 10 or 20 seconds. Any other number can be used.";
+        $h[] = "  ".$this->scrAsBold("  d")." or ".$this->scrAsBold("default")."\tUses default options";
+
         return $h;
     }
 
@@ -539,9 +657,9 @@ class ZPushTop {
      */
     private function getLine($l) {
         if ($this->wide === true)
-            return sprintf("%s%s%s%s%s%s%s%s", $this->ptStr($l['pid'],6), $this->ptStr($l['ip'],16), $this->ptStr($l['user'],16), $this->ptStr($l['command'],16), $this->ptStr($this->sec2min($l['time']),8), $this->ptStr($l['devagent'],28), $this->ptStr($l['devid'],40, true), $l['addinfo']);
+            return sprintf("%s%s%s%s%s%s%s%s", $this->ptStr($l['pid'],6), $this->ptStr($l['ip'],16), $this->ptStr($l['user'],24), $this->ptStr($l['command'],16), $this->ptStr($this->sec2min($l['time']),8), $this->ptStr($l['devagent'],28), $this->ptStr($l['devid'],30, true), $l['addinfo']);
         else
-            return sprintf("%s%s%s%s%s%s%s%s", $this->ptStr($l['pid'],6), $this->ptStr($l['ip'],10), $this->ptStr($l['user'],8), $this->ptStr($l['command'],11), $this->ptStr($this->sec2min($l['time']),6), $this->ptStr($l['devagent'],20), $this->ptStr($l['devid'],18, true), $l['addinfo']);
+            return sprintf("%s%s%s%s%s%s%s%s", $this->ptStr($l['pid'],6), $this->ptStr($l['ip'],10), $this->ptStr($l['user'],8), $this->ptStr($l['command'],11), $this->ptStr($this->sec2min($l['time']),6), $this->ptStr($l['devagent'],20), $this->ptStr($l['devid'],12, true), $l['addinfo']);
     }
 
     /**
