@@ -46,6 +46,7 @@ class ImportChangesStream implements IImportChanges {
     private $objclass;
     private $seenObjects;
     private $importedMsgs;
+    private $checkForIgnoredMessages;
 
     /**
      * Constructor of the StreamImporter
@@ -61,6 +62,7 @@ class ImportChangesStream implements IImportChanges {
         $this->classAsString = (is_object($class))?get_class($class):'';
         $this->seenObjects = array();
         $this->importedMsgs = 0;
+        $this->checkForIgnoredMessages = true;
     }
 
     /**
@@ -94,9 +96,15 @@ class ImportChangesStream implements IImportChanges {
         $this->seenObjects[] = $id;
 
         // checks if the next message may cause a loop or is broken
-        if (ZPush::GetDeviceManager(false) && ZPush::GetDeviceManager()->DoNotStreamMessage($id, $message)) {
+        if (ZPush::GetDeviceManager()->DoNotStreamMessage($id, $message)) {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("ImportChangesStream->ImportMessageChange('%s'): message ignored and requested to be removed from mobile", $id));
-            return $this->ImportMessageDeletion($id);
+
+            // this is an internal operation & should not trigger an update in the device manager
+            $this->checkForIgnoredMessages = false;
+            $stat = $this->ImportMessageDeletion($id);
+            $this->checkForIgnoredMessages = true;
+
+            return $stat;
         }
 
         if ($message->flags === false || $message->flags === SYNC_NEWMESSAGE)
@@ -133,6 +141,10 @@ class ImportChangesStream implements IImportChanges {
      * @return boolean
      */
     public function ImportMessageDeletion($id) {
+        if ($this->checkForIgnoredMessages) {
+           ZPush::GetDeviceManager()->RemoveBrokenMessage($id);
+        }
+
         $this->importedMsgs++;
         $this->encoder->startTag(SYNC_REMOVE);
             $this->encoder->startTag(SYNC_SERVERENTRYID);

@@ -432,6 +432,23 @@ class DeviceManager {
     }
 
     /**
+     * Removes device information about a broken message as it is been removed from the mobile.
+     *
+     * @param string        $id         message id
+     *
+     * @access public
+     * @return boolean
+     */
+    public function RemoveBrokenMessage($id) {
+        $folderid = $this->getLatestFolder();
+        if ($this->device->RemoveIgnoredMessage($folderid, $id)) {
+            ZLog::Write(LOGLEVEL_INFO, sprintf("DeviceManager->RemoveBrokenMessage('%s', '%s'): cleared data about previously ignored message", $folderid, $id));
+            return true;
+        }
+        return false;
+    }
+
+    /**
      * Amount of items to me synchronized
      *
      * @param string    $folderid
