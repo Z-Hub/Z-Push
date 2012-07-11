@@ -64,15 +64,22 @@ class ItemOperations extends RequestProcessor {
             return false;
         //ItemOperations can either be Fetch, EmptyFolderContents or Move
         $fetch = $efc = $move = false;
-        if($el[EN_TAG] == SYNC_ITEMOPERATIONS_FETCH)
+        if($el[EN_TAG] == SYNC_ITEMOPERATIONS_FETCH) {
             $fetch = true;
-        else if($el[EN_TAG] == SYNC_ITEMOPERATIONS_EMPTYFOLDERCONTENTS)
+            self::$topCollector->AnnounceInformation("Fetch", true);
+        }
+        else if($el[EN_TAG] == SYNC_ITEMOPERATIONS_EMPTYFOLDERCONTENTS) {
             $efc = true;
-        else if($el[EN_TAG] == SYNC_ITEMOPERATIONS_MOVE)
+            self::$topCollector->AnnounceInformation("Empty Folder", true);
+        }
+        else if($el[EN_TAG] == SYNC_ITEMOPERATIONS_MOVE) {
             $move = true;
+            self::$topCollector->AnnounceInformation("Move", true);
+        }
 
         if(!$fetch && !$efc && !$move) {
             ZLog::Write(LOGLEVEL_DEBUG, "Unknown item operation:".print_r($el, 1));
+            self::$topCollector->AnnounceInformation("Unknown operation", true);
             return false;
         }
 
@@ -225,6 +232,8 @@ class ItemOperations extends RequestProcessor {
                     self::$encoder->content("Email");
                     self::$encoder->endTag();
 
+                    self::$topCollector->AnnounceInformation("Fetching data from backend with item and folder id");
+
                     $data = self::$backend->Fetch($folderid, $serverid, $collection["cpo"]);
                 }
 
@@ -238,6 +247,9 @@ class ItemOperations extends RequestProcessor {
                     self::$encoder->endTag();
 
                     $tmp = explode(":", $longid);
+
+                    self::$topCollector->AnnounceInformation("Fetching data from backend with long id");
+
                     $data = self::$backend->Fetch($tmp[0], $tmp[1], $collection["cpo"]);
                 }
 
@@ -246,12 +258,16 @@ class ItemOperations extends RequestProcessor {
                     self::$encoder->content($filereference);
                     self::$encoder->endTag(); // end SYNC_AIRSYNCBASE_FILEREFERENCE
 
+                    self::$topCollector->AnnounceInformation("Get attachment data from backend with file reference");
+
                     $data = self::$backend->GetAttachmentData($filereference);
                 }
 
                 //TODO put it in try catch block
 
                 if (isset($data)) {
+                    self::$topCollector->AnnounceInformation("Streaming data");
+
                     self::$encoder->startTag(SYNC_ITEMOPERATIONS_PROPERTIES);
                     $data->Encode(self::$encoder);
                     self::$encoder->endTag(); //SYNC_ITEMOPERATIONS_PROPERTIES
@@ -262,6 +278,8 @@ class ItemOperations extends RequestProcessor {
         // empty folder contents operation
         else if ($efc) {
             try {
+                self::$topCollector->AnnounceInformation("Emptying folder");
+
                 // send request to backend
                 self::$backend-> EmptyFolder($folderid, $deletesubfolders);
             }
@@ -285,6 +303,8 @@ class ItemOperations extends RequestProcessor {
         // TODO implement ItemOperations Move
         // move operation
         else {
+            self::$topCollector->AnnounceInformation("not implemented", true);
+
             self::$encoder->startTag(SYNC_ITEMOPERATIONS_MOVE);
                 self::$encoder->startTag(SYNC_ITEMOPERATIONS_STATUS);
                 self::$encoder->content($status);
