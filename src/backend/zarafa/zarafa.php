@@ -103,6 +103,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
         $this->changesSinkFolders = array();
         $this->changesSinkStores = array();
         $this->wastebasket = false;
+        $this->session = false;
 
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendZarafa using PHP-MAPI version: %s", phpversion("mapi")));
     }
@@ -165,9 +166,11 @@ class BackendZarafa implements IBackend, ISearchProvider {
                 $this->notifications = false;
             }
 
-            if (mapi_last_hresult())
+            if (mapi_last_hresult()) {
                 ZLog::Write(LOGLEVEL_ERROR, sprintf("ZarafaBackend->Logon(): login failed with error code: 0x%X", mapi_last_hresult()));
-
+                if (mapi_last_hresult() == MAPI_E_NETWORK_ERROR)
+                    throw new HTTPReturnCodeException("Error connecting to ZCP (login)", 503, null, LOGLEVEL_INFO);
+            }
         }
         catch (MAPIException $ex) {
             throw new AuthenticationRequiredException($ex->getDisplayMessage());
@@ -181,6 +184,9 @@ class BackendZarafa implements IBackend, ISearchProvider {
 
         // Get/open default store
         $this->defaultstore = $this->openMessageStore($user);
+
+        if (mapi_last_hresult() == MAPI_E_FAILONEPROVIDER)
+            throw new HTTPReturnCodeException("Error connecting to ZCP (open store)", 503, null, LOGLEVEL_INFO);
 
         if($this->defaultstore === false)
             throw new AuthenticationRequiredException(sprintf("ZarafaBackend->Logon(): User '%s' has no default store", $user));
