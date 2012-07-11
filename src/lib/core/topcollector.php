@@ -89,7 +89,7 @@ class TopCollector extends InterProcessData {
      * @access public
      */
     public function __destruct() {
-        $this->AnnounceInformation("terminated", false, true);
+        $this->AnnounceInformation("OK", false, true);
     }
 
     /**
