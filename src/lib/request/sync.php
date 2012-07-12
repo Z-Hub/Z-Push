@@ -390,11 +390,6 @@ class Sync extends RequestProcessor {
                             else
                                 $message = false;
 
-                            if ($status != SYNC_STATUS_SUCCESS) {
-                                ZLog::Write(LOGLEVEL_WARN, "Ignored incoming change, global status indicates problem.");
-                                continue;
-                            }
-
                             switch($element[EN_TAG]) {
                                 case SYNC_FETCH:
                                     array_push($actiondata["fetchids"], $serverid);
@@ -406,6 +401,8 @@ class Sync extends RequestProcessor {
 
                                     if ($status == SYNC_STATUS_SUCCESS)
                                         $this->importMessage($spa, $actiondata, $element[EN_TAG], $message, $clientid, $serverid);
+                                    else
+                                        ZLog::Write(LOGLEVEL_WARN, "Ignored incoming change, global status indicates problem.");
 
                                     break;
                             }
@@ -969,7 +966,7 @@ class Sync extends RequestProcessor {
                 throw new StatusException(sprintf("Sync->getImporter(): no importer for folder id '%s'", $spa->GetFolderId()), SYNC_STATUS_FOLDERHIERARCHYCHANGED);
 
             // if there is a valid state obtained after importing changes in a previous loop, we use that state
-            if ($actiondata["failstate"] && isset($actiondata["failstate"]["failedsyncstate"])) {
+            if (isset($actiondata["failstate"]) && isset($actiondata["failstate"]["failedsyncstate"])) {
                 $this->importer->Config($actiondata["failstate"]["failedsyncstate"], $spa->GetConflict());
             }
             else
