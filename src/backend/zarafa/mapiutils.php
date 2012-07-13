@@ -245,6 +245,11 @@ class MAPIUtils {
      */
     public static function readPropStream($message, $prop) {
         $stream = mapi_openproperty($message, $prop, IID_IStream, 0, 0);
+        $ret = mapi_last_hresult();
+        if ($ret == MAPI_E_NOT_FOUND) {
+            ZLog::Write(LOGLEVEL_WARN, sprintf("MAPIUtils->readPropStream: property 0x%s not found. It is either empty or not set. It will be ignored.", str_pad(dechex($prop), 8, 0, STR_PAD_LEFT)));
+            return "";
+        }
         $data = "";
         $string = "";
         while(1) {
