@@ -113,7 +113,7 @@ class MeetingResponse extends RequestProcessor {
                     self::$encoder->content($status);
                 self::$encoder->endTag();
 
-                if($status == SYNC_MEETRESPSTATUS_SUCCESS) {
+                if($status == SYNC_MEETRESPSTATUS_SUCCESS && !empty($calendarid)) {
                     self::$encoder->startTag(SYNC_MEETINGRESPONSE_CALENDARID);
                         self::$encoder->content($calendarid);
                     self::$encoder->endTag();

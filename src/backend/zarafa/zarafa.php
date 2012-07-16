@@ -852,6 +852,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
         // F/B will be updated on logoff
 
         // We have to return the ID of the new calendar item, so do that here
+        $calendarid = "";
         if (isset($entryid)) {
             $newitem = mapi_msgstore_openentry($this->store, $entryid);
             $newprops = mapi_getprops($newitem, array(PR_SOURCE_KEY));
@@ -860,7 +861,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
 
         // on recurring items, the MeetingRequest class responds with a wrong entryid
         if ($requestid == $calendarid) {
-               ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendZarafa->MeetingResponse('%s','%s', '%s'): returned calender id is the same as the requestid - re-searching", $requestid, $folderid, $response));
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendZarafa->MeetingResponse('%s','%s', '%s'): returned calender id is the same as the requestid - re-searching", $requestid, $folderid, $response));
 
             $props = MAPIMapping::GetMeetingRequestProperties();
             $props = getPropIdsFromStrings($this->store, $props);
@@ -876,10 +877,10 @@ class BackendZarafa implements IBackend, ISearchProvider {
                $calendarid = bin2hex($newprops[PR_SOURCE_KEY]);
                ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendZarafa->MeetingResponse('%s','%s', '%s'): found other calendar entryid", $requestid, $folderid, $response));
             }
-        }
 
-        if ($calendarid == "" || $requestid == $calendarid)
-            throw new StatusException(sprintf("BackendZarafa->MeetingResponse('%s','%s', '%s'): Error finding the accepted meeting response in the calendar", $requestid, $folderid, $response), SYNC_MEETRESPSTATUS_INVALIDMEETREQ);
+            if ($requestid == $calendarid)
+                throw new StatusException(sprintf("BackendZarafa->MeetingResponse('%s','%s', '%s'): Error finding the accepted meeting response in the calendar", $requestid, $folderid, $response), SYNC_MEETRESPSTATUS_INVALIDMEETREQ);
+        }
 
         // delete meeting request from Inbox
         $folderentryid = mapi_msgstore_entryidfromsourcekey($this->store, hex2bin($folderid));
