@@ -2214,7 +2214,7 @@ class MAPIProvider {
 
             }
             // set the preview or windows phones won't show the preview of an email
-            if (Request::GetProtocolVersion() >= 14.0) {
+            if (Request::GetProtocolVersion() >= 14.0 && $bpo->GetPreview()) {
                 $message->asbody->preview = Utils::Utf8_truncate(MAPIUtils::readPropStream($mapimessage, PR_BODY), $bpo->GetPreview());
             }
         }
