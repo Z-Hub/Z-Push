@@ -72,7 +72,11 @@ class Sync extends RequestProcessor {
             }
 
             // Synching specified folders
-            if(self::$decoder->getElementStartTag(SYNC_FOLDERS)) {
+            // Android still sends heartbeat sync even if all syncfolders are disabled.
+            // Check if Folders tag is empty (<Folders/>) and only sync if there are
+            // some folders in the request. See ZP-172
+            $startTag = self::$decoder->getElementStartTag(SYNC_FOLDERS);
+            if(isset($startTag[EN_FLAGS]) && $startTag[EN_FLAGS]) {
                 while(self::$decoder->getElementStartTag(SYNC_FOLDER)) {
                     $actiondata = array();
                     $actiondata["requested"] = true;
