@@ -316,6 +316,9 @@ class Utils {
      * @return string truncated string
      */
     static public function Utf8_truncate($string, $length) {
+        // make sure length is always an interger
+        $length = (int)$length;
+
         if (strlen($string) <= $length)
             return $string;
 
