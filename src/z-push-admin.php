@@ -194,9 +194,9 @@ class ZPushAdminCLI {
 
         // get 'user'
         if (isset($options['u']) && !empty($options['u']))
-            self::$user = trim($options['u']);
+            self::$user = strtolower(trim($options['u']));
         else if (isset($options['user']) && !empty($options['user']))
-            self::$user = trim($options['user']);
+            self::$user = strtolower(trim($options['user']));
 
         // get 'device'
         if (isset($options['d']) && !empty($options['d']))

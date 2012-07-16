@@ -113,7 +113,7 @@ class Request {
 
         // getUser is unfiltered, as everything is allowed.. even "/", "\" or ".."
         if(isset($_GET["User"]))
-            self::$getUser = $_GET["User"];
+            self::$getUser = strtolower($_GET["User"]);
         if(isset($_GET["DeviceId"]))
             self::$devid = self::filterEvilInput($_GET["DeviceId"], self::WORDCHAR_ONLY);
         if(isset($_GET["DeviceType"]))
@@ -140,7 +140,7 @@ class Request {
                 self::$command = Utils::GetCommandFromCode($query['Command']);
 
             if (!isset(self::$getUser) && isset($query[self::COMMANDPARAM_USER]))
-                self::$getUser = $query[self::COMMANDPARAM_USER];
+                self::$getUser = strtolower($query[self::COMMANDPARAM_USER]);
 
             if (!isset(self::$devid) && isset($query['DevID']))
                 self::$devid = self::filterEvilInput($query['DevID'], self::WORDCHAR_ONLY);
@@ -169,7 +169,7 @@ class Request {
 
         // in base64 encoded query string user is not necessarily set
         if (!isset(self::$getUser) && isset($_SERVER['PHP_AUTH_USER']))
-            list(self::$getUser,) = Utils::SplitDomainUser($_SERVER['PHP_AUTH_USER']);
+            list(self::$getUser,) = strtolower(Utils::SplitDomainUser($_SERVER['PHP_AUTH_USER']));
     }
 
     /**
