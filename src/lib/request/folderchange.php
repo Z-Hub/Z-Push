@@ -132,7 +132,7 @@ class FolderChange extends RequestProcessor {
 
             // any additional folders can not be modified!
             if ($serverid !== false && ZPush::GetAdditionalSyncFolderStore($serverid))
-                throw new StatusException("HandleFolderChange() can not change additional folders which are configured", SYNC_FSSTATUS_UNKNOWNERROR);
+                throw new StatusException("HandleFolderChange() can not change additional folders which are configured", SYNC_FSSTATUS_SYSTEMFOLDER);
 
             // switch user store if this this happens inside an additional folder
             // if this is an additional folder the backend has to be setup correctly
