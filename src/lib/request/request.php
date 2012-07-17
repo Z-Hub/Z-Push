@@ -169,7 +169,7 @@ class Request {
 
         // in base64 encoded query string user is not necessarily set
         if (!isset(self::$getUser) && isset($_SERVER['PHP_AUTH_USER']))
-            list(self::$getUser,) = strtolower(Utils::SplitDomainUser($_SERVER['PHP_AUTH_USER']));
+            list(self::$getUser,) = Utils::SplitDomainUser(strtolower($_SERVER['PHP_AUTH_USER']));
     }
 
     /**
