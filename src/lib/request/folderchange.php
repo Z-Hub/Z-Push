@@ -240,7 +240,8 @@ class FolderChange extends RequestProcessor {
         self::$topCollector->AnnounceInformation(sprintf("Operation status %d", $status), true);
 
         // Save the sync state for the next time
-        self::$deviceManager->GetStateManager()->SetSyncState($newsynckey, $importer->GetState());
+        if (isset($importer))
+            self::$deviceManager->GetStateManager()->SetSyncState($newsynckey, $importer->GetState());
 
         return true;
     }
