@@ -110,7 +110,7 @@ abstract class RequestProcessor {
         if (!ZPush::CommandNeedsPlainInput(Request::GetCommandCode()))
             self::$decoder = new WBXMLDecoder(Request::GetInputStream());
 
-        self::$encoder = new WBXMLEncoder(Request::GetOutputStream());
+        self::$encoder = new WBXMLEncoder(Request::GetOutputStream(), Request::GetGETAcceptMultipart());
     }
 
     /**

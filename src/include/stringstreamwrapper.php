@@ -112,6 +112,19 @@ class StringStreamWrapper {
         return ($this->position >= $this->stringlength);
     }
 
+    /**
+    * Retrieves information about a stream
+    *
+    * @access public
+    * @return array
+    */
+    public function stream_stat() {
+        return array(
+            7               => $this->stringlength,
+            'size'          => $this->stringlength,
+        );
+    }
+
    /**
      * Instantiates a StringStreamWrapper
      *

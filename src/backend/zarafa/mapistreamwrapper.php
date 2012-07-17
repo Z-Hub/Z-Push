@@ -123,6 +123,19 @@ class MAPIStreamWrapper {
         return ($this->position >= $this->streamlength);
     }
 
+    /**
+     * Retrieves information about a stream
+     *
+     * @access public
+     * @return array
+     */
+    public function stream_stat() {
+        return array(
+            7               => $this->streamlength,
+            'size'          => $this->streamlength,
+        );
+    }
+
    /**
      * Instantiates a MAPIStreamWrapper
      *

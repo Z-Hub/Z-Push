@@ -61,6 +61,7 @@ class Streamer implements Serializable {
     const STREAMER_TYPE_NO_CONTAINER = 7;
     const STREAMER_TYPE_COMMA_SEPARATED = 8;
     const STREAMER_TYPE_SEMICOLON_SEPARATED = 9;
+    const STREAMER_TYPE_MULTIPART = 10;
 
     protected $mapping;
     public $flags;
@@ -277,6 +278,14 @@ class Streamer implements Serializable {
                 }
                 else {
                     if(isset($map[self::STREAMER_TYPE]) && $map[self::STREAMER_TYPE] == self::STREAMER_TYPE_IGNORE) {
+                        continue;
+                    }
+
+                    if ($encoder->getMultipart() && isset($map[self::STREAMER_PROP]) && $map[self::STREAMER_PROP] == self::STREAMER_TYPE_MULTIPART) {
+                        $encoder->addBodypartStream($this->$map[self::STREAMER_VAR]);
+                        $encoder->startTag(SYNC_ITEMOPERATIONS_PART);
+                        $encoder->content(count($encoder->getBodypartsCount()));
+                        $encoder->endTag();
                         continue;
                     }
 

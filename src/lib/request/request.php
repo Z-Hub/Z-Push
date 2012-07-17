@@ -94,6 +94,7 @@ class Request {
     static private $longId; //TODO
     static private $occurence; //TODO
     static private $saveInSent;
+    static private $acceptMultipart;
 
 
     /**
@@ -163,8 +164,11 @@ class Request {
             if (isset($query[self::COMMANDPARAM_ITEMID]))
                 self::$itemId = self::filterEvilInput($query[self::COMMANDPARAM_ITEMID], self::HEX_ONLY);
 
-            if (isset($query[self::COMMANDPARAM_OPTIONS]) && ($query[self::COMMANDPARAM_OPTIONS] & 1))
+            if (isset($query[self::COMMANDPARAM_OPTIONS]) && (ord($query[self::COMMANDPARAM_OPTIONS]) & self::COMMANDPARAM_OPTIONS_SAVEINSENT))
                 self::$saveInSent = true;
+
+            if (isset($query[self::COMMANDPARAM_OPTIONS]) && (ord($query[self::COMMANDPARAM_OPTIONS]) & self::COMMANDPARAM_OPTIONS_ACCEPTMULTIPART))
+                self::$acceptMultipart = true;
         }
 
         // in base64 encoded query string user is not necessarily set
@@ -201,6 +205,11 @@ class Request {
             if (isset(self::$asProtocolVersion))
                 self::$headers["ms-asprotocolversion"] = self::$asProtocolVersion;
         }
+
+        if (!isset(self::$acceptMultipart) && isset(self::$headers["ms-asacceptmultipart"]) && strtoupper(self::$headers["ms-asacceptmultipart"]) == "T") {
+            self::$acceptMultipart = true;
+        }
+
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("Request::ProcessHeaders() ASVersion: %s", self::$asProtocolVersion));
     }
 
@@ -314,6 +323,19 @@ class Request {
             return self::$saveInSent;
         else
             return true;
+    }
+
+    /**
+    * Returns if the AcceptMultipart parameter of the querystring is set
+    *
+    * @access public
+    * @return boolean
+    */
+    static public function GetGETAcceptMultipart() {
+        if (isset(self::$acceptMultipart))
+            return self::$acceptMultipart;
+        else
+            return false;
     }
 
     /**

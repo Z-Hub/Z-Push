@@ -59,7 +59,10 @@ class WBXMLEncoder extends WBXMLDefs {
 
     private $_stack;
 
-    public function WBXMLEncoder($output) {
+    private $multipart; // the content is multipart
+    private $bodyparts;
+
+    public function WBXMLEncoder($output, $multipart = false) {
         // make sure WBXML_DEBUG is defined. It should be at this point
         if (!defined('WBXML_DEBUG')) define('WBXML_DEBUG', false);
 
@@ -80,6 +83,8 @@ class WBXMLEncoder extends WBXMLDefs {
             }
         }
         $this->_stack = array();
+        $this->multipart = $multipart;
+        $this->bodyparts = array();
     }
 
     /**
@@ -89,7 +94,12 @@ class WBXMLEncoder extends WBXMLDefs {
      * @return
      */
     public function startWBXML() {
-        header("Content-Type: application/vnd.ms-sync.wbxml");
+        if ($this->multipart) {
+            header("Content-Type: application/vnd.ms-sync.multipart");
+        }
+        else {
+            header("Content-Type: application/vnd.ms-sync.wbxml");
+        }
 
         $this->outByte(0x03); // WBXML 1.3
         $this->outMBUInt(0x01); // Public ID 1
@@ -138,6 +148,10 @@ class WBXMLEncoder extends WBXMLDefs {
         // Only output end tags for items that have had a start tag sent
         if($stackelem['sent']) {
             $this->_endTag();
+
+            if(count($this->_stack) == 0 && $this->multipart == true) {
+                $this->processMultipart();
+            }
         }
     }
 
@@ -158,6 +172,39 @@ class WBXMLEncoder extends WBXMLDefs {
             return;
         $this->_outputStack();
         $this->_content($content);
+    }
+
+    /**
+     * Gets the value of multipart
+     *
+     * @access public
+     * @return boolean
+     */
+    public function getMultipart() {
+        return $this->multipart;
+    }
+
+    /**
+     * Adds a bodypart
+     *
+     * @param Stream $bp
+     *
+     * @access public
+     * @return void
+     */
+    public function addBodypartStream($bp) {
+        if ($this->multipart)
+            $this->bodyparts[] = $bp;
+    }
+
+    /**
+     * Gets the number of bodyparts
+     *
+     * @access public
+     * @return int
+     */
+    public function getBodypartsCount() {
+        return count($this->bodyparts);
     }
 
     /**----------------------------------------------------------------------------------------------------------
@@ -416,6 +463,38 @@ class WBXMLEncoder extends WBXMLDefs {
 
         $spaces = str_repeat(" ", count($this->logStack));
         ZLog::Write(LOGLEVEL_WBXML,"O " . $spaces . $content);
+    }
+
+    /**
+     * Processes the multipart response
+     *
+     * @access private
+     * @return void
+     */
+    private function processMultipart() {
+        $len = ob_get_length();
+        $buffer = ob_get_clean();
+        $nrBodyparts = $this->getBodypartsCount();
+        $blockstart = (($nrBodyparts + 1) * 2) * 4 + 4;
+
+        $data = pack("iii", ($nrBodyparts + 1), $blockstart, $len);
+
+        ob_start(null, 1048576);
+
+        foreach ($this->bodyparts as $bp) {
+            $blockstart = $blockstart + $len;
+            $len = fstat($bp);
+            $len = (isset($len['size'])) ? $len['size'] : 0;
+            $data .= pack("ii", $blockstart, $len);
+        }
+
+        fwrite($this->_out, $data);
+        fwrite($this->_out, $buffer);
+        foreach($this->bodyparts as $bp) {
+            while (!feof($bp)) {
+                fwrite($this->_out, fread($bp, 4096));
+            }
+        }
     }
 }
 

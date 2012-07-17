@@ -52,7 +52,8 @@ class SyncItemOperationsAttachment extends SyncObject {
         $mapping = array(
             SYNC_AIRSYNCBASE_CONTENTTYPE                        => array (  self::STREAMER_VAR      => "contenttype"),
             SYNC_ITEMOPERATIONS_DATA                            => array (  self::STREAMER_VAR      => "data",
-                                                                            self::STREAMER_TYPE     => self::STREAMER_TYPE_STREAM),
+                                                                            self::STREAMER_TYPE     => self::STREAMER_TYPE_STREAM,
+                                                                            self::STREAMER_PROP     => self::STREAMER_TYPE_MULTIPART),
         );
 
         parent::SyncObject($mapping);
