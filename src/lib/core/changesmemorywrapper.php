@@ -196,6 +196,14 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
         // if the destinationImporter is set, then this folder should be processed by another importer
         // instead of being loaded in memory.
         if (isset($this->destinationImporter)) {
+            // normally the $folder->type is not set, but we need this value to check if the change operation is permitted
+            // e.g. system folders can normally not be changed - set the type from cache and let the destinationImporter decide
+            if (!isset($folder->type)) {
+                $cacheFolder = $this->GetFolder($folder->serverid);
+                $folder->type = $cacheFolder->type;
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("ChangesMemoryWrapper->ImportFolderChange(): Set foldertype for folder '%s' from cache as it was not sent: '%s'", $folder->displayname, $folder->type));
+            }
+
             $ret = $this->destinationImporter->ImportFolderChange($folder);
 
             // if the operation was sucessfull, update the HierarchyCache
@@ -216,7 +224,7 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
                 // stay the same. These changes will be dropped and are not sent!
                 $cacheFolder = $this->GetFolder($folder->serverid);
                 if ($folder->equals($this->GetFolder($folder->serverid))) {
-                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("Change for folder '%s' will not be sent as modification is not relevant.", $folder->displayname));
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("ChangesMemoryWrapper->ImportFolderChange(): Change for folder '%s' will not be sent as modification is not relevant.", $folder->displayname));
                     return false;
                 }
 
