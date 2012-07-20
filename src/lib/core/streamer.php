@@ -309,8 +309,8 @@ class Streamer implements Serializable {
                     }
                     else if(isset($map[self::STREAMER_TYPE]) && $map[self::STREAMER_TYPE] == self::STREAMER_TYPE_STREAM) {
                         //encode stream with base64
-                        //TODO stream chunked without loading the complete attachment into memory
                         $stream = $this->$map[self::STREAMER_VAR];
+                        $paddingfilter = stream_filter_append($stream, 'padding.3');
                         $base64filter = stream_filter_append($stream, 'convert.base64-encode');
                         $d = "";
                         while (!feof($stream)) {
@@ -318,6 +318,7 @@ class Streamer implements Serializable {
                         }
                         $encoder->content($d);
                         stream_filter_remove($base64filter);
+                        stream_filter_remove($paddingfilter);
                     }
                     // implode comma or semicolon arrays into a string
                     else if(isset($map[self::STREAMER_TYPE]) && is_array($this->$map[self::STREAMER_VAR]) &&

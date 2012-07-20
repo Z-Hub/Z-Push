@@ -77,10 +77,6 @@ class MAPIStreamWrapper {
         $stat = mapi_stream_stat($this->mapistream);
         $this->streamlength = $stat["cb"];
 
-        // pad the stream to the multiple of 4
-        if ($this->streamlength % 4 != 0 )
-            $this->streampad = $this->streamlength + 4 - ($this->streamlength % 4);
-
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("MAPIStreamWrapper::stream_open(): initialized mapistream: %s streamlength: %d", $this->mapistream, $this->streamlength));
 
         return true;
@@ -95,11 +91,9 @@ class MAPIStreamWrapper {
      * @return string
      */
     public function stream_read($len) {
+        $len = ($this->position + $len > $this->streamlength) ? ($this->streamlength - $this->position) : $len;
         $data = mapi_stream_read($this->mapistream, $len);
         $this->position += strlen($data);
-        if ($this->position == $this->streamlength && $this->streampad != 0 )
-            $data = str_pad($data, $this->streampad, 0x0);
-
         return $data;
     }
 
