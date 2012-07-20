@@ -562,7 +562,15 @@ class WBXMLDecoder extends WBXMLDefs {
         $l = 0;
         while (1) {
             $l = (($len - strlen($d)) > 8192) ? 8192 : ($len - strlen($d));
-            if ($l > 0) $d .= fread($this->in, $l);
+            if ($l > 0) {
+                $data = fread($this->in, $l);
+
+                // Stream ends prematurely on instable connections and big mails
+                if ($data === false || feof($this->in))
+                    throw new HTTPReturnCodeException(sprintf("WBXMLDecoder->getOpaque() connection unavailable while trying to read %d bytes from stream. Aborting after %d bytes read.", $len, strlen($d)), HTTP_CODE_500, null, LOGLEVEL_WARN);
+                else
+                    $d .= $data;
+            }
             if (strlen($d) >= $len) break;
         }
         return $d;
