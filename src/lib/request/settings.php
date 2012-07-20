@@ -196,11 +196,9 @@ class Settings extends RequestProcessor {
             if (isset($oofSet)) {
                 $oofSet = self::$backend->Settings($oofSet);
                 self::$encoder->startTag(SYNC_SETTINGS_OOF);
-                    self::$encoder->startTag(SYNC_SETTINGS_SET);
-                        self::$encoder->startTag(SYNC_SETTINGS_STATUS);
-                        self::$encoder->content($oofSet->Status);
-                        self::$encoder->endTag(); //SYNC_SETTINGS_STATUS
-                    self::$encoder->endTag(); //SYNC_SETTINGS_SET
+                    self::$encoder->startTag(SYNC_SETTINGS_STATUS);
+                    self::$encoder->content($oofSet->Status);
+                    self::$encoder->endTag(); //SYNC_SETTINGS_STATUS
                 self::$encoder->endTag(); //SYNC_SETTINGS_OOF
             }
 
