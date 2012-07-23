@@ -160,7 +160,7 @@ class ItemOperations extends RequestProcessor {
                     if(self::$decoder->getElementStartTag(SYNC_MIMESUPPORT)) {
                         $collection["cpo"]->SetMimeSupport(self::$decoder->getElementContent());
                         if(!self::$decoder->getElementEndTag())
-                        return false;
+                            return false;
                     }
 
                     //break if it reached the endtag
@@ -194,6 +194,9 @@ class ItemOperations extends RequestProcessor {
 
         //TODO EmptyFolderContents
         //TODO move
+
+        if(!self::$decoder->getElementEndTag())
+            return false; //SYNC_ITEMOPERATIONS_FETCH or SYNC_ITEMOPERATIONS_EMPTYFOLDERCONTENTS or SYNC_ITEMOPERATIONS_MOVE
 
         if(!self::$decoder->getElementEndTag())
             return false;//SYNC_ITEMOPERATIONS_ITEMOPERATIONS
@@ -281,7 +284,7 @@ class ItemOperations extends RequestProcessor {
                 self::$topCollector->AnnounceInformation("Emptying folder");
 
                 // send request to backend
-                self::$backend-> EmptyFolder($folderid, $deletesubfolders);
+                self::$backend->EmptyFolder($folderid, $deletesubfolders);
             }
             catch (StatusException $stex) {
                $status = $stex->getCode();
