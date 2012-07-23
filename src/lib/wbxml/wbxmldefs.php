@@ -318,6 +318,7 @@ class WBXMLDefs {
                         0x38 => "IsLeapMonth", //14.0
                         0x39 => "FirstDayOfWeek", //post 14.0 20100501
                         0x3a => "OnlineMeetingInternalLink", //post 14.0 20100501
+                        0x3b => "OnlineMeetingExternalLink", //post 14.0 20120630
                     ),
                     5 => array (
                         0x05 => "Moves",

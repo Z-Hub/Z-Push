@@ -275,6 +275,9 @@ define("SYNC_POOMCAL_APPOINTMENTREPLYTIME","POOMCAL:AppointmentReplyTime"); //14
 define("SYNC_POOMCAL_RESPONSETYPE","POOMCAL:ResponseType"); //14.0
 define("SYNC_POOMCAL_CALENDARTYPE","POOMCAL:CalendarType"); //14.0
 define("SYNC_POOMCAL_ISLEAPMONTH","POOMCAL:IsLeapMonth"); //14.0
+define("SYNC_POOMCAL_FIRSTDAYOFWEEK","POOMCAL:FirstDayOfWeek"); //post 14.0
+define("SYNC_POOMCAL_ONLINEMEETINGINTERNALLINK","POOMCAL:OnlineMeetingInternalLink"); //post 14.0
+define("SYNC_POOMCAL_ONLINEMEETINGEXTERNALLINK","POOMCAL:OnlineMeetingExternalLink"); //post 14.0
 
 // Move
 define("SYNC_MOVE_MOVES","Move:Moves");
