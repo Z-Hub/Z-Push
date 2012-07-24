@@ -48,7 +48,6 @@ class MAPIStreamWrapper {
     private $mapistream;
     private $position;
     private $streamlength;
-    private $streampad = 0; // pad stream with 0 string for stream converter (streamlength must be multiple of 4)
 
     /**
      * Opens the stream
