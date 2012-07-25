@@ -2179,6 +2179,7 @@ class MAPIProvider {
                 unset($message->body, $message->bodytruncated);
                 return true;
             }
+            ZLog::Write(LOGLEVEL_WARN, sprintf("Your request (%d bytes) exceeds the value for inline attachments (%d bytes). You can change the value of MAX_EMBEDDED_SIZE in config.php", $mstreamstat['cb'], MAX_EMBEDDED_SIZE));
         }
         return false;
     }
