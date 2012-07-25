@@ -638,6 +638,96 @@ class Utils {
         else
             return @strftime("%d/%m/%Y %H:%M:%S", $timestamp);
     }
+
+
+   /**
+    * Get charset name from a codepage
+    *
+    * @see http://msdn.microsoft.com/en-us/library/dd317756(VS.85).aspx
+    *
+    * Table taken from common/codepage.cpp
+    *
+    * @param integer codepage Codepage
+    *
+    * @access public
+    * @return string iconv-compatible charset name
+    */
+    public static function GetCodepageCharset($codepage) {
+        $codepages = array(
+            20106 => "DIN_66003",
+            20108 => "NS_4551-1",
+            20107 => "SEN_850200_B",
+            950 => "big5",
+            50221 => "csISO2022JP",
+            51932 => "euc-jp",
+            51936 => "euc-cn",
+            51949 => "euc-kr",
+            949 => "euc-kr",
+            936 => "gb18030",
+            52936 => "csgb2312",
+            852 => "ibm852",
+            866 => "ibm866",
+            50220 => "iso-2022-jp",
+            50222 => "iso-2022-jp",
+            50225 => "iso-2022-kr",
+            1252 => "windows-1252",
+            28591 => "iso-8859-1",
+            28592 => "iso-8859-2",
+            28593 => "iso-8859-3",
+            28594 => "iso-8859-4",
+            28595 => "iso-8859-5",
+            28596 => "iso-8859-6",
+            28597 => "iso-8859-7",
+            28598 => "iso-8859-8",
+            28599 => "iso-8859-9",
+            28603 => "iso-8859-13",
+            28605 => "iso-8859-15",
+            20866 => "koi8-r",
+            21866 => "koi8-u",
+            932 => "shift-jis",
+            1200 => "unicode",
+            1201 => "unicodebig",
+            65000 => "utf-7",
+            65001 => "utf-8",
+            1250 => "windows-1250",
+            1251 => "windows-1251",
+            1253 => "windows-1253",
+            1254 => "windows-1254",
+            1255 => "windows-1255",
+            1256 => "windows-1256",
+            1257 => "windows-1257",
+            1258 => "windows-1258",
+            874 => "windows-874",
+            20127 => "us-ascii"
+        );
+
+        if(isset($codepages[$codepage])) {
+            return $codepages[$codepage];
+        } else {
+            // Defaulting to iso-8859-15 since it is more likely for someone to make a mistake in the codepage
+            // when using west-european charsets then when using other charsets since utf-8 is binary compatible
+            // with the bottom 7 bits of west-european
+            return "iso-8859-15";
+        }
+    }
+
+    /**
+     * Converts a string encoded with codepage into an UTF-8 string
+     *
+     * @param int $codepage
+     * @param string $string
+     *
+     * @access public
+     * @return string
+     */
+    public static function ConvertCodepageStringToUtf8($codepage, $string) {
+        if (function_exists("iconv")) {
+            $charset = self::GetCodepageCharset($codepage);
+
+            return iconv($charset, "utf-8", $string);
+        }
+        return $string;
+    }
 }
 
 

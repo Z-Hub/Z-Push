@@ -2131,8 +2131,8 @@ class MAPIProvider {
             $message->asbody->type = $bpReturnType;
             if ($bpReturnType == SYNC_BODYPREFERENCE_RTF)
                 $message->asbody->data = base64_encode($body);
-            elseif (isset($message->internetcpid) && $message->internetcpid == INTERNET_CPID_WINDOWS1252 && $bpReturnType == SYNC_BODYPREFERENCE_HTML)
-                $message->asbody->data = windows1252_to_utf8($body, "", true);
+            elseif (isset($message->internetcpid) && $bpReturnType == SYNC_BODYPREFERENCE_HTML)
+                $message->asbody->data = Utils::ConvertCodepageStringToUtf8($message->internetcpid, $body);
             else
                 $message->asbody->data = w2u($body);
             $message->asbody->estimatedDataSize = strlen($message->asbody->data);
