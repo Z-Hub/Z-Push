@@ -412,7 +412,7 @@ class MAPIProvider {
                 $exceptionatt = $recurrence->getExceptionAttachment($change["basedate"]);
                 if($exceptionatt) {
                     $exceptionobj = mapi_attach_openobj($exceptionatt, 0);
-                    $exception->body = mapi_openproperty($exceptionobj, PR_BODY);
+                    $this->setMessageBodyForType($exceptionobj, SYNC_BODYPREFERENCE_PLAIN, $exception);
                 }
             }
             if(isset($change["subject"]))
