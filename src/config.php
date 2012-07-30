@@ -53,8 +53,8 @@
     // Try to set unlimited timeout
     define('SCRIPT_TIMEOUT', 0);
 
-    //Max size of attachments to display inline. Default is 1MB
-    define('MAX_EMBEDDED_SIZE', 1048576);
+    //Max size of attachments to display inline. Default is 2 MB
+    define('MAX_EMBEDDED_SIZE', 2097152);
 
 
 /**********************************************************************************
