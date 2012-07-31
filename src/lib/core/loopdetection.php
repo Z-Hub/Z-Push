@@ -64,7 +64,7 @@ class LoopDetection extends InterProcessData {
      */
     public function LoopDetection() {
         // initialize super parameters
-        $this->allocate = 204800; // 200 KB
+        $this->allocate = 1024000; // 1 MB
         $this->type = 1337;
         parent::__construct();
 

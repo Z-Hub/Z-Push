@@ -50,7 +50,7 @@ class PingTracking extends InterProcessData {
      */
     public function PingTracking() {
         // initialize super parameters
-        $this->allocate = 204800; // 200 KB
+        $this->allocate = 512000; // 500 KB
         $this->type = 2;
         parent::__construct();
 
