@@ -231,10 +231,11 @@ class Sync extends RequestProcessor {
 
                     // Do not truncate by default
                     $spa->SetTruncation(SYNC_TRUNCATION_ALL);
-                    // set to synchronize all changes. The mobile could overwrite this value
-                    $spa->SetFilterType(SYNC_FILTERTYPE_ALL);
 
                     while(self::$decoder->getElementStartTag(SYNC_OPTIONS)) {
+                        // set to synchronize all changes. The mobile could overwrite this value
+                        $spa->SetFilterType(SYNC_FILTERTYPE_ALL);
+
                         while(1) {
                             if(self::$decoder->getElementStartTag(SYNC_FOLDERTYPE)) {
                                 $foldertype = self::$decoder->getElementContent();
