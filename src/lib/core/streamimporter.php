@@ -112,12 +112,8 @@ class ImportChangesStream implements IImportChanges {
         else {
             // on update of an SyncEmail we only export the flags
             if($message instanceof SyncMail && isset($message->flag) && $message->flag instanceof SyncMailFlags) {
-                if (Utils::CheckMapiExtVersion('6.40')) {
-                    ZLog::Write(LOGLEVEL_DEBUG, "ImportChangesStream->ImportMessageChange(): canceled and switched to ImportMessageReadFlag() to support ZCP 6.40 read flag updates. See ZP-183 for details.");
-                    $this->ImportMessageReadFlag($id, $message->read);
-                    return true;
-                }
                 $newmessage = new SyncMail();
+                $newmessage->read = $message->read;
                 $newmessage->flag = $message->flag;
                 $message = $newmessage;
                 unset($newmessage);
