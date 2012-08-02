@@ -182,7 +182,7 @@ class ZLog {
         if (!isset(self::$devid))
             self::$devid = '';
 
-        return Utils::GetFormattedTime() ." ". self::$pidstr . self::$user . self::getLogLevelString($loglevel, (LOGLEVEL > LOGLEVEL_INFO)) ." ". self::$devid;
+        return Utils::GetFormattedTime() ." ". self::$pidstr . self::getLogLevelString($loglevel, (LOGLEVEL > LOGLEVEL_INFO)) ." ". self::$user . self::$devid;
     }
 
     /**
