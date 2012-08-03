@@ -1025,7 +1025,7 @@ class Sync extends RequestProcessor {
             }
 
             // message was REMOVED before, do NOT attemp to remove it again
-            if ($todo == SYNC_REMOVE && $actiondata["failstate"]["removeids"][$serverid]) {
+            if ($todo == SYNC_REMOVE && isset($actiondata["failstate"]["removeids"][$serverid])) {
                 $ignoreMessage = true;
 
                 // make sure no messages are sent back
@@ -1041,6 +1041,7 @@ class Sync extends RequestProcessor {
         if (!$ignoreMessage) {
             switch($todo) {
                 case SYNC_MODIFY:
+                    self::$topCollector->AnnounceInformation("Saving modified message");
                     try {
                         $actiondata["modifyids"][] = $serverid;
 
@@ -1072,6 +1073,7 @@ class Sync extends RequestProcessor {
 
                     break;
                 case SYNC_ADD:
+                    self::$topCollector->AnnounceInformation("Creating new message from mobile");
                     try {
                         // check incoming message without logging WARN messages about errors
                         if (!($message instanceof SyncObject) || !$message->Check(true)) {
@@ -1089,6 +1091,7 @@ class Sync extends RequestProcessor {
                     }
                     break;
                 case SYNC_REMOVE:
+                    self::$topCollector->AnnounceInformation("Deleting message removed on mobile");
                     try {
                         $actiondata["removeids"][] = $serverid;
                         // if message deletions are to be moved, move them
