@@ -69,12 +69,10 @@ class padding_filter extends php_user_filter {
      */
     function filter($in, $out, &$consumed, $closing) {
         while ($bucket = stream_bucket_make_writeable($in)) {
-            $padding = $this->padding - ($bucket->datalen % $this->padding);
-            if ($bucket->datalen < 8192 && $padding != $this->padding) {
+            if ($this->padding != 0 && $bucket->datalen < 8192) {
                 $bucket->data .= str_pad($bucket->data, $padding, 0x0);
             }
-
-            $consumed += ($padding != $this->padding) ? ($bucket->datalen + $padding) : $bucket->datalen;
+            $consumed += ($this->padding != 0 && $bucket->datalen < 8192) ? ($bucket->datalen + $padding) : $bucket->datalen;
             stream_bucket_append($out, $bucket);
         }
         return PSFS_PASS_ON;
