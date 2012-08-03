@@ -908,7 +908,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
         $this->changesSink = @mapi_sink_create();
 
         if (! $this->changesSink || mapi_last_hresult()) {
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->HasChangesSink(): sink could not be created with  0x%X", mapi_last_hresult()));
+            ZLog::Write(LOGLEVEL_WARN, sprintf("ZarafaBackend->HasChangesSink(): sink could not be created with  0x%X", mapi_last_hresult()));
             return false;
         }
 
