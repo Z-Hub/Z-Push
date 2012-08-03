@@ -272,6 +272,8 @@ class GetItemEstimate extends RequestProcessor {
                 }
                 self::$encoder->endTag();
             }
+            if (array_sum($changes) == 0)
+                self::$topCollector->AnnounceInformation("No changes found", true);
         }
         self::$encoder->endTag();
 
