@@ -237,7 +237,23 @@ class ImportChangesICS implements IImportChanges {
             $exporter->Config($this->conflictsState);
             $exporter->ConfigContentParameters($this->conflictsContentParameters);
             $exporter->InitializeExporter($this->memChanges);
-            while(is_array($exporter->Synchronize()));
+
+            // monitor how long it takes to export potential conflicts
+            // if this takes "too long" we cancel this operation!
+            $potConflicts = $exporter->GetChangeCount();
+            $started = time();
+            $exported = 0;
+            while(is_array($exporter->Synchronize())) {
+                $exported++;
+
+                // stop if this takes more than 15 seconds and there are more than 5 changes still to be exported
+                // within 20 seconds this should be finished or it will not be performed
+                if ((time() - $started) > 15 && ($potConflicts - $exported) > 5 ) {
+                    ZLog::Write(LOGLEVEL_WARN, sprintf("ImportChangesICS->lazyLoadConflicts(): conflict detection cancelled as operation is too slow. In %d seconds only %d from %d changes were processed.",(time() - $started), $exported, $potConflicts));
+                    $this->conflictsLoaded = true;
+                    return;
+                }
+            }
             $this->conflictsLoaded = true;
         }
     }
