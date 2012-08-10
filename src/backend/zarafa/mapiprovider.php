@@ -218,10 +218,8 @@ class MAPIProvider {
         else
             $message->uid = Utils::GetICalUidFromOLUid($message->uid);
 
-        // Get organizer information if it is a meetingrequest
-        if(isset($messageprops[$appointmentprops["meetingstatus"]]) &&
-            $messageprops[$appointmentprops["meetingstatus"]] > 0 &&
-            isset($messageprops[$appointmentprops["representingentryid"]]) &&
+        // Always set organizer information because some devices do not work properly without it
+        if( isset($messageprops[$appointmentprops["representingentryid"]]) &&
             isset($messageprops[$appointmentprops["representingname"]])) {
 
             $message->organizeremail = w2u($this->getSMTPAddressFromEntryID($messageprops[$appointmentprops["representingentryid"]]));
