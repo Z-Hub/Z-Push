@@ -158,8 +158,6 @@ class WBXMLEncoder extends WBXMLDefs {
                 $this->processMultipart();
             }
         }
-        else
-            ZLog::Write(LOGLEVEL_ERROR, "WBXMLEncoder->endTag() no tag on stack!");
     }
 
     /**
