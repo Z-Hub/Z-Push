@@ -1120,18 +1120,20 @@ class MAPIProvider {
             $props[$appointmentprops["isrecurring"]] = false;
         }
 
+        //always set the PR_SENT_REPRESENTING_* props so that the attendee status update also works with the webaccess
+        if (!isset($props[$appointmentprops["representingentryid"]])) {
+            $props[$appointmentprops["representingname"]] = Request::GetAuthUser();
+            $props[$appointmentprops["sentrepresentingemail"]] = Request::GetAuthUser();
+            $props[$appointmentprops["sentrepresentingaddt"]] = "ZARAFA";
+            $props[$appointmentprops["representingentryid"]] = mapi_createoneoff(Request::GetAuthUser(), "ZARAFA", Request::GetAuthUser());
+        }
+
         // Do attendees
         if(isset($appointment->attendees) && is_array($appointment->attendees)) {
             $recips = array();
 
             //open addresss book for user resolve
             $addrbook = mapi_openaddressbook($this->session);
-            //set the PR_SENT_REPRESENTING_* props so that the attendee status update also works with the webaccess
-            if (!isset($props[$appointmentprops["representingentryid"]])) {
-                $props[$appointmentprops["representingname"]] = Request::GetAuthUser();
-                $props[$appointmentprops["representingentryid"]] = mapi_createoneoff(Request::GetAuthUser(), "ZARAFA", Request::GetAuthUser());
-            }
-
             foreach($appointment->attendees as $attendee) {
                 $recip = array();
                 $recip[PR_EMAIL_ADDRESS] = u2w($attendee->email);

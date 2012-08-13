@@ -319,6 +319,8 @@ class MAPIMapping {
             "sourcekey"             => PR_SOURCE_KEY,
             "representingentryid"   => PR_SENT_REPRESENTING_ENTRYID,
             "representingname"      => PR_SENT_REPRESENTING_NAME,
+            "sentrepresentingemail" => PR_SENT_REPRESENTING_EMAIL_ADDRESS,
+            "sentrepresentingaddt"  => PR_SENT_REPRESENTING_ADDRTYPE,
             "reminderset"           => "PT_BOOLEAN:PSETID_Common:0x8503",
             "remindertime"          => "PT_LONG:PSETID_Common:0x8501",
             "meetingstatus"         => "PT_LONG:PSETID_Appointment:0x8217",
