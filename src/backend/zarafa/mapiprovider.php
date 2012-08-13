@@ -45,6 +45,7 @@ class MAPIProvider {
     private $session;
     private $store;
     private $zRFC822;
+    private $addressbook;
 
     /**
      * Constructor of the MAPI Provider
@@ -1133,7 +1134,7 @@ class MAPIProvider {
             $recips = array();
 
             //open addresss book for user resolve
-            $addrbook = mapi_openaddressbook($this->session);
+            $addrbook = $this->getAddressbook();
             foreach($appointment->attendees as $attendee) {
                 $recip = array();
                 $recip[PR_EMAIL_ADDRESS] = u2w($attendee->email);
@@ -1843,9 +1844,9 @@ class MAPIProvider {
      * @return string
      */
     private function getSMTPAddressFromEntryID($entryid) {
-        $ab = mapi_openaddressbook($this->session);
+        $addrbook = $this->getAddressbook();
 
-        $mailuser = mapi_ab_openentry($ab, $entryid);
+        $mailuser = mapi_ab_openentry($addrbook, $entryid);
         if(!$mailuser)
             return "";
 
@@ -2157,8 +2158,8 @@ class MAPIProvider {
      */
     private function imtoinet($mapimessage, &$message) {
         if (function_exists("mapi_inetmapi_imtoinet")) {
-            $addrBook = mapi_openaddressbook($this->session);
-            $mstream = mapi_inetmapi_imtoinet($this->session, $addrBook, $mapimessage, array());
+            $addrbook = $this->getAddressbook();
+            $mstream = mapi_inetmapi_imtoinet($this->session, $addrbook, $mapimessage, array());
 
             $mstreamstat = mapi_stream_stat($mstream);
             if ($mstreamstat['cb'] < MAX_EMBEDDED_SIZE) {
@@ -2389,6 +2390,25 @@ class MAPIProvider {
             ZLog::Write(LOGLEVEL_INFO, "MAPIProvider->setASbody either type or data are not set. Setting to empty body");
             $props[$appointmentprops["body"]] = "";
         }
+    }
+
+    /**
+     * Get MAPI addressbook object
+     *
+     * @access private
+     * @return MAPIAddressbook object to be used with mapi_ab_* or false on failure
+     */
+    private function getAddressbook() {
+        if (isset($this->addressbook) && $this->addressbook) {
+            return $this->addressbook;
+        }
+        $this->addressbook = mapi_openaddressbook($this->session);
+        $result = mapi_last_hresult();
+        if ($result && $this->addressbook === false) {
+            ZLog::Write(LOGLEVEL_ERROR, sprintf("MAPIProvider->getAddressbook error opening addressbook 0x%X", $result));
+            return false;
+        }
+        return $this->addressbook;
     }
 }
 
