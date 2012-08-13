@@ -223,6 +223,7 @@ class Request {
         // split username & domain if received as one
         if (isset($_SERVER['PHP_AUTH_USER'])) {
             list(self::$authUser, self::$authDomain) = Utils::SplitDomainUser($_SERVER['PHP_AUTH_USER']);
+            self::$authUser = strtolower(self::$authUser);
             self::$authPassword = (isset($_SERVER['PHP_AUTH_PW']))?$_SERVER['PHP_AUTH_PW'] : "";
         }
         // authUser & authPassword are unfiltered!
