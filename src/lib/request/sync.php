@@ -42,6 +42,8 @@
 ************************************************/
 
 class Sync extends RequestProcessor {
+    // Ignored SMS identifier
+    const ZPUSHIGNORESMS = "ZPISMS";
     private $importer;
 
     /**
@@ -364,6 +366,17 @@ class Sync extends RequestProcessor {
                             if ($status == SYNC_STATUS_SUCCESS)
                                 $nchanges++;
 
+                            // Foldertype sent when synching SMS
+                            if(self::$decoder->getElementStartTag(SYNC_FOLDERTYPE)) {
+                                $foldertype = self::$decoder->getElementContent();
+                                ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleSync(): incoming data with foldertype '%s'", $foldertype));
+
+                                if(!self::$decoder->getElementEndTag())
+                                return false;
+                            }
+                            else
+                                $foldertype = false;
+
                             if(self::$decoder->getElementStartTag(SYNC_SERVERENTRYID)) {
                                 $serverid = self::$decoder->getElementContent();
 
@@ -405,7 +418,7 @@ class Sync extends RequestProcessor {
                                         $status = $this->getImporter($sc, $spa, $actiondata);
 
                                     if ($status == SYNC_STATUS_SUCCESS)
-                                        $this->importMessage($spa, $actiondata, $element[EN_TAG], $message, $clientid, $serverid);
+                                        $this->importMessage($spa, $actiondata, $element[EN_TAG], $message, $clientid, $serverid, $foldertype);
                                     else
                                         ZLog::Write(LOGLEVEL_WARN, "Ignored incoming change, global status indicates problem.");
 
@@ -996,12 +1009,13 @@ class Sync extends RequestProcessor {
      * @param SyncObject        $message        SyncObject message to be imported
      * @param string            $clientid       Client message identifier
      * @param string            $serverid       Server message identifier
+     * @param string            $foldertype     On sms sync, this says "SMS", else false
      *
      * @access private
      * @throws StatusException  in case the importer is not available
      * @return -                Message related status are returned in the actiondata.
      */
-    private function importMessage($spa, &$actiondata, $todo, $message, $clientid, $serverid) {
+    private function importMessage($spa, &$actiondata, $todo, $message, $clientid, $serverid, $foldertype) {
         // the importer needs to be available!
         if ($this->importer == false)
             throw StatusException(sprintf("Sync->importMessage(): importer not available", SYNC_STATUS_SERVERERROR));
@@ -1045,8 +1059,14 @@ class Sync extends RequestProcessor {
                     try {
                         $actiondata["modifyids"][] = $serverid;
 
+                        // ignore sms messages
+                        if ($foldertype == "SMS" || stripos($serverid, self::ZPUSHIGNORESMS) !== false) {
+                            ZLog::Write(LOGLEVEL_DEBUG, "SMS sync are not supported. Ignoring message.");
+                            // TODO we should update the SMS
+                            $actiondata["statusids"][$serverid] = SYNC_STATUS_SUCCESS;
+                        }
                         // check incoming message without logging WARN messages about errors
-                        if (!($message instanceof SyncObject) || !$message->Check(true)) {
+                        else if (!($message instanceof SyncObject) || !$message->Check(true)) {
                             $actiondata["statusids"][$serverid] = SYNC_STATUS_CLIENTSERVERCONVERSATIONERROR;
                         }
                         else {
@@ -1075,8 +1095,16 @@ class Sync extends RequestProcessor {
                 case SYNC_ADD:
                     self::$topCollector->AnnounceInformation("Creating new message from mobile");
                     try {
+                        // ignore sms messages
+                        if ($foldertype == "SMS") {
+                            ZLog::Write(LOGLEVEL_DEBUG, "SMS sync are not supported. Ignoring message.");
+                            // TODO we should create the SMS
+                            // return a fake serverid which we can identify later
+                            $actiondata["clientids"][$clientid] = self::ZPUSHIGNORESMS . $clientid;
+                            $actiondata["statusids"][$clientid] = SYNC_STATUS_SUCCESS;
+                        }
                         // check incoming message without logging WARN messages about errors
-                        if (!($message instanceof SyncObject) || !$message->Check(true)) {
+                        else if (!($message instanceof SyncObject) || !$message->Check(true)) {
                             $actiondata["clientids"][$clientid] = false;
                             $actiondata["statusids"][$clientid] = SYNC_STATUS_CLIENTSERVERCONVERSATIONERROR;
                         }
@@ -1094,21 +1122,29 @@ class Sync extends RequestProcessor {
                     self::$topCollector->AnnounceInformation("Deleting message removed on mobile");
                     try {
                         $actiondata["removeids"][] = $serverid;
-                        // if message deletions are to be moved, move them
-                        if($spa->GetDeletesAsMoves()) {
-                            $folderid = self::$backend->GetWasteBasket();
-
-                            if($folderid) {
-                                $this->importer->ImportMessageMove($serverid, $folderid);
-                                $actiondata["statusids"][$serverid] = SYNC_STATUS_SUCCESS;
-                                break;
-                            }
-                            else
-                                ZLog::Write(LOGLEVEL_WARN, "Message should be moved to WasteBasket, but the Backend did not return a destination ID. Message is hard deleted now!");
+                        // ignore sms messages
+                        if ($foldertype == "SMS" || stripos($serverid, self::ZPUSHIGNORESMS) !== false) {
+                            ZLog::Write(LOGLEVEL_DEBUG, "SMS sync are not supported. Ignoring message.");
+                            // TODO we should delete the SMS
+                            $actiondata["statusids"][$serverid] = SYNC_STATUS_SUCCESS;
                         }
+                        else {
+                            // if message deletions are to be moved, move them
+                            if($spa->GetDeletesAsMoves()) {
+                                $folderid = self::$backend->GetWasteBasket();
 
-                        $this->importer->ImportMessageDeletion($serverid);
-                        $actiondata["statusids"][$serverid] = SYNC_STATUS_SUCCESS;
+                                if($folderid) {
+                                    $this->importer->ImportMessageMove($serverid, $folderid);
+                                    $actiondata["statusids"][$serverid] = SYNC_STATUS_SUCCESS;
+                                    break;
+                                }
+                                else
+                                    ZLog::Write(LOGLEVEL_WARN, "Message should be moved to WasteBasket, but the Backend did not return a destination ID. Message is hard deleted now!");
+                            }
+
+                            $this->importer->ImportMessageDeletion($serverid);
+                            $actiondata["statusids"][$serverid] = SYNC_STATUS_SUCCESS;
+                        }
                     }
                     catch (StatusException $stex) {
                        $actiondata["statusids"][$serverid] = $stex->getCode();
