@@ -250,6 +250,10 @@ class MAPIUtils {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("MAPIUtils->readPropStream: property 0x%s not found. It is either empty or not set. It will be ignored.", str_pad(dechex($prop), 8, 0, STR_PAD_LEFT)));
             return "";
         }
+        elseif ($ret) {
+            ZLog::Write(LOGLEVEL_ERROR, "MAPIUtils->readPropStream error opening stream: 0X%X", $ret);
+            return "";
+        }
         $data = "";
         $string = "";
         while(1) {
