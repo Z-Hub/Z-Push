@@ -1207,9 +1207,9 @@ class MAPIProvider {
         $nremails = array();
         $abprovidertype = 0;
 
-        $this->setEmailAddress($contact->email1address, $cname, 1, $props, $contactprops, $nremails, $abprovidertype);
-        $this->setEmailAddress($contact->email2address, $cname, 2, $props, $contactprops, $nremails, $abprovidertype);
-        $this->setEmailAddress($contact->email3address, $cname, 3, $props, $contactprops, $nremails, $abprovidertype);
+        if (isset($contact->email1address)) $this->setEmailAddress($contact->email1address, $cname, 1, $props, $contactprops, $nremails, $abprovidertype);
+        if (isset($contact->email2address)) $this->setEmailAddress($contact->email2address, $cname, 2, $props, $contactprops, $nremails, $abprovidertype);
+        if (isset($contact->email3address)) $this->setEmailAddress($contact->email3address, $cname, 3, $props, $contactprops, $nremails, $abprovidertype);
 
         $props[$contactprops["addressbooklong"]] = $abprovidertype;
         $props[$contactprops["displayname"]] = $props[$contactprops["subject"]] = $cname;
