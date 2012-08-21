@@ -2387,7 +2387,7 @@ class MAPIProvider {
             }
         }
         else {
-            ZLog::Write(LOGLEVEL_INFO, "MAPIProvider->setASbody either type or data are not set. Setting to empty body");
+            ZLog::Write(LOGLEVEL_DEBUG, "MAPIProvider->setASbody either type or data are not set. Setting to empty body");
             $props[$appointmentprops["body"]] = "";
         }
     }
