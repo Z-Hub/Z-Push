@@ -418,8 +418,12 @@ class SyncCollections implements Iterator {
             $checkClasses = "policies only";
         else if (array_sum($classes) > 4) {
             $checkClasses = "";
-            foreach($classes as $class=>$count)
-                $checkClasses .= sprintf("%s(%d) ", $class, $count);
+            foreach($classes as $class=>$count) {
+                if ($count == 1)
+                    $checkClasses .= sprintf("%s ", $class);
+                else
+                    $checkClasses .= sprintf("%s(%d) ", $class, $count);
+            }
         }
         else
             $checkClasses = implode("/", array_keys($classes));
