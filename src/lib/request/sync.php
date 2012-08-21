@@ -235,19 +235,29 @@ class Sync extends RequestProcessor {
                     $spa->SetTruncation(SYNC_TRUNCATION_ALL);
 
                     while(self::$decoder->getElementStartTag(SYNC_OPTIONS)) {
-                        // set to synchronize all changes. The mobile could overwrite this value
-                        $spa->SetFilterType(SYNC_FILTERTYPE_ALL);
-
+                        $firstOption = true;
                         while(1) {
+                            // foldertype definition
                             if(self::$decoder->getElementStartTag(SYNC_FOLDERTYPE)) {
                                 $foldertype = self::$decoder->getElementContent();
                                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleSync(): specified options block with foldertype '%s'", $foldertype));
 
                                 // switch the foldertype for the next options
                                 $spa->UseCPO($foldertype);
+
+                                // set to synchronize all changes. The mobile could overwrite this value
+                                $spa->SetFilterType(SYNC_FILTERTYPE_ALL);
+
                                 if(!self::$decoder->getElementEndTag())
-                                return false;
+                                    return false;
                             }
+                            // if no foldertype is defined, use default cpo
+                            else if ($firstOption){
+                                $spa->UseCPO();
+                                // set to synchronize all changes. The mobile could overwrite this value
+                                $spa->SetFilterType(SYNC_FILTERTYPE_ALL);
+                            }
+                            $firstOption = false;
 
                             if(self::$decoder->getElementStartTag(SYNC_FILTERTYPE)) {
                                 $spa->SetFilterType(self::$decoder->getElementContent());
