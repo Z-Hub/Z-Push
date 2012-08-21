@@ -410,9 +410,19 @@ class SyncCollections implements Iterator {
             if ($onlyPingable && $spa->GetPingableFlag() !== true)
                 continue;
 
-            $classes[] = $spa->GetContentClass();
+            if (!isset($classes[$spa->GetContentClass()]))
+                $classes[$spa->GetContentClass()] = 0;
+            $classes[$spa->GetContentClass()] += 1;
         }
-        $checkClasses = implode("/", $classes);
+        if (empty($classes))
+            $checkClasses = "policies only";
+        else if (array_sum($classes) > 4) {
+            $checkClasses = "";
+            foreach($classes as $class=>$count)
+                $checkClasses .= sprintf("%s(%d) ", $class, $count);
+        }
+        else
+            $checkClasses = implode("/", array_keys($classes));
 
         $pingTracking = new PingTracking();
         $this->changes = array();
