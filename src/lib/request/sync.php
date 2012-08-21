@@ -60,7 +60,7 @@ class Sync extends RequestProcessor {
         $sc = new SyncCollections();
         $status = SYNC_STATUS_SUCCESS;
         $wbxmlproblem = false;
-        $emtpysync = false;
+        $emptysync = false;
 
         // Start Synchronize
         if(self::$decoder->getElementStartTag(SYNC_SYNCHRONIZE)) {
@@ -513,7 +513,7 @@ class Sync extends RequestProcessor {
         }
         // we did not receive a SYNCHRONIZE block - assume empty sync
         else {
-            $emtpysync = true;
+            $emptysync = true;
         }
         // END SYNCHRONIZE
 
@@ -526,7 +526,7 @@ class Sync extends RequestProcessor {
         }
 
         // Partial & Empty Syncs need saved data to proceed with synchronization
-        if ($status == SYNC_STATUS_SUCCESS && (! $sc->HasCollections() || $partial === true )) {
+        if ($status == SYNC_STATUS_SUCCESS && ($emptysync === true || $partial === true) ) {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleSync(): Partial or Empty sync requested. Retrieving data of synchronized folders."));
 
             // Load all collections - do not overwrite existing (received!), laod states and check permissions
@@ -559,7 +559,7 @@ class Sync extends RequestProcessor {
         }
 
         // HEARTBEAT & Empty sync
-        if ($status == SYNC_STATUS_SUCCESS && (isset($hbinterval) || $emtpysync == true)) {
+        if ($status == SYNC_STATUS_SUCCESS && (isset($hbinterval) || $emptysync == true)) {
             $interval = (defined('PING_INTERVAL') && PING_INTERVAL > 0) ? PING_INTERVAL : 30;
 
             if (isset($hbinterval))
@@ -579,7 +579,7 @@ class Sync extends RequestProcessor {
                 // wait for changes
                 try {
                     // if doing an empty sync, check only once for changes
-                    if ($emtpysync) {
+                    if ($emptysync) {
                         $foundchanges = $sc->CountChanges();
                     }
                     // wait for changes
@@ -594,7 +594,7 @@ class Sync extends RequestProcessor {
                 }
 
                 // in case of an empty sync with no changes, we can reply with an empty response
-                if ($emtpysync && !$foundchanges){
+                if ($emptysync && !$foundchanges){
                     ZLog::Write(LOGLEVEL_DEBUG, "No changes found for empty sync. Replying with empty response");
                     return true;
                 }

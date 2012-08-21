@@ -414,22 +414,19 @@ class SyncCollections implements Iterator {
         }
         $checkClasses = implode("/", $classes);
 
-        // is there something to check?
-        if (empty($this->collections) || ($onlyPingable && empty($classes)))
-            throw new StatusException("SyncCollections->CheckForChanges(): no collections available", self::ERROR_NO_COLLECTIONS);
-
         $pingTracking = new PingTracking();
         $this->changes = array();
         $changesAvailable = false;
 
         ZPush::GetTopCollector()->SetAsPushConnection();
         ZPush::GetTopCollector()->AnnounceInformation(sprintf("lifetime %ds", $lifetime), true);
-        ZLog::Write(LOGLEVEL_INFO, sprintf("SyncCollections->CheckForChanges(): Waiting for changes... (lifetime %d seconds)", $lifetime));
+        ZLog::Write(LOGLEVEL_INFO, sprintf("SyncCollections->CheckForChanges(): Waiting for %s changes... (lifetime %d seconds)", (empty($classes))?'policy':'store', $lifetime));
 
         // use changes sink where available
         $changesSink = false;
         $forceRealExport = 0;
-        if (ZPush::GetBackend()->HasChangesSink()) {
+        // do not create changessink if there are no folders
+        if (!empty($classes) && ZPush::GetBackend()->HasChangesSink()) {
             $changesSink = true;
 
             // initialize all possible folders
