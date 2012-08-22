@@ -334,13 +334,13 @@ class FreeBusyPublish {
             $ts["type"] = 0;
             $ts["time"] = $item[$this->proptags["startdate"]];
             $ts["subject"] = $item[PR_SUBJECT];
-            $ts["status"] = $item[$this->proptags["busystatus"]];
+            $ts["status"] = (isset($item[$this->proptags["busystatus"]])) ? $item[$this->proptags["busystatus"]] : 0; //ZP-197
             $timestamps[] = $ts;
 
             $ts["type"] = 1;
             $ts["time"] = $item[$this->proptags["duedate"]];
             $ts["subject"] = $item[PR_SUBJECT];
-            $ts["status"] = $item[$this->proptags["busystatus"]];
+            $ts["status"] = (isset($item[$this->proptags["busystatus"]])) ? $item[$this->proptags["busystatus"]] : 0; //ZP-197
             $timestamps[] = $ts;
         }
 
