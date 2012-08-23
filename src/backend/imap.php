@@ -509,7 +509,7 @@ class BackendIMAP extends BackendDiff {
             //try to get the waste basket without doing complete hierarchy sync
             $wastebaskt = @imap_getmailboxes($this->mbox, $this->server, "Trash");
             if (isset($wastebaskt[0])) {
-                $this->wasteID = imap_utf7_decode(substr($wastebaskt[0]->name, strlen($this->server)));
+                $this->wasteID = $this->convertImapId(substr($wastebaskt[0]->name, strlen($this->server)));
                 return $this->wasteID;
             }
             //try get waste id from hierarchy if it wasn't possible with above for some reason
