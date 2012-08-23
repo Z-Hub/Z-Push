@@ -312,8 +312,7 @@ class BackendCombined extends Backend {
     function GetWasteBasket(){
         ZLog::Write(LOGLEVEL_DEBUG, "Combined->GetWasteBasket()");
 
-        if (isset($this->activeBackend))
-        {
+        if (isset($this->activeBackend)) {
             if (!$this->activeBackend->GetWasteBasket())
                 return false;
             else
