@@ -308,7 +308,7 @@ class ImportHierarchyChangesCombinedWrap {
             $folder->parentid = $this->backendid.$this->backend->config['delimiter'].$folder->parentid;
         }
         if(isset($this->backend->config['folderbackend'][$folder->type]) && $this->backend->config['folderbackend'][$folder->type] != $this->backendid){
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("not ussing folder: '%s' ('%s')", $folder->displayname, $folder->serverid));
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("not using folder: '%s' ('%s')", $folder->displayname, $folder->serverid));
             return true;
         }
         ZLog::Write(LOGLEVEL_DEBUG, "ImportHierarchyChangesCombinedWrap->ImportFolderChange() success");
