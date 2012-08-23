@@ -196,18 +196,8 @@ class ImportChangesCombined implements IImportChanges {
             $id = $this->backend->GetBackendFolder($id);
         }
 
-        $importer = $this->backend->getBackend($backendid)->GetImporter();
-
-        if(isset($this->syncstates[$backendid])) {
-            $state = $this->syncstates[$backendid];
-        }
-        else {
-            $state = '';
-        }
-
-        $importer->Config($state);
-        $res = $importer->ImportFolderChange($folder);
-        $this->syncstates[$backendid] = $importer->GetState();
+        $this->icc = $this->backend->getBackend($backendid)->GetImporter();
+        $res = $this->icc->ImportFolderChange($folder);
         ZLog::Write(LOGLEVEL_DEBUG, 'ImportChangesCombined->ImportFolderChange() success');
         return $backendid.$this->backend->config['delimiter'].$res;
     }
@@ -235,18 +225,8 @@ class ImportChangesCombined implements IImportChanges {
         if($parent != '0')
             $parent = $this->backend->GetBackendFolder($parent);
 
-        $importer = $backend->GetImporter();
-
-        if(isset($this->syncstates[$backendid])) {
-            $state = $this->syncstates[$backendid];
-        }
-        else {
-            $state = '';
-        }
-
-        $importer->Config($state);
-        $res = $importer->ImportFolderDeletion($id, $parent);
-        $this->syncstates[$backendid] = $importer->GetState();
+        $this->icc = $backend->GetImporter();
+        $res = $this->icc->ImportFolderDeletion($id, $parent);
         ZLog::Write(LOGLEVEL_DEBUG, 'ImportChangesCombined->ImportFolderDeletion() success');
         return $res;
     }
@@ -263,9 +243,11 @@ class ImportChangesCombined implements IImportChanges {
      */
     public function Config($state, $flags = 0) {
         ZLog::Write(LOGLEVEL_DEBUG, 'ImportChangesCombined->Config(...)');
-        $this->syncstates = $state;
-        if(!is_array($this->syncstates))
-            $this->syncstates = array();
+        if (!$this->icc) {
+            ZLog::Write(LOGLEVEL_ERROR, "ImportChangesCombined->Config() icc not configured");
+            return false;
+        }
+        $this->icc->Config($state, $flags);
         ZLog::Write(LOGLEVEL_DEBUG, 'ImportChangesCombined->Config() success');
     }
 
@@ -276,7 +258,11 @@ class ImportChangesCombined implements IImportChanges {
      * @return string
      */
     public function GetState() {
-        return $this->syncstates;
+        if (!$this->icc) {
+            ZLog::Write(LOGLEVEL_ERROR, "ImportChangesCombined->GetState() icc not configured");
+            return false;
+        }
+        return $this->icc->GetState();
     }
 }
 
