@@ -135,6 +135,110 @@ class Utils {
     }
 
     /**
+     * Build the fileas string from the components according to the configuration.
+     *
+     * @param string $lastname
+     * @param string $firstname
+     * @param string $middlename
+     * @param string $company
+     *
+     * @access public
+     * @return string fileas
+     */
+    static public function BuildFileAs($lastname = "", $firstname = "", $middlename = "", $company = "") {
+        if (defined('FILEAS_ORDER')) {
+            $fileas = $lastfirst = $firstlast = "";
+            $names = trim ($firstname . " " . $middlename);
+            $lastname = trim($lastname);
+            $company = trim($company);
+
+            // lastfirst is "lastname, firstname middlename"
+            // firstlast is "firstname middlename lastname"
+            if (strlen($lastname) > 0) {
+                $lastfirst = $lastname;
+                if (strlen($names) > 0){
+                    $lastfirst .= ", $names";
+                    $firstlast = "$names $lastname";
+                }
+                else {
+                    $firstlast = $lastname;
+                }
+            }
+            elseif (strlen($names) > 0) {
+                $lastfirst = $firstlast = $names;
+            }
+
+            // if fileas with a company is selected
+            // but company is emtpy then it will
+            // fallback to firstlast or lastfirst
+            // (depending on which is selected for company)
+            switch (FILEAS_ORDER) {
+                case SYNC_FILEAS_COMPANYONLY:
+                    if (strlen($company) > 0) {
+                        $fileas = $company;
+                    }
+                    elseif (strlen($firstlast) > 0)
+                        $fileas = $firstlast;
+                    break;
+                case SYNC_FILEAS_COMPANYLAST:
+                    if (strlen($company) > 0) {
+                        $fileas = $company;
+                        if (strlen($lastfirst) > 0)
+                            $fileas .= "($lastfirst)";
+                    }
+                    elseif (strlen($lastfirst) > 0)
+                        $fileas = $lastfirst;
+                    break;
+                case SYNC_FILEAS_COMPANYFIRST:
+                    if (strlen($company) > 0) {
+                        $fileas = $company;
+                        if (strlen($firstlast) > 0) {
+                            $fileas .= " ($firstlast)";
+                        }
+                    }
+                    elseif (strlen($firstlast) > 0) {
+                        $fileas = $firstlast;
+                    }
+                    break;
+                case SYNC_FILEAS_FIRSTCOMPANY:
+                    if (strlen($firstlast) > 0) {
+                        $fileas = $firstlast;
+                        if (strlen($company) > 0) {
+                            $fileas .= " ($company)";
+                        }
+                    }
+                    elseif (strlen($company) > 0) {
+                        $fileas = $company;
+                    }
+                    break;
+                case SYNC_FILEAS_LASTCOMPANY:
+                    if (strlen($lastfirst) > 0) {
+                        $fileas = $lastfirst;
+                        if (strlen($company) > 0) {
+                            $fileas .= " ($company)";
+                        }
+                    }
+                    elseif (strlen($company) > 0) {
+                        $fileas = $company;
+                    }
+                    break;
+                case SYNC_FILEAS_LASTFIRST:
+                    if (strlen($lastfirst) > 0) {
+                        $fileas = $lastfirst;
+                    }
+                    break;
+                default:
+                    $fileas = $firstlast;
+                    break;
+            }
+            if (strlen($fileas) == 0)
+                ZLog::Write(LOGLEVEL_DEBUG, "Fileas is empty.");
+            return $fileas;
+        }
+        ZLog::Write(LOGLEVEL_DEBUG, "FILEAS_ORDER not defined. Add it to your config.php.");
+        return null;
+    }
+    /**
      * Checks if the PHP-MAPI extension is available and in a requested version
      *
      * @param string    $version    the version to be checked ("6.30.10-18495", parts or build number)

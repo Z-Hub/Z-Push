@@ -1291,6 +1291,16 @@ class MAPIProvider {
             $this->setASbody($contact->asbody, $props, $contactprops);
         }
 
+        //set fileas
+        if (defined('FILEAS_ORDER')) {
+            $lastname = (isset($contact->lastname)) ? $contact->lastname : "";
+            $firstname = (isset($contact->firstname)) ? $contact->firstname : "";
+            $middlename = (isset($contact->middlename)) ? $contact->middlename : "";
+            $company = (isset($contact->companyname)) ? $contact->companyname : "";
+            $props[$contactprops["fileas"]] = Utils::BuildFileAs($lastname, $firstname, $middlename, $company);
+        }
+        else ZLog::Write(LOGLEVEL_DEBUG, "FILEAS_ORDER not defined");
+
         mapi_setprops($mapimessage, $props);
     }
 
