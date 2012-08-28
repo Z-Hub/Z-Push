@@ -1872,6 +1872,11 @@ class MAPIProvider {
 
         if($addrtype == "SMTP" && isset($props[PR_EMAIL_ADDRESS]))
             return $props[PR_EMAIL_ADDRESS];
+        elseif ($addrtype == "ZARAFA" && isset($props[PR_EMAIL_ADDRESS])) {
+            $userinfo = mapi_zarafa_getuser_by_name($this->store, $props[PR_EMAIL_ADDRESS]);
+            if (is_array($userinfo) && isset($userinfo["emailaddress"]))
+                return $userinfo["emailaddress"];
+        }
 
         return "";
     }
