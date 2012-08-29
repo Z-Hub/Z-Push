@@ -152,7 +152,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
      */
     public function Logon($user, $domain, $pass) {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->Logon(): Trying to authenticate user '%s'..", $user));
-        $this->mainUser = $user;
+        $this->mainUser = strtolower($user);
 
         try {
             // check if notifications are available in php-mapi
@@ -183,7 +183,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
         }
 
         // Get/open default store
-        $this->defaultstore = $this->openMessageStore($user);
+        $this->defaultstore = $this->openMessageStore($this->mainUser);
 
         if (mapi_last_hresult() == MAPI_E_FAILONEPROVIDER)
             throw new HTTPReturnCodeException("Error connecting to ZCP (open store)", 503, null, LOGLEVEL_INFO);
@@ -192,7 +192,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
             throw new AuthenticationRequiredException(sprintf("ZarafaBackend->Logon(): User '%s' has no default store", $user));
 
         $this->store = $this->defaultstore;
-        $this->storeName = $user;
+        $this->storeName = $this->mainUser;
 
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->Logon(): User '%s' is authenticated",$user));
 
