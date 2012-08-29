@@ -428,7 +428,7 @@ class Sync extends RequestProcessor {
                                         $status = $this->getImporter($sc, $spa, $actiondata);
 
                                     if ($status == SYNC_STATUS_SUCCESS)
-                                        $this->importMessage($spa, $actiondata, $element[EN_TAG], $message, $clientid, $serverid, $foldertype);
+                                        $this->importMessage($spa, $actiondata, $element[EN_TAG], $message, $clientid, $serverid, $foldertype, $nchanges);
                                     else
                                         ZLog::Write(LOGLEVEL_WARN, "Ignored incoming change, global status indicates problem.");
 
@@ -1020,12 +1020,13 @@ class Sync extends RequestProcessor {
      * @param string            $clientid       Client message identifier
      * @param string            $serverid       Server message identifier
      * @param string            $foldertype     On sms sync, this says "SMS", else false
+     * @param integer           $messageCount   Counter of already imported messages
      *
      * @access private
      * @throws StatusException  in case the importer is not available
      * @return -                Message related status are returned in the actiondata.
      */
-    private function importMessage($spa, &$actiondata, $todo, $message, $clientid, $serverid, $foldertype) {
+    private function importMessage($spa, &$actiondata, $todo, $message, $clientid, $serverid, $foldertype, $messageCount) {
         // the importer needs to be available!
         if ($this->importer == false)
             throw StatusException(sprintf("Sync->importMessage(): importer not available", SYNC_STATUS_SERVERERROR));
@@ -1065,7 +1066,7 @@ class Sync extends RequestProcessor {
         if (!$ignoreMessage) {
             switch($todo) {
                 case SYNC_MODIFY:
-                    self::$topCollector->AnnounceInformation("Saving modified message");
+                    self::$topCollector->AnnounceInformation(sprintf("Saving modified message %d", $messageCount));
                     try {
                         $actiondata["modifyids"][] = $serverid;
 
@@ -1103,7 +1104,7 @@ class Sync extends RequestProcessor {
 
                     break;
                 case SYNC_ADD:
-                    self::$topCollector->AnnounceInformation("Creating new message from mobile");
+                    self::$topCollector->AnnounceInformation(sprintf("Creating new message from mobile %d", $messageCount));
                     try {
                         // ignore sms messages
                         if ($foldertype == "SMS") {
@@ -1129,7 +1130,7 @@ class Sync extends RequestProcessor {
                     }
                     break;
                 case SYNC_REMOVE:
-                    self::$topCollector->AnnounceInformation("Deleting message removed on mobile");
+                    self::$topCollector->AnnounceInformation(sprintf("Deleting message removed on mobile %d", $messageCount));
                     try {
                         $actiondata["removeids"][] = $serverid;
                         // ignore sms messages
