@@ -454,7 +454,7 @@ class BackendIMAP extends BackendDiff {
 
         // email sent?
         if (!$send)
-            throw new StatusException(sprintf("BackendIMAP->SendMail(): The email could not be sent. Last IMAP-error: ". imap_last_error()), SYNC_COMMONSTATUS_MAILSUBMISSIONFAILED);
+            throw new StatusException(sprintf("BackendIMAP->SendMail(): The email could not be sent. Last IMAP-error: %s", imap_last_error()), SYNC_COMMONSTATUS_MAILSUBMISSIONFAILED);
 
         // add message to the sent folder
         // build complete headers
@@ -492,9 +492,11 @@ class BackendIMAP extends BackendDiff {
             }
         }
 
-        // unset mimedecoder - free memory
-        unset($mobj);
-        return ($send && $asf);
+        if (!$asf) {
+            ZLog::Write(LOGLEVEL_ERROR, "BackendIMAP->SendMail(): The email could not be saved to Sent Items folder. Check your configuration.");
+        }
+
+        return $send;
     }
 
     /**
