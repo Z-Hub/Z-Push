@@ -1158,7 +1158,7 @@
                 foreach($recipientRows as $key => $recipient) {
                     $found = false;
                     foreach($exception_recips as $excep_recip) {
-                        if ($recipient[PR_SEARCH_KEY] == $excep_recip[PR_SEARCH_KEY])
+                        if (isset($recipient[PR_SEARCH_KEY]) && isset($excep_recip[PR_SEARCH_KEY]) && $recipient[PR_SEARCH_KEY] == $excep_recip[PR_SEARCH_KEY])
                             $found = true;
                     }
 
