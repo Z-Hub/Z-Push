@@ -45,6 +45,9 @@
 
 ob_start(null, 1048576);
 
+// ignore user abortions because this can lead to weird errors - see ZP-239
+ignore_user_abort(true);
+
 include_once('lib/exceptions/exceptions.php');
 include_once('lib/utils/utils.php');
 include_once('lib/utils/compat.php');
