@@ -134,6 +134,13 @@
     // SYNC_FILEAS_FIRSTLAST will be used
     define('FILEAS_ORDER', SYNC_FILEAS_FIRSTLAST);
 
+    // Amount of items to be synchronized per request
+    // Normally this value is requested by the mobile. Common values are 5, 25, 50 or 100.
+    // Exporting too much items can cause mobile timeout on busy systems.
+    // Z-Push will use the lowest value, either set here or by the mobile.
+    // default: 100 - value used if mobile does not limit amount of items
+    define('SYNC_MAX_ITEMS', 100);
+
 /**********************************************************************************
  *  Backend settings
  */

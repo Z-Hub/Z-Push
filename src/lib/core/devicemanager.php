@@ -46,9 +46,6 @@
 ************************************************/
 
 class DeviceManager {
-    // stream up to 100 messages to the client by default
-    const DEFAULTWINDOWSIZE = 100;
-
     // broken message indicators
     const MSG_BROKEN_UNKNOWN = 1;
     const MSG_BROKEN_CAUSINGLOOP = 2;
@@ -461,7 +458,13 @@ class DeviceManager {
         if (isset($this->windowSize[$folderid]))
             $items = $this->windowSize[$folderid];
         else
-            $items = self::DEFAULTWINDOWSIZE;
+            $items = (defined("SYNC_MAX_ITEMS")) ? SYNC_MAX_ITEMS : 100;
+
+        if (defined("SYNC_MAX_ITEMS") && SYNC_MAX_ITEMS < $items) {
+            if ($queuedmessages > SYNC_MAX_ITEMS)
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("DeviceManager->GetWindowSize() overwriting max itmes requested of %d by %d forced in configuration.", $items, SYNC_MAX_ITEMS));
+            $items = SYNC_MAX_ITEMS;
+        }
 
         $this->setLatestFolder($folderid);
 
