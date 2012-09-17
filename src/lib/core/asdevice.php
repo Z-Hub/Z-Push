@@ -384,7 +384,7 @@ class ASDevice extends StateObject {
                 $ignored = $this->ignoredMessages;
                 $newMessages = array();
                 foreach ($ignored as $im) {
-                    if ($im->folderid = $folderid) {
+                    if ($im->folderid == $folderid) {
                         if ($id === false || $im->id === $id) {
                             $foundMessage = true;
                             if (count($this->ignoredMessageIds[$folderid]) == 1) {
