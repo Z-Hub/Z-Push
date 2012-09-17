@@ -43,7 +43,7 @@ In a case that /usr/share/z-push does not exist yet, create it with:
     cp -R z-push-[version]-{buildnr}/* /usr/share/z-push/
 
 Edit the config.php file in the Z-Push directory to fit your needs.
-If you pretend to use Z-Push with Zarafa backend and Zarafa is installed
+If you intend to use Z-Push with Zarafa backend and Zarafa is installed
 on the same server, it should work out of the box without changing anything.
 Please also set your timezone in the config.php file.
 
