@@ -2228,7 +2228,11 @@ class MAPIProvider {
 
             $this->setMessageBodyForType($mapimessage, $bpReturnType, $message);
             //only set the truncation size data if device set it in request
-            if ($bpo->GetTruncationSize() != false && $bpReturnType != SYNC_BODYPREFERENCE_MIME && $message->asbody->estimatedDataSize > $bpo->GetTruncationSize()) {
+            if (    $bpo->GetTruncationSize() != false &&
+                    $bpReturnType != SYNC_BODYPREFERENCE_MIME &&
+                    $message->asbody->estimatedDataSize > $bpo->GetTruncationSize() &&
+                    $contentparameters->GetTruncation() != SYNC_TRUNCATION_ALL // do not truncate message if the whole is requested, e.g. on fetch
+                ) {
                 $message->asbody->data = Utils::Utf8_truncate($message->asbody->data, $bpo->GetTruncationSize());
                 $message->asbody->truncated = 1;
 
