@@ -136,6 +136,7 @@ class ZPushAdminCLI {
     const COMMAND_REMOVEDEVICE = 5;
     const COMMAND_RESYNCDEVICE = 6;
     const COMMAND_CLEARLOOP = 7;
+    const COMMAND_SHOWLASTSYNC = 8;
 
     static private $command;
     static private $user = false;
@@ -151,9 +152,11 @@ class ZPushAdminCLI {
     static public function UsageInstructions() {
         return  "Usage:\n\tz-push-admin.php -a ACTION [options]\n\n" .
                 "Parameters:\n\t-a list/wipe/remove/resync/clearloop\n\t[-u] username\n\t[-d] deviceid\n\n" .
-                "Actions:\n\tlist\t\t\t\t Lists all devices and synchronized users\n" .
+                "Actions:\n" .
+                "\tlist\t\t\t\t Lists all devices and synchronized users\n" .
                 "\tlist -u USER\t\t\t Lists all devices of user USER\n" .
                 "\tlist -d DEVICE\t\t\t Lists all users of device DEVICE\n" .
+                "\tlastsync\t\t\t Lists all devices and synchronized users and the last synchronization time\n" .
                 "\twipe -u USER\t\t\t Remote wipes all devices of user USER\n" .
                 "\twipe -d DEVICE\t\t\t Remote wipes device DEVICE\n" .
                 "\twipe -u USER -d DEVICE\t\t Remote wipes device DEVICE of user USER\n" .
@@ -223,6 +226,11 @@ class ZPushAdminCLI {
 
                 if (self::$device !== false)
                     self::$command = self::COMMAND_SHOWUSERSOFDEVICE;
+                break;
+
+            // list data
+            case "lastsync":
+                self::$command = self::COMMAND_SHOWLASTSYNC;
                 break;
 
             // remove wipe device
@@ -308,6 +316,10 @@ class ZPushAdminCLI {
                 self::CommandDeviceUsers();
                 break;
 
+            case self::COMMAND_SHOWLASTSYNC:
+                self::CommandShowLastSync();
+                break;
+
             case self::COMMAND_WIPEDEVICE:
                 if (self::$device)
                     echo sprintf("Are you sure you want to REMOTE WIPE device '%s' [y/N]: ", self::$device);
@@ -370,6 +382,32 @@ class ZPushAdminCLI {
             }
             else
                 self::printDeviceData($deviceId, self::$user);
+        }
+    }
+
+    /**
+     * Command "Show all devices and users with last sync time"
+     * Prints the device id of/and connected users
+     *
+     * @return
+     * @access public
+     */
+     static public function CommandShowLastSync() {
+        $devicelist = ZPushAdmin::ListDevices(false);
+        if (empty($devicelist))
+            echo "\tno devices found\n";
+        else {
+            echo "All known devices and users and their last synchronization time\n\n";
+            echo str_pad("Device id", 36). str_pad("Synchronized user", 30)."Last sync time\n";
+            echo "-----------------------------------------------------------------------------------------------------\n";
+        }
+
+        foreach ($devicelist as $deviceId) {
+            $users = ZPushAdmin::ListUsers($deviceId);
+            foreach ($users as $user) {
+                $device = ZPushAdmin::GetDeviceDetails($deviceId, $user);
+                echo str_pad($deviceId, 36) . str_pad($user, 30). ($device->GetLastSyncTime() ? strftime("%Y-%m-%d %H:%M", $device->GetLastSyncTime()) : "never") . "\n";
+            }
         }
     }
 
