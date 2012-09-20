@@ -445,6 +445,25 @@ class BackendZarafa implements IBackend, ISearchProvider {
             $ab = mapi_openaddressbook($this->session);
             mapi_inetmapi_imtomapi($this->session, $this->store, $ab, $mapimessage, $sm->mime, array());
 
+            // Set the appSeqNr so that tracking tab can be updated for meeting request updates
+            // @see http://jira.zarafa.com/browse/ZP-68
+            $meetingRequestProps = MAPIMapping::GetMeetingRequestProperties();
+            $meetingRequestProps = getPropIdsFromStrings($this->store, $meetingRequestProps);
+            $props = mapi_getprops($mapimessage, array(PR_MESSAGE_CLASS, $meetingRequestProps["goidtag"]));
+            if (stripos($props[PR_MESSAGE_CLASS], "IPM.Schedule.Meeting.Resp.") === 0) {
+                // search for calendar items using goid
+                $mr = new Meetingrequest($this->store, $mapimessage);
+                $appointments = $mr->findCalendarItems($props[$meetingRequestProps["goidtag"]]);
+                if (is_array($appointments) && !empty($appointments)) {
+                    $app = mapi_msgstore_openentry($this->store, $appointments[0]);
+                    $appprops = mapi_getprops($app, array($meetingRequestProps["appSeqNr"]));
+                    if (isset($appprops[$meetingRequestProps["appSeqNr"]]) && $appprops[$meetingRequestProps["appSeqNr"]]) {
+                        $mapiprops[$meetingRequestProps["appSeqNr"]] = $appprops[$meetingRequestProps["appSeqNr"]];
+                        ZLog::Write(LOGLEVEL_DEBUG, sprintf("Set sequence number to:%d", $appprops[$meetingRequestProps["appSeqNr"]]));
+                    }
+                }
+            }
+
             // Delete the PR_SENT_REPRESENTING_* properties because some android devices
             // do not send neither From nor Sender header causing empty PR_SENT_REPRESENTING_NAME and
             // PR_SENT_REPRESENTING_EMAIL_ADDRESS properties and "broken" PR_SENT_REPRESENTING_ENTRYID
