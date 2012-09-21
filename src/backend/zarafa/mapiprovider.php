@@ -1122,7 +1122,10 @@ class MAPIProvider {
         }
 
         //always set the PR_SENT_REPRESENTING_* props so that the attendee status update also works with the webaccess
-        if (!isset($props[$appointmentprops["representingentryid"]])) {
+        $p = array($appointmentprops["representingentryid"]);
+        $representingentryid = $this->getProps($mapimessage, $p);
+
+        if (!isset($representingentryid[$appointmentprops["representingentryid"]])) {
             $props[$appointmentprops["representingname"]] = Request::GetAuthUser();
             $props[$appointmentprops["sentrepresentingemail"]] = Request::GetAuthUser();
             $props[$appointmentprops["sentrepresentingaddt"]] = "ZARAFA";
