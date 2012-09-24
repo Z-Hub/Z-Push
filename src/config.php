@@ -132,7 +132,7 @@
     // option is selected for company).
     // If SYNC_FILEAS_COMPANYONLY is selected and company of the contact is not set
     // SYNC_FILEAS_FIRSTLAST will be used
-    define('FILEAS_ORDER', SYNC_FILEAS_FIRSTLAST);
+    define('FILEAS_ORDER', SYNC_FILEAS_LASTFIRST);
 
     // Amount of items to be synchronized per request
     // Normally this value is requested by the mobile. Common values are 5, 25, 50 or 100.
