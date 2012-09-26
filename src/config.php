@@ -118,7 +118,9 @@
     // This can also be disabled by setting it to false
     define('SINK_FORCERECHECK', 300);
 
-    // Set the fileas order contacts. Possible values are:
+    // Set the fileas (save as) order for contacts in the webaccess/webapp/outlook.
+    // It will only affect new/modified contacts on the mobile which then are synced to the server.
+    // Possible values are:
     // SYNC_FILEAS_FIRSTLAST    - fileas will be "Firstname Middlename Lastname"
     // SYNC_FILEAS_LASTFIRST    - fileas will be "Lastname, Firstname Middlename"
     // SYNC_FILEAS_COMPANYONLY  - fileas will be "Company"
@@ -131,7 +133,7 @@
     // to SYNC_FILEAS_FIRSTLAST or SYNC_FILEAS_LASTFIRST (depending on if last or first
     // option is selected for company).
     // If SYNC_FILEAS_COMPANYONLY is selected and company of the contact is not set
-    // SYNC_FILEAS_FIRSTLAST will be used
+    // SYNC_FILEAS_LASTFIRST will be used
     define('FILEAS_ORDER', SYNC_FILEAS_LASTFIRST);
 
     // Amount of items to be synchronized per request
