@@ -66,7 +66,8 @@ class GetItemEstimate extends RequestProcessor {
             $spa = new SyncParameters();
             $spastatus = false;
 
-            if (Request::GetProtocolVersion() >= 14.0) {
+            // read the folder properties
+            while (1) {
                 if(self::$decoder->getElementStartTag(SYNC_SYNCKEY)) {
                     try {
                         $spa->SetSyncKey(self::$decoder->getElementContent());
@@ -79,7 +80,7 @@ class GetItemEstimate extends RequestProcessor {
                         return false;
                 }
 
-                if(self::$decoder->getElementStartTag(SYNC_GETITEMESTIMATE_FOLDERID)) {
+                elseif(self::$decoder->getElementStartTag(SYNC_GETITEMESTIMATE_FOLDERID)) {
                     $spa->SetFolderId( self::$decoder->getElementContent());
 
                     if(!self::$decoder->getElementEndTag())
@@ -87,7 +88,7 @@ class GetItemEstimate extends RequestProcessor {
                 }
 
                 // conversation mode requested
-                if(self::$decoder->getElementStartTag(SYNC_CONVERSATIONMODE)) {
+                elseif(self::$decoder->getElementStartTag(SYNC_CONVERSATIONMODE)) {
                     $spa->SetConversationMode(true);
                     if(($conversationmode = self::$decoder->getElementContent()) !== false) {
                         $spa->SetConversationMode((boolean)$conversationmode);
@@ -96,7 +97,7 @@ class GetItemEstimate extends RequestProcessor {
                     }
                 }
 
-                if(self::$decoder->getElementStartTag(SYNC_OPTIONS)) {
+                elseif(self::$decoder->getElementStartTag(SYNC_OPTIONS)) {
                     while(1) {
                         if(self::$decoder->getElementStartTag(SYNC_FILTERTYPE)) {
                             $spa->SetFilterType(self::$decoder->getElementContent());
@@ -123,48 +124,29 @@ class GetItemEstimate extends RequestProcessor {
                         }
                     }
                 }
-            }
-            else {
-                //get items estimate does not necessarily send the folder type
-                if(self::$decoder->getElementStartTag(SYNC_GETITEMESTIMATE_FOLDERTYPE)) {
+
+                // get items estimate does not necessarily send the folder type
+                elseif(self::$decoder->getElementStartTag(SYNC_GETITEMESTIMATE_FOLDERTYPE)) {
                     $spa->SetContentClass(self::$decoder->getElementContent());
 
                     if(!self::$decoder->getElementEndTag())
                         return false;
                 }
 
-                if(self::$decoder->getElementStartTag(SYNC_GETITEMESTIMATE_FOLDERID)) {
-                    $spa->SetFolderId(self::$decoder->getElementContent());
+                //TODO AS 2.5 and filtertype not set
+                elseif(self::$decoder->getElementStartTag(SYNC_FILTERTYPE)) {
+                    $spa->SetFilterType(self::$decoder->getElementContent());
 
                     if(!self::$decoder->getElementEndTag())
                         return false;
                 }
 
-                if(!self::$decoder->getElementStartTag(SYNC_FILTERTYPE))
-                    return false;
-
-                $spa->SetFilterType(self::$decoder->getElementContent());
-
-                if(!self::$decoder->getElementEndTag())
-                    return false;
-
-                if(!self::$decoder->getElementStartTag(SYNC_SYNCKEY))
-                    return false;
-
-                try {
-                    $spa->SetSyncKey(self::$decoder->getElementContent());
+                $e = self::$decoder->peek();
+                if($e[EN_TYPE] == EN_TYPE_ENDTAG) {
+                    self::$decoder->getElementEndTag(); //SYNC_GETITEMESTIMATE_FOLDER
+                    break;
                 }
-                catch (StateInvalidException $siex) {
-                    $spastatus = SYNC_GETITEMESTSTATUS_SYNCSTATENOTPRIMED;
-                }
-
-                if(!self::$decoder->getElementEndTag())
-                    return false;
             }
-
-            if(!self::$decoder->getElementEndTag())
-                return false; //SYNC_GETITEMESTIMATE_FOLDER
-
             // Process folder data
 
             //In AS 14 request only collectionid is sent, without class
@@ -218,6 +200,7 @@ class GetItemEstimate extends RequestProcessor {
                     self::$topCollector->AnnounceInformation("StatusException ". $sc->GetParameter($spa, "status"), true);
                 }
             }
+
         }
         if(!self::$decoder->getElementEndTag())
             return false; //SYNC_GETITEMESTIMATE_FOLDERS
