@@ -178,7 +178,7 @@ class Utils {
                         $fileas = $company;
                     }
                     elseif (strlen($firstlast) > 0)
-                        $fileas = $firstlast;
+                        $fileas = $lastfirst;
                     break;
                 case SYNC_FILEAS_COMPANYLAST:
                     if (strlen($company) > 0) {
