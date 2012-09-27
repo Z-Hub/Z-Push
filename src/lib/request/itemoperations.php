@@ -160,12 +160,6 @@ class ItemOperations extends RequestProcessor {
                                     return false;
                             }
 
-                            if(self::$decoder->getElementStartTag(SYNC_ITEMOPERATIONS_RANGE)) {
-                                $operation["cpo"]->BodyPreference($bptype)->SetRange(self::$decoder->getElementContent());
-                                if(!self::$decoder->getElementEndTag())
-                                    return false;
-                            }
-
                             if(!self::$decoder->getElementEndTag())
                                 return false;//SYNC_AIRSYNCBASE_BODYPREFERENCE
                         }
@@ -182,6 +176,12 @@ class ItemOperations extends RequestProcessor {
                             self::$decoder->getElementEndTag();
                             break;
                         }
+                    }
+
+                    if(self::$decoder->getElementStartTag(SYNC_ITEMOPERATIONS_RANGE)) {
+                        $operation["range"] = self::$decoder->getElementContent();
+                        if(!self::$decoder->getElementEndTag())
+                            return false;
                     }
                 }
             }
