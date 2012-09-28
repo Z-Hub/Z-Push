@@ -170,18 +170,18 @@ class ItemOperations extends RequestProcessor {
                                 return false;
                         }
 
+                        if(self::$decoder->getElementStartTag(SYNC_ITEMOPERATIONS_RANGE)) {
+                            $operation["range"] = self::$decoder->getElementContent();
+                            if(!self::$decoder->getElementEndTag())
+                                return false;
+                        }
+
                         //break if it reached the endtag
                         $e = self::$decoder->peek();
                         if($e[EN_TYPE] == EN_TYPE_ENDTAG) {
                             self::$decoder->getElementEndTag();
                             break;
                         }
-                    }
-
-                    if(self::$decoder->getElementStartTag(SYNC_ITEMOPERATIONS_RANGE)) {
-                        $operation["range"] = self::$decoder->getElementContent();
-                        if(!self::$decoder->getElementEndTag())
-                            return false;
                     }
                 }
             }
