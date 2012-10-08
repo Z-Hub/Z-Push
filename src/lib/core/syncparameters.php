@@ -45,6 +45,10 @@
 
 class SyncParameters extends StateObject {
     const DEFAULTOPTIONS = "DEFAULT";
+    const EMAILOPTIONS = "EMAILS";
+    const CALENDAROPTIONS = "CALENDAR";
+    const CONTACTOPTIONS = "CONTACTS";
+    const NOTEOPTIONS = "NOTE";
     const SMSOPTIONS = "SMS";
 
     private $synckeyChanged = false;
@@ -228,8 +232,8 @@ class SyncParameters extends StateObject {
      * @return ContentParameters object
      */
     public function GetCPO($options = self::DEFAULTOPTIONS) {
-        if ($options !== self::DEFAULTOPTIONS && $options !== self::SMSOPTIONS)
-            throw new FatalNotImplementedException(sprintf("SyncParameters->GetCPO('%s') ContentParameters is invalid. Such type is not available.", $options));
+        $this->isValidType($options);
+        $options = $this->normalizeType($options);
 
         $this->checkCPO($options);
 
@@ -250,8 +254,7 @@ class SyncParameters extends StateObject {
      * @return
      */
     public function UseCPO($options = self::DEFAULTOPTIONS) {
-        if ($options !== self::DEFAULTOPTIONS && $options !== self::SMSOPTIONS)
-            throw new FatalNotImplementedException(sprintf("SyncParameters->UseCPO('%s') ContentParameters is invalid. Such type is not available.", $options));
+        $this->isValidType($options);
 
         ZLOG::Write(LOGLEVEL_DEBUG, sprintf("SyncParameters->UseCPO('%s')", $options));
         $this->currentCPO = $options;
@@ -268,6 +271,8 @@ class SyncParameters extends StateObject {
      * @return boolean
      */
     private function checkCPO($options = self::DEFAULTOPTIONS) {
+        $this->isValidType($options);
+
         if (!isset($this->contentParameters[$options])) {
             $a = $this->contentParameters;
             $a[$options] = new ContentParameters();
@@ -276,6 +281,65 @@ class SyncParameters extends StateObject {
 
         return true;
     }
+
+    /**
+     * Checks if the requested option type is available
+     *
+     * @param string $options   CPO type
+     *
+     * @access private
+     * @return boolean
+     * @throws FatalNotImplementedException
+     */
+     private function isValidType($options) {
+         $options = strtoupper($options);
+         if ($options !== self::DEFAULTOPTIONS &&
+                        $options !== self::EMAILOPTIONS &&
+                        $options !== self::CALENDAROPTIONS &&
+                        $options !== self::CONTACTOPTIONS &&
+                        $options !== self::NOTEOPTIONS &&
+                        $options !== self::SMSOPTIONS)
+            throw new FatalNotImplementedException(sprintf("SyncParameters->isAllowedType('%s') ContentParameters is invalid. Such type is not available.", $options));
+
+        return true;
+    }
+
+    /**
+     * Normalizes the requested option type and returns it as
+     * default option if no default is available
+     *
+     * @param string $options   CPO type
+     *
+     * @access private
+     * @return string
+     * @throws FatalNotImplementedException
+     */
+     private function normalizeType($options) {
+        // return the requested CPO as it is defined
+        if (isset($this->contentParameters[$options]))
+            return $options;
+
+        // return email, calendar, contact or note CPO as default CPO if there no explicit default CPO defined
+        if ($options == self::DEFAULTOPTIONS && !isset($this->contentParameters[self::DEFAULTOPTIONS])) {
+            if ($options == self::EMAILOPTIONS && isset($this->contentParameters[self::EMAILOPTIONS]))
+                return self::EMAILOPTIONS;
+
+            if ($options == self::CALENDAROPTIONS && isset($this->contentParameters[self::CALENDAROPTIONS]))
+                return self::CALENDAROPTIONS;
+
+            if ($options == self::CONTACTOPTIONS && isset($this->contentParameters[self::CONTACTOPTIONS]))
+                return self::CONTACTOPTIONS;
+
+            if ($options == self::NOTEOPTIONS && isset($this->contentParameters[self::NOTEOPTIONS]))
+                return self::NOTEOPTIONS;
+        }
+        // something unexpected happened, just return default, empty in the worst case
+        else {
+            $this->checkCPO(self::DEFAULTOPTIONS);
+            return self::DEFAULTOPTIONS;
+        }
+    }
+
 
     /**
      * PHP magic to implement any getter, setter, has and delete operations
@@ -333,5 +397,4 @@ class SyncParameters extends StateObject {
         return true;
     }
 }
-
 ?>
