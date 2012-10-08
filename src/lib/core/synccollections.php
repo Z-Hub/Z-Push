@@ -53,6 +53,7 @@
 class SyncCollections implements Iterator {
     const ERROR_NO_COLLECTIONS = 1;
     const ERROR_WRONG_HIERARCHY = 2;
+    const OBSOLETE_CONNECTION = 3;
 
     private $stateManager;
 
@@ -485,9 +486,8 @@ class SyncCollections implements Iterator {
 
                 // more than 60 secs to go?
                 if (($now + 60) < $endat) {
-                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->CheckForChanges(): Timeout forced after %ss from %ss due to other process", ($now-$started), $lifetime));
                     ZPush::GetTopCollector()->AnnounceInformation(sprintf("Forced timeout after %ds", ($now-$started)), true);
-                    return false;
+                    throw new StatusException(sprintf("SyncCollections->CheckForChanges(): Timeout forced after %ss from %ss due to other process", ($now-$started), $lifetime), self::OBSOLETE_CONNECTION);
                 }
             }
 

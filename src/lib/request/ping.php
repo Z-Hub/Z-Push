@@ -163,7 +163,9 @@ class Ping extends RequestProcessor {
                     $pingstatus = SYNC_PINGSTATUS_FOLDERHIERSYNCREQUIRED;
                     self::$deviceManager->AnnounceProcessStatus(false, $pingstatus);
                     break;
-
+                case SyncCollections::OBSOLETE_CONNECTION:
+                    $foundchanges = false;
+                    break;
             }
         }
 
