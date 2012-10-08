@@ -99,19 +99,22 @@ function get_mapi_error_name($errcode=null)
         $errcode = mapi_last_hresult();
     }
 
-    if ($errcode !== 0){
-        $allConstants = get_defined_constants(true);
+    if ($errcode !== 0) {
+        // get_defined_constants(true) is preferred, but crashes PHP
+        // https://bugs.php.net/bug.php?id=61156
+        $allConstants = get_defined_constants();
 
-        foreach($allConstants['user'] as $key => $value){
-            $prefix = substr($key, 0, 7);
-            if ($prefix == "MAPI_E_" || $prefix == "MAPI_W_") {
-                /**
-                 * If PHP encounters a number beyond the bounds of the integer type,
-                 * it will be interpreted as a float instead, so when comparing these error codes
-                 * we have to manually typecast value to integer, so float will be converted in integer,
-                 * but still its out of bound for integer limit so it will be auto adjusted to minus value
-                 */
-                if ($errcode == (int) $value){
+        foreach ($allConstants as $key => $value) {
+            /**
+             * If PHP encounters a number beyond the bounds of the integer type,
+             * it will be interpreted as a float instead, so when comparing these error codes
+             * we have to manually typecast value to integer, so float will be converted in integer,
+             * but still its out of bound for integer limit so it will be auto adjusted to minus value
+             */
+            if ($errcode == (int) $value) {
+                // Check that we have an actual MAPI error or warning definition
+                $prefix = substr($key, 0, 7);
+                if ($prefix == "MAPI_E_" || $prefix == "MAPI_W_") {
                     return $key;
                 }
             }
