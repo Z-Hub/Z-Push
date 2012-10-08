@@ -602,7 +602,8 @@ If it is the first time this attendee has proposed a new date/time, increment th
     function isInCalendar() {
         $messageprops = mapi_getprops($this->message, Array($this->proptags['goid'], $this->proptags['goid2'], PR_RCVD_REPRESENTING_NAME));
         $goid = $messageprops[$this->proptags['goid']];
-        $goid2 = $messageprops[$this->proptags['goid2']];
+        if (isset($messageprops[$this->proptags['goid2']]))
+            $goid2 = $messageprops[$this->proptags['goid2']];
 
         $basedate = $this->getBasedateFromGlobalID($goid);
 
@@ -621,11 +622,13 @@ If it is the first time this attendee has proposed a new date/time, increment th
             // First try with GlobalID(0x3) (case 1)
             $entryid = $this->findCalendarItems($goid, $calFolder);
             // If not found then try with CleanGlobalID(0x23) (case 2)
-            if (!is_array($entryid))
+            if (!is_array($entryid) && isset($goid2))
                 $entryid = $this->findCalendarItems($goid2, $calFolder);
-        } else {
+        } else if (isset($goid2)) {
             $entryid = $this->findCalendarItems($goid2, $calFolder);
         }
+        else
+            return false;
 
         return is_array($entryid);
     }
