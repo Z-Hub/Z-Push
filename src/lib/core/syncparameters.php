@@ -45,7 +45,7 @@
 
 class SyncParameters extends StateObject {
     const DEFAULTOPTIONS = "DEFAULT";
-    const EMAILOPTIONS = "EMAILS";
+    const EMAILOPTIONS = "EMAIL";
     const CALENDAROPTIONS = "CALENDAR";
     const CONTACTOPTIONS = "CONTACTS";
     const NOTEOPTIONS = "NOTE";
