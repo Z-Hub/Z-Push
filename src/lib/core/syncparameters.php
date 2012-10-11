@@ -232,6 +232,7 @@ class SyncParameters extends StateObject {
      * @return ContentParameters object
      */
     public function GetCPO($options = self::DEFAULTOPTIONS) {
+        $options = strtoupper($options);
         $this->isValidType($options);
         $options = $this->normalizeType($options);
 
@@ -254,7 +255,14 @@ class SyncParameters extends StateObject {
      * @return
      */
     public function UseCPO($options = self::DEFAULTOPTIONS) {
+        $options = strtoupper($options);
         $this->isValidType($options);
+
+        // remove potential old default CPO if available
+        if (isset($this->contentParameters[self::DEFAULTOPTIONS]) && $options != self::DEFAULTOPTIONS && $options !== self::SMSOPTIONS) {
+            unset($this->contentParameters[self::DEFAULTOPTIONS]);
+            ZLog::Write(LOGLEVEL_DEBUG, "SyncParameters->UseCPO(): removed existing DEFAULT CPO as it is obsolete");
+        }
 
         ZLOG::Write(LOGLEVEL_DEBUG, sprintf("SyncParameters->UseCPO('%s')", $options));
         $this->currentCPO = $options;
@@ -292,7 +300,6 @@ class SyncParameters extends StateObject {
      * @throws FatalNotImplementedException
      */
      private function isValidType($options) {
-         $options = strtoupper($options);
          if ($options !== self::DEFAULTOPTIONS &&
                         $options !== self::EMAILOPTIONS &&
                         $options !== self::CALENDAROPTIONS &&
@@ -319,22 +326,26 @@ class SyncParameters extends StateObject {
         if (isset($this->contentParameters[$options]))
             return $options;
 
+        $returnCPO = $options;
         // return email, calendar, contact or note CPO as default CPO if there no explicit default CPO defined
         if ($options == self::DEFAULTOPTIONS && !isset($this->contentParameters[self::DEFAULTOPTIONS])) {
-            if ($options == self::EMAILOPTIONS && isset($this->contentParameters[self::EMAILOPTIONS]))
-                return self::EMAILOPTIONS;
 
-            if ($options == self::CALENDAROPTIONS && isset($this->contentParameters[self::CALENDAROPTIONS]))
-                return self::CALENDAROPTIONS;
+            if (isset($this->contentParameters[self::EMAILOPTIONS]))
+                $returnCPO = self::EMAILOPTIONS;
+            elseif (isset($this->contentParameters[self::CALENDAROPTIONS]))
+                $returnCPO = self::CALENDAROPTIONS;
+            elseif (isset($this->contentParameters[self::CONTACTOPTIONS]))
+                $returnCPO = self::CONTACTOPTIONS;
+            elseif (isset($this->contentParameters[self::NOTEOPTIONS]))
+                $returnCPO = self::NOTEOPTIONS;
 
-            if ($options == self::CONTACTOPTIONS && isset($this->contentParameters[self::CONTACTOPTIONS]))
-                return self::CONTACTOPTIONS;
-
-            if ($options == self::NOTEOPTIONS && isset($this->contentParameters[self::NOTEOPTIONS]))
-                return self::NOTEOPTIONS;
+            if ($returnCPO != $options)
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncParameters->normalizeType(): using %s for requested %s", $returnCPO, $options));
+            return $returnCPO;
         }
         // something unexpected happened, just return default, empty in the worst case
         else {
+            ZLog::Write(LOGLEVEL_WARN, "SyncParameters->normalizeType(): no DEFAULT CPO available, creating empty CPO");
             $this->checkCPO(self::DEFAULTOPTIONS);
             return self::DEFAULTOPTIONS;
         }
