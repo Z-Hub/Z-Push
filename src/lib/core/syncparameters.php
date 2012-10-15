@@ -260,7 +260,9 @@ class SyncParameters extends StateObject {
 
         // remove potential old default CPO if available
         if (isset($this->contentParameters[self::DEFAULTOPTIONS]) && $options != self::DEFAULTOPTIONS && $options !== self::SMSOPTIONS) {
-            unset($this->contentParameters[self::DEFAULTOPTIONS]);
+            $a = $this->contentParameters;
+            unset($a[self::DEFAULTOPTIONS]);
+            $this->contentParameters = $a;
             ZLog::Write(LOGLEVEL_DEBUG, "SyncParameters->UseCPO(): removed existing DEFAULT CPO as it is obsolete");
         }
 
