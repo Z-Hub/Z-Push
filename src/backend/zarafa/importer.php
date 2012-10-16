@@ -69,6 +69,8 @@ class ImportChangesICS implements IImportChanges {
     private $conflictsLoaded;
     private $conflictsContentParameters;
     private $conflictsState;
+    private $cutoffdate;
+    private $contentClass;
 
     /**
      * Constructor
@@ -85,6 +87,8 @@ class ImportChangesICS implements IImportChanges {
         $this->store = $store;
         $this->folderid = $folderid;
         $this->conflictsLoaded = false;
+        $this->cutoffdate = false;
+        $this->contentClass = false;
 
         if ($folderid) {
             $entryid = mapi_msgstore_entryidfromsourcekey($store, $folderid);
@@ -155,6 +159,33 @@ class ImportChangesICS implements IImportChanges {
     }
 
     /**
+     * Configures additional parameters for content selection
+     *
+     * @param ContentParameters         $contentparameters
+     *
+     * @access public
+     * @return boolean
+     * @throws StatusException
+     */
+    public function ConfigContentParameters($contentparameters) {
+        $filtertype = $contentparameters->GetFilterType();
+        switch($contentparameters->GetContentClass()) {
+            case "Email":
+                $this->cutoffdate = ($filtertype) ? Utils::GetCutOffDate($filtertype) : false;
+                break;
+            case "Calendar":
+                $this->cutoffdate = ($filtertype) ? Utils::GetCutOffDate($filtertype) : false;
+                break;
+            default:
+            case "Contacts":
+            case "Tasks":
+                $this->cutoffdate = false;
+                break;
+        }
+        $this->contentClass = $contentparameters->GetContentClass();
+    }
+
+    /**
      * Reads state from the Importer
      *
      * @access public
@@ -185,6 +216,33 @@ class ImportChangesICS implements IImportChanges {
         }
 
         return $state;
+    }
+
+    /**
+     * Checks if a message is in the synchronization interval (window)
+     * if a filter (e.g. Sync items two weeks back) or limits this synchronization.
+     * These checks only apply to Emails and Appointments only, Contacts, Tasks and Notes do not have time restrictions.
+     *
+     * @param string     $messageid        the message id to be checked
+     *
+     * @access private
+     * @return boolean
+     */
+    private function isMessageInSyncInterval($messageid) {
+        $entryid = mapi_msgstore_entryidfromsourcekey($this->store, $this->folderid, hex2bin($messageid));
+        if(!$entryid) {
+            ZLog::Write(LOGLEVEL_WARN, sprintf("ImportChangesICS->isMessageInSyncInterval('%s'): Error, unable to resolve message id", $id));
+            return false;
+        }
+
+        $mapimessage = mapi_msgstore_openentry($this->store, $entryid);
+        
+        if ($this->contentClass == "Email")
+            return MAPIUtils::IsInEmailSyncInterval($this->store, $mapimessage, $this->cutoffdate);
+        elseif ($this->contentClass == "Calendar")
+            return MAPIUtils::IsInCalendarSyncInterval($this->store, $mapimessage, $this->cutoffdate);
+
+        return true;
     }
 
     /**----------------------------------------------------------------------------------------------------------
@@ -281,6 +339,10 @@ class ImportChangesICS implements IImportChanges {
         if($id) {
             $props[PR_SOURCE_KEY] = $sourcekey;
 
+            // on editing an existing message, check if it is in the synchronization interval
+            if (!$this->isMessageInSyncInterval($id))
+                throw new StatusException(sprintf("ImportChangesICS->ImportMessageChange('%s','%s'): Message is outside the sync interval. Data not saved.", $id, get_class($message)), SYNC_STATUS_SYNCCANNOTBECOMPLETED);
+
             // check for conflicts
             $this->lazyLoadConflicts();
             if($this->memChanges->IsChanged($id)) {
@@ -324,6 +386,10 @@ class ImportChangesICS implements IImportChanges {
      * @throws StatusException
      */
     public function ImportMessageDeletion($id) {
+        // check if the message is in the current syncinterval
+        if (!$this->isMessageInSyncInterval($id))
+            throw new StatusException(sprintf("ImportChangesICS->ImportMessageDeletion('%s'): Message is outside the sync interval and so far not deleted.", $id), SYNC_STATUS_OBJECTNOTFOUND);
+
         // check for conflicts
         $this->lazyLoadConflicts();
         if($this->memChanges->IsChanged($id)) {
@@ -353,6 +419,10 @@ class ImportChangesICS implements IImportChanges {
      * @throws StatusException
      */
     public function ImportMessageReadFlag($id, $flags) {
+        // check if the message is in the current syncinterval
+        if (!$this->isMessageInSyncInterval($id))
+            throw new StatusException(sprintf("ImportChangesICS->ImportMessageReadFlag('%s','%d'): Message is outside the sync interval. Flags not updated.", $id, $flags), SYNC_STATUS_OBJECTNOTFOUND);
+
         // check for conflicts
         /*
          * Checking for conflicts is correct at this point, but is a very expensive operation.
@@ -393,6 +463,10 @@ class ImportChangesICS implements IImportChanges {
     public function ImportMessageMove($id, $newfolder) {
         if (strtolower($newfolder) == strtolower(bin2hex($this->folderid)) )
             throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Error, source and destination are equal", $id, $newfolder), SYNC_MOVEITEMSSTATUS_SAMESOURCEANDDEST);
+
+        // check if the source message is in the current syncinterval
+        if (!$this->isMessageInSyncInterval($id))
+            throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Source message is outside the sync interval. Move not performed.", $id, $newfolder), SYNC_MOVEITEMSSTATUS_INVALIDSOURCEID);
 
         // Get the entryid of the message we're moving
         $entryid = mapi_msgstore_entryidfromsourcekey($this->store, $this->folderid, hex2bin($id));

@@ -1007,6 +1007,13 @@ class Sync extends RequestProcessor {
             }
             else
                 $this->importer->Config($sc->GetParameter($spa, "state"), $spa->GetConflict());
+
+            // the CPO is also needed by the importer to check if imported changes
+            // are inside the sync window - see ZP-258
+            // TODO ConfigContentParameters needs to be defined in IImportChanges and all implementing importers/backends
+            // this is currently only supported by the Zarafa Backend
+            if (method_exists($this->importer, "ConfigContentParameters"))
+                $this->importer->ConfigContentParameters($spa->GetCPO());
         }
         catch (StatusException $stex) {
            $status = $stex->getCode();

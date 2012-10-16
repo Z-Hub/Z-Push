@@ -59,6 +59,7 @@ class MAPIUtils {
      * @return array
      */
     public static function GetEmailRestriction($timestamp) {
+        // ATTENTION: ON CHANGING THIS RESTRICTION, MAPIUtils::IsInEmailRestriction() also needs to be changed
         $restriction = array ( RES_PROPERTY,
                           array (   RELOP => RELOP_GE,
                                     ULPROPTAG => PR_MESSAGE_DELIVERY_TIME,
@@ -74,6 +75,7 @@ class MAPIUtils {
      * Create a MAPI restriction to use in the calendar which will
      * return all future calendar items, plus those since $timestamp
      *
+     * @param MAPIStore  $store         the MAPI store
      * @param long       $timestamp     Timestamp since when to include messages
      *
      * @access public
@@ -88,6 +90,7 @@ class MAPIUtils {
         $props = MAPIMapping::GetAppointmentProperties();
         $props = getPropIdsFromStrings($store, $props);
 
+        // ATTENTION: ON CHANGING THIS RESTRICTION, MAPIUtils::IsInCalendarRestriction() also needs to be changed
         $restriction = Array(RES_OR,
              Array(
                    // OR
@@ -112,7 +115,7 @@ class MAPIUtils {
                    Array(RES_OR,
                          Array(
                                // OR
-                               // (EXIST(recurrence_enddate_property) && item[isRecurring] == true && item[end] >= start)
+                               // (EXIST(recurrence_enddate_property) && item[isRecurring] == true && recurrence_enddate_property >= start)
                                Array(RES_AND,
                                      Array(
                                            Array(RES_EXIST,
@@ -210,14 +213,90 @@ class MAPIUtils {
         );
     }
 
+    /**
+     * Checks if mapimessage is inside the synchronization interval
+     * also defined by MAPIUtils::GetEmailRestriction()
+     *
+     * @param MAPIStore       $store           mapi store
+     * @param MAPIMessage     $mapimessage     the mapi message to be checked
+     * @param long            $timestamp       the lower time limit
+     *
+     * @access public
+     * @return boolean
+     */
+    public static function IsInEmailSyncInterval($store, $mapimessage, $timestamp) {
+        $p = mapi_getprops($mapimessage, array(PR_MESSAGE_DELIVERY_TIME));
+
+        if (isset($p[PR_MESSAGE_DELIVERY_TIME]) && $p[PR_MESSAGE_DELIVERY_TIME] >= $timestamp) {
+            ZLog::Write(LOGLEVEL_DEBUG, "MAPIUtils->IsInEmailSyncInterval: Message is in the synchronization interval");
+            return true;
+        }
+
+        ZLog::Write(LOGLEVEL_WARN, "MAPIUtils->IsInEmailSyncInterval: Message is OUTSIDE the synchronization interval");
+        return false;
+    }
+
+    /**
+     * Checks if mapimessage is inside the synchronization interval
+     * also defined by MAPIUtils::GetCalendarRestriction()
+     *
+     * @param MAPIStore       $store           mapi store
+     * @param MAPIMessage     $mapimessage     the mapi message to be checked
+     * @param long            $timestamp       the lower time limit
+     *
+     * @access public
+     * @return boolean
+     */
+    public static function IsInCalendarSyncInterval($store, $mapimessage, $timestamp) {
+        // This is our viewing window
+        $start = $timestamp;
+        $end = 0x7fffffff; // infinite end
+
+        $props = MAPIMapping::GetAppointmentProperties();
+        $props = getPropIdsFromStrings($store, $props);
+
+        $p = mapi_getprops($mapimessage, array($props["starttime"], $props["endtime"], $props["recurrenceend"], $props["isrecurring"], $props["recurrenceend"]));
+
+        if (
+                (
+                    isset($p[$props["endtime"]]) && isset($p[$props["starttime"]]) &&
+
+                    //item.end > window.start && item.start < window.end
+                    $p[$props["endtime"]] > $start && $p[$props["starttime"]] < $end
+                )
+            ||
+                (
+                    isset($p[$props["isrecurring"]]) &&
+
+                    //(EXIST(recurrence_enddate_property) && item[isRecurring] == true && recurrence_enddate_property >= start)
+                    isset($p[$props["recurrenceend"]]) && $p[$props["isrecurring"]] == true && $p[$props["recurrenceend"]] >= $start
+                )
+            ||
+                (
+                    isset($p[$props["isrecurring"]]) && isset($p[$props["starttime"]]) &&
+
+                    //(!EXIST(recurrence_enddate_property) && item[isRecurring] == true && item[start] <= end)
+                    !isset($p[$props["recurrenceend"]]) && $p[$props["isrecurring"]] == true && $p[$props["starttime"]] <= $end
+                )
+           ) {
+            ZLog::Write(LOGLEVEL_DEBUG, "MAPIUtils->IsInCalendarSyncInterval: Message is in the synchronization interval");
+            return true;
+        }
+
+
+        ZLog::Write(LOGLEVEL_WARN, "MAPIUtils->IsInCalendarSyncInterval: Message is OUTSIDE the synchronization interval");
+        return false;
+    }
+
 
     /**
      * Handles recurring item for meeting request coming from tnef
      *
-     * @access public
-     *
      * @param array $mapiprops
      * @param array $props
+     *
+     * @access public
+     * @return
      */
     public static function handleRecurringItem(&$mapiprops, &$props) {
         $mapiprops[$props["isrecurringtag"]] = true;
@@ -237,10 +316,10 @@ class MAPIUtils {
     /**
      * Reads data of large properties from a stream
      *
-     * @access public
-     *
      * @param MAPIMessage $message
      * @param long $prop
+     *
+     * @access public
      * @return string
      */
     public static function readPropStream($message, $prop) {
@@ -270,8 +349,10 @@ class MAPIUtils {
     /**
      * Checks if a store supports properties containing unicode characters
      *
-     * @access public
      * @param MAPIStore $store
+     *
+     * @access public
+     * @return
      */
     public static function IsUnicodeStore($store) {
         $supportmask = mapi_getprops($store, array(PR_STORE_SUPPORT_MASK));
