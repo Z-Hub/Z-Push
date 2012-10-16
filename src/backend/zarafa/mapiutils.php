@@ -59,7 +59,7 @@ class MAPIUtils {
      * @return array
      */
     public static function GetEmailRestriction($timestamp) {
-        // ATTENTION: ON CHANGING THIS RESTRICTION, MAPIUtils::IsInEmailRestriction() also needs to be changed
+        // ATTENTION: ON CHANGING THIS RESTRICTION, MAPIUtils::IsInEmailSyncInterval() also needs to be changed
         $restriction = array ( RES_PROPERTY,
                           array (   RELOP => RELOP_GE,
                                     ULPROPTAG => PR_MESSAGE_DELIVERY_TIME,
@@ -90,7 +90,7 @@ class MAPIUtils {
         $props = MAPIMapping::GetAppointmentProperties();
         $props = getPropIdsFromStrings($store, $props);
 
-        // ATTENTION: ON CHANGING THIS RESTRICTION, MAPIUtils::IsInCalendarRestriction() also needs to be changed
+        // ATTENTION: ON CHANGING THIS RESTRICTION, MAPIUtils::IsInCalendarSyncInterval() also needs to be changed
         $restriction = Array(RES_OR,
              Array(
                    // OR
