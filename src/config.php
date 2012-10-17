@@ -65,6 +65,20 @@
 
 /**********************************************************************************
  *  Logging settings
+ *  Possible LOGLEVEL and LOGUSERLEVEL values are:
+ *  LOGLEVEL_OFF            - no logging
+ *  LOGLEVEL_FATAL          - log only critical errors
+ *  LOGLEVEL_ERROR          - logs events which might require corrective actions
+ *  LOGLEVEL_WARN           - might lead to an error or require corrective actions in the future
+ *  LOGLEVEL_INFO           - usually completed actions
+ *  LOGLEVEL_DEBUG          - debugging information, typically only meaningful to developers
+ *  LOGLEVEL_WBXML          - also prints the WBXML sent to/from the device
+ *  LOGLEVEL_DEVICEID       - also prints the device id for every log entry
+ *  LOGLEVEL_WBXMLSTACK     - also prints the contents of WBXML stack
+ *
+ *  The verbosity increases from top to bottom. More verbose levels include less verbose
+ *  ones, e.g. setting to LOGLEVEL_DEBUG will also output LOGLEVEL_FATAL, LOGLEVEL_ERROR,
+ *  LOGLEVEL_WARN and LOGLEVEL_INFO level entries.
  */
     define('LOGFILEDIR', '/var/log/z-push/');
     define('LOGFILE', LOGFILEDIR . 'z-push.log');
