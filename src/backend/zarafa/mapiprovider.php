@@ -289,6 +289,25 @@ class MAPIProvider {
                 array_push($message->attendees, $attendee);
         }
 
+        // Status 0 = no meeting, status 1 = organizer, status 2/3/4/5 = tentative/accepted/declined/notresponded
+        if(isset($messageprops[$appointmentprops["meetingstatus"]]) && $messageprops[$appointmentprops["meetingstatus"]] > 1) {
+            // Work around iOS6 cancellation issue when there are no attendees for this meeting. Just add ourselves as the sole attendee.
+            if(count($message->attendees) == 0) {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("MAPIProvider->getAppointment: adding ourself as an attendee for iOS6 workaround"));
+                $attendee = new SyncAttendee();
+
+                $meinfo = mapi_zarafa_getuser_by_name($this->store, Request::GetAuthUser());
+
+                if (is_array($meinfo)) {
+                    $attendee->email = w2u($meinfo["emailaddress"]);
+                    $attendee->mame = w2u($meinfo["fullname"]);
+                    $attendee->attendeetype = MAPI_TO;
+
+                    array_push($message->attendees, $attendee);
+                }
+            }
+        }
+
         if (!isset($message->nativebodytype)) $message->nativebodytype = $this->getNativeBodyType($messageprops);
 
         return $message;
