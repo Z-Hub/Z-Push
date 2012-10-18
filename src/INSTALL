@@ -101,7 +101,18 @@ Lastly, make sure that PHP has the following settings:
     php_flag short_open_tag on
 
 You can set this in the httpd.conf, in php.ini or in an .htaccess file in
-the root of z-push. If you don't set this up correctly, you will not be
+the root of z-push.
+
+If you have several php applications on the same system, you could specify the
+z-push directory so these settings are considered only there.
+    <Directory /usr/share/z-push>
+        php_flag magic_quotes_gpc off
+        php_flag register_globals off
+        php_flag magic_quotes_runtime off
+        php_flag short_open_tag on
+    </Directory>
+
+If you don't set this up correctly, you will not be
 able to login correctly via z-push.
 
 Please also set a memory_limit for php to 128M in php.ini.
