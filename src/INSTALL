@@ -27,6 +27,20 @@ Additional informations can be found in the Zarafa Administrator Manual:
 http://doc.zarafa.com/trunk/Administrator_Manual/en-US/html/_zpush.html
 
 
+Additioal php packages
+----------------------
+To use the full featureset of Z-Push 2 and the z-push-top command line utility, 
+additional php packages are required. These provide SOAP support, access to 
+process control and shared memory. 
+
+These packages vary in names between the distributions.
+- Generally install the package:                    php-soap 
+- On Suse (SLES & OpenSuse) install the packages:   php5-pcntl php5-sysvshm php5-sysvsem
+- On RHEL based systems install the package:        php-process
+  To install this package you need to add an extra channel subscription from the 
+  RHEL Server Optional channel.
+
+
 How to install
 --------------
 
@@ -90,6 +104,8 @@ You can set this in the httpd.conf, in php.ini or in an .htaccess file in
 the root of z-push. If you don't set this up correctly, you will not be
 able to login correctly via z-push.
 
+Please also set a memory_limit for php to 128M in php.ini.
+
 Z-Push writes files to your file system like logs or data from the
 FileStateMachine (which is default). In order to make this possible,
 you either need to disable the php-safe-mode in php.ini or .htaccess with
@@ -98,6 +114,18 @@ or configure it accordingly, so Z-Push is allowed to write to the
 log and state directories. 
 
 After doing this, you should be able to synchronize with your mobile device.
+
+To use the command line tools, access the installation directory 
+(usually /usr/share/z-push) and execute:
+    ./z-push-top.php        and/or
+    ./z-push-admin.php
+
+To facilitate the access symbolic links can be created, by executing:
+    ln -s /usr/share/z-push/z-push-admin.php /usr/sbin/z-push-admin
+    ln -s /usr/share/z-push/z-push-top.php /usr/sbin/z-push-top
+
+With these symlinks in place the cli tools can be accessed from any 
+directory and without the php file extension.
 
 
 Upgrading from Z-Push 1.X versions
