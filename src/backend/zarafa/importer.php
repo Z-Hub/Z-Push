@@ -229,6 +229,12 @@ class ImportChangesICS implements IImportChanges {
      * @return boolean
      */
     private function isMessageInSyncInterval($messageid) {
+        // if there is no restriciton we do not need to check
+        if ($this->cutoffdate === false)
+            return true;
+
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ImportChangesICS->isMessageInSyncInterval('%s'): cut off date is: %s", $messageid, $this->cutoffdate));
+
         $entryid = mapi_msgstore_entryidfromsourcekey($this->store, $this->folderid, hex2bin($messageid));
         if(!$entryid) {
             ZLog::Write(LOGLEVEL_WARN, sprintf("ImportChangesICS->isMessageInSyncInterval('%s'): Error, unable to resolve message id", $messageid));
