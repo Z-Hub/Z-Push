@@ -499,13 +499,13 @@ class BackendZarafa implements IBackend, ISearchProvider {
 
                     if (strlen($body) > 0) {
                         $fwbody = MAPIUtils::readPropStream($fwmessage, PR_BODY);
-                        $fwbody = (isset($cpid[$sendMailProps["internetcpid"]])) ? Utils::ConvertCodepageStringToUtf8($cpid[$sendMailProps["internetcpid"]], $fwbody) : u2w($fwbody);
+                        $fwbody = (isset($cpid[$sendMailProps["internetcpid"]])) ? Utils::ConvertCodepageStringToUtf8($cpid[$sendMailProps["internetcpid"]], $fwbody) : w2u($fwbody);
                         $mapiprops[$sendMailProps["body"]] = $body."\r\n\r\n".$fwbody;
                     }
 
                     if (strlen($bodyHtml) > 0) {
                         $fwbodyHtml = MAPIUtils::readPropStream($fwmessage, PR_HTML);
-                        $fwbodyHtml = (isset($cpid[$sendMailProps["internetcpid"]])) ? Utils::ConvertCodepageStringToUtf8($cpid[$sendMailProps["internetcpid"]], $fwbodyHtml) : u2w($fwbodyHtml);
+                        $fwbodyHtml = (isset($cpid[$sendMailProps["internetcpid"]])) ? Utils::ConvertCodepageStringToUtf8($cpid[$sendMailProps["internetcpid"]], $fwbodyHtml) : w2u($fwbodyHtml);
                         $mapiprops[$sendMailProps["html"]] = $bodyHtml."<br><br>".$fwbodyHtml;
                     }
                 }
