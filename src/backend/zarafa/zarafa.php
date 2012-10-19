@@ -491,6 +491,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
                     // get message's body in order to append forward or reply text
                     $body = MAPIUtils::readPropStream($mapimessage, PR_BODY);
                     $bodyHtml = MAPIUtils::readPropStream($mapimessage, PR_HTML);
+                    $cpid = mapi_getprops($fwmessage, array($sendMailProps["internetcpid"]));
                     if($sm->forwardflag) {
                         // attach the original attachments to the outgoing message
                         $this->copyAttachments($mapimessage, $fwmessage);
@@ -498,11 +499,13 @@ class BackendZarafa implements IBackend, ISearchProvider {
 
                     if (strlen($body) > 0) {
                         $fwbody = MAPIUtils::readPropStream($fwmessage, PR_BODY);
+                        $fwbody = (isset($cpid[$sendMailProps["internetcpid"]])) ? Utils::ConvertCodepageStringToUtf8($cpid[$sendMailProps["internetcpid"]], $fwbody) : u2w($fwbody);
                         $mapiprops[$sendMailProps["body"]] = $body."\r\n\r\n".$fwbody;
                     }
 
                     if (strlen($bodyHtml) > 0) {
                         $fwbodyHtml = MAPIUtils::readPropStream($fwmessage, PR_HTML);
+                        $fwbodyHtml = (isset($cpid[$sendMailProps["internetcpid"]])) ? Utils::ConvertCodepageStringToUtf8($cpid[$sendMailProps["internetcpid"]], $fwbodyHtml) : u2w($fwbodyHtml);
                         $mapiprops[$sendMailProps["html"]] = $bodyHtml."<br><br>".$fwbodyHtml;
                     }
                 }
