@@ -48,7 +48,8 @@ class SyncParameters extends StateObject {
     const EMAILOPTIONS = "EMAIL";
     const CALENDAROPTIONS = "CALENDAR";
     const CONTACTOPTIONS = "CONTACTS";
-    const NOTEOPTIONS = "NOTE";
+    const NOTEOPTIONS = "NOTES";
+    const TASKOPTIONS = "TASKS";
     const SMSOPTIONS = "SMS";
 
     private $synckeyChanged = false;
@@ -307,6 +308,7 @@ class SyncParameters extends StateObject {
                         $options !== self::CALENDAROPTIONS &&
                         $options !== self::CONTACTOPTIONS &&
                         $options !== self::NOTEOPTIONS &&
+                        $options !== self::TASKOPTIONS &&
                         $options !== self::SMSOPTIONS)
             throw new FatalNotImplementedException(sprintf("SyncParameters->isAllowedType('%s') ContentParameters is invalid. Such type is not available.", $options));
 
@@ -340,6 +342,8 @@ class SyncParameters extends StateObject {
                 $returnCPO = self::CONTACTOPTIONS;
             elseif (isset($this->contentParameters[self::NOTEOPTIONS]))
                 $returnCPO = self::NOTEOPTIONS;
+            elseif (isset($this->contentParameters[self::TASKOPTIONS]))
+                $returnCPO = self::TASKOPTIONS;
 
             if ($returnCPO != $options)
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncParameters->normalizeType(): using %s for requested %s", $returnCPO, $options));
