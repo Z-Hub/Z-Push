@@ -1141,19 +1141,33 @@ class MAPIProvider {
         }
 
         //always set the PR_SENT_REPRESENTING_* props so that the attendee status update also works with the webaccess
-        $p = array($appointmentprops["representingentryid"]);
-        $representingentryid = $this->getProps($mapimessage, $p);
+        $p = array( $appointmentprops["representingentryid"], $appointmentprops["representingname"], $appointmentprops["sentrepresentingaddt"],
+                    $appointmentprops["sentrepresentingemail"], $appointmentprops["sentrepresentinsrchk"]);
+        $representingprops = $this->getProps($mapimessage, $p);
 
-        if (!isset($representingentryid[$appointmentprops["representingentryid"]])) {
+        if (!isset($representingprops[$appointmentprops["representingentryid"]])) {
             $props[$appointmentprops["representingname"]] = Request::GetAuthUser();
             $props[$appointmentprops["sentrepresentingemail"]] = Request::GetAuthUser();
             $props[$appointmentprops["sentrepresentingaddt"]] = "ZARAFA";
             $props[$appointmentprops["representingentryid"]] = mapi_createoneoff(Request::GetAuthUser(), "ZARAFA", Request::GetAuthUser());
+            $props[$appointmentprops["sentrepresentinsrchk"]] = $props[$appointmentprops["sentrepresentingaddt"]].":".$props[$appointmentprops["sentrepresentingemail"]];
         }
 
         // Do attendees
         if(isset($appointment->attendees) && is_array($appointment->attendees)) {
             $recips = array();
+
+            // Outlook XP requires organizer in the attendee list as well
+            $org = array();
+            $org[PR_ENTRYID] = isset($representingprops[$appointmentprops["representingentryid"]]) ? $representingprops[$appointmentprops["representingentryid"]] : $props[$appointmentprops["representingentryid"]];
+            $org[PR_DISPLAY_NAME] = isset($representingprops[$appointmentprops["representingname"]]) ? $representingprops[$appointmentprops["representingname"]] : $props[$appointmentprops["representingname"]];
+            $org[PR_ADDRTYPE] = isset($representingprops[$appointmentprops["sentrepresentingaddt"]]) ? $representingprops[$appointmentprops["sentrepresentingaddt"]] : $props[$appointmentprops["sentrepresentingaddt"]];
+            $org[PR_EMAIL_ADDRESS] = isset($representingprops[$appointmentprops["sentrepresentingemail"]]) ? $representingprops[$appointmentprops["sentrepresentingemail"]] : $props[$appointmentprops["sentrepresentingemail"]];
+            $org[PR_SEARCH_KEY] = isset($representingprops[$appointmentprops["sentrepresentinsrchk"]]) ? $representingprops[$appointmentprops["sentrepresentinsrchk"]] : $props[$appointmentprops["sentrepresentinsrchk"]];
+            $org[PR_RECIPIENT_FLAGS] = recipOrganizer | recipSendable;
+            $org[PR_RECIPIENT_TYPE] = MAPI_TO;
+
+            array_push($recips, $org);
 
             //open addresss book for user resolve
             $addrbook = $this->getAddressbook();
@@ -1171,6 +1185,7 @@ class MAPIProvider {
                     $recip[PR_ADDRTYPE] = $userinfo[0][PR_ADDRTYPE];
                     $recip[PR_ENTRYID] = $userinfo[0][PR_ENTRYID];
                     $recip[PR_RECIPIENT_TYPE] = MAPI_TO;
+                    $recip[PR_RECIPIENT_FLAGS] = recipSendable;
                 }
                 else {
                     $recip[PR_DISPLAY_NAME] = u2w($attendee->name);
