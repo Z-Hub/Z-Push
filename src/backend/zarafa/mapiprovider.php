@@ -1008,7 +1008,7 @@ class MAPIProvider {
         $props = array();
 
         //we also have to set the responsestatus and not only meetingstatus, so we use another mapi tag
-        if (isset($appointment->meetingstatus)) $props[$appointmentprops["meetingstatus"]] = $appointment->meetingstatus;
+        $props[$appointmentprops["responsestatus"]] = (isset($appointment->responsestatus)) ? $appointment->responsestatus : olResponseNone;
 
         //sensitivity is not enough to mark an appointment as private, so we use another mapi tag
         $private = (isset($appointment->sensitivity) && $appointment->sensitivity == 0) ? false : true;

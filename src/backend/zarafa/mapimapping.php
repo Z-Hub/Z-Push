@@ -328,7 +328,7 @@ class MAPIMapping {
             "recurringstate"        => "PT_BINARY:PSETID_Appointment:0x8216",
             "timezonetag"           => "PT_BINARY:PSETID_Appointment:0x8233",
             "recurrenceend"         => "PT_SYSTIME:PSETID_Appointment:0x8236",
-            "meetingstatus"         => "PT_LONG:PSETID_Appointment:0x8218",
+            "responsestatus"        => "PT_LONG:PSETID_Appointment:0x8218",
             "commonstart"           => "PT_SYSTIME:PSETID_Common:0x8516",
             "commonend"             => "PT_SYSTIME:PSETID_Common:0x8517",
             "reminderstart"         => "PT_SYSTIME:PSETID_Common:0x8502",
