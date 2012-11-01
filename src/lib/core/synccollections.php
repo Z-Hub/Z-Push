@@ -427,7 +427,7 @@ class SyncCollections implements Iterator {
             }
         }
         else
-            $checkClasses = implode("/", array_keys($classes));
+            $checkClasses = implode(" ", array_keys($classes));
 
         $pingTracking = new PingTracking();
         $this->changes = array();
