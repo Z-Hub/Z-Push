@@ -714,12 +714,6 @@ class Sync extends RequestProcessor {
 
                         self::$encoder->startTag(SYNC_FOLDER);
 
-                        if($spa->HasContentClass()) {
-                            self::$encoder->startTag(SYNC_FOLDERTYPE);
-                                self::$encoder->content($spa->GetContentClass());
-                            self::$encoder->endTag();
-                        }
-
                         self::$encoder->startTag(SYNC_SYNCKEY);
                         if($status == SYNC_STATUS_SUCCESS && $spa->HasNewSyncKey())
                             self::$encoder->content($spa->GetNewSyncKey());
