@@ -79,6 +79,7 @@ include('version.php');
             pcntl_signal(SIGINT, array($zpt, "SignalHandler"));
             $zpt->run();
             $zpt->scrClear();
+            system("stty sane");
         }
         else
             echo "Z-Push shared memory interprocess communication is not available.\n";
