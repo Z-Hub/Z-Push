@@ -182,6 +182,10 @@ include_once('version.php');
         if(!RequestProcessor::HandleRequest())
             throw new WBXMLException(ZLog::GetWBXMLDebugInfo());
 
+        // eventually the RequestProcessor wants to send other headers to the mobile
+        foreach (RequestProcessor::GetSpecialHeaders() as $header)
+            header($header);
+
         // stream the data
         $len = ob_get_length();
         $data = ob_get_contents();

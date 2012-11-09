@@ -55,6 +55,7 @@ abstract class RequestProcessor {
     static protected $decoder;
     static protected $encoder;
     static protected $userIsAuthenticated;
+    static protected $specialHeaders;
 
     /**
      * Authenticates the remote user
@@ -124,6 +125,19 @@ abstract class RequestProcessor {
 
         // TODO handle WBXML exceptions here and print stack
         return $handler->Handle(Request::GetCommandCode());
+    }
+
+    /**
+     * Returns any additional headers which should be sent to the mobile
+     *
+     * @access public
+     * @return array
+     */
+    static public function GetSpecialHeaders() {
+        if (!isset(self::$specialHeaders) || !is_array(self::$specialHeaders))
+            return array();
+
+        return self::$specialHeaders;
     }
 
     /**

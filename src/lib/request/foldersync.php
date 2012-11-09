@@ -67,6 +67,13 @@ class FolderSync extends RequestProcessor {
         if(!self::$decoder->getElementEndTag())
             return false;
 
+        // every FolderSync with SyncKey 0 should return the supported AS version & command headers
+        if($synckey == "0") {
+            self::$specialHeaders = array();
+            self::$specialHeaders[] = ZPush::GetSupportedProtocolVersions();
+            self::$specialHeaders[] = ZPush::GetSupportedCommands();
+        }
+
         $status = SYNC_FSSTATUS_SUCCESS;
         $newsynckey = $synckey;
         try {
