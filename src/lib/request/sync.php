@@ -1052,7 +1052,7 @@ class Sync extends RequestProcessor {
         $ignoreMessage = false;
         if ($actiondata["failstate"]) {
             // message was ADDED before, do NOT add it again
-            if ($todo == SYNC_ADD && $actiondata["failstate"]["clientids"][$clientid]) {
+            if ($todo == SYNC_ADD && isset($actiondata["failstate"]["clientids"][$clientid])) {
                 $ignoreMessage = true;
 
                 // make sure no messages are sent back
