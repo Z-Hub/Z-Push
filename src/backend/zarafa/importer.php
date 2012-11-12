@@ -237,11 +237,15 @@ class ImportChangesICS implements IImportChanges {
 
         $entryid = mapi_msgstore_entryidfromsourcekey($this->store, $this->folderid, hex2bin($messageid));
         if(!$entryid) {
-            ZLog::Write(LOGLEVEL_WARN, sprintf("ImportChangesICS->isMessageInSyncInterval('%s'): Error, unable to resolve message id", $messageid));
+            ZLog::Write(LOGLEVEL_WARN, sprintf("ImportChangesICS->isMessageInSyncInterval('%s'): Error, unable to resolve message id: 0x%X", $messageid, mapi_last_hresult()));
             return false;
         }
 
         $mapimessage = mapi_msgstore_openentry($this->store, $entryid);
+        if(!$mapimessage) {
+            ZLog::Write(LOGLEVEL_WARN, sprintf("ImportChangesICS->isMessageInSyncInterval('%s'): Error, unable to open entry id: 0x%X", $messageid, mapi_last_hresult()));
+            return false;
+        }
 
         if ($this->contentClass == "Email")
             return MAPIUtils::IsInEmailSyncInterval($this->store, $mapimessage, $this->cutoffdate);
