@@ -1027,7 +1027,7 @@ class MAPIProvider {
         $props[$appointmentprops["sideeffects"]] = 369;
 
 
-        if(isset($appointment->reminder) && $appointment->reminder > 0) {
+        if(isset($appointment->reminder) && $appointment->reminder >= 0) {
             // Set 'flagdueby' to correct value (start - reminderminutes)
             $props[$appointmentprops["flagdueby"]] = $appointment->starttime - $appointment->reminder * 60;
             $props[$appointmentprops["remindertime"]] = $appointment->reminder;
