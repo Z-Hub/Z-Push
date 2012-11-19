@@ -223,7 +223,7 @@ class ZPush {
             throw new FatalMisconfigurationException("The configured LOGFILE can not be modified.");
 
         if (!touch(LOGERRORFILE))
-            throw new FatalMisconfigurationException("The configured LOGFILE can not be modified.");
+            throw new FatalMisconfigurationException("The configured LOGERRORFILE can not be modified.");
 
         // set time zone
         // code contributed by Robert Scheck (rsc) - more information: https://developer.berlios.de/mantis/view.php?id=479
