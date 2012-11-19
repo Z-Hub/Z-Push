@@ -593,7 +593,7 @@ class ImportChangesICS implements IImportChanges {
             return false;
         }
 
-        // update folder
+        // open folder for update
         $entryid = mapi_msgstore_entryidfromsourcekey($this->store, hex2bin($id));
         if (!$entryid)
             throw new StatusException(sprintf("ImportChangesICS->ImportFolderChange('%s','%s','%s'): Error, unable to open folder (no entry id): 0x%X", Utils::PrintAsString($folder->serverid), $folder->parentid, $displayname, mapi_last_hresult()), SYNC_FSSTATUS_PARENTNOTFOUND);
@@ -610,6 +610,7 @@ class ImportChangesICS implements IImportChanges {
         if (!isset($props[PR_SOURCE_KEY]) || !isset($props[PR_PARENT_SOURCE_KEY]) || !isset($props[PR_DISPLAY_NAME]) || !isset($props[PR_CONTAINER_CLASS]))
             throw new StatusException(sprintf("ImportChangesICS->ImportFolderChange('%s','%s','%s'): Error, folder data not available: 0x%X", Utils::PrintAsString($folder->serverid), $folder->parentid, $displayname, mapi_last_hresult()), SYNC_FSSTATUS_SERVERERROR);
 
+        // get the real parent source key from mapi
         if ($parent == "0") {
             $parentprops = mapi_getprops($this->store, array(PR_IPM_SUBTREE_ENTRYID));
             $parentfentryid = $parentprops[PR_IPM_SUBTREE_ENTRYID];
@@ -620,11 +621,33 @@ class ImportChangesICS implements IImportChanges {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("ImportChangesICS->ImportFolderChange(): resolved AS parent '0' to sourcekey '%s'", $parent));
         }
 
-        // In theory the parent id could change, which means that the folder was moved.
-        // It is unknown if any device supports this, so we do currently not implement it (no known device is able to do this)
-        if (bin2hex($props[PR_PARENT_SOURCE_KEY]) !== $parent)
-            throw new StatusException(sprintf("ImportChangesICS->ImportFolderChange('%s','%s','%s'): Folder was moved to another location, which is currently not supported. Please report this to the Z-Push dev team together with the WBXML log and your device details (model, firmware etc).", Utils::PrintAsString($folder->serverid), $folder->parentid, $displayname, mapi_last_hresult()), SYNC_FSSTATUS_UNKNOWNERROR);
+        // a changed parent id means that the folder should be moved
+        if (bin2hex($props[PR_PARENT_SOURCE_KEY]) !== $parent) {
+            $sourceparentfentryid = mapi_msgstore_entryidfromsourcekey($this->store, $props[PR_PARENT_SOURCE_KEY]);
+            if(!$sourceparentfentryid)
+                throw new StatusException(sprintf("ImportChangesICS->ImportFolderChange('%s','%s','%s'): Error, unable to open parent source folder (no entry id): 0x%X", Utils::PrintAsString($folder->serverid), $folder->parentid, $displayname, mapi_last_hresult()), SYNC_FSSTATUS_PARENTNOTFOUND);
 
+            $sourceparentfolder = mapi_msgstore_openentry($this->store, $sourceparentfentryid);
+            if(!$sourceparentfolder)
+                throw new StatusException(sprintf("ImportChangesICS->ImportFolderChange('%s','%s','%s'): Error, unable to open parent source folder (open entry): 0x%X", Utils::PrintAsString($folder->serverid), $folder->parentid, $displayname, mapi_last_hresult()), SYNC_FSSTATUS_PARENTNOTFOUND);
+
+            $destparentfentryid = mapi_msgstore_entryidfromsourcekey($this->store, hex2bin($parent));
+            if(!$sourceparentfentryid)
+                throw new StatusException(sprintf("ImportChangesICS->ImportFolderChange('%s','%s','%s'): Error, unable to open destination folder (no entry id): 0x%X", Utils::PrintAsString($folder->serverid), $folder->parentid, $displayname, mapi_last_hresult()), SYNC_FSSTATUS_SERVERERROR);
+
+            $destfolder = mapi_msgstore_openentry($this->store, $destparentfentryid);
+            if(!$destfolder)
+                throw new StatusException(sprintf("ImportChangesICS->ImportFolderChange('%s','%s','%s'): Error, unable to open destination folder (open entry): 0x%X", Utils::PrintAsString($folder->serverid), $folder->parentid, $displayname, mapi_last_hresult()), SYNC_FSSTATUS_SERVERERROR);
+
+            // mapi_folder_copyfolder() fails if a folder with this name already exists -> MAPI_E_COLLISION
+            if(! mapi_folder_copyfolder($sourceparentfolder, $entryid, $destfolder, $displayname, FOLDER_MOVE))
+                throw new StatusException(sprintf("ImportChangesICS->ImportFolderChange('%s','%s','%s'): Error, unable to move folder: 0x%X", Utils::PrintAsString($folder->serverid), $folder->parentid, $displayname, mapi_last_hresult()), SYNC_FSSTATUS_FOLDEREXISTS);
+
+            $folderProps = mapi_getprops($mfolder, array(PR_SOURCE_KEY));
+            return $folderProps[PR_SOURCE_KEY];
+        }
+
+        // update the display name
         $props = array(PR_DISPLAY_NAME => $displayname);
         mapi_setprops($mfolder, $props);
         mapi_savechanges($mfolder);
