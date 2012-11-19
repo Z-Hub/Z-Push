@@ -598,6 +598,10 @@ class ImportChangesICS implements IImportChanges {
         if (!$entryid)
             throw new StatusException(sprintf("ImportChangesICS->ImportFolderChange('%s','%s','%s'): Error, unable to open folder (no entry id): 0x%X", Utils::PrintAsString($folder->serverid), $folder->parentid, $displayname, mapi_last_hresult()), SYNC_FSSTATUS_PARENTNOTFOUND);
 
+        // check if this is a MAPI default folder
+        if ($this->mapiprovider->IsMAPIDefaultFolder($entryid))
+            throw new StatusException(sprintf("ImportChangesICS->ImportFolderChange('%s','%s','%s'): Error, MAPI default folder can not be created/modified", Utils::PrintAsString($folder->serverid), $folder->parentid, $displayname), SYNC_FSSTATUS_SYSTEMFOLDER);
+
         $mfolder = mapi_msgstore_openentry($this->store, $entryid);
         if (!$mfolder)
             throw new StatusException(sprintf("ImportChangesICS->ImportFolderChange('%s','%s','%s'): Error, unable to open folder (open entry): 0x%X", Utils::PrintAsString($folder->serverid), $folder->parentid, $displayname, mapi_last_hresult()), SYNC_FSSTATUS_PARENTNOTFOUND);
@@ -651,7 +655,7 @@ class ImportChangesICS implements IImportChanges {
         // get the folder type from the MAPIProvider
         $type = $this->mapiprovider->GetFolderType($folderentryid);
 
-        if (Utils::IsSystemFolder($type))
+        if (Utils::IsSystemFolder($type) || $this->mapiprovider->IsMAPIDefaultFolder($folderentryid))
             throw new StatusException(sprintf("ImportChangesICS->ImportFolderDeletion('%s','%s'): Error deleting system/default folder", $id, $parent), SYNC_FSSTATUS_SYSTEMFOLDER);
 
         $ret = mapi_importhierarchychanges_importfolderdeletion ($this->importer, 0, array(PR_SOURCE_KEY => hex2bin($id)));
