@@ -293,6 +293,9 @@ class MAPIProvider {
         if(isset($messageprops[$appointmentprops["meetingstatus"]]) && $messageprops[$appointmentprops["meetingstatus"]] > 1) {
             // Work around iOS6 cancellation issue when there are no attendees for this meeting. Just add ourselves as the sole attendee.
             if(count($message->attendees) == 0) {
+                if (!isset($message->attendees) || !is_array($message->attendees))
+                    $message->attendees = array();
+
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("MAPIProvider->getAppointment: adding ourself as an attendee for iOS6 workaround"));
                 $attendee = new SyncAttendee();
 
