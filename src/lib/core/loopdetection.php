@@ -477,6 +477,43 @@ class LoopDetection extends InterProcessData {
     }
 
     /**
+     * Marks a SyncState as "already used", e.g. when an import process started.
+     * This is most critical for DiffBackends, as an imported message would be exported again
+     * in the heartbeat if the notification is triggered before the import is complete.
+     *
+     * @param string $folderid          folder id
+     * @param string $uuid              synkkey
+     * @param string $counter           synckey counter
+     * @param int    $flags
+     *
+     * @access public
+     * @return boolean
+     */
+    public function SetSyncStateUsage($folderid, $uuid, $counter, $flags) {
+        // initialize params
+        $this->InitializeParams();
+
+        // exclusive block
+        if ($this->blockMutex()) {
+            $loopdata = ($this->hasData()) ? $this->getData() : array();
+
+            // check and initialize the array structure
+            $this->checkArrayStructure($loopdata, $folderid);
+            $current = $loopdata[self::$devid][self::$user][$folderid];
+
+            // update the usage flag
+            $current["usage"] = $flags;
+
+            // update loop data
+            $loopdata[self::$devid][self::$user][$folderid] = $current;
+            $ok = $this->setData($loopdata);
+
+            $this->releaseMutex();
+        }
+        // end exclusive block
+    }
+
+    /**
      * Checks if the given counter for a certain uuid+folderid was exported before.
      * Returns also true if the counter are the same but previously there were
      * changes to be exported.
@@ -516,6 +553,12 @@ class LoopDetection extends InterProcessData {
                     ZLog::Write(LOGLEVEL_DEBUG, "LoopDetection->IsSyncStateObsolete(): yes, counter already processed");
                     $obsolete = true;
                 }
+
+                if (isset($current["usage"]) && $current["uuid"] == $uuid && $current["count"] == $counter) {
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("LoopDetection->IsSyncStateObsolete(): yes, state is already in use, flag: %d", $current["usage"]));
+                    $obsolete = true;
+                }
+
             }
 
         }

@@ -1046,6 +1046,9 @@ class Sync extends RequestProcessor {
         if ($this->importer == false)
             throw StatusException(sprintf("Sync->importMessage(): importer not available", SYNC_STATUS_SERVERERROR));
 
+        // mark this state as used, e.g. for HeartBeat
+        self::$deviceManager->SetHeartbeatStateIntegrity($spa->GetFolderId(), $spa->GetUuid(), $spa->GetUuidCounter());
+
         // Detect incoming loop
         // messages which were created/removed before will not have the same action executed again
         // if a message is edited we perform this action "again", as the message could have been changed on the mobile in the meantime

@@ -607,7 +607,7 @@ class DeviceManager {
     }
 
     /**
-     * Checks if the given counter for a certain uuid+folderid was exported before.
+     * Checks if the given counter for a certain uuid+folderid was already exported or modified.
      * This is called when a heartbeat request found changes to make sure that the same
      * changes are not exported twice, as during the heartbeat there could have been a normal
      * sync request.
@@ -621,6 +621,21 @@ class DeviceManager {
      */
     public function CheckHearbeatStateIntegrity($folderid, $uuid, $counter) {
         return $this->loopdetection->IsSyncStateObsolete($folderid, $uuid, $counter);
+    }
+
+    /**
+     * Marks a syncstate as obsolete for Heartbeat, as e.g. an import was started using it.
+     *
+     * @param string $folderid          folder id
+     * @param string $uuid              synkkey
+     * @param string $counter           synckey counter
+     * @param int    $flags
+     *
+     * @access public
+     * @return
+     */
+    public function SetHeartbeatStateIntegrity($folderid, $uuid, $counter, $flags = 1) {
+        return $this->loopdetection->SetSyncStateUsage($folderid, $uuid, $counter, $flags);
     }
 
     /**
