@@ -111,6 +111,7 @@ class FolderChange extends RequestProcessor {
             }
         }
 
+        // endtag foldercreate, folderupdate, folderdelete
         if(!self::$decoder->getElementEndTag())
             return false;
 
@@ -198,7 +199,6 @@ class FolderChange extends RequestProcessor {
                     self::$encoder->content($serverid);
                     self::$encoder->endTag();
                 }
-                self::$encoder->endTag();
             }
             self::$encoder->endTag();
         }
@@ -215,8 +215,8 @@ class FolderChange extends RequestProcessor {
                     self::$encoder->content($newsynckey);
                     self::$encoder->endTag();
                 }
-                self::$encoder->endTag();
             }
+            self::$encoder->endTag();
         }
 
         elseif ($delete) {
@@ -231,11 +231,9 @@ class FolderChange extends RequestProcessor {
                     self::$encoder->content($newsynckey);
                     self::$encoder->endTag();
                 }
-                self::$encoder->endTag();
             }
+            self::$encoder->endTag();
         }
-
-        self::$encoder->endTag();
 
         self::$topCollector->AnnounceInformation(sprintf("Operation status %d", $status), true);
 
