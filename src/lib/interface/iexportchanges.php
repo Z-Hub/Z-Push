@@ -45,17 +45,6 @@
 
 interface IExportChanges extends IChanges {
     /**
-     * Configures additional parameters used for content synchronization
-     *
-     * @param ContentParameters         $contentparameters
-     *
-     * @access public
-     * @return boolean
-     * @throws StatusException
-     */
-    public function ConfigContentParameters($contentparameters);
-
-    /**
      * Sets the importer where the exporter will sent its changes to
      * This exporter should also be ready to accept calls after this
      *

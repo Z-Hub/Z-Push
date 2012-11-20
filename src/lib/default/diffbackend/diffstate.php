@@ -52,6 +52,8 @@ class DiffState implements IChanges {
     protected $syncstate;
     protected $backend;
     protected $flags;
+    protected $contentparameters;
+    protected $cutoffdate;
 
     /**
      * Initializes the state
@@ -73,6 +75,20 @@ class DiffState implements IChanges {
         $this->syncstate = $state;
         $this->flags = $flags;
         return true;
+    }
+
+    /**
+     * Configures additional parameters used for content synchronization
+     *
+     * @param ContentParameters         $contentparameters
+     *
+     * @access public
+     * @return boolean
+     * @throws StatusException
+     */
+    public function ConfigContentParameters($contentparameters) {
+        $this->contentparameters = $contentparameters;
+        $this->cutoffdate = Utils::GetCutOffDate($contentparameters->GetFilterType());
     }
 
     /**

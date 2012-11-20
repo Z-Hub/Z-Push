@@ -69,6 +69,7 @@ class ImportChangesStream implements IImportChanges {
      * Implement interface - never used
      */
     public function Config($state, $flags = 0) { return true; }
+    public function ConfigContentParameters($contentparameters) { return true; }
     public function GetState() { return false;}
     public function LoadConflicts($contentparameters, $state) { return true; }
 

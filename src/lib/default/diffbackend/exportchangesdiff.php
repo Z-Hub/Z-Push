@@ -45,8 +45,6 @@
 class ExportChangesDiff extends DiffState implements IExportChanges{
     private $importer;
     private $folderid;
-    private $contentparameters;
-    private $cutoffdate;
     private $changes;
     private $step;
 
@@ -62,20 +60,6 @@ class ExportChangesDiff extends DiffState implements IExportChanges{
     public function ExportChangesDiff($backend, $folderid) {
         $this->backend = $backend;
         $this->folderid = $folderid;
-    }
-
-    /**
-     * Configures additional parameters used for content synchronization
-     *
-     * @param ContentParameters         $contentparameters
-     *
-     * @access public
-     * @return boolean
-     * @throws StatusException
-     */
-    public function ConfigContentParameters($contentparameters) {
-        $this->contentparameters = $contentparameters;
-        $this->cutoffdate = Utils::GetCutOffDate($contentparameters->GetFilterType());
     }
 
     /**

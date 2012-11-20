@@ -64,6 +64,17 @@ interface IChanges {
     public function Config($state, $flags = 0);
 
     /**
+     * Configures additional parameters used for content synchronization
+     *
+     * @param ContentParameters         $contentparameters
+     *
+     * @access public
+     * @return boolean
+     * @throws StatusException
+     */
+    public function ConfigContentParameters($contentparameters);
+
+    /**
      * Reads and returns the current state
      *
      * @access public

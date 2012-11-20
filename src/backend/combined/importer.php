@@ -251,6 +251,26 @@ class ImportChangesCombined implements IImportChanges {
         ZLog::Write(LOGLEVEL_DEBUG, 'ImportChangesCombined->Config() success');
     }
 
+
+    /**
+     * Configures additional parameters used for content synchronization
+     *
+     * @param ContentParameters         $contentparameters
+     *
+     * @access public
+     * @return boolean
+     * @throws StatusException
+     */
+    public function ConfigContentParameters($contentparameters) {
+        ZLog::Write(LOGLEVEL_DEBUG, "ImportChangesCombined->ConfigContentParameters()");
+        if (!$this->icc) {
+            ZLog::Write(LOGLEVEL_ERROR, "ImportChangesCombined->ConfigContentParameters() icc not configured");
+            return false;
+        }
+        $this->icc->ConfigContentParameters($contentparameters);
+        ZLog::Write(LOGLEVEL_DEBUG, "ImportChangesCombined->ConfigContentParameters() success");
+    }
+
     /**
      * Reads and returns the current state
      *
