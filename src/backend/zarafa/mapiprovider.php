@@ -2214,23 +2214,6 @@ class MAPIProvider {
     }
 
     /**
-     * Returns the best match of preferred body preference types.
-     *
-     * @param array             $bpTypes
-     *
-     * @access private
-     * @return int
-     */
-    private function getBodyPreferenceBestMatch($bpTypes) {
-        // The best choice is RTF, then HTML and then MIME in order to save bandwidth
-        // because MIME is a complete message including the headers and attachments
-        if (in_array(SYNC_BODYPREFERENCE_RTF, $bpTypes))  return SYNC_BODYPREFERENCE_RTF;
-        if (in_array(SYNC_BODYPREFERENCE_HTML, $bpTypes)) return SYNC_BODYPREFERENCE_HTML;
-        if (in_array(SYNC_BODYPREFERENCE_MIME, $bpTypes)) return SYNC_BODYPREFERENCE_MIME;
-        return SYNC_BODYPREFERENCE_PLAIN;
-    }
-
-    /**
      * Returns the message body for a required format
      *
      * @param MAPIMessage       $mapimessage
@@ -2335,8 +2318,8 @@ class MAPIProvider {
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("Remove mime body preference type because the device required no mime support. BodyPreference types: %s", implode(', ', $bpTypes)));
             }
             //get the best fitting preference type
-            $bpReturnType = $this->getBodyPreferenceBestMatch($bpTypes);
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("getBodyPreferenceBestMatch: %d", $bpReturnType));
+            $bpReturnType = Utils::GetBodyPreferenceBestMatch($bpTypes);
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("GetBodyPreferenceBestMatch: %d", $bpReturnType));
             $bpo = $contentparameters->BodyPreference($bpReturnType);
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("bpo: truncation size:'%d', allornone:'%d', preview:'%d'", $bpo->GetTruncationSize(), $bpo->GetAllOrNone(), $bpo->GetPreview()));
 
