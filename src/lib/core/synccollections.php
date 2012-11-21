@@ -512,6 +512,7 @@ class SyncCollections implements Iterator {
                     if ($this->CountChange($folderid)) {
                         ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->CheckForChanges(): Notification received on folder '%s'", $folderid));
                         $validNotifications = true;
+                        $this->waitingTime = time()-$started;
                     }
                     else {
                         ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->CheckForChanges(): Notification received on folder '%s', but it is not relevant", $folderid));
@@ -632,7 +633,8 @@ class SyncCollections implements Iterator {
      * @return array
      */
     public function WaitedForChanges() {
-        return ($this->waitingTime > 1);
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->WaitedForChanges: waited for %d seconds", $this->waitingTime));
+        return ($this->waitingTime > 0);
     }
 
     /**
