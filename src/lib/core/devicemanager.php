@@ -629,13 +629,12 @@ class DeviceManager {
      * @param string $folderid          folder id
      * @param string $uuid              synkkey
      * @param string $counter           synckey counter
-     * @param int    $flags
      *
      * @access public
      * @return
      */
-    public function SetHeartbeatStateIntegrity($folderid, $uuid, $counter, $flags = 1) {
-        return $this->loopdetection->SetSyncStateUsage($folderid, $uuid, $counter, $flags);
+    public function SetHeartbeatStateIntegrity($folderid, $uuid, $counter) {
+        return $this->loopdetection->SetSyncStateUsage($folderid, $uuid, $counter);
     }
 
     /**
