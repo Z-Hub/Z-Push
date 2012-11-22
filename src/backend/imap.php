@@ -97,7 +97,7 @@ class BackendIMAP extends BackendDiff {
         $this->mboxFolder = "";
 
         if ($this->mbox) {
-            ZLog::Write(LOGLEVEL_INFO, sprintf("BackendIMAP->Logon(): User '%s' is authenticated on IMAP",$username));
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->Logon(): User '%s' is authenticated on IMAP",$username));
             $this->username = $username;
             $this->domain = $domain;
             // set serverdelimiter
@@ -449,16 +449,23 @@ class BackendIMAP extends BackendDiff {
         // more debugging
         ZLog::Write(LOGLEVEL_DEBUG, "BackendIMAP->SendMail(): parsed message: ". print_r($message,1));
         ZLog::Write(LOGLEVEL_DEBUG, "BackendIMAP->SendMail(): headers: $headers");
-        ZLog::Write(LOGLEVEL_DEBUG, "BackendIMAP->SendMail(): subject: {$message->headers["subject"]}");
+        /* BEGIN fmbiete's contribution r1528, ZP-320 */
+        if (isset($message->headers["subject"])) {
+            ZLog::Write(LOGLEVEL_DEBUG, "BackendIMAP->SendMail(): subject: {$message->headers["subject"]}");
+        }
+        else {
+            ZLog::Write(LOGLEVEL_DEBUG, "BackendIMAP->SendMail(): subject: no subject set");
+        }
+        /* END fmbiete's contribution r1528, ZP-320 */
         ZLog::Write(LOGLEVEL_DEBUG, "BackendIMAP->SendMail(): body: $body");
 
         if (!defined('IMAP_USE_IMAPMAIL') || IMAP_USE_IMAPMAIL == true) {
-            $send =  @imap_mail ( $toaddr, $message->headers["subject"], $body, $headers, $ccaddr, $bccaddr);
+            $send =  @imap_mail ( $toaddr, isset($message->headers["subject"])?$message->headers["subject"]:"", $body, $headers, $ccaddr, $bccaddr);
         }
         else {
             if (!empty($ccaddr))  $headers .= "\nCc: $ccaddr";
             if (!empty($bccaddr)) $headers .= "\nBcc: $bccaddr";
-            $send =  @mail ( $toaddr, $message->headers["subject"], $body, $headers, $envelopefrom );
+            $send =  @mail ( $toaddr, isset($message->headers["subject"])?$message->headers["subject"]:"", $body, $headers, $envelopefrom );
         }
 
         // email sent?
@@ -468,7 +475,7 @@ class BackendIMAP extends BackendDiff {
         // add message to the sent folder
         // build complete headers
         $headers .= "\nTo: $toaddr";
-        $headers .= "\nSubject: " . $message->headers["subject"];
+        $headers .= "\nSubject: " . (isset($message->headers["subject"])?$message->headers["subject"]:"");
 
         if (!defined('IMAP_USE_IMAPMAIL') || IMAP_USE_IMAPMAIL == true) {
             if (!empty($ccaddr))  $headers .= "\nCc: $ccaddr";
@@ -558,7 +565,20 @@ class BackendIMAP extends BackendDiff {
         $mobj = new Mail_mimeDecode($mail);
         $message = $mobj->decode(array('decode_headers' => true, 'decode_bodies' => true, 'include_bodies' => true, 'charset' => 'utf-8'));
 
-        if (!isset($message->parts[$part]->body))
+        /* BEGIN fmbiete's contribution r1528, ZP-320 */
+        //trying parts
+        $mparts = $message->parts;
+        for ($i = 0; $i < count($mparts); $i++) {
+            $auxpart = $mparts[$i];
+            //recursively add parts
+            if($auxpart->ctype_primary == "multipart" && ($auxpart->ctype_secondary == "mixed" || $auxpart->ctype_secondary == "alternative"  || $auxpart->ctype_secondary == "related")) {
+                foreach($auxpart->parts as $spart)
+                    $mparts[] = $spart;
+            }
+        }
+        /* END fmbiete's contribution r1528, ZP-320 */
+
+        if (!isset($mparts[$part]->body))
             throw new StatusException(sprintf("BackendIMAP->GetAttachmentData('%s'): Error, requested part key can not be found: '%d'", $attname, $part), SYNC_ITEMOPERATIONSSTATUS_INVALIDATT);
 
         // unset mimedecoder & mail
@@ -567,9 +587,16 @@ class BackendIMAP extends BackendDiff {
 
         include_once('include/stringstreamwrapper.php');
         $attachment = new SyncItemOperationsAttachment();
-        $attachment->data = StringStreamWrapper::Open($message->parts[$part]->body);
-        if (isset($message->parts[$part]->ctype_primary) && isset($message->parts[$part]->ctype_secondary))
-            $attachment->contenttype = $message->parts[$part]->ctype_primary .'/'.$message->parts[$part]->ctype_secondary;
+        /* BEGIN fmbiete's contribution r1528, ZP-320 */
+        $attachment->data = StringStreamWrapper::Open($mparts[$part]->body);
+        if (isset($mparts[$part]->ctype_primary) && isset($mparts[$part]->ctype_secondary))
+            $attachment->contenttype = $mparts[$part]->ctype_primary .'/'.$mparts[$part]->ctype_secondary;
+
+        unset($mparts);
+        unset($message);
+
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->GetAttachmentData contenttype %s", $attachment->contenttype));
+        /* END fmbiete's contribution r1528, ZP-320 */
 
         return $attachment;
     }
@@ -921,10 +948,10 @@ class BackendIMAP extends BackendDiff {
             }
 
             // cut of deleted messages
-            if (array_key_exists( "deleted", $vars) && $overview->deleted)
+            if (array_key_exists("deleted", $vars) && $overview->deleted)
                 continue;
 
-            if (array_key_exists( "uid", $vars)) {
+            if (array_key_exists("uid", $vars)) {
                 $message = array();
                 $message["mod"] = $date;
                 $message["id"] = $overview->uid;
@@ -953,6 +980,7 @@ class BackendIMAP extends BackendDiff {
     public function GetMessage($folderid, $id, $contentparameters) {
         $truncsize = Utils::GetTruncSize($contentparameters->GetTruncation());
         $mimesupport = $contentparameters->GetMimeSupport();
+        $bodypreference = $contentparameters->GetBodyPreference(); /* fmbiete's contribution r1528, ZP-320 */
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->GetMessage('%s','%s')", $folderid,  $id));
 
         $folderImapid = $this->getImapIdFromFolderId($folderid);
@@ -967,27 +995,116 @@ class BackendIMAP extends BackendDiff {
             $mobj = new Mail_mimeDecode($mail);
             $message = $mobj->decode(array('decode_headers' => true, 'decode_bodies' => true, 'include_bodies' => true, 'charset' => 'utf-8'));
 
+            /* BEGIN fmbiete's contribution r1528, ZP-320 */
             $output = new SyncMail();
 
-            $body = $this->getBody($message);
-            $output->bodysize = strlen($body);
-
-            // truncate body, if requested
-            if(strlen($body) > $truncsize) {
-                $body = Utils::Utf8_truncate($body, $truncsize);
-                $output->bodytruncated = 1;
-            } else {
-                $body = $body;
-                $output->bodytruncated = 0;
+            //Select body type preference
+            $bpReturnType = SYNC_BODYPREFERENCE_PLAIN;
+            if ($bodypreference !== false) {
+                $bpReturnType = $this->getBodyPreferenceBestMatch($bodypreference);
             }
-            $body = str_replace("\n","\r\n", str_replace("\r","",$body));
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->GetMessage - getBodyPreferenceBestMatch: %d", $bpReturnType));
 
-            $output->body = $body;
+            //Get body data
+            $this->getBodyRecursive($message, "plain", $plainBody);
+            $this->getBodyRecursive($message, "html", $htmlBody);
+            if ($plainBody == "") {
+                $plainBody = Utils::ConvertHtmlToText($htmlBody);
+            }
+            $htmlBody = str_replace("\n","\r\n", str_replace("\r","",$htmlBody));
+            $plainBody = str_replace("\n","\r\n", str_replace("\r","",$plainBody));
+
+            if (Request::GetProtocolVersion() >= 12.0) {
+                $output->asbody = new SyncBaseBody();
+
+                switch($bpReturnType) {
+                    case SYNC_BODYPREFERENCE_PLAIN:
+                        $output->asbody->data = $plainBody;
+                        break;
+                    case SYNC_BODYPREFERENCE_HTML:
+                        if ($htmlBody == "") {
+                            $output->asbody->data = $plainBody;
+                            $bpReturnType = SYNC_BODYPREFERENCE_PLAIN;
+                        }
+                        else {
+                            $output->asbody->data = $htmlBody;
+                        }
+                        break;
+                    case SYNC_BODYPREFERENCE_MIME:
+                        ZLog::Write(LOGLEVEL_DEBUG, "BackendIMAP->GetMessage MIME Format");
+                        //We don't need to create a new MIME mail, we already have one!!
+                        $output->asbody->data = $mail;
+                        break;
+                    case SYNC_BODYPREFERENCE_RTF:
+                        ZLog::Write(LOGLEVEL_DEBUG, "BackendIMAP->GetMessage RTF Format NOT CHECKED");
+                        $output->asbody->data = base64_encode($plainBody);
+                        break;
+                }
+                // truncate body, if requested
+                if(strlen($output->asbody->data) > $truncsize) {
+                    $output->asbody->data = Utils::Utf8_truncate($output->asbody->data, $truncsize);
+                    $output->asbody->truncated = 1;
+                }
+
+                $output->asbody->type = $bpReturnType;
+                $output->nativebodytype = $bpReturnType;
+                $output->asbody->estimatedDataSize = strlen($output->asbody->data);
+
+                $bpo = $contentparameters->BodyPreference($output->asbody->type);
+                if (Request::GetProtocolVersion() >= 14.0 && $bpo->GetPreview()) {
+                    $output->asbody->preview = Utils::Utf8_truncate($plainBody, $bpo->GetPreview());
+                }
+                else {
+                    $output->asbody->truncated = 0;
+                }
+            }
+            /* END fmbiete's contribution r1528, ZP-320 */
+            else { // ASV_2.5
+                $output->bodytruncated = 0;
+                /* BEGIN fmbiete's contribution r1528, ZP-320 */
+                if ($bpReturnType == SYNC_BODYPREFERENCE_MIME) {
+                    if (strlen($mail) > $truncsize) {
+                        $output->mimedata = Utils::Utf8_truncate($mail, $truncsize);
+                        $output->mimetruncated = 1;
+                    }
+                    else {
+                        $output->mimetruncated = 0;
+                        $output->mimedata = $mail;
+                    }
+                    $output->mimesize = strlen($output->mimedata);
+                }
+                else {
+                    // truncate body, if requested
+                    if (strlen($plainBody) > $truncsize) {
+                        $output->body = Utils::Utf8_truncate($plainBody, $truncsize);
+                        $output->bodytruncated = 1;
+                    }
+                    else {
+                        $output->body = $plainBody;
+                        $output->bodytruncated = 0;
+                    }
+                    $output->bodysize = strlen($output->body);
+                }
+                /* END fmbiete's contribution r1528, ZP-320 */
+            }
+
             $output->datereceived = isset($message->headers["date"]) ? $this->cleanupDate($message->headers["date"]) : null;
             $output->messageclass = "IPM.Note";
             $output->subject = isset($message->headers["subject"]) ? $message->headers["subject"] : "";
             $output->read = $stat["flags"];
             $output->from = isset($message->headers["from"]) ? $message->headers["from"] : null;
+
+            /* BEGIN fmbiete's contribution r1528, ZP-320 */
+            if (isset($message->headers["thread-topic"])) {
+                $output->threadtopic = $message->headers["thread-topic"];
+            }
+
+            // Language Code Page ID: http://msdn.microsoft.com/en-us/library/windows/desktop/dd317756%28v=vs.85%29.aspx
+            $output->internetcpid = INTERNET_CPID_UTF8;
+            if (Request::GetProtocolVersion() >= 12.0) {
+                $output->contentclass = "urn:content-classes:message";
+            }
+            /* END fmbiete's contribution r1528, ZP-320 */
 
             $Mail_RFC822 = new Mail_RFC822();
             $toaddr = $ccaddr = $replytoaddr = array();
@@ -1027,16 +1144,20 @@ class BackendIMAP extends BackendDiff {
             // convert mime-importance to AS-importance
             if (isset($message->headers["x-priority"])) {
                 $mimeImportance =  preg_replace("/\D+/", "", $message->headers["x-priority"]);
+                //MAIL 1 - most important, 3 - normal, 5 - lowest
+                //AS 0 - low, 1 - normal, 2 - important
                 if ($mimeImportance > 3)
                     $output->importance = 0;
                 if ($mimeImportance == 3)
                     $output->importance = 1;
                 if ($mimeImportance < 3)
                     $output->importance = 2;
+            } else { /* fmbiete's contribution r1528, ZP-320 */
+                $output->importance = 1;
             }
 
-            // Attachments are only searched in the top-level part
-            if(isset($message->parts)) {
+            // Attachments are not needed for MIME messages
+            if($bpReturnType != SYNC_BODYPREFERENCE_MIME && isset($message->parts)) {
                 $mparts = $message->parts;
                 for ($i=0; $i<count($mparts); $i++) {
                     $part = $mparts[$i];
@@ -1050,14 +1171,6 @@ class BackendIMAP extends BackendDiff {
                     if ((isset($part->disposition) && ($part->disposition == "attachment" || $part->disposition == "inline")) ||
                         (isset($part->ctype_primary) && $part->ctype_primary != "text")) {
 
-                        if (!isset($output->attachments) || !is_array($output->attachments))
-                            $output->attachments = array();
-
-                        $attachment = new SyncAttachment();
-
-                        if (isset($part->body))
-                            $attachment->attsize = strlen($part->body);
-
                         if(isset($part->d_parameters['filename']))
                             $attname = $part->d_parameters['filename'];
                         else if(isset($part->ctype_parameters['name']))
@@ -1066,13 +1179,45 @@ class BackendIMAP extends BackendDiff {
                             $attname = $part->headers['content-description'];
                         else $attname = "unknown attachment";
 
-                        $attachment->displayname = $attname;
-                        $attachment->attname = $folderid . ":" . $id . ":" . $i;
-                        $attachment->attmethod = 1;
-                        $attachment->attoid = isset($part->headers['content-id']) ? $part->headers['content-id'] : "";
-                        array_push($output->attachments, $attachment);
-                    }
+                        /* BEGIN fmbiete's contribution r1528, ZP-320 */
+                        if (Request::GetProtocolVersion() >= 12.0) {
+                            if (!isset($output->asattachments) || !is_array($output->asattachments))
+                                $output->asattachments = array();
 
+                            $attachment = new SyncBaseAttachment();
+
+                            $attachment->estimatedDataSize = isset($part->d_parameters['size']) ? $part->d_parameters['size'] : isset($part->body) ? strlen($part->body) : 0;
+
+                            $attachment->displayname = $attname;
+                            $attachment->filereference = $folderid . ":" . $id . ":" . $i;
+                            $attachment->method = 1; //Normal attachment
+                            $attachment->contentid = isset($part->headers['content-id']) ? str_replace("<", "", str_replace(">", "", $part->headers['content-id'])) : "";
+                            if (isset($part->disposition) && $part->disposition == "inline") {
+                                $attachment->isinline = 1;
+                            }
+                            else {
+                                $attachment->isinline = 0;
+                            }
+
+                            array_push($output->asattachments, $attachment);
+                        }
+                        else { //ASV_2.5
+                            if (!isset($output->attachments) || !is_array($output->attachments))
+                                $output->attachments = array();
+
+                            $attachment = new SyncAttachment();
+
+                            $attachment->attsize = isset($part->d_parameters['size']) ? $part->d_parameters['size'] : isset($part->body) ? strlen($part->body) : 0;
+
+                            $attachment->displayname = $attname;
+                            $attachment->attname = $folderid . ":" . $id . ":" . $i;
+                            $attachment->attmethod = 1;
+                            $attachment->attoid = isset($part->headers['content-id']) ? str_replace("<", "", str_replace(">", "", $part->headers['content-id'])) : "";
+
+                            array_push($output->attachments, $attachment);
+                        }
+                        /* END fmbiete's contribution r1528, ZP-320 */
+                    }
                 }
             }
             // unset mimedecoder & mail
@@ -1406,10 +1551,6 @@ class BackendIMAP extends BackendDiff {
 
         if($body === "") {
             $this->getBodyRecursive($message, "html", $body);
-            // remove css-style tags
-            $body = preg_replace("/<style.*?<\/style>/is", "", $body);
-            // remove all other html
-            $body = strip_tags($body);
         }
 
         return $body;
@@ -1439,7 +1580,24 @@ class BackendIMAP extends BackendDiff {
             }
         }
     }
-
+    /* BEGIN fmbiete's contribution r1528, ZP-320 */
+    /**
+     * Returns the best match of preferred body preference types.
+     *
+     * @param array             $bpTypes
+     *
+     * @access private
+     * @return int
+     */
+    private function getBodyPreferenceBestMatch($bpTypes) {
+        // The best choice is RTF, then HTML and then MIME in order to save bandwidth
+        // because MIME is a complete message including the headers and attachments
+        if (in_array(SYNC_BODYPREFERENCE_RTF, $bpTypes))  return SYNC_BODYPREFERENCE_RTF;
+        if (in_array(SYNC_BODYPREFERENCE_HTML, $bpTypes)) return SYNC_BODYPREFERENCE_HTML;
+        if (in_array(SYNC_BODYPREFERENCE_MIME, $bpTypes)) return SYNC_BODYPREFERENCE_MIME;
+        return SYNC_BODYPREFERENCE_PLAIN;
+    }
+    /* END fmbiete's contribution r1528, ZP-320 */
     /**
      * Returns the serverdelimiter for folder parsing
      *
@@ -1648,6 +1806,17 @@ class BackendIMAP extends BackendDiff {
         return $receiveddate;
     }
 
-}
+    /* BEGIN fmbiete's contribution r1528, ZP-320 */
+    /**
+     * Indicates which AS version is supported by the backend.
+     *
+     * @access public
+     * @return string       AS version constant
+     */
+    public function GetSupportedASVersion() {
+        return ZPush::ASV_14;
+    }
+    /* END fmbiete's contribution r1528, ZP-320 */
+};
 
 ?>
