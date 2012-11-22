@@ -191,6 +191,11 @@
     define('IMAP_INLINE_FORWARD', false);
     // use imap_mail() to send emails (default) - if false mail() is used
     define('IMAP_USE_IMAPMAIL', true);
+    /* BEGIN fmbiete's contribution r1527, ZP-319 */
+    // list of folders we want to exclude from sync. Names, or part of it, separated by |
+    // example: dovecot.sieve|archive|spam
+    define('IMAP_EXCLUDED_FOLDERS', '');
+    /* END fmbiete's contribution r1527, ZP-319 */
 
 
     // ************************

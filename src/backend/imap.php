@@ -59,6 +59,7 @@ class BackendIMAP extends BackendDiff {
     protected $serverdelimiter;
     protected $sinkfolders;
     protected $sinkstates;
+    protected $excludedFolders; /* fmbiete's contribution r1527, ZP-319 */
 
     /**----------------------------------------------------------------------------------------------------------
      * default backend methods
@@ -82,6 +83,14 @@ class BackendIMAP extends BackendDiff {
 
         if (!function_exists("imap_open"))
             throw new FatalException("BackendIMAP(): php-imap module is not installed", 0, null, LOGLEVEL_FATAL);
+
+        /* BEGIN fmbiete's contribution r1527, ZP-319 */
+        $this->excludedFolders = array();
+        if (defined('IMAP_EXCLUDED_FOLDERS')) {
+            $this->excludedFolders = explode("|", IMAP_EXCLUDED_FOLDERS);
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->Logon(): Excluding Folders (%s)", IMAP_EXCLUDED_FOLDERS));
+        }
+        /* END fmbiete's contribution r1527, ZP-319 */
 
         // open the IMAP-mailbox
         $this->mbox = @imap_open($this->server , $username, $password, OP_HALFOPEN);
@@ -669,21 +678,34 @@ class BackendIMAP extends BackendDiff {
             $list = array_reverse($list);
 
             foreach ($list as $val) {
-                $box = array();
-                // cut off serverstring
-                $imapid = substr($val->name, strlen($this->server));
-                $box["id"] = $this->convertImapId($imapid);
+                /* BEGIN fmbiete's contribution r1527, ZP-319 */
+                // don't return the excluded folders
+                $notExcluded = true;
+                for ($i = 0; $notExcluded && $i < count($this->excludedFolders); $i++) {
+                    if (strpos(strtolower($val->name), strtolower($this->excludedFolders[$i])) !== false) {
+                        $notExcluded = false;
+                        ZLog::Write(LOGLEVEL_DEBUG, "Pattern: <" . $this->excludedFolders[$i] . "> found, excluding folder: " . $val->name);
+                    }
+                }
 
-                $fhir = explode($val->delimiter, $imapid);
-                if (count($fhir) > 1) {
-                    $this->getModAndParentNames($fhir, $box["mod"], $imapparent);
-                    $box["parent"] = $this->convertImapId($imapparent);
+                if ($notExcluded) {
+                    $box = array();
+                    // cut off serverstring
+                    $imapid = substr($val->name, strlen($this->server));
+                    $box["id"] = $this->convertImapId($imapid);
+
+                    $fhir = explode($val->delimiter, $imapid);
+                    if (count($fhir) > 1) {
+                        $this->getModAndParentNames($fhir, $box["mod"], $imapparent);
+                        $box["parent"] = $this->convertImapId($imapparent);
+                    }
+                    else {
+                        $box["mod"] = $imapid;
+                        $box["parent"] = "0";
+                    }
+                    $folders[]=$box;
+                    /* END fmbiete's contribution r1527, ZP-319 */
                 }
-                else {
-                    $box["mod"] = $imapid;
-                    $box["parent"] = "0";
-                }
-                $folders[]=$box;
             }
         }
         else {
