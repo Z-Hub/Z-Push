@@ -681,10 +681,11 @@ class BackendIMAP extends BackendDiff {
                 /* BEGIN fmbiete's contribution r1527, ZP-319 */
                 // don't return the excluded folders
                 $notExcluded = true;
-                for ($i = 0; $notExcluded && $i < count($this->excludedFolders); $i++) {
-                    if (strpos(strtolower($val->name), strtolower($this->excludedFolders[$i])) !== false) {
+                for ($i = 0, $cnt = count($this->excludedFolders); $notExcluded && $i < $cnt; $i++) { // expr1, expr2 modified by mku ZP-329
+                    // fix exclude folders with special chars by mku ZP-329
+                    if (strpos(strtolower($val->name), strtolower(Utils::Utf7_iconv_encode(Utils::Utf8_to_utf7($this->excludedFolders[$i])))) !== false) {
                         $notExcluded = false;
-                        ZLog::Write(LOGLEVEL_DEBUG, "Pattern: <" . $this->excludedFolders[$i] . "> found, excluding folder: " . $val->name);
+                        ZLog::Write(LOGLEVEL_DEBUG, sprintf("Pattern: <%s> found, excluding folder: '%s'", $this->excludedFolders[$i], $val->name)); // sprintf added by mku ZP-329
                     }
                 }
 
