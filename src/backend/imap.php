@@ -1036,7 +1036,6 @@ class BackendIMAP extends BackendDiff {
                         }
                         break;
                     case SYNC_BODYPREFERENCE_MIME:
-                        ZLog::Write(LOGLEVEL_DEBUG, "BackendIMAP->GetMessage MIME Format");
                         //We don't need to create a new MIME mail, we already have one!!
                         $output->asbody->data = $mail;
                         break;
@@ -1057,7 +1056,7 @@ class BackendIMAP extends BackendDiff {
 
                 $bpo = $contentparameters->BodyPreference($output->asbody->type);
                 if (Request::GetProtocolVersion() >= 14.0 && $bpo->GetPreview()) {
-                    $output->asbody->preview = Utils::Utf8_truncate($plainBody, $bpo->GetPreview());
+                    $output->asbody->preview = Utils::Utf8_truncate(Utils::ConvertHtmlToText($plainBody), $bpo->GetPreview());
                 }
                 else {
                     $output->asbody->truncated = 0;
