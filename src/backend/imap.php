@@ -1273,7 +1273,7 @@ class BackendIMAP extends BackendDiff {
 
     /**
      * Called when a message has been changed on the mobile.
-     * This functionality is not available for emails.
+     * Added support for FollowUp flag
      *
      * @param string              $folderid            id of the folder
      * @param string              $id                  id of the message
@@ -1286,15 +1286,40 @@ class BackendIMAP extends BackendDiff {
      */
     public function ChangeMessage($folderid, $id, $message, $contentParameters) {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->ChangeMessage('%s','%s','%s')", $folderid, $id, get_class($message)));
-        // TODO recheck implementation
-        // TODO this could throw several StatusExceptions like e.g. SYNC_STATUS_OBJECTNOTFOUND, SYNC_STATUS_SYNCCANNOTBECOMPLETED
 
-        // TODO SyncInterval check + ContentParameters
-        // see https://jira.zarafa.com/browse/ZP-258 for details
-        // before changing the message, it should be checked if the message is in the SyncInterval
-        // to determine the cutoffdate use Utils::GetCutOffDate($contentparameters->GetFilterType());
-        // if the message is not in the interval an StatusException with code SYNC_STATUS_SYNCCANNOTBECOMPLETED should be thrown
-        return false;
+        /* BEGIN fmbiete's contribution r1529, ZP-321 */
+        if (isset($message->flag)) {
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->ChangeMessage('Setting flag')"));
+
+            $folderImapid = $this->getImapIdFromFolderId($folderid);
+
+            $this->imap_reopenFolder($folderImapid);
+
+            if (isset($message->flag->flagstatus) && $message->flag->flagstatus == 2) {
+                if(isset($message->flag->flagtype) && $message->flag->flagtype == "FollowUp") {
+                    ZLog::Write(LOGLEVEL_DEBUG, "Set On FollowUp -> IMAP Flagged");
+                    $status = @imap_setflag_full($this->mbox, $id, "\\Flagged",ST_UID);
+                }
+                else {
+                    ZLog::Write(LOGLEVEL_DEBUG, "Clearing Flagged");
+                    $status = @imap_clearflag_full ( $this->mbox, $id, "\\Flagged", ST_UID);
+                }
+            }
+            else {
+                ZLog::Write(LOGLEVEL_DEBUG, "Clearing Flagged");
+                $status = @imap_clearflag_full ( $this->mbox, $id, "\\Flagged", ST_UID);
+            }
+
+            if ($status) {
+                ZLog::Write(LOGLEVEL_DEBUG, "Flagged changed");
+            }
+            else {
+                ZLog::Write(LOGLEVEL_DEBUG, "Flagged failed");
+            }
+        }
+
+        return $this->StatMessage($folderid, $id);
+        /* END fmbiete's contribution r1529, ZP-321 */
     }
 
     /**
