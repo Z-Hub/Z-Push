@@ -823,7 +823,7 @@ class BackendIMAP extends BackendDiff {
                 $folder->displayname = Utils::Utf7_to_utf8(Utils::Utf7_iconv_decode($imapid));
                 $folder->parentid = "0";
             }
-            $folder->type = SYNC_FOLDER_TYPE_OTHER;
+            $folder->type = SYNC_FOLDER_TYPE_USER_MAIL;
         }
 
         //advanced debugging
