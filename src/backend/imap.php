@@ -123,13 +123,15 @@ class BackendIMAP extends BackendDiff {
             // list all errors
             $errors = imap_errors();
             if (is_array($errors)) {
-                foreach ($errors as $e)
-                    if (stripos($e, "fail") !== false)
+                foreach ($errors as $e) {
+                    if (stripos($e, "fail") !== false) {
                         $level = LOGLEVEL_WARN;
-                    else
+                    }
+                    else {
                         $level = LOGLEVEL_DEBUG;
-
+                    }
                     ZLog::Write($level, "BackendIMAP->Logoff(): IMAP said: " . $e);
+                }
             }
             @imap_close($this->mbox);
             ZLog::Write(LOGLEVEL_DEBUG, "BackendIMAP->Logoff(): IMAP connection closed");
