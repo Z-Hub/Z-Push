@@ -849,6 +849,25 @@ class Utils {
         if (in_array(SYNC_BODYPREFERENCE_MIME, $bpTypes)) return SYNC_BODYPREFERENCE_MIME;
         return SYNC_BODYPREFERENCE_PLAIN;
     }
+
+    /* BEGIN fmbiete's contribution r1516, ZP-318 */
+    /**
+     * Converts a html string into a plain text string
+     *
+     * @param string $html
+     *
+     * @access public
+     * @return string
+     */
+    public static function ConvertHtmlToText($html) {
+        // remove css-style tags
+        $plaintext = preg_replace("/<style.*?<\/style>/is", "", $html);
+        // remove all other html
+        $plaintext = strip_tags($plaintext);
+
+        return $plaintext;
+    }
+    /* END fmbiete's contribution r1516, ZP-318 */
 }
 
 
