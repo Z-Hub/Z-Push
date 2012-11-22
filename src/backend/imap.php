@@ -454,18 +454,21 @@ class BackendIMAP extends BackendDiff {
             ZLog::Write(LOGLEVEL_DEBUG, "BackendIMAP->SendMail(): subject: {$message->headers["subject"]}");
         }
         else {
-            ZLog::Write(LOGLEVEL_DEBUG, "BackendIMAP->SendMail(): subject: no subject set");
+            ZLog::Write(LOGLEVEL_DEBUG, "BackendIMAP->SendMail(): subject: no subject set. Set to empty.");
+            $message->headers["subject"] = ""; // added by mku ZP-330
         }
         /* END fmbiete's contribution r1528, ZP-320 */
         ZLog::Write(LOGLEVEL_DEBUG, "BackendIMAP->SendMail(): body: $body");
 
         if (!defined('IMAP_USE_IMAPMAIL') || IMAP_USE_IMAPMAIL == true) {
-            $send =  @imap_mail ( $toaddr, isset($message->headers["subject"])?$message->headers["subject"]:"", $body, $headers, $ccaddr, $bccaddr);
+            // changed by mku ZP-330
+            $send =  @imap_mail ( $toaddr, $message->headers["subject"], $body, $headers, $ccaddr, $bccaddr);
         }
         else {
             if (!empty($ccaddr))  $headers .= "\nCc: $ccaddr";
             if (!empty($bccaddr)) $headers .= "\nBcc: $bccaddr";
-            $send =  @mail ( $toaddr, isset($message->headers["subject"])?$message->headers["subject"]:"", $body, $headers, $envelopefrom );
+            // changed by mku ZP-330
+            $send =  @mail ( $toaddr, $message->headers["subject"], $body, $headers, $envelopefrom );
         }
 
         // email sent?
@@ -475,7 +478,7 @@ class BackendIMAP extends BackendDiff {
         // add message to the sent folder
         // build complete headers
         $headers .= "\nTo: $toaddr";
-        $headers .= "\nSubject: " . (isset($message->headers["subject"])?$message->headers["subject"]:"");
+        $headers .= "\nSubject: " . $message->headers["subject"]; // changed by mku ZP-330
 
         if (!defined('IMAP_USE_IMAPMAIL') || IMAP_USE_IMAPMAIL == true) {
             if (!empty($ccaddr))  $headers .= "\nCc: $ccaddr";
@@ -1001,7 +1004,7 @@ class BackendIMAP extends BackendDiff {
             //Select body type preference
             $bpReturnType = SYNC_BODYPREFERENCE_PLAIN;
             if ($bodypreference !== false) {
-                $bpReturnType = $this->getBodyPreferenceBestMatch($bodypreference);
+                $bpReturnType = Utils::GetBodyPreferenceBestMatch($bodypreference); // changed by mku ZP-330
             }
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->GetMessage - getBodyPreferenceBestMatch: %d", $bpReturnType));
 
@@ -1580,24 +1583,7 @@ class BackendIMAP extends BackendDiff {
             }
         }
     }
-    /* BEGIN fmbiete's contribution r1528, ZP-320 */
-    /**
-     * Returns the best match of preferred body preference types.
-     *
-     * @param array             $bpTypes
-     *
-     * @access private
-     * @return int
-     */
-    private function getBodyPreferenceBestMatch($bpTypes) {
-        // The best choice is RTF, then HTML and then MIME in order to save bandwidth
-        // because MIME is a complete message including the headers and attachments
-        if (in_array(SYNC_BODYPREFERENCE_RTF, $bpTypes))  return SYNC_BODYPREFERENCE_RTF;
-        if (in_array(SYNC_BODYPREFERENCE_HTML, $bpTypes)) return SYNC_BODYPREFERENCE_HTML;
-        if (in_array(SYNC_BODYPREFERENCE_MIME, $bpTypes)) return SYNC_BODYPREFERENCE_MIME;
-        return SYNC_BODYPREFERENCE_PLAIN;
-    }
-    /* END fmbiete's contribution r1528, ZP-320 */
+
     /**
      * Returns the serverdelimiter for folder parsing
      *
