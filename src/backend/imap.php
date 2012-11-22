@@ -1297,14 +1297,8 @@ class BackendIMAP extends BackendDiff {
             $this->imap_reopenFolder($folderImapid);
 
             if (isset($message->flag->flagstatus) && $message->flag->flagstatus == 2) {
-                if(isset($message->flag->flagtype) && $message->flag->flagtype == "FollowUp") {
-                    ZLog::Write(LOGLEVEL_DEBUG, "Set On FollowUp -> IMAP Flagged");
-                    $status = @imap_setflag_full($this->mbox, $id, "\\Flagged",ST_UID);
-                }
-                else {
-                    ZLog::Write(LOGLEVEL_DEBUG, "Clearing Flagged");
-                    $status = @imap_clearflag_full ( $this->mbox, $id, "\\Flagged", ST_UID);
-                }
+                ZLog::Write(LOGLEVEL_DEBUG, "Set On FollowUp -> IMAP Flagged");
+                $status = @imap_setflag_full($this->mbox, $id, "\\Flagged",ST_UID);
             }
             else {
                 ZLog::Write(LOGLEVEL_DEBUG, "Clearing Flagged");
