@@ -1287,6 +1287,13 @@ class BackendIMAP extends BackendDiff {
      */
     public function ChangeMessage($folderid, $id, $message, $contentParameters) {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->ChangeMessage('%s','%s','%s')", $folderid, $id, get_class($message)));
+        // TODO this could throw several StatusExceptions like e.g. SYNC_STATUS_OBJECTNOTFOUND, SYNC_STATUS_SYNCCANNOTBECOMPLETED
+
+        // TODO SyncInterval check + ContentParameters
+        // see https://jira.zarafa.com/browse/ZP-258 for details
+        // before changing the message, it should be checked if the message is in the SyncInterval
+        // to determine the cutoffdate use Utils::GetCutOffDate($contentparameters->GetFilterType());
+        // if the message is not in the interval an StatusException with code SYNC_STATUS_SYNCCANNOTBECOMPLETED should be thrown
 
         /* BEGIN fmbiete's contribution r1529, ZP-321 */
         if (isset($message->flag)) {
