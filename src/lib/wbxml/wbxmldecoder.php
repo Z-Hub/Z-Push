@@ -436,18 +436,18 @@ class WBXMLDecoder extends WBXMLDefs {
                 case WBXML_ENTITY:
                     $entity = $this->getMBUInt();
                     $attr .= $this->entityToCharset($entity);
-                    return $element;
+                    return $attr; /* fmbiete's contribution r1534, ZP-324 */
 
                 case WBXML_STR_I:
                     $attr .= $this->getTermStr();
-                    return $element;
+                    return $attr; /* fmbiete's contribution r1534, ZP-324 */
 
                 case WBXML_LITERAL:
                     if($attr != "")
                         $attributes += $this->splitAttribute($attr);
 
                     $attr = $this->getStringTableEntry($this->getMBUInt());
-                    return $element;
+                    return $attr; /* fmbiete's contribution r1534, ZP-324 */
 
                 case WBXML_EXT_I_0:
                 case WBXML_EXT_I_1:
@@ -468,7 +468,7 @@ class WBXMLDecoder extends WBXMLDefs {
 
                 case WBXML_STR_T:
                     $attr .= $this->getStringTableEntry($this->getMBUInt());
-                    return $element;
+                    return $attr; /* fmbiete's contribution r1534, ZP-324 */
 
                 case WBXML_LITERAL_A:
                     return false;
@@ -481,7 +481,7 @@ class WBXMLDecoder extends WBXMLDefs {
                 case WBXML_OPAQUE:
                     $length = $this->getMBUInt();
                     $attr .= $this->getOpaque($length);
-                    return $element;
+                    return $attr; /* fmbiete's contribution r1534, ZP-324 */
 
                 case WBXML_LITERAL_AC:
                     return false;
