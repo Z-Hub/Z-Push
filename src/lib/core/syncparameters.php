@@ -68,7 +68,9 @@ class SyncParameters extends StateObject {
                                     'deletesasmoves' => false,
                                     'conversationmode' => false,
                                     'windowsize' => 5,
-                                    'contentparameters' => array()
+                                    'contentparameters' => array(),
+                                    'foldersynctotal' => false,
+                                    'foldersyncremaining' => false,
                                 );
 
     /**

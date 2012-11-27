@@ -369,28 +369,6 @@ class SyncCollections implements Iterator {
     }
 
     /**
-     * Returns the timestamp of the last synchronization of a device.
-     *
-     * @param $device       an ASDevice
-     *
-     * @access public
-     * @return int                  timestamp
-     */
-    static public function GetLastSyncTimeOfDevice(&$device) {
-        // we need a StateManager for this operation
-        $stateManager = new StateManager();
-        $stateManager->SetDevice($device);
-
-        $sc = new SyncCollections();
-        $sc->SetStateManager($stateManager);
-
-        // load all collections of device without loading states or checking permissions
-        $sc->LoadAllCollections(true, false, false);
-
-        return $sc->GetLastSyncTime();
-    }
-
-    /**
      * Checks if the currently known collections for changes for $lifetime seconds.
      * If the backend provides a ChangesSink the sink will be used.
      * If not every $interval seconds an exporter will be configured for each

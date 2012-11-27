@@ -514,6 +514,7 @@ class ZPushAdminCLI {
         $folders = $device->GetAllFolderIds();
         $synchedFolders = 0;
         $synchedFolderTypes = array();
+        $syncedFoldersInProgress = 0;
         foreach ($folders as $folderid) {
             if ($device->GetFolderUUID($folderid)) {
                 $synchedFolders++;
@@ -542,6 +543,15 @@ class ZPushAdminCLI {
                 if (!isset($synchedFolderTypes[$gentype]))
                     $synchedFolderTypes[$gentype] = 0;
                 $synchedFolderTypes[$gentype]++;
+
+                // set the folder name for all folders which are not fully synchronized yet
+                $fstatus = $device->GetFolderSyncStatus($folderid);
+                if ($fstatus !== false && is_array($fstatus)) {
+                    // TODO would be nice if we could see the real name of the folder, right now we use the folder type as name
+                    $fstatus['name'] = $gentype;
+                    $device->SetFolderSyncStatus($folderid, $fstatus);
+                    $syncedFoldersInProgress++;
+                }
             }
         }
         $folderinfo = "";
@@ -580,8 +590,21 @@ class ZPushAdminCLI {
         echo "First sync:\t\t". strftime("%Y-%m-%d %H:%M", $device->GetFirstSyncTime()) ."\n";
         echo "Last sync:\t\t". ($device->GetLastSyncTime() ? strftime("%Y-%m-%d %H:%M", $device->GetLastSyncTime()) : "never")."\n";
         echo "Total folders:\t\t". count($folders). "\n";
-        echo "Synchronized folders:\t". $synchedFolders . "\n";
+        echo "Synchronized folders:\t". $synchedFolders;
+        if ($syncedFoldersInProgress > 0)
+            echo " (". $syncedFoldersInProgress. " in progress)";
+        echo "\n";
         echo "Synchronized data:\t$folderinfo\n";
+        if ($syncedFoldersInProgress > 0) {
+            echo "Synchronization progress:\n";
+            foreach ($folders as $folderid) {
+                $d = $device->GetFolderSyncStatus($folderid);
+                if ($d) {
+                    $percent = round($d['done']*100/$d['total']);
+                    printf("\tFolder: %s%s Sync: %s    Status: %s%d%% (%d/%d)\n", $d['name'], str_repeat(" ", 12-strlen($d['name'])), $d['status'], ($percent < 10)?" ":"", $percent, $d['done'], $d['total'] );
+                }
+            }
+        }
         echo "Status:\t\t\t";
         switch ($device->GetWipeStatus()) {
             case SYNC_PROVISION_RWSTATUS_OK:

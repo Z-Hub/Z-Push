@@ -693,10 +693,15 @@ class Sync extends RequestProcessor {
                                         $status = $stex->getCode();
                                 }
 
-                                if (! $spa->HasSyncKey())
+                                if (! $spa->HasSyncKey()) {
                                     self::$topCollector->AnnounceInformation(sprintf("Exporter registered. %d objects queued.", $changecount), true);
+                                    // update folder status as initialized
+                                    $spa->SetFolderSyncTotal($changecount);
+                                    self::$deviceManager->SetFolderSyncStatus($folderid, DeviceManager::FLD_SYNC_INITIALIZED);
+                                }
                                 else if ($status != SYNC_STATUS_SUCCESS)
                                     self::$topCollector->AnnounceInformation(sprintf("StatusException code: %d", $status), true);
+
                             }
                         }
 
@@ -877,7 +882,6 @@ class Sync extends RequestProcessor {
                                     ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleSync(): Exported maxItems of messages: %d / %d", $n, $changecount));
                                     break;
                                 }
-
                             }
 
                             // $progress is not an array when exporting the last message
@@ -888,6 +892,13 @@ class Sync extends RequestProcessor {
 
                             self::$encoder->endTag();
                             self::$topCollector->AnnounceInformation(sprintf("Outgoing %d objects%s", $n, ($n >= $windowSize)?" of ".$changecount:""), true);
+
+                            // update folder status
+                            $spa->SetFolderSyncRemaining($changecount);
+                            if ($changecount == 0)
+                                self::$deviceManager->SetFolderSyncStatus($folderid, DeviceManager::FLD_SYNC_COMPLETED);
+                            else
+                                self::$deviceManager->SetFolderSyncStatus($folderid, DeviceManager::FLD_SYNC_INPROGRESS);
                         }
 
                         self::$encoder->endTag();

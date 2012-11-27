@@ -48,6 +48,7 @@ class ASDevice extends StateObject {
     const FOLDERUUID = 1;
     const FOLDERTYPE = 2;
     const FOLDERSUPPORTEDFIELDS = 3;
+    const FOLDERSYNCSTATUS = 4;
 
     // expected values for not set member variables
     protected $unsetdata = array(
@@ -636,6 +637,50 @@ class ASDevice extends StateObject {
         $this->contentData = $contentData;
         return true;
     }
+
+    /**
+     * Gets the current sync status of a certain folder
+     *
+     * @param string    $folderid
+     *
+     * @access public
+     * @return mixed/boolean        false means the status is not available
+     */
+    public function GetFolderSyncStatus($folderid) {
+        if (isset($this->contentData) && isset($this->contentData[$folderid]) &&
+                        isset($this->contentData[$folderid][self::FOLDERUUID]) && $this->contentData[$folderid][self::FOLDERUUID] !== false &&
+                        isset($this->contentData[$folderid][self::FOLDERSYNCSTATUS]) )
+
+            return $this->contentData[$folderid][self::FOLDERSYNCSTATUS];
+
+        return false;
+    }
+
+    /**
+     * Sets the current sync status of a certain folder
+     *
+     * @param string    $folderid
+     * @param mixed     $status     if set to false the current status is deleted
+     *
+     * @access public
+     * @return boolean
+     */
+    public function SetFolderSyncStatus($folderid, $status) {
+        $contentData = $this->contentData;
+        if (!isset($contentData[$folderid]) || !is_array($contentData[$folderid]))
+            $contentData[$folderid] = array();
+
+        if ($status !== false) {
+            $contentData[$folderid][self::FOLDERSYNCSTATUS] = $status;
+        }
+        else if (isset($contentData[$folderid][self::FOLDERSYNCSTATUS])) {
+            unset($contentData[$folderid][self::FOLDERSYNCSTATUS]);
+        }
+
+        $this->contentData = $contentData;
+        return true;
+    }
+
 }
 
 ?>

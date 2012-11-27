@@ -99,9 +99,37 @@ class ZPushAdmin {
             $device->StripData();
 
             try {
-                $lastsync = SyncCollections::GetLastSyncTimeOfDevice($device);
-                if ($lastsync)
-                    $device->SetLastSyncTime($lastsync);
+                // we need a StateManager for this operation
+                $stateManager = new StateManager();
+                $stateManager->SetDevice($device);
+
+                $sc = new SyncCollections();
+                $sc->SetStateManager($stateManager);
+
+                // load all collections of device without loading states or checking permissions
+                $sc->LoadAllCollections(true, false, false);
+
+                if ($sc->GetLastSyncTime())
+                    $device->SetLastSyncTime($sc->GetLastSyncTime());
+
+                // get information about the folder synchronization status from SyncCollections
+                $folders = $device->GetAllFolderIds();
+
+                foreach ($folders as $folderid) {
+                    $fstatus = $device->GetFolderSyncStatus($folderid);
+
+                    if ($fstatus !== false && isset($fstatus[ASDevice::FOLDERSYNCSTATUS])) {
+                        $spa = $sc->GetCollection($folderid);
+                        $total = $spa->GetFolderSyncTotal();
+                        $todo = $spa->GetFolderSyncRemaining();
+                        $fstatus['status'] = ($fstatus[ASDevice::FOLDERSYNCSTATUS] == 1)?'Initialized':'Synchronizing';
+                        $fstatus['total'] = $total;
+                        $fstatus['done'] = $total - $todo;
+                        $fstatus['todo'] = $todo;
+
+                        $device->SetFolderSyncStatus($folderid, $fstatus);
+                    }
+                }
             }
             catch (StateInvalidException $sive) {
                 ZLog::Write(LOGLEVEL_WARN, sprintf("ZPushAdmin::GetDeviceDetails(): device '%s' of user '%s' has invalid states. Please sync to solve this issue.", $devid, $user));
