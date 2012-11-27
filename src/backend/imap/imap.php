@@ -43,6 +43,9 @@
 * Consult LICENSE file for details
 ************************************************/
 
+// config file
+require_once("backend/imap/config.php");
+
 include_once('lib/default/diffbackend/diffbackend.php');
 include_once('include/mimeDecode.php');
 require_once('include/z_RFC822.php');

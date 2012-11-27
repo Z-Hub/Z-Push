@@ -97,6 +97,14 @@ class ZPush {
     // Webservice commands
     const COMMAND_WEBSERVICE_DEVICE = -100;
 
+    static private $autoloadBackendPreference = array(
+                    "BackendZarafa",
+                    "BackendCombined",
+                    "BackendIMAP",
+                    "BackendVCardDir",
+                    "BackendMaildir"
+                );
+
     static private $supportedASVersions = array(
                     self::ASV_1,
                     self::ASV_2,
@@ -439,7 +447,23 @@ class ZPush {
         if (!isset(ZPush::$backend)) {
             // Initialize our backend
             $ourBackend = @constant('BACKEND_PROVIDER');
-            self::IncludeBackend($ourBackend);
+
+            // if no backend provider is defined, try to include automatically
+            if ($ourBackend == false || $ourBackend == "") {
+                $loaded = false;
+                foreach (self::$autoloadBackendPreference as $autoloadBackend) {
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPush::GetBackend(): trying autoload backend '%s'", $autoloadBackend));
+                    $loaded = self::IncludeBackend($autoloadBackend);
+                    if ($loaded) {
+                        $ourBackend = $autoloadBackend;
+                        break;
+                    }
+                }
+                if (!$ourBackend || !$loaded)
+                    throw new FatalMisconfigurationException("No Backend provider can not be loaded. Check your installation and configuration!");
+            }
+            else
+                self::IncludeBackend($ourBackend);
 
             if (class_exists($ourBackend))
                 ZPush::$backend = new $ourBackend();

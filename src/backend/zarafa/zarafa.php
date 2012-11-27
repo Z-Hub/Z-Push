@@ -45,6 +45,9 @@
 * Consult LICENSE file for details
 *************************************************/
 
+// config file
+require_once("backend/zarafa/config.php");
+
 // include PHP-MAPI classes
 include_once('backend/zarafa/mapi/mapi.util.php');
 include_once('backend/zarafa/mapi/mapidefs.php');
