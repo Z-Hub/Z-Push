@@ -648,8 +648,8 @@ class ASDevice extends StateObject {
      */
     public function GetFolderSyncStatus($folderid) {
         if (isset($this->contentData) && isset($this->contentData[$folderid]) &&
-                        isset($this->contentData[$folderid][self::FOLDERUUID]) && $this->contentData[$folderid][self::FOLDERUUID] !== false &&
-                        isset($this->contentData[$folderid][self::FOLDERSYNCSTATUS]) )
+            isset($this->contentData[$folderid][self::FOLDERUUID]) && $this->contentData[$folderid][self::FOLDERUUID] !== false &&
+            isset($this->contentData[$folderid][self::FOLDERSYNCSTATUS]) )
 
             return $this->contentData[$folderid][self::FOLDERSYNCSTATUS];
 
