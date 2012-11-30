@@ -121,6 +121,7 @@ class Settings extends RequestProcessor {
                     case SYNC_SETTINGS_DEVICEINFORMATION:
                         $deviceinformation = new SyncDeviceInformation();
                         $deviceinformation->Decode(self::$decoder);
+                        $deviceinformation->Status = SYNC_SETTINGSSTATUS_SUCCESS;
                         self::$deviceManager->SaveDeviceInformation($deviceinformation);
                         break;
 
