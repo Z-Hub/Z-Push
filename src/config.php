@@ -157,6 +157,19 @@
     // default: 100 - value used if mobile does not limit amount of items
     define('SYNC_MAX_ITEMS', 100);
 
+    // The devices usually send a list of supported properties for calendar and contact
+    // items. If a device does not includes such a supported property in Sync request,
+    // it means the property's value will be deleted on the server.
+    // However some devices do not send a list of supported properties. It is then impossible
+    // to tell if a property was deleted or it was not set at all if it does not appear in Sync.
+    // This parameter defines Z-Push behaviour during Sync if a device does not issue a list with
+    // supported properties.
+    // See also https://jira.zarafa.com/browse/ZP-302.
+    // Possible values:
+    // false - do not unset properties which are not sent during Sync (default)
+    // true  - unset properties which are not sent during Sync
+    define('UNSET_UNDEFINED_PROPERTIES', false);
+
 /**********************************************************************************
  *  Backend settings
  */
