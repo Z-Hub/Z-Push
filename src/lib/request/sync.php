@@ -697,7 +697,8 @@ class Sync extends RequestProcessor {
                                     self::$topCollector->AnnounceInformation(sprintf("Exporter registered. %d objects queued.", $changecount), true);
                                     // update folder status as initialized
                                     $spa->SetFolderSyncTotal($changecount);
-                                    self::$deviceManager->SetFolderSyncStatus($folderid, DeviceManager::FLD_SYNC_INITIALIZED);
+                                    if ($changecount > 0)
+                                        self::$deviceManager->SetFolderSyncStatus($folderid, DeviceManager::FLD_SYNC_INITIALIZED);
                                 }
                                 else if ($status != SYNC_STATUS_SUCCESS)
                                     self::$topCollector->AnnounceInformation(sprintf("StatusException code: %d", $status), true);
