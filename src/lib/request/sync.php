@@ -718,11 +718,17 @@ class Sync extends RequestProcessor {
                             $changecount > 0 || (! $spa->HasSyncKey() && $status == SYNC_STATUS_SUCCESS))
                                 $spa->SetNewSyncKey(self::$deviceManager->GetStateManager()->GetNewSyncKey($spa->GetSyncKey()));
 
+                        self::$encoder->startTag(SYNC_FOLDER);
+
                         if($spa->HasContentClass()) {
                             ZLog::Write(LOGLEVEL_DEBUG, sprintf("Folder type: %s", $spa->GetContentClass()));
+                            // AS 12.0 devices require content class
+                            if (Request::GetProtocolVersion() < 12.1) {
+                                self::$encoder->startTag(SYNC_FOLDERTYPE);
+                                self::$encoder->content($spa->GetContentClass());
+                                self::$encoder->endTag();
+                            }
                         }
-
-                        self::$encoder->startTag(SYNC_FOLDER);
 
                         self::$encoder->startTag(SYNC_SYNCKEY);
                         if($status == SYNC_STATUS_SUCCESS && $spa->HasNewSyncKey())
