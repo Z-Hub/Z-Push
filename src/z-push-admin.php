@@ -600,8 +600,12 @@ class ZPushAdminCLI {
             foreach ($folders as $folderid) {
                 $d = $device->GetFolderSyncStatus($folderid);
                 if ($d) {
-                    $percent = round($d['done']*100/$d['total']);
-                    printf("\tFolder: %s%s Sync: %s    Status: %s%d%% (%d/%d)\n", $d['name'], str_repeat(" ", 12-strlen($d['name'])), $d['status'], ($percent < 10)?" ":"", $percent, $d['done'], $d['total'] );
+                    $status = "";
+                    if ($d['total'] > 0) {
+                        $percent = round($d['done']*100/$d['total']);
+                        $status = sprintf("Status: %s%d%% (%d/%d)", ($percent < 10)?" ":"", $percent, $d['done'], $d['total']);
+                    }
+                    printf("\tFolder: %s%s Sync: %s    %s\n", $d['name'], str_repeat(" ", 12-strlen($d['name'])), $d['status'], $status);
                 }
             }
         }
