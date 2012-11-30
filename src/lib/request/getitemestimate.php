@@ -266,6 +266,10 @@ class GetItemEstimate extends RequestProcessor {
 
                             if ($changes[$folderid] > 0)
                                 self::$topCollector->AnnounceInformation(sprintf("%s %d changes", $spa->GetContentClass(), $changes[$folderid]), true);
+
+                            // update the device data to mark folders as complete when synching with WM
+                            if ($changes[$folderid] == 0)
+                                self::$deviceManager->SetFolderSyncStatus($folderid, DeviceManager::FLD_SYNC_COMPLETED);
                         }
                     }
                     self::$encoder->endTag();
