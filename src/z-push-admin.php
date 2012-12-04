@@ -203,9 +203,9 @@ class ZPushAdminCLI {
 
         // get 'device'
         if (isset($options['d']) && !empty($options['d']))
-            self::$device = trim($options['d']);
+            self::$device = strtolower(trim($options['d']));
         else if (isset($options['device']) && !empty($options['device']))
-            self::$device = trim($options['device']);
+            self::$device = strtolower(trim($options['device']));
 
         // get 'action'
         $action = false;
@@ -582,7 +582,7 @@ class ZPushAdminCLI {
         if ($device->GetDevicePhoneNumber())
             echo "Device Phone nr:\t". $device->GetDevicePhoneNumber(). "\n";
         if ($device->GetDeviceMobileOperator())
-            echo "Device Operator:\t\t". $device->GetDeviceMobileOperator(). "\n";
+            echo "Device Operator:\t". $device->GetDeviceMobileOperator(). "\n";
         if ($device->GetDeviceEnableOutboundSMS())
             echo "Device Outbound SMS:\t". $device->GetDeviceEnableOutboundSMS(). "\n";
 

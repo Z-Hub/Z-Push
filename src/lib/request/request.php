@@ -116,7 +116,7 @@ class Request {
         if(isset($_GET["User"]))
             self::$getUser = strtolower($_GET["User"]);
         if(isset($_GET["DeviceId"]))
-            self::$devid = self::filterEvilInput($_GET["DeviceId"], self::WORDCHAR_ONLY);
+            self::$devid = strtolower(self::filterEvilInput($_GET["DeviceId"], self::WORDCHAR_ONLY));
         if(isset($_GET["DeviceType"]))
             self::$devtype = self::filterEvilInput($_GET["DeviceType"], self::LETTERS_ONLY);
         if (isset($_GET["AttachmentName"]))
@@ -144,7 +144,7 @@ class Request {
                 self::$getUser = strtolower($query[self::COMMANDPARAM_USER]);
 
             if (!isset(self::$devid) && isset($query['DevID']))
-                self::$devid = self::filterEvilInput($query['DevID'], self::WORDCHAR_ONLY);
+                self::$devid = strtolower(self::filterEvilInput($query['DevID'], self::WORDCHAR_ONLY));
 
             if (!isset(self::$devtype) && isset($query['DevType']))
                 self::$devtype = self::filterEvilInput($query['DevType'], self::LETTERS_ONLY);

@@ -61,6 +61,9 @@ interface IStateMachine {
     const HIERARCHY = "hc";
     const BACKENDSTORAGE = "bs";
 
+    const STATEVERSION_01 = "1";    // Z-Push 2.0.x - default value if unset
+    const STATEVERSION_02 = "2";    // Z-Push 2.1.0 Milestone 1
+
     /**
      * Constructor
      * @throws FatalMisconfigurationException
@@ -163,6 +166,24 @@ interface IStateMachine {
      * @return array
      */
     public function GetAllDevices($username = false);
+
+    /**
+     * Returns the current version of the state files
+     *
+     * @access public
+     * @return int
+     */
+    public function GetStateVersion();
+
+    /**
+     * Sets the current version of the state files
+     *
+     * @param int       $version            the new supported version
+     *
+     * @access public
+     * @return boolean
+     */
+    public function SetStateVersion($version);
 }
 
 ?>

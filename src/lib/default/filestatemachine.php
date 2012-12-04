@@ -46,7 +46,10 @@
 ************************************************/
 
 class FileStateMachine implements IStateMachine {
+    const VERSION = "version";
+
     private $userfilename;
+    private $settingsfilename;
 
     /**
      * Constructor
@@ -68,6 +71,7 @@ class FileStateMachine implements IStateMachine {
         // checks if the directory exists and tries to create the necessary subfolders if they do not exist
         $this->getDirectoryForDevice(Request::GetDeviceID());
         $this->userfilename = STATE_DIR . 'users';
+        $this->settingsfilename = STATE_DIR . 'settings';
 
         if (!touch($this->userfilename))
             throw new FatalMisconfigurationException("Not possible to write to the configured state directory.");
@@ -316,6 +320,39 @@ class FileStateMachine implements IStateMachine {
             else
                 return array();
         }
+    }
+
+    /**
+     * Returns the current version of the state files
+     *
+     * @access public
+     * @return int
+     */
+    public function GetStateVersion() {
+        if (file_exists($this->settingsfilename))
+            $settings = unserialize(file_get_contents($this->settingsfilename));
+        else
+            $settings = array(self::VERSION => IStateMachine::STATEVERSION_01);
+
+        return $settings[self::VERSION];
+    }
+
+    /**
+     * Sets the current version of the state files
+     *
+     * @param int       $version            the new supported version
+     *
+     * @access public
+     * @return boolean
+     */
+    public function SetStateVersion($version) {
+        if (file_exists($this->settingsfilename))
+            $settings = file_get_contents($this->settingsfilename);
+        else
+            array(self::VERSION => IStateMachine::STATEVERSION_01);
+
+        $settings[self::VERSION] = $version;
+        return file_put_contents($this->settingsfilename, serialize($settings));
     }
 
 
