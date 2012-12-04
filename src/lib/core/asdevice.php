@@ -262,8 +262,12 @@ class ASDevice extends StateObject {
         if ($this->useragent != "") {
             // [] = changedate, previous user agent
             $a = $this->useragentHistory;
-            $a[] = array(time(), $this->useragent);
-            $this->useragentHistory = $a;
+
+            // only add if this agent was not seen before
+            if (! in_array(array(true, $this->useragent), $a)) {
+                $a[] = array(time(), $this->useragent);
+                $this->useragentHistory = $a;
+            }
         }
         $this->useragent = $useragent;
         return true;
