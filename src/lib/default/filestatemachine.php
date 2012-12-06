@@ -46,6 +46,7 @@
 ************************************************/
 
 class FileStateMachine implements IStateMachine {
+    const SUPPORTED_STATE_VERSION = IStateMachine::STATEVERSION_02;
     const VERSION = "version";
 
     private $userfilename;
@@ -331,8 +332,15 @@ class FileStateMachine implements IStateMachine {
     public function GetStateVersion() {
         if (file_exists($this->settingsfilename))
             $settings = unserialize(file_get_contents($this->settingsfilename));
-        else
-            $settings = array(self::VERSION => IStateMachine::STATEVERSION_01);
+        else {
+            $filecontents = @file_get_contents($this->userfilename);
+            if (is_array($filecontents))
+                $settings = array(self::VERSION => IStateMachine::STATEVERSION_01);
+            else {
+                $settings = array(self::VERSION => self::SUPPORTED_STATE_VERSION);
+                $this->SetStateVersion(self::SUPPORTED_STATE_VERSION);
+            }
+        }
 
         return $settings[self::VERSION];
     }
@@ -352,6 +360,7 @@ class FileStateMachine implements IStateMachine {
             array(self::VERSION => IStateMachine::STATEVERSION_01);
 
         $settings[self::VERSION] = $version;
+        ZLog::Write(LOGLEVEL_INFO, sprintf("FileStateMachine->SetStateVersion() saving supported state version, value '%d'", $version));
         return file_put_contents($this->settingsfilename, serialize($settings));
     }
 
