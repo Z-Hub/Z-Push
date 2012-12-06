@@ -103,7 +103,7 @@ class MoveItems extends RequestProcessor {
                 if ($importer === false)
                     throw new StatusException(sprintf("HandleMoveItems() could not get an importer for folder id '%s'", $move["srcfldid"]), SYNC_MOVEITEMSSTATUS_INVALIDSOURCEID);
 
-                // get saves SyncParameters for this folder
+                // get saved SyncParameters for this folder
                 $spa = self::$deviceManager->GetStateManager()->GetSynchedFolderState($move["srcfldid"]);
                 if (!$spa->HasSyncKey())
                     throw new StatusException(sprintf("MoveItems(): Source folder id '%s' is not fully synchronized. Unable to perform operation.", $move["srcfldid"]), SYNC_MOVEITEMSSTATUS_INVALIDSOURCEID);
