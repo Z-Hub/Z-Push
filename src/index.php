@@ -107,6 +107,7 @@ include_once('lib/syncobjects/syncdevicepassword.php');
 include_once('lib/syncobjects/syncitemoperationsattachment.php');
 include_once('lib/syncobjects/syncsendmail.php');
 include_once('lib/syncobjects/syncsendmailsource.php');
+include_once('lib/syncobjects/syncvalidatecert.php');
 include_once('lib/syncobjects/syncresolverecipients.php');
 include_once('lib/syncobjects/syncresolverecipient.php');
 include_once('lib/syncobjects/syncresolverecipientsoptions.php');
