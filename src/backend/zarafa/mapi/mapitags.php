@@ -971,6 +971,7 @@ define('PR_OTHER_ADDRESS_POST_OFFICE_BOX'             ,mapi_prop_tag(PT_TSTRING,
 define('PR_OTHER_ADDRESS_POST_OFFICE_BOX_W'           ,mapi_prop_tag(PT_UNICODE,     0x3A64));
 define('PR_OTHER_ADDRESS_POST_OFFICE_BOX_A'           ,mapi_prop_tag(PT_STRING8,     0x3A64));
 
+define('PR_USER_X509_CERTIFICATE'                     ,mapi_prop_tag(PT_MV_BINARY,   0x3A70));
 
 /*
  *  Profile section properties
@@ -1231,6 +1232,7 @@ define('PR_EMS_AB_REPORTS_MV'                         ,mapi_prop_tag(PT_MV_BINAR
 define('PR_EMS_AB_IS_MEMBER_OF_DL'                    ,mapi_prop_tag(PT_MV_BINARY,   0x8008));
 define('PR_EMS_AB_OWNER'                              ,mapi_prop_tag(PT_BINARY,      0x800C));
 define('PR_EMS_AB_ROOM_CAPACITY'                      ,mapi_prop_tag(PT_LONG,        0x0807));
+define('PR_EMS_AB_TAGGED_X509_CERT'                   ,mapi_prop_tag(PT_MV_BINARY,   0x8C6A));
 
 define('PR_EC_ARCHIVE_SERVERS'                        ,mapi_prop_tag(PT_MV_TSTRING,  0x67c4));
 
