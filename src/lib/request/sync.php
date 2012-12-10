@@ -585,8 +585,9 @@ class Sync extends RequestProcessor {
                 try {
                     // if doing an empty sync, check only once for changes
                     if ($emptysync) {
-                        $foundchanges = $sc->CountChanges();
+                    $foundchanges = $sc->CountChanges();
                     }
+
                     // wait for changes
                     else {
                         ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleSync(): Entering Heartbeat mode"));
@@ -653,7 +654,7 @@ class Sync extends RequestProcessor {
                             ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleSync(): partial sync for folder class '%s' with id '%s'", $spa->GetContentClass(), $spa->GetFolderId()));
 
                         // initialize exporter to get changecount
-                        $changecount = 0;
+                        $changecount = false;
                         if (isset($exporter))
                             unset($exporter);
 
@@ -697,8 +698,10 @@ class Sync extends RequestProcessor {
                                     self::$topCollector->AnnounceInformation(sprintf("Exporter registered. %d objects queued.", $changecount), true);
                                     // update folder status as initialized
                                     $spa->SetFolderSyncTotal($changecount);
-                                    if ($changecount > 0)
+                                    $spa->SetFolderSyncRemaining($changecount);
+                                    if ($changecount > 0) {
                                         self::$deviceManager->SetFolderSyncStatus($folderid, DeviceManager::FLD_SYNC_INITIALIZED);
+                                    }
                                 }
                                 else if ($status != SYNC_STATUS_SUCCESS)
                                     self::$topCollector->AnnounceInformation(sprintf("StatusException code: %d", $status), true);
@@ -902,7 +905,8 @@ class Sync extends RequestProcessor {
 
                             // update folder status
                             $spa->SetFolderSyncRemaining($changecount);
-                            if ($changecount == 0)
+                            // changecount is initialized with 'false', so 0 means no changes!
+                            if ($changecount === 0 || ($changecount !== false && $changecount <= $windowSize))
                                 self::$deviceManager->SetFolderSyncStatus($folderid, DeviceManager::FLD_SYNC_COMPLETED);
                             else
                                 self::$deviceManager->SetFolderSyncStatus($folderid, DeviceManager::FLD_SYNC_INPROGRESS);
