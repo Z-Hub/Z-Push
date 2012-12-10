@@ -244,6 +244,7 @@ class TopCollector extends InterProcessData {
      */
     public function SetUserAgent($agent) {
         $this->latest["devagent"] = $agent;
+        return true;
     }
 
     /**
@@ -256,6 +257,7 @@ class TopCollector extends InterProcessData {
      */
     public function SetAsPushConnection() {
         $this->latest["push"] = true;
+        return true;
     }
 
     /**

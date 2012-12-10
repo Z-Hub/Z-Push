@@ -611,6 +611,19 @@ class DeviceManager {
     }
 
     /**
+     * Announces that the current process is a push connection to the process loop
+     * detection and to the Top collector
+     *
+     * @access public
+     * @return boolean
+     */
+    public function AnnounceProcessAsPush() {
+        ZLog::Write(LOGLEVEL_DEBUG, "Announce process as PUSH connection");
+
+        return $this->loopdetection->ProcessLoopDetectionSetAsPush() && ZPush::GetTopCollector()->SetAsPushConnection();
+    }
+
+    /**
      * Checks if the given counter for a certain uuid+folderid was already exported or modified.
      * This is called when a heartbeat request found changes to make sure that the same
      * changes are not exported twice, as during the heartbeat there could have been a normal
@@ -669,7 +682,6 @@ class DeviceManager {
 
         return true;
     }
-
 
     /**
      * Indicates if the device needs an AS version update

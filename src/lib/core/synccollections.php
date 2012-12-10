@@ -411,7 +411,7 @@ class SyncCollections implements Iterator {
         $this->changes = array();
         $changesAvailable = false;
 
-        ZPush::GetTopCollector()->SetAsPushConnection();
+        ZPush::GetDeviceManager()->AnnounceProcessAsPush();
         ZPush::GetTopCollector()->AnnounceInformation(sprintf("lifetime %ds", $lifetime), true);
         ZLog::Write(LOGLEVEL_INFO, sprintf("SyncCollections->CheckForChanges(): Waiting for %s changes... (lifetime %d seconds)", (empty($classes))?'policy':'store', $lifetime));
 
