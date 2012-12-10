@@ -137,7 +137,7 @@ class ZPush {
                     self::COMMAND_GETITEMESTIMATE   => array(self::ASV_1,  self::REQUESTHANDLER => "GetItemEstimate"),
                     self::COMMAND_MEETINGRESPONSE   => array(self::ASV_1,  self::REQUESTHANDLER => "MeetingResponse"),
                     self::COMMAND_RESOLVERECIPIENTS => array(self::ASV_1,  self::REQUESTHANDLER => "ResolveRecipients"),
-                    self::COMMAND_VALIDATECERT      => array(self::ASV_1,  self::REQUESTHANDLER => false),
+                    self::COMMAND_VALIDATECERT      => array(self::ASV_1,  self::REQUESTHANDLER => "ValidateCert"),
                     self::COMMAND_PROVISION         => array(self::ASV_25, self::REQUESTHANDLER => "Provisioning",  self::UNAUTHENTICATED, self::UNPROVISIONED),
                     self::COMMAND_SEARCH            => array(self::ASV_1,  self::REQUESTHANDLER => "Search"),
                     self::COMMAND_PING              => array(self::ASV_2,  self::REQUESTHANDLER => "Ping",          self::UNPROVISIONED),
