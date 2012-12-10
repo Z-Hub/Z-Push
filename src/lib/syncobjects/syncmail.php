@@ -101,7 +101,7 @@ class SyncMail extends SyncObject {
 
                     SYNC_POOMMAIL_FROM                                  => array (  self::STREAMER_VAR      => "from",
                                                                                     self::STREAMER_CHECKS   => array(   self::STREAMER_CHECK_LENGTHMAX      => 32768,
-                                                                                                                        self::STREAMER_CHECK_EMAIL        => "broken-from@z-push.local" )),
+                                                                                                                        self::STREAMER_CHECK_EMAIL        => "" )),
 
                     SYNC_POOMMAIL_SUBJECT                               => array (  self::STREAMER_VAR      => "subject"),
                     SYNC_POOMMAIL_THREADTOPIC                           => array (  self::STREAMER_VAR      => "threadtopic"),
