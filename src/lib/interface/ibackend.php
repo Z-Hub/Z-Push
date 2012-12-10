@@ -279,6 +279,16 @@ interface IBackend {
      * @return SyncObject   $settings
      */
     public function Settings($settings);
+
+    /**
+     * Resolves recipients
+     *
+     * @param SyncObject        $resolveRecipients
+     *
+     * @access public
+     * @return SyncObject       $resolveRecipients
+     */
+    public function ResolveRecipients($resolveRecipients);
 }
 
 ?>

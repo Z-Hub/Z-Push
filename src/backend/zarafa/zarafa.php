@@ -89,6 +89,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
     private $changesSinkFolders;
     private $changesSinkStores;
     private $wastebasket;
+    private $addressbook;
 
     /**
      * Constructor of the Zarafa Backend
@@ -1019,6 +1020,38 @@ class BackendZarafa implements IBackend, ISearchProvider {
         return $settings;
     }
 
+    /**
+     * Resolves recipients
+     *
+     * @param SyncObject        $resolveRecipients
+     *
+     * @access public
+     * @return SyncObject       $resolveRecipients
+     */
+    public function ResolveRecipients($resolveRecipients) {
+        if ($resolveRecipients instanceof SyncResolveRecipients) {
+            $resolveRecipients->status = SYNC_RESOLVERECIPSSTATUS_SUCCESS;
+            $resolveRecipients->recipient = array();
+            foreach ($resolveRecipients->to as $i => $to) {
+                $recipient = $this->resolveRecipient($to);
+                if ($recipient instanceof SyncResolveRecipient) {
+                    $resolveRecipients->recipient[$i] = $recipient;
+                }
+                elseif (is_int($recipient)) {
+                    $resolveRecipients->status = $recipient;
+                }
+            }
+
+            return $resolveRecipients;
+        }
+        ZLog::Write(LOGLEVEL_WARN, "Not a valid SyncResolveRecipients object.");
+        // return a SyncResolveRecipients object so that sync doesn't fail
+        $r = new SyncResolveRecipients();
+        $r->status = SYNC_RESOLVERECIPSSTATUS_PROTOCOLERROR;
+        $r->recipient = array();
+        return $r;
+    }
+
 
     /**----------------------------------------------------------------------------------------------------------
      * Implementation of the ISearchProvider interface
@@ -1753,6 +1786,256 @@ class BackendZarafa implements IBackend, ISearchProvider {
         $mapiquery = array(RES_AND, $resAnd);
 
         return $mapiquery;
+    }
+
+    /**
+     * Resolve recipient based on his email address.
+     *
+     * @param string $to
+     *
+     * @return SyncResolveRecipient|boolean
+     */
+    private function resolveRecipient($to) {
+        $recipient = $this->resolveRecipientGAL($to);
+
+        if ($recipient !== false) {
+            return $recipient;
+        }
+
+        $recipient = $this->resolveRecipientContact($to);
+
+        if ($recipient !== false) {
+            return $recipient;
+        }
+
+        return false;
+    }
+
+    /**
+     * Resolves recipient from the GAL and gets his certificates.
+     *
+     * @param string $to
+     * @return SyncResolveRecipient|boolean
+     */
+    private function resolveRecipientGAL($to) {
+        $addrbook = $this->getAddressbook();
+            $ab_entryid = mapi_ab_getdefaultdir($addrbook);
+        if ($ab_entryid)
+            $ab_dir = mapi_ab_openentry($addrbook, $ab_entryid);
+        if ($ab_dir)
+            $table = mapi_folder_getcontentstable($ab_dir);
+
+        //         if (!$table)
+            //             throw new StatusException(sprintf("ZarafaBackend->resolveRecipient(): could not open addressbook: 0x%X", mapi_last_hresult()), SYNC_RESOLVERECIPSSTATUS_RESPONSE_UNRESOLVEDRECIP);
+
+        if (!$table) {
+            ZLog::Write(LOGLEVEL_WARN, sprintf("Unable to open addressbook:0x%X", mapi_last_hresult()));
+            return false;
+        }
+
+        $restriction = MAPIUtils::GetSearchRestriction(u2w($to));
+        mapi_table_restrict($table, $restriction);
+
+        $querycnt = mapi_table_getrowcount($table);
+        if ($querycnt > 0) {
+            $abentries = mapi_table_queryrows($table, array(PR_DISPLAY_NAME, PR_EMS_AB_TAGGED_X509_CERT), 0, 1);
+            $certificates =
+                // check if there are any certificates available
+                (isset($abentries[0][PR_EMS_AB_TAGGED_X509_CERT]) && is_array($abentries[0][PR_EMS_AB_TAGGED_X509_CERT]) && count($abentries[0][PR_EMS_AB_TAGGED_X509_CERT])) ?
+                    $this->getCertificates($abentries[0][PR_EMS_AB_TAGGED_X509_CERT], $querycnt) : false;
+            if ($certificates === false) {
+                // the recipient does not have a valid certificate, set the appropriate status
+                ZLog::Write(LOGLEVEL_INFO, sprintf("No certificates found for '%s'", $to));
+                $certificates = $this->getCertificates(false);
+            }
+            $recipient = $this->createResolveRecipient(SYNC_RESOLVERECIPIENTS_TYPE_GAL, w2u($abentries[0][PR_DISPLAY_NAME]), $to, $certificates);
+            return $recipient;
+        }
+        else {
+            ZLog::Write(LOGLEVEL_WARN, sprintf("No recipient found for: '%s'", $to));
+            return SYNC_RESOLVERECIPSSTATUS_RESPONSE_UNRESOLVEDRECIP;
+        }
+        return false;
+    }
+
+    /**
+     * Resolves recipient from the contact list and gets his certificates.
+     *
+     * @param string $to
+     *
+     * @return SyncResolveRecipient|boolean
+     */
+    private function resolveRecipientContact($to) {
+        // go through all contact folders of the user and
+        // check if there's a contact with the given email address
+        $root = mapi_msgstore_openentry($this->defaultstore);
+        if (!$root) {
+            ZLog::Write(LOGLEVEL_ERROR, sprintf("Unable to open default store: 0x%X", mapi_last_hresult));
+        }
+        $rootprops = mapi_getprops($root, array(PR_IPM_CONTACT_ENTRYID));
+        $contacts = $this->getContactsFromFolder($this->defaultstore, $rootprops[PR_IPM_CONTACT_ENTRYID], $to);
+        $recipients = array();
+
+        if ($contacts !== false) {
+            // create resolve recipient object
+            foreach ($contacts as $contact) {
+                $certificates =
+                // check if there are any certificates available
+                (isset($contact[PR_USER_X509_CERTIFICATE]) && is_array($contact[PR_USER_X509_CERTIFICATE]) && count($contact[PR_USER_X509_CERTIFICATE])) ?
+                $this->getCertificates($contact[PR_USER_X509_CERTIFICATE], 1) : false;
+
+                if ($certificates !== false) {
+                    return $this->createResolveRecipient(SYNC_RESOLVERECIPIENTS_TYPE_CONTACT, u2w($contact[PR_DISPLAY_NAME]), $to, $certificates);
+                }
+            }
+        }
+
+        $contactfolder = mapi_msgstore_openentry($this->defaultstore, $rootprops[PR_IPM_CONTACT_ENTRYID]);
+        $subfolders = MAPIUtils::GetSubfoldersForType($contactfolder, "IPF.Contact");
+        foreach($subfolders as $folder) {
+            $contacts = $this->getContactsFromFolder($this->defaultstore, $folder[PR_ENTRYID], $to);
+            if ($contacts !== false) {
+                foreach ($contacts as $contact) {
+                    $certificates =
+                    // check if there are any certificates available
+                    (isset($contact[PR_USER_X509_CERTIFICATE]) && is_array($contact[PR_USER_X509_CERTIFICATE]) && count($contact[PR_USER_X509_CERTIFICATE])) ?
+                    $this->getCertificates($contact[PR_USER_X509_CERTIFICATE], 1) : false;
+
+                    if ($certificates !== false) {
+                        return $this->createResolveRecipient(SYNC_RESOLVERECIPIENTS_TYPE_CONTACT, u2w($contact[PR_DISPLAY_NAME]), $to, $certificates);
+                    }
+                }
+            }
+        }
+
+        // search contacts in public folders
+        $storestables = mapi_getmsgstorestable($this->session);
+        $result = mapi_last_hresult();
+
+        if ($result == NOERROR){
+            $rows = mapi_table_queryallrows($storestables, array(PR_ENTRYID, PR_DEFAULT_STORE, PR_MDB_PROVIDER));
+            foreach($rows as $row) {
+                if (isset($row[PR_MDB_PROVIDER]) && $row[PR_MDB_PROVIDER] == ZARAFA_STORE_PUBLIC_GUID) {
+                    // TODO refactor public store
+                    $publicstore = mapi_openmsgstore($this->session, $row[PR_ENTRYID]);
+                    $publicfolder = mapi_msgstore_openentry($publicstore);
+
+                    $subfolders = MAPIUtils::GetSubfoldersForType($publicfolder, "IPF.Contact");
+                    if ($subfolders !== false) {
+                        foreach($subfolders as $folder) {
+                            $contacts = $this->getContactsFromFolder($publicstore, $folder[PR_ENTRYID], $to);
+                            if ($contacts !== false) {
+                                foreach ($contacts as $contact) {
+                                    $certificates =
+                                    // check if there are any certificates available
+                                    (isset($contact[PR_USER_X509_CERTIFICATE]) && is_array($contact[PR_USER_X509_CERTIFICATE]) && count($contact[PR_USER_X509_CERTIFICATE])) ?
+                                    $this->getCertificates($contact[PR_USER_X509_CERTIFICATE], 1) : false;
+
+                                    if ($certificates !== false) {
+                                        return $this->createResolveRecipient(SYNC_RESOLVERECIPIENTS_TYPE_CONTACT, u2w($contact[PR_DISPLAY_NAME]), $to, $certificates);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+        else {
+            ZLog::Write(LOGLEVEL_WARN, sprintf("Unable to open public store: 0x%X", $result));
+        }
+
+        $certificates = $this->getCertificates(false);
+        return $this->createResolveRecipient(SYNC_RESOLVERECIPIENTS_TYPE_CONTACT, $to, $to, $certificates);
+    }
+
+    /**
+     * Creates SyncRRCertificates object for ResolveRecipients
+     *
+     * @param binary $certificates
+     * @param int $recipientCount
+     *
+     * @return SyncRRCertificates
+     */
+    private function getCertificates($certificates, $recipientCount = 0) {
+        $cert = new SyncRRCertificates();
+        if ($certificates === false) {
+            $cert->status = SYNC_RESOLVERECIPSSTATUS_CERTIFICATES_NOVALIDCERT;
+            return $cert;
+        }
+        $cert->status = SYNC_RESOLVERECIPSSTATUS_SUCCESS;
+        $cert->certificatecount = count ($certificates);
+        $cert->recipientcount = $recipientCount;
+        $cert->certificate = array();
+        foreach ($certificates as $certificate) {
+            $cert->certificate[] = base64_encode($certificate);
+        }
+        return $cert;
+    }
+
+    /**
+     *
+     * @param int $type
+     * @param string $displayname
+     * @param string $email
+     * @param array $certificates
+     *
+     * @return SyncResolveRecipient
+     */
+    private function createResolveRecipient($type, $displayname, $email, $certificates) {
+        $recipient = new SyncResolveRecipient();
+        $recipient->type = $type;
+        $recipient->displayname = $displayname;
+        $recipient->emailaddress = $email;
+        $recipient->certificates = $certificates;
+        if ($recipient->certificates === false) {
+            // the recipient does not have a valid certificate, set the appropriate status
+            ZLog::Write(LOGLEVEL_INFO, sprintf("No certificates found for '%s'", $email));
+            $cert = new SyncRRCertificates();
+            $cert->status = SYNC_RESOLVERECIPSSTATUS_CERTIFICATES_NOVALIDCERT;
+            $recipient->certificates = $cert;
+        }
+        return $recipient;
+    }
+
+    /**
+     * Returns contacts matching given email address from a folder.
+     *
+     * @param MAPIStore $store
+     * @param binary $folderEntryid
+     * @param string $email
+     *
+     * @return array|boolean
+     */
+    private function getContactsFromFolder($store, $folderEntryid, $email) {
+        $folder = mapi_msgstore_openentry($store, $folderEntryid);
+        $folderContent = mapi_folder_getcontentstable($folder);
+        mapi_table_restrict($folderContent, MAPIUtils::GetEmailAddressRestriction($store, $email));
+        // TODO max limit
+        if (mapi_table_getrowcount($folderContent) > 0) {
+            return mapi_table_queryallrows($folderContent, array(PR_DISPLAY_NAME, PR_USER_X509_CERTIFICATE));
+        }
+        return false;
+    }
+
+    /**
+     * Get MAPI addressbook object
+     *
+     * @access private
+     * @return MAPIAddressbook object to be used with mapi_ab_* or false on failure
+     */
+    private function getAddressbook() {
+        if (isset($this->addressbook) && $this->addressbook) {
+            return $this->addressbook;
+        }
+        $this->addressbook = mapi_openaddressbook($this->session);
+        $result = mapi_last_hresult();
+        if ($result && $this->addressbook === false) {
+            ZLog::Write(LOGLEVEL_ERROR, sprintf("MAPIProvider->getAddressbook error opening addressbook 0x%X", $result));
+            return false;
+        }
+        return $this->addressbook;
     }
 }
 

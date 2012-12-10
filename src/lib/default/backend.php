@@ -188,6 +188,21 @@ abstract class Backend implements IBackend {
         return $settings;
     }
 
+    /**
+     * Resolves recipients
+     *
+     * @param SyncObject        $resolveRecipients
+     *
+     * @access public
+     * @return SyncObject       $resolveRecipients
+     */
+    public function ResolveRecipients($resolveRecipients) {
+        $r = new SyncResolveRecipients();
+        $r->status = SYNC_RESOLVERECIPSSTATUS_PROTOCOLERROR;
+        $r->recipient = array();
+        return $r;
+    }
+
 
     /**----------------------------------------------------------------------------------------------------------
      * Protected methods for BackendStorage
