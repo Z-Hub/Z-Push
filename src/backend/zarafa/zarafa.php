@@ -422,11 +422,6 @@ class BackendZarafa implements IBackend, ISearchProvider {
         foreach(preg_split("/((\r)?\n)/", $sm->mime) as $rfc822line)
             ZLog::Write(LOGLEVEL_WBXML, "RFC822: ". $rfc822line);
 
-        $mimeParams = array('decode_headers' => true,
-                            'decode_bodies' => true,
-                            'include_bodies' => true,
-                            'charset' => 'utf-8');
-
         $sendMailProps = MAPIMapping::GetSendMailProperties();
         $sendMailProps = getPropIdsFromStrings($this->store, $sendMailProps);
 
