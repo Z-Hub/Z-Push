@@ -658,12 +658,12 @@ class DeviceManager {
             // only update if there is a change
             if ($statusflag !== $currentStatus[ASDevice::FOLDERSYNCSTATUS] && $statusflag != self::FLD_SYNC_COMPLETED) {
                 $this->device->SetFolderSyncStatus($folderid, array(ASDevice::FOLDERSYNCSTATUS => $statusflag));
-                ZLog::Write(LOGLEVEL_WARN, sprintf("SetFolderSyncStatus(): set %s for %s", $statusflag, $folderid));
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("SetFolderSyncStatus(): set %s for %s", $statusflag, $folderid));
             }
             // if completed, remove the status
             else if ($statusflag == self::FLD_SYNC_COMPLETED) {
                 $this->device->SetFolderSyncStatus($folderid, false);
-                ZLog::Write(LOGLEVEL_WARN, sprintf("SetFolderSyncStatus(): completed for %s", $folderid));
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("SetFolderSyncStatus(): completed for %s", $folderid));
             }
         }
 
