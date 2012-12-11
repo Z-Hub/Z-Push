@@ -334,7 +334,7 @@ class FileStateMachine implements IStateMachine {
             $settings = unserialize(file_get_contents($this->settingsfilename));
         else {
             $filecontents = @file_get_contents($this->userfilename);
-            if (is_array($filecontents))
+            if ($filecontents)
                 $settings = array(self::VERSION => IStateMachine::STATEVERSION_01);
             else {
                 $settings = array(self::VERSION => self::SUPPORTED_STATE_VERSION);
