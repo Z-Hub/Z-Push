@@ -81,7 +81,7 @@ try {
     $migrate = new StateMigrator20xto210();
 
     if (!$migrate->MigrationNecessary())
-        echo "Migration script was run before and eventually no migration is necessary. Rerunning checks\n");
+        echo "Migration script was run before and eventually no migration is necessary. Rerunning checks\n";
 
     $migrate->DoMigration();
 }
