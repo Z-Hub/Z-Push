@@ -237,8 +237,8 @@ class ZPush {
             throw new FatalMisconfigurationException("The configured LOGERRORFILE can not be modified.");
 
         // check ownership on the (eventually) just created files
-        self::checkFileOwner(LOGFILE);
-        self::checkFileOwner(LOGERRORFILE);
+        Utils::FixFileOwner(LOGFILE);
+        Utils::FixFileOwner(LOGERRORFILE);
 
         // set time zone
         // code contributed by Robert Scheck (rsc) - more information: https://developer.berlios.de/mantis/view.php?id=479
@@ -808,30 +808,6 @@ END;
         }
 
         return $defcapa;
-    }
-
-    /**
-     * Checks if a file has the same owner and group as the parent directory.
-     * If not, owner and group are updated.
-     * Function code contributed by Robert Scheck aka rsc.
-     *
-     * @param string $file
-     *
-     * @access private
-     * @return boolean
-     */
-    static private function checkFileOwner($file) {
-        if(posix_getuid() == 0 && file_exists($file)) {
-            $dir = dirname($file);
-            $perm_dir = stat($dir);
-            $perm_log = stat($file);
-
-            if($perm_dir[4] !== $perm_log[4] || $perm_dir[5] !== $perm_log[5]) {
-                chown($file, $perm_dir[4]);
-                chgrp($file, $perm_dir[5]);
-            }
-        }
-        return true;
     }
 
 }

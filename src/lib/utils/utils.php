@@ -868,6 +868,30 @@ class Utils {
         return $plaintext;
     }
     /* END fmbiete's contribution r1516, ZP-318 */
+
+    /**
+     * Checks if a file has the same owner and group as the parent directory.
+     * If not, owner and group are fixed (being updated to the owner/group of the directory).
+     * Function code contributed by Robert Scheck aka rsc.
+     *
+     * @param string $file
+     *
+     * @access public
+     * @return boolean
+     */
+    public static function FixFileOwner($file) {
+        if(posix_getuid() == 0 && file_exists($file)) {
+            $dir = dirname($file);
+            $perm_dir = stat($dir);
+            $perm_log = stat($file);
+
+            if($perm_dir[4] !== $perm_log[4] || $perm_dir[5] !== $perm_log[5]) {
+                chown($file, $perm_dir[4]);
+                chgrp($file, $perm_dir[5]);
+            }
+        }
+        return true;
+    }
 }
 
 
