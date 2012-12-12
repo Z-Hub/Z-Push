@@ -76,6 +76,7 @@ class FileStateMachine implements IStateMachine {
 
         if (!touch($this->userfilename))
             throw new FatalMisconfigurationException("Not possible to write to the configured state directory.");
+        Utils::FixFileOwner($this->userfilename);
     }
 
     /**
@@ -361,7 +362,9 @@ class FileStateMachine implements IStateMachine {
 
         $settings[self::VERSION] = $version;
         ZLog::Write(LOGLEVEL_INFO, sprintf("FileStateMachine->SetStateVersion() saving supported state version, value '%d'", $version));
-        return file_put_contents($this->settingsfilename, serialize($settings));
+        $status = file_put_contents($this->settingsfilename, serialize($settings));
+        Utils::FixFileOwner($this->settingsfilename);
+        return $status;
     }
 
 
