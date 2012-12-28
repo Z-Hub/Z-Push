@@ -303,7 +303,7 @@ class MAPIProvider {
 
                 if (is_array($meinfo)) {
                     $attendee->email = w2u($meinfo["emailaddress"]);
-                    $attendee->mame = w2u($meinfo["fullname"]);
+                    $attendee->name = w2u($meinfo["fullname"]);
                     $attendee->attendeetype = MAPI_TO;
 
                     array_push($message->attendees, $attendee);
