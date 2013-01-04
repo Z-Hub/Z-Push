@@ -581,11 +581,10 @@ class Sync extends RequestProcessor {
             if ($loadstatus == SYNC_STATUS_SUCCESS) {
                 $foundchanges = false;
 
-                // wait for changes
                 try {
                     // if doing an empty sync, check only once for changes
                     if ($emptysync) {
-                    $foundchanges = $sc->CountChanges();
+                        $foundchanges = $sc->CountChanges();
                     }
 
                     // wait for changes
@@ -604,9 +603,11 @@ class Sync extends RequestProcessor {
                     }
                 }
 
-                // in case of an empty sync with no changes, we can reply with an empty response
-                if ($emptysync && !$foundchanges){
-                    ZLog::Write(LOGLEVEL_DEBUG, "No changes found for empty sync. Replying with empty response");
+                // in case there are no changes, we can reply with an empty response
+                if (!$foundchanges){
+                    ZLog::Write(LOGLEVEL_DEBUG, "No changes found. Replying with empty response and closing connection.");
+                    self::$specialHeaders = array();
+                    self::$specialHeaders[] = "Connection: close";
                     return true;
                 }
 
