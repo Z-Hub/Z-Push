@@ -166,6 +166,27 @@ class Search extends RequestProcessor {
                 if(!self::$decoder->getElementEndTag()) // SYNC_SEARCH_AND
                     return false;
             }
+            elseif (self::$decoder->getElementStartTag(SYNC_SEARCH_EQUALTO)) {
+                    // linkid can be an empty tag as well as have value
+                    if(self::$decoder->getElementStartTag(SYNC_DOCUMENTLIBRARY_LINKID)) {
+                        if (($linkId = self::$decoder->getElementContent()) !== false) {
+                            $cpo->SetLinkId($linkId);
+                            if(!self::$decoder->getElementEndTag()) { // SYNC_DOCUMENTLIBRARY_LINKID
+                                return false;
+                            }
+                        }
+                    }
+
+                    if(self::$decoder->getElementStartTag(SYNC_SEARCH_VALUE)) {
+                        $searchvalue = self::$decoder->getElementContent();
+                        $cpo->SetSearchValueLess($searchvalue);
+                        if(!self::$decoder->getElementEndTag()) // SYNC_SEARCH_VALUE
+                            return false;
+                    }
+
+                    if(!self::$decoder->getElementEndTag()) // SYNC_SEARCH_EQUALTO
+                        return false;
+                }
 
             if(!self::$decoder->getElementEndTag()) // SYNC_SEARCH_QUERY
                 return false;
