@@ -78,35 +78,6 @@ class Utils {
     }
 
     /**
-     * iPhone defines standard summer time information for current year only,
-     * starting with time change in February. Dates from the 1st January until
-     * the time change are undefined and the server uses GMT or its current time.
-     * The function parses the ical attachment and replaces DTSTART one year back
-     * in VTIMEZONE section if the event takes place in this undefined time.
-     * See also http://developer.berlios.de/mantis/view.php?id=311
-     *
-     * @param string    $ical               iCalendar data
-     *
-     * @access public
-     * @return string
-     */
-    static public function IcalTimezoneFix($ical) {
-        $eventDate = substr($ical, (strpos($ical, ":", strpos($ical, "DTSTART", strpos($ical, "BEGIN:VEVENT")))+1), 8);
-        $posStd = strpos($ical, "DTSTART:", strpos($ical, "BEGIN:STANDARD")) + strlen("DTSTART:");
-        $posDst = strpos($ical, "DTSTART:", strpos($ical, "BEGIN:DAYLIGHT")) + strlen("DTSTART:");
-        $beginStandard = substr($ical, $posStd , 8);
-        $beginDaylight = substr($ical, $posDst , 8);
-
-        if (($eventDate < $beginStandard) && ($eventDate < $beginDaylight) ) {
-            ZLog::Write(LOGLEVEL_DEBUG,"icalTimezoneFix for event on $eventDate, standard:$beginStandard, daylight:$beginDaylight");
-            $year = intval(date("Y")) - 1;
-            $ical = substr_replace($ical, $year, (($beginStandard < $beginDaylight) ? $posDst : $posStd), strlen($year));
-        }
-
-        return $ical;
-    }
-
-    /**
      * Build an address string from the components
      *
      * @param string    $street     the street
