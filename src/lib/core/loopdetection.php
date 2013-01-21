@@ -515,6 +515,7 @@ class LoopDetection extends InterProcessData {
             $this->checkArrayStructure($loopdata, $folderid);
             $current = $loopdata[self::$devid][self::$user][$folderid];
 
+
             // update the usage flag
             $current["usage"] = $counter;
 
@@ -557,16 +558,18 @@ class LoopDetection extends InterProcessData {
             $current = $loopdata[self::$devid][self::$user][$folderid];
 
             if (!empty($current)) {
-                if ($current["uuid"] != $uuid) {
-                    ZLog::Write(LOGLEVEL_DEBUG, "LoopDetection->IsSyncStateObsolete(): yes, uuid changed");
+                if (!isset($current["uuid"]) || $current["uuid"] != $uuid) {
+                    ZLog::Write(LOGLEVEL_DEBUG, "LoopDetection->IsSyncStateObsolete(): yes, uuid changed or not set");
                     $obsolete = true;
                 }
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("LoopDetection->IsSyncStateObsolete(): check uuid counter: %d - last known counter: %d with %d queued objects", $counter, $current["count"], $current["queued"]));
+                else {
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("LoopDetection->IsSyncStateObsolete(): check uuid counter: %d - last known counter: %d with %d queued objects", $counter, $current["count"], $current["queued"]));
 
-                if ($current["uuid"] == $uuid && ($current["count"] > $counter || ($current["count"] == $counter && $current["queued"] > 0) || (isset($current["usage"]) && $current["usage"] >= $counter))) {
-                    $usage = isset($current["usage"]) ? sprintf(" - counter %d already expired",$current["usage"]) : "";
-                    ZLog::Write(LOGLEVEL_DEBUG, "LoopDetection->IsSyncStateObsolete(): yes, counter already processed". $usage);
-                    $obsolete = true;
+                    if ($current["uuid"] == $uuid && ($current["count"] > $counter || ($current["count"] == $counter && $current["queued"] > 0) || (isset($current["usage"]) && $current["usage"] >= $counter))) {
+                        $usage = isset($current["usage"]) ? sprintf(" - counter %d already expired",$current["usage"]) : "";
+                        ZLog::Write(LOGLEVEL_DEBUG, "LoopDetection->IsSyncStateObsolete(): yes, counter already processed". $usage);
+                        $obsolete = true;
+                    }
                 }
             }
         }
