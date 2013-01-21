@@ -263,7 +263,7 @@ class ItemOperations extends RequestProcessor {
                         $data = self::$backend->Fetch($operation['folderid'], $operation['serverid'], $operation["cpo"]);
                     }
 
-                    if (isset($longid)) {
+                    if (isset($operation['longid'])) {
                         self::$encoder->startTag(SYNC_SEARCH_LONGID);
                         self::$encoder->content($operation['longid']);
                         self::$encoder->endTag(); // end SYNC_FOLDERID
