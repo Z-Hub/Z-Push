@@ -116,6 +116,8 @@ class ImportChangesStream implements IImportChanges {
                 $newmessage = new SyncMail();
                 $newmessage->read = $message->read;
                 $newmessage->flag = $message->flag;
+                if (isset($message->lastverbexectime)) $newmessage->lastverbexectime = $message->lastverbexectime;
+                if (isset($message->lastverbexecuted)) $newmessage->lastverbexecuted = $message->lastverbexecuted;
                 $message = $newmessage;
                 unset($newmessage);
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("ImportChangesStream->ImportMessageChange('%s'): SyncMail message updated. Message content is striped, only flags are streamed.", $id));

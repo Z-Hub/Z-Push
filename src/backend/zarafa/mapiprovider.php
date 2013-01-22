@@ -740,6 +740,11 @@ class MAPIProvider {
         $message->contentclass = DEFAULT_EMAIL_CONTENTCLASS;
         if (!isset($message->nativebodytype)) $message->nativebodytype = $this->getNativeBodyType($messageprops);
 
+        // reply, reply to all, forward flags
+        if (isset($message->lastverbexecuted) && $message->lastverbexecuted) {
+            $message->lastverbexecuted = Utils::GetLastVerbExecuted($message->lastverbexecuted);
+        }
+
         return $message;
     }
 

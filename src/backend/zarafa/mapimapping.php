@@ -184,6 +184,8 @@ class MAPIMapping {
             // "threadtopic"        => PR_CONVERSATION_TOPIC,
             "internetcpid"          => PR_INTERNET_CPID,
             "nativebodytype"        => PR_NATIVE_BODY_INFO,
+            "lastverbexecuted"      => PR_LAST_VERB_EXECUTED,
+            "lastverbexectime"      => PR_LAST_VERB_EXECUTION_TIME,
             );
     }
 
