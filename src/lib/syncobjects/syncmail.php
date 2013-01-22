@@ -182,7 +182,10 @@ class SyncMail extends SyncObject {
             $mapping[SYNC_POOMMAIL2_CONVERSATIONID]                     = array (   self::STREAMER_VAR      => "conversationid");
             $mapping[SYNC_POOMMAIL2_CONVERSATIONINDEX]                  = array (   self::STREAMER_VAR      => "conversationindex");
             $mapping[SYNC_POOMMAIL2_LASTVERBEXECUTED]                   = array (   self::STREAMER_VAR      => "lastverbexecuted");
-            $mapping[SYNC_POOMMAIL2_LASTVERBEXECUTIONTIME]              = array (   self::STREAMER_VAR      => "lastverbexectime");
+
+            $mapping[SYNC_POOMMAIL2_LASTVERBEXECUTIONTIME]              = array (   self::STREAMER_VAR      => "lastverbexectime",
+                                                                                    self::STREAMER_TYPE     => self::STREAMER_TYPE_DATE_DASHES);
+
             $mapping[SYNC_POOMMAIL2_RECEIVEDASBCC]                      = array (   self::STREAMER_VAR      => "receivedasbcc");
             $mapping[SYNC_POOMMAIL2_SENDER]                             = array (   self::STREAMER_VAR      => "sender");
             $mapping[SYNC_POOMMAIL_CATEGORIES]                          = array (   self::STREAMER_VAR      => "categories",
