@@ -190,7 +190,7 @@ class StateMigrator20xto210 {
                     $dev->deviceidOrg = $dev->deviceid;
 
                 $dev->deviceid = strtolower($dev->deviceid);
-                $dev->useragenthistory = array();
+                $dev->useragenthistory = array_unique($dev->useragenthistory);
                 $newdata[$user] = $dev;
             }
             $devState->devices = $newdata;
