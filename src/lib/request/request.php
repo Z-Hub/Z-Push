@@ -211,6 +211,14 @@ class Request {
         }
 
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("Request::ProcessHeaders() ASVersion: %s", self::$asProtocolVersion));
+
+        if (defined('USE_X_FORWARDED_FOR_HEADER') && USE_X_FORWARDED_FOR_HEADER == true && isset(self::$headers["x-forwarded-for"])) {
+            $forwardedIP = self::filterEvilInput(self::$headers["x-forwarded-for"], self::NUMBERSDOT_ONLY);
+            if ($forwardedIP) {
+                self::$remoteAddr = $forwardedIP;
+                ZLog::Write(LOGLEVEL_INFO, sprintf("'X-Forwarded-for' indicates remote IP: %s", self::$remoteAddr));
+            }
+        }
     }
 
     /**
