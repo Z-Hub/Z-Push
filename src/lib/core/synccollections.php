@@ -226,7 +226,7 @@ class SyncCollections implements Iterator {
             if ($spa->HasReferenceLifetime())
                 $this->refLifetime = $spa->GetReferenceLifetime();
 
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->AddCollection(): Updated reference PolicyKey '%s', reference Lifetime '%s', Last sync at '%s'", $this->refPolicyKey, $this->refLifetime, $spa->GetFolderId(),$this->lastSyncTime));
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->AddCollection(): Updated reference PolicyKey '%s', reference Lifetime '%s', Last sync at '%s'", $this->refPolicyKey, $this->refLifetime, $this->lastSyncTime));
         }
 
         return true;
