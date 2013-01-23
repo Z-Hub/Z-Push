@@ -265,6 +265,8 @@ class ZPushAdmin {
             try {
                 $devicedata = ZPush::GetStateMachine()->GetState($devid, IStateMachine::DEVICEDATA);
                 $device->SetData($devicedata, false);
+                if (!isset($devicedata->devices))
+                    throw new StateInvalidException("No devicedata stored in ASDevice");
                 $devices = $devicedata->devices;
             }
             catch (StateNotFoundException $e) {
@@ -307,7 +309,7 @@ class ZPushAdmin {
      *
      * @param string    $user           user of the device
      * @param string    $devid          device id which should be wiped
-     * @param string    $folderid       if not set, hierarchy state is linked
+     * @param mixed     $folderid       a single folder id or an array of folder ids
      *
      * @return boolean
      * @access public
@@ -323,16 +325,31 @@ class ZPushAdmin {
                 return false;
             }
 
+            if (!$folderid || (is_array($folderid) && empty($folderid))) {
+                ZLog::Write(LOGLEVEL_ERROR, sprintf("ZPushAdmin::ResyncFolder(): no folders synchronized for user '%s' on device '%s'. Aborting.",$user, $devid));
+                return false;
+            }
+
             // remove folder state
-            StateManager::UnLinkState($device, $folderid);
+            if (is_array($folderid)) {
+                foreach ($folderid as $fid) {
+                    StateManager::UnLinkState($device, $fid);
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::ResyncFolder(): folder '%s' on device '%s' of user '%s' marked to be re-synchronized.", $fid, $devid, $user));
+                }
+            }
+            else {
+                StateManager::UnLinkState($device, $folderid);
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::ResyncFolder(): folder '%s' on device '%s' of user '%s' marked to be re-synchronized.", $folderid, $devid, $user));
+            }
 
             ZPush::GetStateMachine()->SetState($device->GetData(), $devid, IStateMachine::DEVICEDATA);
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::ResyncFolder(): folder '%s' on device '%s' of user '%s' marked to be re-synchronized.", $devid, $user));
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::ResyncFolder(): saved updated device data of device '%s' of user '%s'", $devid, $user));
         }
         catch (StateNotFoundException $e) {
             ZLog::Write(LOGLEVEL_ERROR, sprintf("ZPushAdmin::ResyncFolder(): state for device '%s' of user '%s' can not be found or saved", $devid, $user));
             return false;
         }
+        return true;
     }
 
 
