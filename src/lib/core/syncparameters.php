@@ -397,7 +397,7 @@ class SyncParameters extends StateObject {
     protected function preSerialize() {
         parent::preSerialize();
 
-        if ($this->changed === true && $this->synckeyChanged)
+        if ($this->changed === true && ($this->synckeyChanged || $this->lastsynctime === false))
             $this->lastsynctime = time();
 
         return true;
