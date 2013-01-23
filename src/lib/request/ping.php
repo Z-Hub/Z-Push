@@ -147,10 +147,18 @@ class Ping extends RequestProcessor {
             foreach ($sc as $folderid => $spa)
                 $sc->SaveCollection($spa);
         } // END SYNC_PING_PING
+        else {
+            // if no ping initialization data was sent, we check if we have pingable folders
+            // if not, we indicate that there is nothing to do.
+            if (! $sc->PingableFolders()) {
+                $pingstatus = SYNC_PINGSTATUS_FAILINGPARAMS;
+                ZLog::Write(LOGLEVEL_DEBUG, "HandlePing(): no pingable folders found and no initialization data sent. Returning SYNC_PINGSTATUS_FAILINGPARAMS.");
+            }
+        }
 
         // Check for changes on the default LifeTime, set interval and ONLY on pingable collections
         try {
-            if (empty($fakechanges)) {
+            if (!$pingstatus && empty($fakechanges)) {
                 $foundchanges = $sc->CheckForChanges($sc->GetLifetime(), $interval, true);
             }
         }

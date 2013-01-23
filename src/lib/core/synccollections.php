@@ -214,6 +214,7 @@ class SyncCollections implements Iterator {
     public function AddCollection($spa) {
         $this->collections[$spa->GetFolderId()] = $spa;
 
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->AddCollection(): Folder id '%s' : ref. PolicyKey '%s', ref. Lifetime '%s', last sync at '%s'", $spa->GetFolderId(), $spa->GetReferencePolicyKey(), $spa->GetReferenceLifetime(), $spa->GetLastSyncTime()));
         if ($spa->HasLastSyncTime() && $spa->GetLastSyncTime() > $this->lastSyncTime) {
             $this->lastSyncTime = $spa->GetLastSyncTime();
 
@@ -224,6 +225,8 @@ class SyncCollections implements Iterator {
             // use SyncParameters LifeTime as reference if available
             if ($spa->HasReferenceLifetime())
                 $this->refLifetime = $spa->GetReferenceLifetime();
+
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->AddCollection(): Updated reference PolicyKey '%s', reference Lifetime '%s', Last sync at '%s'", $this->refPolicyKey, $this->refLifetime, $spa->GetFolderId(),$this->lastSyncTime));
         }
 
         return true;
@@ -601,6 +604,23 @@ class SyncCollections implements Iterator {
      */
     public function GetChangedFolderIds() {
         return $this->changes;
+    }
+
+    /**
+     * Indicates if there are folders which are pingable
+     *
+     * @access public
+     * @return boolean
+     */
+    public function PingableFolders() {
+        $pingable = false;
+
+        foreach ($this->collections as $folderid => $spa) {
+            if ($spa->GetPingableFlag() == true)
+                $pingable = true;
+        }
+
+        return $pingable;
     }
 
     /**
