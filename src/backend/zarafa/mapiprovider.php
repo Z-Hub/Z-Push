@@ -2294,7 +2294,7 @@ class MAPIProvider {
     private function imtoinet($mapimessage, &$message) {
         if (function_exists("mapi_inetmapi_imtoinet")) {
             $addrbook = $this->getAddressbook();
-            $mstream = mapi_inetmapi_imtoinet($this->session, $addrbook, $mapimessage, array());
+            $mstream = mapi_inetmapi_imtoinet($this->session, $addrbook, $mapimessage, array('use_tnef' => -1));
 
             $mstreamstat = mapi_stream_stat($mstream);
             if ($mstreamstat['cb'] < MAX_EMBEDDED_SIZE) {
