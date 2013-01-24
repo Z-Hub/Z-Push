@@ -397,6 +397,7 @@ class MAPIMapping {
             "completion"            => "PT_DOUBLE:PSETID_Task:0x8102",
             "status"                => "PT_LONG:PSETID_Task:0x8101",
             "icon"                  => PR_ICON_INDEX,
+            "owner"                 => "PT_STRING8:PSETID_Task:0x811F",
         );
     }
 

@@ -1486,7 +1486,22 @@ class MAPIProvider {
             $recur["duedate"] = $task->duedate;
             $recurrence->setRecurrence($recur);
         }
+
+        //open addresss book for user resolve to set the owner
+        $addrbook = $this->getAddressbook();
+
+        // check if there is already an owner for the task, set current user if not
+        $p = array( $taskprops["owner"]);
+        $owner = $this->getProps($mapimessage, $p);
+        if (!isset($owner[$taskprops["owner"]])) {
+            $userinfo = mapi_zarafa_getuser($this->store, Request::GetAuthUser());
+            if(mapi_last_hresult() == NOERROR && isset($userinfo["fullname"])) {
+                $props[$taskprops["owner"]] = $userinfo["fullname"];
+            }
+        }
         mapi_setprops($mapimessage, $props);
+
+
     }
 
     /**
