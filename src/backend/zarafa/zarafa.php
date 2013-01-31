@@ -689,10 +689,10 @@ class BackendZarafa implements IBackend, ISearchProvider {
         switch($response) {
             case 1:     // accept
             default:
-                $entryid = $meetingrequest->doAccept(false, false, true, false, false, false, true); // last true is the $userAction
+                $entryid = $meetingrequest->doAccept(false, false, false, false, false, false, true); // last true is the $userAction
                 break;
             case 2:        // tentative
-                $entryid = $meetingrequest->doAccept(true, false, true, false, false, false, true); // last true is the $userAction
+                $entryid = $meetingrequest->doAccept(true, false, false, false, false, false, true); // last true is the $userAction
                 break;
             case 3:        // decline
                 $meetingrequest->doDecline(false);

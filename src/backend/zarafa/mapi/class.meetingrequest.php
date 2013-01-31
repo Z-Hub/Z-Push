@@ -940,6 +940,13 @@ If it is the first time this attendee has proposed a new date/time, increment th
                             $props[$this->proptags['busystatus']] = $tentative ? fbTentative : fbBusy;
                         }
 
+                        // ZP-341 - we need to copy as well the attachments
+                        // Copy attachments too
+                        $this->replaceAttachments($this->message, $new);
+                        // Copy recipients too
+                        $this->replaceRecipients($this->message, $new, $isDelegate);
+                        // ZP-341 - end
+
                         if($userAction) {
                             // if user has responded then set replytime
                             $props[$this->proptags['replytime']] = time();
