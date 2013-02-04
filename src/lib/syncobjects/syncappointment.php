@@ -66,7 +66,7 @@ class SyncAppointment extends SyncObject {
     public $attendees;
     public $body;
     public $bodytruncated;
-    public $exception;
+    public $exceptions;
     public $deleted;
     public $exceptionstarttime;
     public $categories;
