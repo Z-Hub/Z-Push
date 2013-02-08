@@ -101,6 +101,11 @@ class ZLog {
      * @return
      */
     static public function Write($loglevel, $message) {
+        // truncate messages longer than 10 KB
+        $messagesize = strlen($message);
+        if ($messagesize > 10240)
+            $message = substr($message, 0, 10240) . sprintf(" <log message with %d bytes truncated>", $messagesize);
+
         self::$lastLogs[$loglevel] = $message;
         $data = self::buildLogString($loglevel) . $message . "\n";
 
