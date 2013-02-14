@@ -1197,6 +1197,13 @@ class MAPIProvider {
                         if (isset($exception->body))
                             $exceptionprops[$appointmentprops["body"]] = u2w($exception->body);
 
+                        if (isset($exception->asbody)) {
+                            $this->setASbody($exception->asbody, $exceptionprops, $appointmentprops);
+                            $mapiexception["body"] = $exceptionprops[$appointmentprops["body"]] =
+                                (isset($exceptionprops[$appointmentprops["body"]])) ? $exceptionprops[$appointmentprops["body"]] :
+                                ((isset($exceptionprops[$appointmentprops["html"]])) ? $exceptionprops[$appointmentprops["html"]] : "");
+                        }
+
                         array_push($recur["changed_occurences"], $mapiexception);
 
                         if (!empty($exceptionprops)) {
