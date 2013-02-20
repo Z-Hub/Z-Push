@@ -234,6 +234,9 @@ class Sync extends RequestProcessor {
                     // Do not truncate by default
                     $spa->SetTruncation(SYNC_TRUNCATION_ALL);
 
+                    // use default conflict handling if not specified by the mobile
+                    $spa->SetConflict(SYNC_CONFLICT_DEFAULT);
+
                     while(self::$decoder->getElementStartTag(SYNC_OPTIONS)) {
                         $firstOption = true;
                         while(1) {
@@ -337,11 +340,6 @@ class Sync extends RequestProcessor {
                         (!$spa->HasFilterType() || $spa->GetFilterType() == SYNC_FILTERTYPE_ALL || $spa->GetFilterType() > SYNC_FILTERTIME_MAX)) {
                             ZLog::Write(LOGLEVEL_DEBUG, sprintf("SYNC_FILTERTIME_MAX defined. Filter set to value: %s", SYNC_FILTERTIME_MAX));
                             $spa->SetFilterType(SYNC_FILTERTIME_MAX);
-                    }
-
-                    // set default conflict behavior from config if the device doesn't send a conflict resolution parameter
-                    if (! $spa->HasConflict()) {
-                        $spa->SetConflict(SYNC_CONFLICT_DEFAULT);
                     }
 
                     // Check if the hierarchycache is available. If not, trigger a HierarchySync
