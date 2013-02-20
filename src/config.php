@@ -59,6 +59,10 @@
     // When accessing through a proxy, the "X-Forwarded-For" header contains the original remote IP
     define('USE_X_FORWARDED_FOR_HEADER', false);
 
+    // When using client certificates, we can check if the login sent matches the owner of the certificate.
+    // This setting specifies the owner parameter in the certificate to look at.
+    define("CERTIFICATE_OWNER_PARAMETER", "SSL_CLIENT_S_DN_CN");
+
 /**********************************************************************************
  *  Default FileStateMachine settings
  */

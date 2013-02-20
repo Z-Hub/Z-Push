@@ -73,6 +73,10 @@ abstract class RequestProcessor {
     static public function Authenticate() {
         self::$userIsAuthenticated = false;
 
+        // when a certificate is sent, allow authentication only as the certificate owner
+        if(defined("CERTIFICATE_OWNER_PARAMETER") && isset($_SERVER[CERTIFICATE_OWNER_PARAMETER]) && strtolower($_SERVER[CERTIFICATE_OWNER_PARAMETER]) != strtolower(Request::GetAuthUser()))
+            throw new AuthenticationRequiredException(sprintf("Access denied. Access is allowed only for the certificate owner '%s'", $_SERVER[CERTIFICATE_OWNER_PARAMETER]));
+
         $backend = ZPush::GetBackend();
         if($backend->Logon(Request::GetAuthUser(), Request::GetAuthDomain(), Request::GetAuthPassword()) == false)
             throw new AuthenticationRequiredException("Access denied. Username or password incorrect");
