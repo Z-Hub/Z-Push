@@ -665,6 +665,10 @@ class Sync extends RequestProcessor {
 
                             if($status == SYNC_STATUS_SUCCESS) {
                                 try {
+                                    // if this is an additional folder the backend has to be setup correctly
+                                    if (!self::$backend->Setup(ZPush::GetAdditionalSyncFolderStore($spa->GetFolderId())))
+                                        throw new StatusException(sprintf("HandleSync() could not Setup() the backend for folder id '%s'", $spa->GetFolderId()), SYNC_STATUS_FOLDERHIERARCHYCHANGED);
+
                                     // Use the state from the importer, as changes may have already happened
                                     $exporter = self::$backend->GetExporter($spa->GetFolderId());
 
@@ -939,6 +943,9 @@ class Sync extends RequestProcessor {
                             else
                                 ZLog::Write(LOGLEVEL_ERROR, sprintf("HandleSync(): error saving '%s' - no state information available", $spa->GetNewSyncKey()));
                         }
+
+                        // reset status for the next folder
+                        $status = SYNC_STATUS_SUCCESS;
 
                         // save SyncParameters
                         if ($status == SYNC_STATUS_SUCCESS && empty($actiondata["fetchids"]))
