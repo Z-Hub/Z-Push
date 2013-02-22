@@ -627,61 +627,60 @@ class MAPIProvider {
 
         foreach($rows as $row) {
             if(isset($row[PR_ATTACH_NUM])) {
+                if (Request::GetProtocolVersion() >= 12.0) {
+                    $attach = new SyncBaseAttachment();
+                }
+                else {
+                    $attach = new SyncAttachment();
+                }
+
                 $mapiattach = mapi_message_openattach($mapimessage, $row[PR_ATTACH_NUM]);
+                $attachprops = mapi_getprops($mapiattach, array(PR_ATTACH_LONG_FILENAME, PR_ATTACH_FILENAME, PR_ATTACHMENT_HIDDEN, PR_ATTACH_CONTENT_ID, PR_ATTACH_CONTENT_ID_W, PR_ATTACH_MIME_TAG, PR_ATTACH_MIME_TAG_W, PR_ATTACH_METHOD, PR_DISPLAY_NAME, PR_DISPLAY_NAME_W, PR_ATTACH_SIZE));
 
-                $attachprops = mapi_getprops($mapiattach, array(PR_ATTACH_LONG_FILENAME, PR_ATTACH_FILENAME, PR_ATTACHMENT_HIDDEN, PR_ATTACH_CONTENT_ID, PR_ATTACH_CONTENT_ID_W, PR_ATTACH_MIME_TAG, PR_ATTACH_MIME_TAG_W));
+                // the displayname is handled equaly for all AS versions
+                $attach->displayname = w2u((isset($attachprops[PR_ATTACH_LONG_FILENAME])) ? $attachprops[PR_ATTACH_LONG_FILENAME] : ((isset($attachprops[PR_ATTACH_FILENAME])) ? $attachprops[PR_ATTACH_FILENAME] : ((isset($attachprops[PR_DISPLAY_NAME])) ? $attachprops[PR_DISPLAY_NAME] : "attachment.bin")));
+                // fix attachment name in case of inline images
+                if ($attach->displayname == "inline.txt" && (isset($attachprops[PR_ATTACH_MIME_TAG]) || $attachprops[PR_ATTACH_MIME_TAG_W])) {
+                    $mimetype = (isset($attachprops[PR_ATTACH_MIME_TAG])) ? $attachprops[PR_ATTACH_MIME_TAG]:$attachprops[PR_ATTACH_MIME_TAG_W];
+                    $mime = explode("/", $mimetype);
 
-                $stream = mapi_openpropertytostream($mapiattach, PR_ATTACH_DATA_BIN);
-                if($stream) {
-                    $stat = mapi_stream_stat($stream);
-
-                    if (Request::GetProtocolVersion() >= 12.0) {
-                        $attach = new SyncBaseAttachment();
+                    if (count($mime) == 2 && $mime[0] == "image") {
+                        $attach->displayname = "inline." . $mime[1];
                     }
-                    else {
-                        $attach = new SyncAttachment();
+                }
+
+                // set AS version specific parameters
+                if (Request::GetProtocolVersion() >= 12.0) {
+                    $attach->filereference = $entryid.":".$row[PR_ATTACH_NUM];
+                    $attach->method = (isset($attachprops[PR_ATTACH_METHOD])) ? $attachprops[PR_ATTACH_METHOD] : ATTACH_BY_VALUE;
+
+                    // if displayname does not have the eml extension for embedde messages, android and WP devices won't open it
+                    if ($attach->method == ATTACH_EMBEDDED_MSG) {
+                        if (strtolower(substr($attach->displayname, -4)) != '.eml')
+                            $attach->displayname .= '.eml';
                     }
+                    $attach->estimatedDataSize = $attachprops[PR_ATTACH_SIZE];
 
-                    // the displayname is handled equal for all AS versions
-                    $attach->displayname = w2u((isset($attachprops[PR_ATTACH_LONG_FILENAME])) ? $attachprops[PR_ATTACH_LONG_FILENAME] : ((isset($attachprops[PR_ATTACH_FILENAME])) ? $attachprops[PR_ATTACH_FILENAME] : "attachment.bin"));
+                    if (isset($attachprops[PR_ATTACH_CONTENT_ID]) && $attachprops[PR_ATTACH_CONTENT_ID])
+                        $attach->contentid = $attachprops[PR_ATTACH_CONTENT_ID];
 
-                    // fix attachment name in case of inline images
-                    if ($attach->displayname == "inline.txt" && (isset($attachprops[PR_ATTACH_MIME_TAG]) || $attachprops[PR_ATTACH_MIME_TAG_W])) {
-                        $mimetype = (isset($attachprops[PR_ATTACH_MIME_TAG]))?$attachprops[PR_ATTACH_MIME_TAG]:$attachprops[PR_ATTACH_MIME_TAG_W];
-                        $mime = explode("/", $mimetype);
+                    if (!isset($attach->contentid) && isset($attachprops[PR_ATTACH_CONTENT_ID_W]) && $attachprops[PR_ATTACH_CONTENT_ID_W])
+                        $attach->contentid = $attachprops[PR_ATTACH_CONTENT_ID_W];
 
-                        if (count($mime) == 2 && $mime[0] == "image") {
-                            $attach->displayname = "inline." . $mime[1];
-                        }
-                    }
+                    if (isset($attachprops[PR_ATTACHMENT_HIDDEN]) && $attachprops[PR_ATTACHMENT_HIDDEN]) $attach->isinline = 1;
 
-                    // set AS version specific parameters
-                    if (Request::GetProtocolVersion() >= 12.0) {
-                        $attach->filereference = $entryid.":".$row[PR_ATTACH_NUM];
-                        $attach->method = 1;
-                        $attach->estimatedDataSize = $stat["cb"];
+                    if(!isset($message->asattachments))
+                        $message->asattachments = array();
 
-                        if (isset($attachprops[PR_ATTACH_CONTENT_ID]) && $attachprops[PR_ATTACH_CONTENT_ID])
-                            $attach->contentid = $attachprops[PR_ATTACH_CONTENT_ID];
+                    array_push($message->asattachments, $attach);
+                }
+                else {
+                    $attach->attsize = $attachprops[PR_ATTACH_SIZE];
+                    $attach->attname = $entryid.":".$row[PR_ATTACH_NUM];
+                    if(!isset($message->attachments))
+                        $message->attachments = array();
 
-                        if (!isset($attach->contentid) && isset($attachprops[PR_ATTACH_CONTENT_ID_W]) && $attachprops[PR_ATTACH_CONTENT_ID_W])
-                            $attach->contentid = $attachprops[PR_ATTACH_CONTENT_ID_W];
-
-                        if (isset($attachprops[PR_ATTACHMENT_HIDDEN]) && $attachprops[PR_ATTACHMENT_HIDDEN]) $attach->isinline = 1;
-
-                        if(!isset($message->asattachments))
-                            $message->asattachments = array();
-
-                        array_push($message->asattachments, $attach);
-                    }
-                    else {
-                        $attach->attsize = $stat["cb"];
-                        $attach->attname = $entryid.":".$row[PR_ATTACH_NUM];
-                        if(!isset($message->attachments))
-                            $message->attachments = array();
-
-                        array_push($message->attachments, $attach);
-                    }
+                    array_push($message->attachments, $attach);
                 }
             }
         }
