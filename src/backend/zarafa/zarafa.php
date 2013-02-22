@@ -601,19 +601,29 @@ class BackendZarafa implements IBackend, ISearchProvider {
         if(!$attach)
             throw new StatusException(sprintf("ZarafaBackend->GetAttachmentData('%s'): Error, unable to open attachment number '%s' with: 0x%X", $attname, $attachnum, mapi_last_hresult()), SYNC_ITEMOPERATIONSSTATUS_INVALIDATT);
 
-        $stream = mapi_openpropertytostream($attach, PR_ATTACH_DATA_BIN);
+        // get necessary attachment props
+        $attprops = mapi_getprops($attach, array(PR_ATTACH_MIME_TAG, PR_ATTACH_MIME_TAG_W, PR_ATTACH_METHOD));
+        $attachment = new SyncItemOperationsAttachment();
+        // check if it's an embedded message and open it in such a case
+        if (isset($attprops[PR_ATTACH_METHOD]) && $attprops[PR_ATTACH_METHOD] == ATTACH_EMBEDDED_MSG) {
+            $embMessage = mapi_attach_openobj($attach);
+            $addrbook = $this->getAddressbook();
+            $stream = mapi_inetmapi_imtoinet($this->session, $addrbook, $embMessage, array('use_tnef' => -1));
+            // set the default contenttype for this kind of messages
+            $attachment->contenttype = "message/rfc822";
+        }
+        else
+            $stream = mapi_openpropertytostream($attach, PR_ATTACH_DATA_BIN);
+
         if(!$stream)
             throw new StatusException(sprintf("ZarafaBackend->GetAttachmentData('%s'): Error, unable to open attachment data stream: 0x%X", $attname, mapi_last_hresult()), SYNC_ITEMOPERATIONSSTATUS_INVALIDATT);
 
-        //get the mime type of the attachment
-        $contenttype = mapi_getprops($attach, array(PR_ATTACH_MIME_TAG, PR_ATTACH_MIME_TAG_W));
-        $attachment = new SyncItemOperationsAttachment();
         // put the mapi stream into a wrapper to get a standard stream
         $attachment->data = MapiStreamWrapper::Open($stream);
-        if (isset($contenttype[PR_ATTACH_MIME_TAG]))
-            $attachment->contenttype = $contenttype[PR_ATTACH_MIME_TAG];
-        elseif (isset($contenttype[PR_ATTACH_MIME_TAG_W]))
-            $attachment->contenttype = $contenttype[PR_ATTACH_MIME_TAG_W];
+        if (isset($attprops[PR_ATTACH_MIME_TAG]))
+            $attachment->contenttype = $attprops[PR_ATTACH_MIME_TAG];
+        elseif (isset($attprops[PR_ATTACH_MIME_TAG_W]))
+            $attachment->contenttype = $attprops[PR_ATTACH_MIME_TAG_W];
             //TODO default contenttype
         return $attachment;
     }
