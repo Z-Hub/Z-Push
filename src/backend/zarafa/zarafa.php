@@ -1402,28 +1402,8 @@ class BackendZarafa implements IBackend, ISearchProvider {
         foreach($rows as $row) {
             if(isset($row[PR_ATTACH_NUM])) {
                 $attach = mapi_message_openattach($fromMessage, $row[PR_ATTACH_NUM]);
-
                 $newattach = mapi_message_createattach($toMessage);
-
-                // Copy all attachments from old to new attachment
-                $attachprops = mapi_getprops($attach);
-                mapi_setprops($newattach, $attachprops);
-
-                if(isset($attachprops[mapi_prop_tag(PT_ERROR, mapi_prop_id(PR_ATTACH_DATA_BIN))])) {
-                    // Data is in a stream
-                    $srcstream = mapi_openpropertytostream($attach, PR_ATTACH_DATA_BIN);
-                    $dststream = mapi_openpropertytostream($newattach, PR_ATTACH_DATA_BIN, MAPI_MODIFY | MAPI_CREATE);
-
-                    while(1) {
-                        $data = mapi_stream_read($srcstream, 4096);
-                        if(strlen($data) == 0)
-                            break;
-
-                        mapi_stream_write($dststream, $data);
-                    }
-
-                    mapi_stream_commit($dststream);
-                }
+                mapi_copyto($attach, array(), array(), $newattach, 0);
                 mapi_savechanges($newattach);
             }
         }
