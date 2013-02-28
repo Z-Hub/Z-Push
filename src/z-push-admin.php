@@ -138,6 +138,7 @@ class ZPushAdminCLI {
     const COMMAND_CLEARLOOP = 7;
     const COMMAND_SHOWLASTSYNC = 8;
     const COMMAND_RESYNCFOLDER = 9;
+    const COMMAND_FIXSTATES = 10;
 
     static private $command;
     static private $user = false;
@@ -172,6 +173,7 @@ class ZPushAdminCLI {
                 "\tresync -t FOLDERID -u USER\t Resynchronize the specified folder id only. The USER should be specified.\n" .
                 "\tclearloop\t\t\t Clears system wide loop detection data\n" .
                 "\tclearloop -d DEVICE -u USER\t Clears all loop detection data of a device DEVICE and an optional user USER\n" .
+                "\tfixstates\t\t\t Checks the states for integrity and fixes potential issues\n" .
                 "\n";
     }
 
@@ -286,6 +288,12 @@ class ZPushAdminCLI {
                 self::$command = self::COMMAND_CLEARLOOP;
                 break;
 
+            // clear loop detection data
+            case "fixstates":
+            case "fix":
+                self::$command = self::COMMAND_FIXSTATES;
+                break;
+
 
             default:
                 self::UsageInstructions();
@@ -379,10 +387,14 @@ class ZPushAdminCLI {
                     self::CommandResyncFolder();
                     break;
 
-
             case self::COMMAND_CLEARLOOP:
                 self::CommandClearLoopDetectionData();
                 break;
+
+            case self::COMMAND_FIXSTATES:
+                self::CommandFixStates();
+                break;
+
         }
         echo "\n";
     }
@@ -625,6 +637,35 @@ class ZPushAdminCLI {
 
         $stat = ZPushAdmin::ResyncFolder($user, $deviceId, $folders);
         echo sprintf("Resync of %d folders of type %s on device '%s' of user '%s': %s\n", count($folders), $type, $deviceId, $user, ($stat)?'Requested':ZLog::GetLastMessage(LOGLEVEL_ERROR));
+    }
+
+    /**
+     * Fixes the states for potential issues
+     *
+     * @return
+     * @access private
+     */
+    static private function CommandFixStates() {
+        echo "Validating and fixing states (this can take some time):\n";
+
+        echo "\tChecking username casings: ";
+        if ($stat = ZPushAdmin::FixStatesDifferentUsernameCases())
+            printf("Processed: %d - Converted: %d - Removed: %d\n", $stat[0], $stat[1], $stat[2]);
+        else
+            echo ZLog::GetLastMessage(LOGLEVEL_ERROR) . "\n";
+
+        // fixes ZP-339
+        echo "\tChecking available devicedata & user linking: ";
+        if ($stat = ZPushAdmin::FixStatesDeviceToUserLinking())
+            printf("Processed: %d - Fixed: %d\n", $stat[0], $stat[1]);
+        else
+            echo ZLog::GetLastMessage(LOGLEVEL_ERROR) . "\n";
+
+        echo "\tChecking for unreferenced (obsolete) state files: ";
+        if (($stat = ZPushAdmin::FixStatesUserToStatesLinking()) !== false)
+            printf("Processed: %d - Deleted: %d\n",  $stat[0], $stat[1]);
+        else
+            echo ZLog::GetLastMessage(LOGLEVEL_ERROR) . "\n";
     }
 
     /**

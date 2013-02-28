@@ -457,6 +457,165 @@ class ZPushAdmin {
         return $loopdetection->GetCachedData($user, $devid);
     }
 
+    /**
+     * Fixes states with usernames in different cases
+     *
+     * @return boolean
+     * @access public
+     */
+    static public function FixStatesDifferentUsernameCases() {
+        $processed = 0;
+        $dropedUsers = 0;
+        $fixedUsers = 0;
+
+        $devices = ZPush::GetStateMachine()->GetAllDevices(false);
+        foreach ($devices as $devid) {
+            $users = self::ListUsers($devid);
+            $obsoleteUsers = array();
+
+            // find obsolete uppercase users
+            foreach ($users as $username) {
+                $processed++;
+                $lowUsername = strtolower($username);
+                if ($lowUsername === $username)
+                    continue; // default case
+
+                $obsoleteUsers[] = $username;
+            }
+
+            // remove or transform obsolete users
+            if (!empty($obsoleteUsers)) {
+                // load the device data
+                try {
+                    $devData = ZPush::GetStateMachine()->GetState($devid, IStateMachine::DEVICEDATA);
+
+                    $devices = $devData->devices;
+                    $knownUsers = array_keys($devData->devices);
+                    ZLog::Write(LOGLEVEL_DEBUG, print_r($devData,1),false);
+
+                    foreach ($obsoleteUsers as $ouser) {
+                        $lowerOUser = strtolower($ouser);
+                        // there is a lowercase user, drop the uppercase one
+                        if (in_array($lowerOUser, $knownUsers)) {
+                            unset($devices[$ouser]);
+                            $dropedUsers++;
+                            ZLog::Write(LOGLEVEL_DEBUG, print_r(array_keys($devices),1));
+
+                            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::FixStatesDifferentUsernameCases(): user '%s' of device '%s' is obsolete as a lowercase username is known", $ouser, $devid));
+                        }
+                        // there is only an uppercase user, save it as lowercase
+                        else {
+                            $devices[$lowerOUser] = $devices[$ouser];
+                            unset($devices[$ouser]);
+                            $fixedUsers++;
+
+                            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::FixStatesDifferentUsernameCases(): user '%s' of device '%s' was saved as '%s'", $ouser, $devid, $lowerOUser));
+                        }
+                    }
+
+                    unset($devData->device);
+                    // save the devicedata
+                    $devData->devices = $devices;
+                    ZPush::GetStateMachine()->SetState($devData, $devid, IStateMachine::DEVICEDATA);
+
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::FixStatesDifferentUsernameCases(): updated device '%s' and user(s) %s were dropped or converted", $devid, implode(", ", $obsoleteUsers)));
+                }
+                catch (StateNotFoundException $e) {
+                    ZLog::Write(LOGLEVEL_ERROR, sprintf("ZPushAdmin::FixStatesDifferentUsernameCases(): state for device '%s' can not be found", $devid));
+                }
+            }
+        }
+
+        return array($processed, $fixedUsers, $dropedUsers);
+    }
+
+    /**
+     * Fixes states of available device data to the user linking
+     *
+     * @return int
+     * @access public
+     */
+    static public function FixStatesDeviceToUserLinking() {
+        $seen = 0;
+        $fixed = 0;
+        $devices = ZPush::GetStateMachine()->GetAllDevices(false);
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::FixStatesDeviceToUserLinking(): found %d devices", count($devices)));
+
+        foreach ($devices as $devid) {
+            $users = self::ListUsers($devid);
+            foreach ($users as $username) {
+                $seen++;
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::FixStatesDeviceToUserLinking(): linking user '%s' to device '%d'", $username, $devid));
+
+                if (ZPush::GetStateMachine()->LinkUserDevice($username, $devid))
+                    $fixed++;
+            }
+        }
+        return array($seen, $fixed);
+    }
+
+    /**
+     * Fixes states of the user linking to the states
+     * and removes all obsolete states
+     *
+     * @return boolean
+     * @access public
+     */
+    static public function FixStatesUserToStatesLinking() {
+        $processed = 0;
+        $deleted = 0;
+        $devices = ZPush::GetStateMachine()->GetAllDevices(false);
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::FixStatesUserToStatesLinking(): found %d devices", count($devices)));
+
+        foreach ($devices as $devid) {
+            try {
+                // we work on device level
+                $devicedata = ZPush::GetStateMachine()->GetState($devid, IStateMachine::DEVICEDATA);
+                $knownUuids = array();
+
+                // get all known UUIDs for this device
+                foreach (self::ListUsers($devid) as $username) {
+                    $device = new ASDevice($devid, ASDevice::UNDEFINED, $username, ASDevice::UNDEFINED);
+                    $device->SetData($devicedata, false);
+
+                    // get all known uuids of this device
+                    $folders = $device->GetAllFolderIds();
+
+                    // add a "false" folder id so the hierarchy UUID is retrieved
+                    $folders[] = false;
+
+                    foreach ($folders as $folderid) {
+                        $uuid = $device->GetFolderUUID($folderid);
+                        if ($uuid)
+                            $knownUuids[] = $uuid;
+                    }
+
+                }
+            }
+            catch (StateNotFoundException $e) {}
+
+            // get all uuids for deviceid from statemachine
+            $existingStates = ZPush::GetStateMachine()->GetAllStatesForDevice($devid);
+            $processed = count($existingStates);
+
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::FixStatesUserToStatesLinking(): found %d valid uuids and %d states for device device '%s'", count($knownUuids), $processed, $devid));
+
+            // remove states for all unknown uuids
+            foreach ($existingStates as $obsoleteState) {
+                if ($obsoleteState['type'] === IStateMachine::DEVICEDATA)
+                    continue;
+
+                if (!in_array($obsoleteState['uuid'], $knownUuids)) {
+                    if (is_numeric($obsoleteState['counter']))
+                        $obsoleteState['counter']++;
+
+                    ZPush::GetStateMachine()->CleanStates($devid, $obsoleteState['type'], $obsoleteState['uuid'], $obsoleteState['counter']);
+                    $deleted++;
+                }
+            }
+        }
+        return array($processed, $deleted);
+    }
 
 }
 
