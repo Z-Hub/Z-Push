@@ -96,14 +96,15 @@ class ZLog {
      *
      * @param int       $loglevel           one of the defined LOGLEVELS
      * @param string    $message
+     * @param boolean   $tuncate            indicate if the message should be truncated, default true
      *
      * @access public
      * @return
      */
-    static public function Write($loglevel, $message) {
+    static public function Write($loglevel, $message, $truncate = true) {
         // truncate messages longer than 10 KB
         $messagesize = strlen($message);
-        if ($messagesize > 10240)
+        if ($truncate && $messagesize > 10240)
             $message = substr($message, 0, 10240) . sprintf(" <log message with %d bytes truncated>", $messagesize);
 
         self::$lastLogs[$loglevel] = $message;
