@@ -141,7 +141,7 @@ interface IStateMachine {
      * @param string    $devid
      *
      * @access public
-     * @return array
+     * @return boolean     indicating if the user was added or not (existed already)
      */
     public function LinkUserDevice($username, $devid);
 
@@ -152,7 +152,7 @@ interface IStateMachine {
      * @param string    $devid
      *
      * @access public
-     * @return array
+     * @return boolean
      */
     public function UnLinkUserDevice($username, $devid);
 
@@ -184,6 +184,16 @@ interface IStateMachine {
      * @return boolean
      */
     public function SetStateVersion($version);
+
+    /**
+     * Returns all available states for a device id
+     *
+     * @param string    $devid              the device id
+     *
+     * @access public
+     * @return array(mixed)
+     */
+    public function GetAllStatesForDevice($devid);
 }
 
 ?>

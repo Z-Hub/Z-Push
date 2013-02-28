@@ -205,11 +205,12 @@ class FileStateMachine implements IStateMachine {
      * @param string    $devid
      *
      * @access public
-     * @return array
+     * @return boolean     indicating if the user was added or not (existed already)
      */
     public function LinkUserDevice($username, $devid) {
         include_once("simplemutex.php");
         $mutex = new SimpleMutex();
+        $changed = false;
 
         // exclusive block
         if ($mutex->Block()) {
@@ -219,8 +220,6 @@ class FileStateMachine implements IStateMachine {
                 $users = unserialize($filecontents);
             else
                 $users = array();
-
-            $changed = false;
 
             // add user/device to the list
             if (!isset($users[$username])) {
@@ -241,6 +240,7 @@ class FileStateMachine implements IStateMachine {
 
             $mutex->Release();
         }
+        return $changed;
     }
 
    /**
@@ -250,11 +250,12 @@ class FileStateMachine implements IStateMachine {
      * @param string    $devid
      *
      * @access public
-     * @return array
+     * @return boolean
      */
     public function UnLinkUserDevice($username, $devid) {
         include_once("simplemutex.php");
         $mutex = new SimpleMutex();
+        $changed = false;
 
         // exclusive block
         if ($mutex->Block()) {
@@ -264,8 +265,6 @@ class FileStateMachine implements IStateMachine {
                 $users = unserialize($filecontents);
             else
                 $users = array();
-
-            $changed = false;
 
             // is this user listed at all?
             if (isset($users[$username])) {
@@ -290,6 +289,7 @@ class FileStateMachine implements IStateMachine {
 
             $mutex->Release();
         }
+        return $changed;
     }
 
     /**
@@ -365,6 +365,54 @@ class FileStateMachine implements IStateMachine {
         $status = file_put_contents($this->settingsfilename, serialize($settings));
         Utils::FixFileOwner($this->settingsfilename);
         return $status;
+    }
+
+    /**
+     * Returns all available states for a device id
+     *
+     * @param string    $devid              the device id
+     *
+     * @access public
+     * @return array(mixed)
+     */
+    public function GetAllStatesForDevice($devid) {
+        $out = array();
+        $devdir = $this->getDirectoryForDevice($devid) . "/$devid-";
+
+        foreach (glob($devdir . "*", GLOB_NOSORT) as $devdata) {
+            // cut the device dir away and split into parts
+            $parts = explode("-", substr($devdata, strlen($devdir)));
+
+            $state = array('type' => false, 'counter' => false, 'uuid' => false);
+
+            if (isset($parts[0]) && $parts[0] == IStateMachine::DEVICEDATA)
+                $state['type'] = IStateMachine::DEVICEDATA;
+
+            if (isset($parts[0]) && strlen($parts[0]) == 8 &&
+                isset($parts[1]) && strlen($parts[1]) == 4 &&
+                isset($parts[2]) && strlen($parts[2]) == 4 &&
+                isset($parts[3]) && strlen($parts[3]) == 4 &&
+                isset($parts[4]) && strlen($parts[4]) == 12)
+                $state['uuid'] = $parts[0]."-".$parts[1]."-".$parts[2]."-".$parts[3]."-".$parts[4];
+
+            if (isset($parts[5]) && is_numeric($parts[5])) {
+                $state['counter'] = $parts[5];
+                $state['type'] = ""; // default
+            }
+
+            if (isset($parts[5])) {
+                if (is_int($parts[5]))
+                    $state['counter'] = $parts[5];
+
+                else if (in_array($parts[5], array(IStateMachine::FOLDERDATA, IStateMachine::FAILSAVE, IStateMachine::HIERARCHY, IStateMachine::BACKENDSTORAGE)))
+                    $state['type'] = $parts[5];
+            }
+            if (isset($parts[6]) && is_numeric($parts[6]))
+                $state['counter'] = $parts[6];
+
+            $out[] = $state;
+        }
+        return $out;
     }
 
 
