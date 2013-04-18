@@ -96,7 +96,7 @@ class ZLog {
      *
      * @param int       $loglevel           one of the defined LOGLEVELS
      * @param string    $message
-     * @param boolean   $tuncate            indicate if the message should be truncated, default true
+     * @param boolean   $truncate           indicate if the message should be truncated, default true
      *
      * @access public
      * @return
