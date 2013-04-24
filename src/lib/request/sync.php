@@ -580,16 +580,9 @@ class Sync extends RequestProcessor {
                 $foundchanges = false;
 
                 try {
-                    // if doing an empty sync, check only once for changes
-                    if ($emptysync) {
-                        $foundchanges = $sc->CountChanges();
-                    }
-
-                    // wait for changes
-                    else {
-                        ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleSync(): Entering Heartbeat mode"));
-                        $foundchanges = $sc->CheckForChanges($sc->GetLifetime(), $interval);
-                    }
+                    // always check for changes
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleSync(): Entering Heartbeat mode"));
+                    $foundchanges = $sc->CheckForChanges($sc->GetLifetime(), $interval);
                 }
                 catch (StatusException $stex) {
                     if ($stex->getCode() == SyncCollections::OBSOLETE_CONNECTION) {
