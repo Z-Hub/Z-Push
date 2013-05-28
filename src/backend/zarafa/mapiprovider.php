@@ -1014,7 +1014,8 @@ class MAPIProvider {
         else {
             $this->setPropsInMAPI($mapimessage, $message->flag, $flagmapping);
             $props[$flagprops["todoitemsflags"]] = 1;
-            $props[$flagprops["todotitle"]] = $message->subject;
+            if (isset($message->subject) && str_len($message->subject) > 0)
+                $props[$flagprops["todotitle"]] = $message->subject;
             // ordinal date is utc current time
             if (!isset($message->flag->ordinaldate) || empty($message->flag->ordinaldate)) {
                 $props[$flagprops["ordinaldate"]] = time();
