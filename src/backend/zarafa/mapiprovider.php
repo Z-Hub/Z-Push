@@ -1460,6 +1460,7 @@ class MAPIProvider {
                 // Set status to 'complete'
                 $props[$taskprops["completion"]] = 1.0;
                 $props[$taskprops["status"]] = 2;
+                $props[$taskprops["reminderset"]] = false;
             } else {
                 // Set completion to 0%
                 // Set status to 'not started'
