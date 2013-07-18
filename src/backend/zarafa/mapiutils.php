@@ -473,6 +473,15 @@ class MAPIUtils {
         }
     }
 
+    public static function GetSignedAttachmentRestriction() {
+        return array(  RES_PROPERTY,
+            array(  RELOP => RELOP_EQ,
+                ULPROPTAG => PR_ATTACH_MIME_TAG,
+                VALUE => array(PR_ATTACH_MIME_TAG => 'multipart/signed')
+            ),
+        );
+    }
+
 }
 
 ?>
