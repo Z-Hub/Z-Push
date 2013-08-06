@@ -1384,8 +1384,8 @@ class MAPIProvider {
                 // TODO contact picture handling
                 // check if contact has already got a picture. delete it first in that case
                 // delete it also if it was removed on a mobile
-                $picprops = mapi_getprops($mapimessage, array($props[$contactprops["haspic"]]));
-                if (isset($picprops[$props[$contactprops["haspic"]]]) && $picprops[$props[$contactprops["haspic"]]]) {
+                $picprops = mapi_getprops($mapimessage, array($contactprops["haspic"]));
+                if (isset($picprops[$contactprops["haspic"]]) && $picprops[$contactprops["haspic"]]) {
                     ZLog::Write(LOGLEVEL_DEBUG, "Contact already has a picture. Delete it");
 
                     $attachtable = mapi_message_getattachmenttable($mapimessage);
