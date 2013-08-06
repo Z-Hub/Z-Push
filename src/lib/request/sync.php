@@ -385,14 +385,14 @@ class Sync extends RequestProcessor {
                             else
                                 $foldertype = false;
 
+                            $serverid = false;
                             if(self::$decoder->getElementStartTag(SYNC_SERVERENTRYID)) {
-                                $serverid = self::$decoder->getElementContent();
-
-                                if(!self::$decoder->getElementEndTag()) // end serverid
-                                    return false;
+                                if (($serverid = self::$decoder->getElementContent()) !== false) {
+                                    if(!self::$decoder->getElementEndTag()) { // end serverid
+                                        return false;
+                                    }
+                                }
                             }
-                            else
-                                $serverid = false;
 
                             if(self::$decoder->getElementStartTag(SYNC_CLIENTENTRYID)) {
                                 $clientid = self::$decoder->getElementContent();
