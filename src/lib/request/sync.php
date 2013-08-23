@@ -530,7 +530,7 @@ class Sync extends RequestProcessor {
         if ($status == SYNC_STATUS_SUCCESS && ($emptysync === true || $partial === true) ) {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleSync(): Partial or Empty sync requested. Retrieving data of synchronized folders."));
 
-            // Load all collections - do not overwrite existing (received!), laod states and check permissions
+            // Load all collections - do not overwrite existing (received!), load states and check permissions
             try {
                 $sc->LoadAllCollections(false, true, true);
             }
@@ -569,6 +569,13 @@ class Sync extends RequestProcessor {
             // states are lazy loaded - we have to make sure that they are there!
             $loadstatus = SYNC_STATUS_SUCCESS;
             foreach($sc as $folderid => $spa) {
+                // some androids do heartbeat on the OUTBOX folder, with weird results - ZP-362
+                // we do not load the state so we will never get relevant changes on the OUTBOX folder
+                if (self::$deviceManager->GetFolderTypeFromCacheById($folderid) == SYNC_FOLDER_TYPE_OUTBOX) {
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleSync(): Heartbeat on Outbox folder not allowed"));
+                    continue;
+                }
+
                 $fad = array();
                 // if loading the states fails, we do not enter heartbeat, but we keep $status on SYNC_STATUS_SUCCESS
                 // so when the changes are exported the correct folder gets an SYNC_STATUS_INVALIDSYNCKEY

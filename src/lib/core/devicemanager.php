@@ -334,6 +334,18 @@ class DeviceManager {
     }
 
     /**
+     * Returns the ActiveSync folder type for a FolderID
+     *
+     * @param string    $folderid
+     *
+     * @access public
+     * @return int/boolean        boolean if no type is found
+     */
+    public function GetFolderTypeFromCacheById($folderid) {
+        return $this->device->GetFolderType($folderid);
+    }
+
+    /**
      * Returns a FolderID of default classes
      * this is for AS 1.0 compatibility:
      *      this information was made available during GetHierarchy()
