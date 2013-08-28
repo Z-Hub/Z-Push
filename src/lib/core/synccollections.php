@@ -127,7 +127,7 @@ class SyncCollections implements Iterator {
     /**
      * Loads all collections known for the current device
      *
-     * @param boolean $folderid                 folder id to be loaded
+     * @param string $folderid                  folder id to be loaded
      * @param boolean $loadState                (opt) indicates if the collection sync state should be loaded, default true
      * @param boolean $checkPermissions         (opt) if set to true each folder will pass
      *                                          through a backend->Setup() to check permissions.
@@ -165,13 +165,13 @@ class SyncCollections implements Iterator {
             throw new StatusException(sprintf("SyncCollections->LoadCollection(): could not Setup() the backend for folder id '%s'", $spa->GetFolderId()), self::ERROR_WRONG_HIERARCHY);
 
         // add collection to object
-        $this->AddCollection($spa);
+        $addStatus = $this->AddCollection($spa);
 
         // load the latest known syncstate if requested
-        if ($loadState === true)
+        if ($addStatus && $loadState === true)
             $this->addparms[$folderid]["state"] = $this->stateManager->GetSyncState($spa->GetLatestSyncKey());
 
-        return true;
+        return $addStatus;
     }
 
     /**
@@ -183,7 +183,7 @@ class SyncCollections implements Iterator {
      * @return boolean
      */
     public function SaveCollection($spa) {
-        if (! $this->saveData)
+        if (! $this->saveData || !$spa->HasFolderId())
             return false;
 
         if ($spa->IsDataChanged()) {
@@ -212,6 +212,9 @@ class SyncCollections implements Iterator {
      * @return boolean
      */
     public function AddCollection($spa) {
+        if (! $spa->HasFolderId())
+            return false;
+
         $this->collections[$spa->GetFolderId()] = $spa;
 
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->AddCollection(): Folder id '%s' : ref. PolicyKey '%s', ref. Lifetime '%s', last sync at '%s'", $spa->GetFolderId(), $spa->GetReferencePolicyKey(), $spa->GetReferenceLifetime(), $spa->GetLastSyncTime()));
@@ -289,6 +292,9 @@ class SyncCollections implements Iterator {
      * @return mixed            returns 'null' if nothing set
      */
     public function GetParameter($spa, $key) {
+        if (!$spa->HasFolderId())
+            return null;
+
         if (isset($this->addparms[$spa->GetFolderId()]) && isset($this->addparms[$spa->GetFolderId()][$key]))
             return $this->addparms[$spa->GetFolderId()][$key];
         else
