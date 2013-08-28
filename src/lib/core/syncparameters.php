@@ -193,7 +193,7 @@ class SyncParameters extends StateObject {
             unset($this->uuidNewCounter);
         }
 
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncParameters->GetLastestSyncKey(): '%s'", $this->GetSyncKey()));
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncParameters->GetLatestSyncKey(): '%s'", $this->GetSyncKey()));
         return $this->GetSyncKey();
     }
 
