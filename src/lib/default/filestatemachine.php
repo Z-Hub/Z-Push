@@ -74,7 +74,7 @@ class FileStateMachine implements IStateMachine {
         $this->userfilename = STATE_DIR . 'users';
         $this->settingsfilename = STATE_DIR . 'settings';
 
-        if (!touch($this->userfilename))
+        if (!is_writable($this->userfilename))
             throw new FatalMisconfigurationException("Not possible to write to the configured state directory.");
         Utils::FixFileOwner($this->userfilename);
     }
