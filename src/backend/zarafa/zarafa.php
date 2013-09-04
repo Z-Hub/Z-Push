@@ -473,6 +473,10 @@ class BackendZarafa implements IBackend, ISearchProvider {
                     $sendMailProps["sentrepresentingaddt"], $sendMailProps["sentrepresentinsrchk"]));
 
         if(isset($sm->source->itemid) && $sm->source->itemid) {
+            // answering an email in a public/shared folder
+            if (!$this->Setup(ZPush::GetAdditionalSyncFolderStore($sm->source->folderid)))
+                throw new StatusException(sprintf("ZarafaBackend->SendMail() could not Setup() the backend for folder id '%s'", $sm->source->folderid), SYNC_COMMONSTATUS_SERVERERROR);
+
             $entryid = mapi_msgstore_entryidfromsourcekey($this->store, hex2bin($sm->source->folderid), hex2bin($sm->source->itemid));
             if ($entryid)
                 $fwmessage = mapi_msgstore_openentry($this->store, $entryid);
