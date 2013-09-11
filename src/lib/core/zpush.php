@@ -230,10 +230,10 @@ class ZPush {
         if (!file_exists(LOGFILEDIR))
             throw new FatalMisconfigurationException("The configured LOGFILEDIR does not exist or can not be accessed.");
 
-        if (!is_writable(LOGFILE))
+        if ((!file_exists(LOGFILE) && !touch(LOGFILE)) || !is_writable(LOGFILE))
             throw new FatalMisconfigurationException("The configured LOGFILE can not be modified.");
 
-        if (!is_writable(LOGERRORFILE))
+        if ((!file_exists(LOGERRORFILE) && !touch(LOGERRORFILE)) || !is_writable(LOGERRORFILE))
             throw new FatalMisconfigurationException("The configured LOGERRORFILE can not be modified.");
 
         // check ownership on the (eventually) just created files
