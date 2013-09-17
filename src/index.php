@@ -149,14 +149,14 @@ include_once('version.php');
         Request::ProcessHeaders();
 
         // Check required GET parameters
-        if(Request::IsMethodPOST() && (Request::GetCommandCode() === false || !Request::GetGETUser() || !Request::GetDeviceID() || !Request::GetDeviceType()))
+        if(Request::IsMethodPOST() && (Request::GetCommandCode() === false || !Request::GetDeviceID() || !Request::GetDeviceType()))
             throw new FatalException("Requested the Z-Push URL without the required GET parameters");
 
         // Load the backend
         $backend = ZPush::GetBackend();
 
         // always request the authorization header
-        if (! Request::AuthenticationInfo())
+        if (! Request::AuthenticationInfo() || !Request::GetGETUser())
             throw new AuthenticationRequiredException("Access denied. Please send authorisation information");
 
         // check the provisioning information
