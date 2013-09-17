@@ -68,8 +68,8 @@ Make sure that these directories exist and are writeable for your webserver
 process, so either change the owner of these directories to the UID of
 your apache process or make the directories world writeable:
 
-    chmod 777 /var/lib/z-push
-    chmod 777 /var/log/z-push
+    chmod 755 /var/lib/z-push /var/log/z-push
+    chown apache:apache /var/lib/z-push /var/log/z-push
     
 For the default webserver user please refer to your distribution's manual.
 
@@ -139,24 +139,87 @@ With these symlinks in place the cli tools can be accessed from any
 directory and without the php file extension.
 
 
-Upgrading from Z-Push 1.X versions
-------------------------------------
+Upgrade
+-------
+Upgrading to a newer Z-Push version follows the same path as the
+initial installation.
+When upgrading to a new minor version e.g. from Z-Push 1.4 t
+Z-Push 1.4.1, the existing Z-Push directory can be overwritten
+when extracting the archive. When installing a new major version
+it is recommended to extract the tarball to another directory and
+to copy the state from the existing installation.
 
-The easiest way to upgrade is to follow the steps for a new installation. The states
-of Z-Push 1.X are not compatible and there is no upgrade path, but as this version 
-implements a fully automatic resynchronisation of devices it should not affect the
-users and work without the user interaction.
+*Important*
+It is crucial to always keep the data of the state directory in order
+to ensure data consistency on already synchronized mobiles.
+
+Without the state information mobile devices, which already have an
+ActiveSync profile, will receive duplicate items or the synchronization
+will break completely.
+
+*Important*
+Upgrading to Z-Push 2.X from 1.X it is not necessary to copy the state
+directory because states are not compatible. However Z-Push 2 implements
+a fully automatic resynchronizing of devices in the case states are
+missing or faulty.
+
+*Important*
+Downgrading from Z-Push 2.X to 1.X is not simple. As the states are not
+compatible you would have to follow the procedure for a new installation
+and re-create profiles on every device.
+
+*Important*
+States of Z-Push 2.0 and Z-Push 2.1 are not compatible. A state migration
+script is available in the tools folder.
+
+Please also observe the published release notes of the new Z-Push version.
+For some releases it is necessary to e.g. resynchronize the mobile. 
 
 
-Update to newer Z-Push versions
--------------------------------
+S/MIME
+------
+Z-Push supports signing and en-/decrypting of emails on mobile devices
+since the version 2.0.7.
 
-Upgrading to a newer Z-Push version follows the same path as the initial 
-installation.
+*Important*
+Currently only Android 4.X and higher and iOS 5 and higher devices are
+known to support encryption/signing of emails.
 
-Please observe the published release notes of the new Z-Push version.
-For some releases it is necessary to e.g. resynchronize the mobile.
+It might be possible that PHP functions require CA information in order
+to validate certs. Therefore the CAINFO parameter in the config.php
+must be configured properly.
 
+The major part of S/MIME deployment is the PKI setup. It includes the
+public-private key/certificate obtaining, their management in directory
+service and roll-out to the mobile devices. Individual certificates can
+either be obtained from a local (company intern) or a public CA. There
+are various public CAs offering certificates: commercial ones e.g.
+Symantec or Comodo or community-driven e.g. CAcert.org.
+
+Both most popular directory services Microsoft Active Directory (MS AD)
+and free open source solution OpenLDAP allow to save certificates. Private
+keys/certificates reside in user’s directory or on a smartcard. Public
+certificates are saved in directory. MS AD and OpenLDAP both use 
+serCertificate attribute to save it.
+
+In Active Directory the public key for contacts from GAB is saved in
+PR_EMS_AB_TAGGED_X509_CERT (0x8C6A1102) property and if you save a key
+in a contact it’s PR_USER_X509_CERTIFICATE (0x3A701102).
+
+In LDAP public key for contacts from GAB is saved in userCertificate
+property. It should be mapped to 0x3A220102 in ldap.propmap.cfg
+(0x3A220102 = userCertificate). Make sure it looks like this in LDAP:
+
+userCertificate;binary
+    MIIFGjCCBAKgAwIBAgIQbRnqpxlPa… 
+
+*Important*
+It is strongly recommended to use MS AD or LDAP to manage certificates.
+Other user plugin options like db or unix might not work correctly and
+are not supported.
+
+For in-depth information please refer to:
+http://www.zarafa.com/blog/post/2013/05/smime-z-push-signing-and-en-decrypting-emails-mobile-devices 
 
 Setting up your mobile device
 -----------------------------
@@ -208,3 +271,9 @@ users by adding them comma separated to $specialLogUsers in the config.php
  *NOTE* Be aware that if you are using LOGLEVEL_DEBUG and LOGLEVEL_WBXML
  Z-Push will be quite talkative, so it is advisable to use log-rotate
  on the log file.
+ 
+*Repeated incorrect password messages*
+If a password contains characters which are encoded differently in ISO-8859-1
+and Windows-1252 encodings (e.g. "§") the login might fail with Z-Push but
+it works fine with the WebApp/Webaccess. The solution is to add
+setlocale(LC_CTYPE, "en_US.UTF-8"); to the config.php file. 
