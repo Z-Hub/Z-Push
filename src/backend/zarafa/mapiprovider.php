@@ -1244,8 +1244,13 @@ class MAPIProvider {
             $props[$appointmentprops["sentrepresentingaddt"]] = "ZARAFA";
             $props[$appointmentprops["representingentryid"]] = mapi_createoneoff(Request::GetAuthUser(), "ZARAFA", Request::GetAuthUser());
             $props[$appointmentprops["sentrepresentinsrchk"]] = $props[$appointmentprops["sentrepresentingaddt"]].":".$props[$appointmentprops["sentrepresentingemail"]];
+
+            $props[$appointmentprops["icon"]] = 1026;
             // the user is the organizer
+            // set these properties to show tracking tab in webapp
+            $props[$appointmentprops["mrwassent"]] = true;
             $props[$appointmentprops["responsestatus"]] = olResponseOrganized;
+            $props[$appointmentprops["meetingstatus"]] = olMeeting;
         }
 
         // Do attendees
@@ -1294,11 +1299,6 @@ class MAPIProvider {
             }
 
             mapi_message_modifyrecipients($mapimessage, 0, $recips);
-            $props[$appointmentprops["icon"]] = 1026;
-            // set these properties to show tracking tab in webapp
-            $props[$appointmentprops["mrwassent"]] = true;
-            $props[$appointmentprops["responsestatus"]] = olResponseOrganized;
-            $props[$appointmentprops["meetingstatus"]] = olMeeting;
         }
         mapi_setprops($mapimessage, $props);
     }
