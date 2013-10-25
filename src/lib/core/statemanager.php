@@ -88,6 +88,16 @@ class StateManager {
     }
 
     /**
+     * Prevents the StateMachine from removing old states
+     *
+     * @access public
+     * @return void
+     */
+    public function DoNotDeleteOldStates() {
+        $this->deleteOldStates = false;
+    }
+
+    /**
      * Sets an ASDevice for the Statemanager to work with
      *
      * @param ASDevice  $device

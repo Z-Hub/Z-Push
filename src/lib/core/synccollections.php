@@ -108,6 +108,9 @@ class SyncCollections implements Iterator {
     public function LoadAllCollections($overwriteLoaded = false, $loadState = false, $checkPermissions = false) {
         $this->loadStateManager();
 
+        // this operation should not remove old state counters
+        $this->stateManager->DoNotDeleteOldStates();
+
         $invalidStates = false;
         foreach($this->stateManager->GetSynchedFolders() as $folderid) {
             if ($overwriteLoaded === false && isset($this->collections[$folderid]))
