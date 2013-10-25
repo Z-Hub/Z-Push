@@ -602,7 +602,7 @@ class Sync extends RequestProcessor {
                 }
 
                 // in case there are no changes, we can reply with an empty response
-                if (!$foundchanges){
+                if (!$foundchanges && $status == SYNC_STATUS_SUCCESS && $emptysync == true){
                     ZLog::Write(LOGLEVEL_DEBUG, "No changes found. Replying with empty response and closing connection.");
                     self::$specialHeaders = array();
                     self::$specialHeaders[] = "Connection: close";
