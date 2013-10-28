@@ -133,6 +133,12 @@ class ItemOperations extends RequestProcessor {
                     // Save all OPTIONS into a ContentParameters object
                     $operation["cpo"] = new ContentParameters();
                     while(1) {
+                        // Android 4.3 sends empty options tag, so we don't have to look further
+                        $e = self::$decoder->peek();
+                        if($e[EN_TYPE] == EN_TYPE_ENDTAG) {
+                            break;
+                        }
+
                         while (self::$decoder->getElementStartTag(SYNC_AIRSYNCBASE_BODYPREFERENCE)) {
                             if(self::$decoder->getElementStartTag(SYNC_AIRSYNCBASE_TYPE)) {
                                 $bptype = self::$decoder->getElementContent();
