@@ -448,7 +448,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
         // @see http://jira.zarafa.com/browse/ZP-68
         $meetingRequestProps = MAPIMapping::GetMeetingRequestProperties();
         $meetingRequestProps = getPropIdsFromStrings($this->store, $meetingRequestProps);
-        $props = mapi_getprops($mapimessage, array(PR_MESSAGE_CLASS, $meetingRequestProps["goidtag"]));
+        $props = mapi_getprops($mapimessage, array(PR_MESSAGE_CLASS, $meetingRequestProps["goidtag"], $sendMailProps["internetcpid"]));
         if (stripos($props[PR_MESSAGE_CLASS], "IPM.Schedule.Meeting.Resp.") === 0) {
             // search for calendar items using goid
             $mr = new Meetingrequest($this->store, $mapimessage);
@@ -500,15 +500,33 @@ class BackendZarafa implements IBackend, ISearchProvider {
                     $this->copyAttachments($mapimessage, $fwmessage);
                 }
 
+                // regarding the conversion @see ZP-470
                 if (strlen($body) > 0) {
                     $fwbody = MAPIUtils::readPropStream($fwmessage, PR_BODY);
-                    $fwbody = (isset($cpid[$sendMailProps["internetcpid"]])) ? Utils::ConvertCodepageStringToUtf8($cpid[$sendMailProps["internetcpid"]], $fwbody) : w2u($fwbody);
+                    // if both cpids are set to the charset to charset conversion
+                    if (isset($cpid[$sendMailProps["internetcpid"]]) && isset($props[$sendMailProps["internetcpid"]]))
+                        $fwbody = Utils::ConvertCodepage($props[$sendMailProps["internetcpid"]], $cpid[$sendMailProps["internetcpid"]], $fwbody);
+                    // if only new message's cpid is set, convert to UTF-8
+                    elseif (isset($cpid[$sendMailProps["internetcpid"]]))
+                        $fwbody = Utils::ConvertCodepageStringToUtf8($cpid[$sendMailProps["internetcpid"]], $fwbody);
+                    // otherwise to the general conversion
+                    else
+                        $fwbody = w2u($fwbody);
+
                     $mapiprops[$sendMailProps["body"]] = $body."\r\n\r\n".$fwbody;
                 }
 
                 if (strlen($bodyHtml) > 0) {
                     $fwbodyHtml = MAPIUtils::readPropStream($fwmessage, PR_HTML);
-                    $fwbodyHtml = (isset($cpid[$sendMailProps["internetcpid"]])) ? Utils::ConvertCodepageStringToUtf8($cpid[$sendMailProps["internetcpid"]], $fwbodyHtml) : w2u($fwbodyHtml);
+                    if (isset($cpid[$sendMailProps["internetcpid"]]) && isset($props[$sendMailProps["internetcpid"]]))
+                        $fwbodyHtml = Utils::ConvertCodepage($props[$sendMailProps["internetcpid"]], $cpid[$sendMailProps["internetcpid"]], $fwbodyHtml);
+                    // if only new message's cpid is set, convert to UTF-8
+                    elseif (isset($cpid[$sendMailProps["internetcpid"]]))
+                        $fwbodyHtml = Utils::ConvertCodepageStringToUtf8($cpid[$sendMailProps["internetcpid"]], $fwbodyHtml);
+                    // otherwise to the general conversion
+                    else
+                        $fwbodyHtml = w2u($fwbodyHtml);
+
                     $mapiprops[$sendMailProps["html"]] = $bodyHtml."<br><br>".$fwbodyHtml;
                 }
             }
