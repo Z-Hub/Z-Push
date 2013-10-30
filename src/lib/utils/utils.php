@@ -798,8 +798,30 @@ class Utils {
     public static function ConvertCodepageStringToUtf8($codepage, $string) {
         if (function_exists("iconv")) {
             $charset = self::GetCodepageCharset($codepage);
-
             return iconv($charset, "utf-8", $string);
+        }
+        return $string;
+    }
+
+    /**
+     * Converts a string to another charset.
+     *
+     * @param int $in
+     * @param int $out
+     * @param string $string
+     *
+     * @access public
+     * @return string
+     */
+    public static function ConvertCodepage($in, $out, $string) {
+        // do nothing if both charsets are the same
+        if ($in == $out)
+            return $string;
+
+        if (function_exists("iconv")) {
+            $inCharset = self::GetCodepageCharset($in);
+            $outCharset = self::GetCodepageCharset($out);
+            return iconv($inCharset, $outCharset, $string);
         }
         return $string;
     }
