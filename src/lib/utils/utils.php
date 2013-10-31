@@ -510,6 +510,9 @@ class Utils {
         if (function_exists("iconv")){
             return @iconv("UTF-7", "UTF-8", $string);
         }
+        else
+            ZLog::Write(LOGLEVEL_WARN, "Utils::Utf7_to_utf8() 'iconv' is not available. Charset conversion skipped.");
+
         return $string;
     }
 
@@ -525,6 +528,9 @@ class Utils {
         if (function_exists("iconv")){
             return @iconv("UTF-8", "UTF-7", $string);
         }
+        else
+            ZLog::Write(LOGLEVEL_WARN, "Utils::Utf8_to_utf7() 'iconv' is not available. Charset conversion skipped.");
+
         return $string;
     }
 
@@ -800,6 +806,9 @@ class Utils {
             $charset = self::GetCodepageCharset($codepage);
             return iconv($charset, "utf-8", $string);
         }
+        else
+            ZLog::Write(LOGLEVEL_WARN, "Utils::ConvertCodepageStringToUtf8() 'iconv' is not available. Charset conversion skipped.");
+
         return $string;
     }
 
@@ -823,6 +832,9 @@ class Utils {
             $outCharset = self::GetCodepageCharset($out);
             return iconv($inCharset, $outCharset, $string);
         }
+        else
+            ZLog::Write(LOGLEVEL_WARN, "Utils::ConvertCodepage() 'iconv' is not available. Charset conversion skipped.");
+
         return $string;
     }
 
