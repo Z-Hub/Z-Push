@@ -53,9 +53,6 @@
     // Try to set unlimited timeout
     define('SCRIPT_TIMEOUT', 0);
 
-    // Max size of attachments to display inline. Default is 2 MB
-    define('MAX_EMBEDDED_SIZE', 2097152);
-
     // When accessing through a proxy, the "X-Forwarded-For" header contains the original remote IP
     define('USE_X_FORWARDED_FOR_HEADER', false);
 
