@@ -186,7 +186,7 @@
     // This limitation is not being followed by the ActiveSync clients which set much bigger
     // contact photos. You can override the default value of the max photo size.
     // default: 49152 - 48 KB default max photo size in bytes
-    define(SYNC_CONTACTS_MAXPICTURESIZE, 49152);
+    define('SYNC_CONTACTS_MAXPICTURESIZE', 49152);
 
 /**********************************************************************************
  *  Backend settings
