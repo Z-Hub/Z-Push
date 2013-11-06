@@ -27,7 +27,7 @@ Additional informations can be found in the Zarafa Administrator Manual:
 http://doc.zarafa.com/trunk/Administrator_Manual/en-US/html/_zpush.html
 
 
-Additioal php packages
+Additional php packages
 ----------------------
 To use the full featureset of Z-Push 2 and the z-push-top command line utility, 
 additional php packages are required. These provide SOAP support, access to 
