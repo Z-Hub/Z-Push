@@ -112,7 +112,7 @@ z-push directory so these settings are considered only there.
         php_flag short_open_tag on
     </Directory>
 
-If you don't set this up correctly, you will not be
+If you don't set this up correctly, you will not be 
 able to login correctly via z-push.
 
 Please also set a memory_limit for php to 128M in php.ini.
@@ -275,5 +275,8 @@ users by adding them comma separated to $specialLogUsers in the config.php
 *Repeated incorrect password messages*
 If a password contains characters which are encoded differently in ISO-8859-1
 and Windows-1252 encodings (e.g. "§") the login might fail with Z-Push but
-it works fine with the WebApp/Webaccess. The solution is to add
-setlocale(LC_CTYPE, "en_US.UTF-8"); to the config.php file. 
+it works fine with the WebApp/Webaccess. The solution is to add:
+
+setlocale(LC_CTYPE, "en_US.UTF-8");
+
+to the config.php file. 
