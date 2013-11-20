@@ -561,7 +561,12 @@ class MAPIProvider {
             }
 
             // Organizer is the sender
-            $message->meetingrequest->organizer = $message->from;
+            if (strpos($message->messageclass, "IPM.Schedule.Meeting.Resp") === 0) {
+                $message->meetingrequest->organizer = $message->to;
+            }
+            else {
+                $message->meetingrequest->organizer = $message->from;
+            }
 
             // Process recurrence
             if(isset($props[$meetingrequestproperties["isrecurringtag"]]) && $props[$meetingrequestproperties["isrecurringtag"]]) {
