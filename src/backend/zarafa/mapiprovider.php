@@ -1242,10 +1242,13 @@ class MAPIProvider {
         $representingprops = $this->getProps($mapimessage, $p);
 
         if (!isset($representingprops[$appointmentprops["representingentryid"]])) {
-            $props[$appointmentprops["representingname"]] = Request::GetAuthUser();
+            $storeProps = mapi_getprops($this->store, array(PR_MAILBOX_OWNER_ENTRYID));
+            $props[$appointmentprops["representingentryid"]] = $storeProps[PR_MAILBOX_OWNER_ENTRYID];
+            $displayname = $this->getFullnameFromEntryID($storeProps[PR_MAILBOX_OWNER_ENTRYID]);
+
+            $props[$appointmentprops["representingname"]] = ($displayname !== false) ? $displayname : Request::GetAuthUser();
             $props[$appointmentprops["sentrepresentingemail"]] = Request::GetAuthUser();
             $props[$appointmentprops["sentrepresentingaddt"]] = "ZARAFA";
-            $props[$appointmentprops["representingentryid"]] = mapi_createoneoff(Request::GetAuthUser(), "ZARAFA", Request::GetAuthUser());
             $props[$appointmentprops["sentrepresentinsrchk"]] = $props[$appointmentprops["sentrepresentingaddt"]].":".$props[$appointmentprops["sentrepresentingemail"]];
 
             if(isset($appointment->attendees) && is_array($appointment->attendees) && !empty($appointment->attendees)) {
@@ -2036,6 +2039,28 @@ class MAPIProvider {
         }
 
         return "";
+    }
+
+    /**
+     * Returns fullname from an entryid
+     *
+     * @param binary $entryid
+     * @return string fullname or false on error
+     */
+    private function getFullnameFromEntryID($entryid) {
+        $addrbook = $this->getAddressbook();
+        $mailuser = mapi_ab_openentry($addrbook, $entryid);
+        if(!$mailuser) {
+            ZLog::Write(LOGLEVEL_ERROR, sprintf("Unable to get mailuser for getFullnameFromEntryID (0x%X)", mapi_last_hresult()));
+            return false;
+        }
+
+        $props = mapi_getprops($mailuser, array(PR_DISPLAY_NAME));
+        if (isset($props[PR_DISPLAY_NAME])) {
+            return $props[PR_DISPLAY_NAME];
+        }
+        ZLog::Write(LOGLEVEL_ERROR, sprintf("Unable to get fullname for getFullnameFromEntryID (0x%X)", mapi_last_hresult()));
+        return false;
     }
 
     /**
