@@ -1548,7 +1548,9 @@ class MAPIProvider {
         $props = array();
         $props[$noteprops["messageclass"]] = "IPM.StickyNote";
         // set body otherwise the note will be "broken" when editing it in outlook
-        $props[$noteprops["body"]] = $note->asbody->data;
+        $this->setASbody($note->asbody, $props, $noteprops);
+
+        $props[$noteprops["internetcpid"]] = INTERNET_CPID_UTF8;
         mapi_setprops($mapimessage, $props);
     }
 

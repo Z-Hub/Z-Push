@@ -475,6 +475,9 @@ class MAPIMapping {
         return array(
             "body"                  => PR_BODY,
             "messageclass"          => PR_MESSAGE_CLASS,
+            "html"                  => PR_HTML,
+            "internetcpid"          => PR_INTERNET_CPID,
+
         );
     }
 
