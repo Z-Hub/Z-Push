@@ -645,6 +645,7 @@ class Utils {
 
             // Webservice commands
             case ZPush::COMMAND_WEBSERVICE_DEVICE:    return 'WebserviceDevice';
+            case ZPush::COMMAND_WEBSERVICE_USERS:    return 'WebserviceUsers';
         }
         return false;
     }
@@ -688,6 +689,7 @@ class Utils {
 
             // Webservice commands
             case 'WebserviceDevice':     return ZPush::COMMAND_WEBSERVICE_DEVICE;
+            case 'WebserviceUsers':      return ZPush::COMMAND_WEBSERVICE_USERS;
         }
         return false;
     }

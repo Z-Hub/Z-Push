@@ -96,6 +96,7 @@ class ZPush {
 
     // Webservice commands
     const COMMAND_WEBSERVICE_DEVICE = -100;
+    const COMMAND_WEBSERVICE_USERS = -101;
 
     // Latest supported State version
     const STATE_VERSION = IStateMachine::STATEVERSION_02;
@@ -146,7 +147,8 @@ class ZPush {
                     self::COMMAND_SETTINGS          => array(self::ASV_12, self::REQUESTHANDLER => "Settings"),
 
                     self::COMMAND_WEBSERVICE_DEVICE => array(self::REQUESTHANDLER => "Webservice", self::PLAININPUT, self::NOACTIVESYNCCOMMAND, self::WEBSERVICECOMMAND),
-                );
+                    self::COMMAND_WEBSERVICE_USERS  => array(self::REQUESTHANDLER => "Webservice", self::PLAININPUT, self::NOACTIVESYNCCOMMAND, self::WEBSERVICECOMMAND),
+            );
 
 
 

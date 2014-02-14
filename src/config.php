@@ -185,6 +185,13 @@
     // default: 49152 - 48 KB default max photo size in bytes
     define('SYNC_CONTACTS_MAXPICTURESIZE', 49152);
 
+    // Over the WebserviceUsers command it is possible to retrieve a list of all
+    // known devices and users on this Z-Push system. The authenticated user needs to have
+    // admin rights and a public folder must exist.
+    // In multicompany environments this enable an admin user of any company to retrieve
+    // this full list, so this feature is disabled by default. Enable with care.
+    define('ALLOW_WEBSERVICE_USERS_ACCESS', false);
+
 /**********************************************************************************
  *  Backend settings
  */

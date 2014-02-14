@@ -85,6 +85,11 @@ abstract class BackendDiff extends Backend {
     public function Setup($store, $checkACLonly = false, $folderid = false) {
         $this->store = $store;
 
+        // we don't know if and how diff backends implement the "admin" check, but this will disable it for the webservice
+        // backends which want to implement this, need to overwrite this method explicitely. For more info see https://jira.zarafa.com/browse/ZP-462
+        if ($store == "SYSTEM" && $checkACLonly == true)
+            return false;
+
         return true;
     }
 
