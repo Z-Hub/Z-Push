@@ -217,7 +217,12 @@ class Sync extends RequestProcessor {
                     }
 
                     if(self::$decoder->getElementStartTag(SYNC_WINDOWSIZE)) {
-                        $spa->SetWindowSize(self::$decoder->getElementContent());
+                        $ws = self::$decoder->getElementContent();
+                        // normalize windowsize - see ZP-477
+                        if ($ws == 0 || $ws > 512)
+                            $ws = 512;
+
+                        $spa->SetWindowSize($ws);
 
                         // also announce the currently requested window size to the DeviceManager
                         self::$deviceManager->SetWindowSize($spa->GetFolderId(), $spa->GetWindowSize());
