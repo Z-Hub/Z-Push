@@ -331,8 +331,15 @@ class FileStateMachine implements IStateMachine {
      * @return int
      */
     public function GetStateVersion() {
-        if (file_exists($this->settingsfilename))
+        if (file_exists($this->settingsfilename)) {
             $settings = unserialize(file_get_contents($this->settingsfilename));
+            if (strtolower(gettype($settings) == "string") && strtolower($settings) == '2:1:{s:7:"version";s:1:"2";}') {
+                ZLog::Write(LOGLEVEL_INFO, "Broken state version file found. Attempt to autofix it. See https://jira.zarafa.com/browse/ZP-493 for more information.");
+                unlink($this->settingsfilename);
+                $this->SetStateVersion(IStateMachine::STATEVERSION_02);
+                $settings = array(self::VERSION => IStateMachine::STATEVERSION_02);
+            }
+        }
         else {
             $filecontents = @file_get_contents($this->userfilename);
             if ($filecontents)
@@ -356,9 +363,9 @@ class FileStateMachine implements IStateMachine {
      */
     public function SetStateVersion($version) {
         if (file_exists($this->settingsfilename))
-            $settings = file_get_contents($this->settingsfilename);
+            $settings = unserialize(file_get_contents($this->settingsfilename));
         else
-            array(self::VERSION => IStateMachine::STATEVERSION_01);
+            $settings = array(self::VERSION => IStateMachine::STATEVERSION_01);
 
         $settings[self::VERSION] = $version;
         ZLog::Write(LOGLEVEL_INFO, sprintf("FileStateMachine->SetStateVersion() saving supported state version, value '%d'", $version));
