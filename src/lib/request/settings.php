@@ -217,11 +217,9 @@ class Settings extends RequestProcessor {
             //set device information
             if (isset($deviceinformation)) {
                 self::$encoder->startTag(SYNC_SETTINGS_DEVICEINFORMATION);
-                    self::$encoder->startTag(SYNC_SETTINGS_SET);
-                        self::$encoder->startTag(SYNC_SETTINGS_STATUS);
-                        self::$encoder->content($deviceinformation->Status);
-                        self::$encoder->endTag(); //SYNC_SETTINGS_STATUS
-                    self::$encoder->endTag(); //SYNC_SETTINGS_SET
+                    self::$encoder->startTag(SYNC_SETTINGS_STATUS);
+                    self::$encoder->content($deviceinformation->Status);
+                    self::$encoder->endTag(); //SYNC_SETTINGS_STATUS
                 self::$encoder->endTag(); //SYNC_SETTINGS_DEVICEINFORMATION
             }
 
