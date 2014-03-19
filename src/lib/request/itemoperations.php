@@ -243,7 +243,6 @@ class ItemOperations extends RequestProcessor {
 //             return false;//SYNC_ITEMOPERATIONS_ITEMOPERATIONS
 
         $status = SYNC_ITEMOPERATIONSSTATUS_SUCCESS;
-        //TODO status handling
 
         self::$encoder->startWBXML();
 
@@ -253,11 +252,50 @@ class ItemOperations extends RequestProcessor {
         self::$encoder->content($status);
         self::$encoder->endTag();//SYNC_ITEMOPERATIONS_STATUS
 
+        // Stop here if something went wrong
+        if ($status != SYNC_ITEMOPERATIONSSTATUS_SUCCESS) {
+            self::$encoder->endTag();//SYNC_ITEMOPERATIONS_ITEMOPERATIONS
+            return true;
+        }
+
         self::$encoder->startTag(SYNC_ITEMOPERATIONS_RESPONSE);
 
         foreach ($itemoperations as $operation) {
             // fetch response
             if ($operation['operation'] == SYNC_ITEMOPERATIONS_FETCH) {
+
+                $status = SYNC_ITEMOPERATIONSSTATUS_SUCCESS;
+
+                // retrieve the data
+                // Fetch throws Sync status codes, - GetAttachmentData ItemOperations codes
+                if (isset($operation['filereference'])) {
+                    try {
+                        self::$topCollector->AnnounceInformation("Get attachment data from backend with file reference");
+                        $data = self::$backend->GetAttachmentData($operation['filereference']);
+                    }
+                    catch (StatusException $stex) {
+                        $status = $stex->getCode();
+                    }
+
+                }
+                else {
+                    try {
+                        if (isset($operation['folderid']) && isset($operation['serverid'])) {
+                            self::$topCollector->AnnounceInformation("Fetching data from backend with item and folder id");
+                            $data = self::$backend->Fetch($operation['folderid'], $operation['serverid'], $operation["cpo"]);
+                        }
+                        else if (isset($operation['longid'])) {
+                            self::$topCollector->AnnounceInformation("Fetching data from backend with long id");
+                            $tmp = explode(":", $operation['longid']);
+                            $data = self::$backend->Fetch($tmp[0], $tmp[1], $operation["cpo"]);
+                        }
+                    }
+                    catch (StatusException $stex) {
+                        // the only option to return is that we could not retrieve it
+                        $status = SYNC_ITEMOPERATIONSSTATUS_CONVERSIONFAILED;
+                    }
+                }
+
                 self::$encoder->startTag(SYNC_ITEMOPERATIONS_FETCH);
 
                     self::$encoder->startTag(SYNC_ITEMOPERATIONS_STATUS);
@@ -276,10 +314,6 @@ class ItemOperations extends RequestProcessor {
                         self::$encoder->startTag(SYNC_FOLDERTYPE);
                         self::$encoder->content("Email");
                         self::$encoder->endTag();
-
-                        self::$topCollector->AnnounceInformation("Fetching data from backend with item and folder id");
-
-                        $data = self::$backend->Fetch($operation['folderid'], $operation['serverid'], $operation["cpo"]);
                     }
 
                     if (isset($operation['longid'])) {
@@ -290,25 +324,13 @@ class ItemOperations extends RequestProcessor {
                         self::$encoder->startTag(SYNC_FOLDERTYPE);
                         self::$encoder->content("Email");
                         self::$encoder->endTag();
-
-                        $tmp = explode(":", $operation['longid']);
-
-                        self::$topCollector->AnnounceInformation("Fetching data from backend with long id");
-
-                        $data = self::$backend->Fetch($tmp[0], $tmp[1], $operation["cpo"]);
                     }
 
                     if (isset($operation['filereference'])) {
                         self::$encoder->startTag(SYNC_AIRSYNCBASE_FILEREFERENCE);
                         self::$encoder->content($operation['filereference']);
                         self::$encoder->endTag(); // end SYNC_AIRSYNCBASE_FILEREFERENCE
-
-                        self::$topCollector->AnnounceInformation("Get attachment data from backend with file reference");
-
-                        $data = self::$backend->GetAttachmentData($operation['filereference']);
                     }
-
-                    //TODO put it in try catch block
 
                     if (isset($data)) {
                         self::$topCollector->AnnounceInformation("Streaming data");
@@ -350,9 +372,10 @@ class ItemOperations extends RequestProcessor {
             else {
                 self::$topCollector->AnnounceInformation("not implemented", true);
 
+                // reply with "can't do"
                 self::$encoder->startTag(SYNC_ITEMOPERATIONS_MOVE);
                     self::$encoder->startTag(SYNC_ITEMOPERATIONS_STATUS);
-                    self::$encoder->content($status);
+                    self::$encoder->content(SYNC_ITEMOPERATIONSSTATUS_SERVERERROR);
                     self::$encoder->endTag();//SYNC_ITEMOPERATIONS_STATUS
                 self::$encoder->endTag();//SYNC_ITEMOPERATIONS_MOVE
             }
