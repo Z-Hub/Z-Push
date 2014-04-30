@@ -268,9 +268,12 @@ class MAPIProvider {
                     $attendee->email = w2u($row[PR_EMAIL_ADDRESS]);
                 //if address type is ZARAFA, the PR_EMAIL_ADDRESS contains username
                 elseif ($row[PR_ADDRTYPE] == "ZARAFA") {
-                    $userinfo = mapi_zarafa_getuser_by_name($this->store, $row[PR_EMAIL_ADDRESS]);
-                    if (is_array($userinfo) && isset($userinfo["emailaddress"]))
+                    $userinfo = @mapi_zarafa_getuser_by_name($this->store, $row[PR_EMAIL_ADDRESS]);
+                    if (is_array($userinfo) && isset($userinfo["emailaddress"])) {
                         $attendee->email = w2u($userinfo["emailaddress"]);
+                    }
+                    else
+                        ZLog::Write(LOGLEVEL_WARN, sprintf("MAPIProvider->getAppointment: The attendee '%s' of type ZARAFA can not be resolved. Code: 0x%X", $row[PR_EMAIL_ADDRESS], mapi_last_hresult()));
                 }
             }
 
