@@ -449,6 +449,23 @@ class BackendZarafa implements IBackend, ISearchProvider {
         $meetingRequestProps = MAPIMapping::GetMeetingRequestProperties();
         $meetingRequestProps = getPropIdsFromStrings($this->store, $meetingRequestProps);
         $props = mapi_getprops($mapimessage, array(PR_MESSAGE_CLASS, $meetingRequestProps["goidtag"], $sendMailProps["internetcpid"]));
+
+        // Convert sent message's body to UTF-8.
+        // @see http://jira.zarafa.com/browse/ZP-505
+        if (isset($props[$sendMailProps["internetcpid"]]) && $props[$sendMailProps["internetcpid"]] != INTERNET_CPID_UTF8) {
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("Sent email cpid is not unicode (%d). Set it to unicode and convert email body.", $props[$sendMailProps["internetcpid"]]));
+            $mapiprops[$sendMailProps["internetcpid"]] = INTERNET_CPID_UTF8;
+
+            $body = MAPIUtils::readPropStream($mapimessage, PR_BODY);
+            $body = Utils::ConvertCodepageStringToUtf8($props[$sendMailProps["internetcpid"]], $body);
+            $mapiprops[$sendMailProps["body"]] = $body;
+
+            $bodyHtml = MAPIUtils::readPropStream($mapimessage, PR_HTML);
+            $bodyHtml = Utils::ConvertCodepageStringToUtf8($props[$sendMailProps["internetcpid"]], $bodyHtml);
+            $mapiprops[$sendMailProps["html"]] = $bodyHtml;
+
+            mapi_setprops($mapimessage, $mapiprops);
+        }
         if (stripos($props[PR_MESSAGE_CLASS], "IPM.Schedule.Meeting.Resp.") === 0) {
             // search for calendar items using goid
             $mr = new Meetingrequest($this->store, $mapimessage);
@@ -492,8 +509,12 @@ class BackendZarafa implements IBackend, ISearchProvider {
             // only attach the original message if the mobile does not send it itself
             if (!isset($sm->replacemime)) {
                 // get message's body in order to append forward or reply text
-                $body = MAPIUtils::readPropStream($mapimessage, PR_BODY);
-                $bodyHtml = MAPIUtils::readPropStream($mapimessage, PR_HTML);
+                if (!isset($body)) {
+                    $body = MAPIUtils::readPropStream($mapimessage, PR_BODY);
+                }
+                if (!isset($bodyHtml)) {
+                    $bodyHtml = MAPIUtils::readPropStream($mapimessage, PR_HTML);
+                }
                 $cpid = mapi_getprops($fwmessage, array($sendMailProps["internetcpid"]));
                 if($sm->forwardflag) {
                     // attach the original attachments to the outgoing message
@@ -503,13 +524,8 @@ class BackendZarafa implements IBackend, ISearchProvider {
                 // regarding the conversion @see ZP-470
                 if (strlen($body) > 0) {
                     $fwbody = MAPIUtils::readPropStream($fwmessage, PR_BODY);
-                    // if both cpids are set convert from the existing charset to the new charset
-                    if (isset($cpid[$sendMailProps["internetcpid"]]) && isset($props[$sendMailProps["internetcpid"]])) {
-                        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->SendMail(): convert plain forwarded message charset (both set) from '%s' to '%s'", $cpid[$sendMailProps["internetcpid"]], $props[$sendMailProps["internetcpid"]]));
-                        $fwbody = Utils::ConvertCodepage($cpid[$sendMailProps["internetcpid"]], $props[$sendMailProps["internetcpid"]], $fwbody);
-                    }
                     // if only the old message's cpid is set, convert from old charset to utf-8
-                    elseif (isset($cpid[$sendMailProps["internetcpid"]])) {
+                    if (isset($cpid[$sendMailProps["internetcpid"]]) && $cpid[$sendMailProps["internetcpid"]] != INTERNET_CPID_UTF8) {
                         ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->SendMail(): convert plain forwarded message charset (only fw set) from '%s' to '65001'", $cpid[$sendMailProps["internetcpid"]]));
                         $fwbody = Utils::ConvertCodepageStringToUtf8($cpid[$sendMailProps["internetcpid"]], $fwbody);
                     }
@@ -524,12 +540,8 @@ class BackendZarafa implements IBackend, ISearchProvider {
 
                 if (strlen($bodyHtml) > 0) {
                     $fwbodyHtml = MAPIUtils::readPropStream($fwmessage, PR_HTML);
-                    if (isset($cpid[$sendMailProps["internetcpid"]]) && isset($props[$sendMailProps["internetcpid"]])) {
-                        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->SendMail(): convert html forwarded message charset (both set) from '%s' to '%s'", $cpid[$sendMailProps["internetcpid"]], $props[$sendMailProps["internetcpid"]]));
-                        $fwbodyHtml = Utils::ConvertCodepage( $cpid[$sendMailProps["internetcpid"]], $props[$sendMailProps["internetcpid"]], $fwbodyHtml);
-                    }
                     // if only new message's cpid is set, convert to UTF-8
-                    elseif (isset($cpid[$sendMailProps["internetcpid"]])) {
+                    if (isset($cpid[$sendMailProps["internetcpid"]]) && $cpid[$sendMailProps["internetcpid"]] != INTERNET_CPID_UTF8) {
                         ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->SendMail(): convert html forwarded message charset (only fw set) from '%s' to '65001'", $cpid[$sendMailProps["internetcpid"]]));
                         $fwbodyHtml = Utils::ConvertCodepageStringToUtf8($cpid[$sendMailProps["internetcpid"]], $fwbodyHtml);
                     }
