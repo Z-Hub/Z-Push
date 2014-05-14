@@ -62,6 +62,7 @@ class SyncMeetingRequest extends SyncObject {
     public $busystatus;
     public $timezone;
     public $globalobjid;
+    public $disallownewtimeproposal;
 
     function SyncMeetingRequest() {
         $mapping = array (
@@ -126,6 +127,10 @@ class SyncMeetingRequest extends SyncObject {
                                                                                     self::STREAMER_CHECKS   => array(   self::STREAMER_CHECK_REQUIRED   => base64_encode(pack("la64vvvvvvvv"."la64vvvvvvvv"."l",0,"",0,0,0,0,0,0,0,0,0,"",0,0,0,0,0,0,0,0,0)) )),
 
                     SYNC_POOMMAIL_GLOBALOBJID                           => array (  self::STREAMER_VAR      => "globalobjid"),
+
+                    SYNC_POOMMAIL_DISALLOWNEWTIMEPROPOSAL               => array (  self::STREAMER_VAR      => "disallownewtimeproposal",
+                                                                                    self::STREAMER_CHECKS   => array(   self::STREAMER_CHECK_REQUIRED   => self::STREAMER_CHECK_SETZERO,
+                                                                                    self::STREAMER_CHECK_ONEVALUEOF => array(0,1)  )),
                 );
 
         parent::SyncObject($mapping);
