@@ -224,7 +224,7 @@ class MAPIMapping {
             "responserequested"     => PR_RESPONSE_REQUESTED,
             // timezone
             "alldayevent"           => "PT_BOOLEAN:PSETID_Appointment:0x8215",
-            "busystatus"            => "PT_LONG:PSETID_Appointment:0x8205",
+            "busystatus"            => "PT_LONG:PSETID_Appointment:0x8224",
             "rtf"                   => PR_RTF_COMPRESSED,
             "dtstamp"               => PR_LAST_MODIFICATION_TIME,
             "endtime"               => "PT_SYSTIME:PSETID_Appointment:0x820e",
