@@ -624,6 +624,7 @@ class MAPIProvider {
                     $req->processMeetingCancellation();
                 }
             }
+            $message->contentclass = DEFAULT_CALENDAR_CONTENTCLASS;
         }
 
         // Add attachments
@@ -746,7 +747,7 @@ class MAPIProvider {
         //TODO contentclass and nativebodytype and internetcpid
         if (!isset($message->internetcpid)) $message->internetcpid = (defined('STORE_INTERNET_CPID')) ? constant('STORE_INTERNET_CPID') : INTERNET_CPID_WINDOWS1252;
         $this->setFlag($mapimessage, $message);
-        $message->contentclass = DEFAULT_EMAIL_CONTENTCLASS;
+        if (!isset($message->contentclass)) $message->contentclass = DEFAULT_EMAIL_CONTENTCLASS;
         if (!isset($message->nativebodytype)) $message->nativebodytype = $this->getNativeBodyType($messageprops);
 
         // reply, reply to all, forward flags

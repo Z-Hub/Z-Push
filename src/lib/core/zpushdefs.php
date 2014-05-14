@@ -1025,6 +1025,7 @@ define("SYNC_FLAGSTATUS_COMPLETE", 1);
 define("SYNC_FLAGSTATUS_ACTIVE", 2);
 
 define("DEFAULT_EMAIL_CONTENTCLASS", "urn:content-classes:message");
+define("DEFAULT_CALENDAR_CONTENTCLASS", "urn:content-classes:calendarmessage");
 
 define("SYNC_MAIL_LASTVERB_UNKNOWN", 0);
 define("SYNC_MAIL_LASTVERB_REPLYSENDER", 1);
