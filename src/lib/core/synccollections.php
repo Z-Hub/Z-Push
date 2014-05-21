@@ -449,6 +449,13 @@ class SyncCollections implements Iterator {
         // wait for changes
         $started = time();
         $endat = time() + $lifetime;
+
+        // always use policy key from the request if it was sent
+        $policyKey = $this->GetReferencePolicyKey();
+        if (Request::WasPolicyKeySent() && Request::GetPolicyKey() != 0) {
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("refpolkey:'%s', sent polkey:'%s'", $policyKey, Request::GetPolicyKey()));
+            $policyKey = Request::GetPolicyKey();
+        }
         while(($now = time()) < $endat) {
             // how long are we waiting for changes
             $this->waitingTime = $now-$started;
@@ -460,7 +467,7 @@ class SyncCollections implements Iterator {
 
             // Check if provisioning is necessary
             // if a PolicyKey was sent use it. If not, compare with the ReferencePolicyKey
-            if (PROVISIONING === true && $this->GetReferencePolicyKey() !== false && ZPush::GetDeviceManager()->ProvisioningRequired($this->GetReferencePolicyKey(), true))
+            if (PROVISIONING === true && $policyKey !== false && ZPush::GetDeviceManager()->ProvisioningRequired($policyKey, true))
                 // the hierarchysync forces provisioning
                 throw new StatusException("SyncCollections->CheckForChanges(): PolicyKey changed. Provisioning required.", self::ERROR_WRONG_HIERARCHY);
 
