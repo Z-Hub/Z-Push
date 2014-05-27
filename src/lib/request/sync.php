@@ -358,7 +358,7 @@ class Sync extends RequestProcessor {
                         ZLog::Write(LOGLEVEL_DEBUG, "HierarchyCache is also not available. Triggering HierarchySync to device");
                     }
 
-                    if(self::$decoder->getElementStartTag(SYNC_PERFORM)) {
+                    if(($el = self::$decoder->getElementStartTag(SYNC_PERFORM)) && ($el[EN_FLAGS] & EN_FLAGS_CONTENT)) {
                         // We can not proceed here as the content class is unknown
                         if ($status != SYNC_STATUS_SUCCESS) {
                             ZLog::Write(LOGLEVEL_WARN, "Ignoring all incoming actions as global status indicates problem.");
