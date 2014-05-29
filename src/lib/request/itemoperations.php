@@ -90,144 +90,145 @@ class ItemOperations extends RequestProcessor {
                 return false;
             }
 
-            if ($fetch) {
-                if(!self::$decoder->getElementStartTag(SYNC_ITEMOPERATIONS_STORE))
-                    return false;
-                $operation['store'] = self::$decoder->getElementContent();
-                if(!self::$decoder->getElementEndTag())
-                    return false;//SYNC_ITEMOPERATIONS_STORE
+            // process operation
+            while(1) {
+                if ($fetch) {
+                    if(self::$decoder->getElementStartTag(SYNC_ITEMOPERATIONS_STORE)) {
+                        $operation['store'] = self::$decoder->getElementContent();
+                        if(!self::$decoder->getElementEndTag())
+                            return false;//SYNC_ITEMOPERATIONS_STORE
+                    }
 
-                if(self::$decoder->getElementStartTag(SYNC_SEARCH_LONGID)) {
-                    $operation['longid'] = self::$decoder->getElementContent();
-                    if(!self::$decoder->getElementEndTag())
-                        return false;//SYNC_SEARCH_LONGID
-                }
+                    if(self::$decoder->getElementStartTag(SYNC_SEARCH_LONGID)) {
+                        $operation['longid'] = self::$decoder->getElementContent();
+                        if(!self::$decoder->getElementEndTag())
+                            return false;//SYNC_SEARCH_LONGID
+                    }
 
-                if(self::$decoder->getElementStartTag(SYNC_FOLDERID)) {
-                    $operation['folderid'] = self::$decoder->getElementContent();
-                    if(!self::$decoder->getElementEndTag())
-                        return false;//SYNC_FOLDERID
-                }
+                    if(self::$decoder->getElementStartTag(SYNC_FOLDERID)) {
+                        $operation['folderid'] = self::$decoder->getElementContent();
+                        if(!self::$decoder->getElementEndTag())
+                            return false;//SYNC_FOLDERID
+                    }
 
-                if(self::$decoder->getElementStartTag(SYNC_SERVERENTRYID)) {
-                    $operation['serverid'] = self::$decoder->getElementContent();
-                    if(!self::$decoder->getElementEndTag())
-                        return false;//SYNC_SERVERENTRYID
-                }
+                    if(self::$decoder->getElementStartTag(SYNC_SERVERENTRYID)) {
+                        $operation['serverid'] = self::$decoder->getElementContent();
+                        if(!self::$decoder->getElementEndTag())
+                            return false;//SYNC_SERVERENTRYID
+                    }
 
-                if(self::$decoder->getElementStartTag(SYNC_AIRSYNCBASE_FILEREFERENCE)) {
-                    $operation['filereference'] = self::$decoder->getElementContent();
-                    if(!self::$decoder->getElementEndTag())
-                        return false;//SYNC_AIRSYNCBASE_FILEREFERENCE
-                }
+                    if(self::$decoder->getElementStartTag(SYNC_AIRSYNCBASE_FILEREFERENCE)) {
+                        $operation['filereference'] = self::$decoder->getElementContent();
+                        if(!self::$decoder->getElementEndTag())
+                            return false;//SYNC_AIRSYNCBASE_FILEREFERENCE
+                    }
 
-                if(self::$decoder->getElementStartTag(SYNC_ITEMOPERATIONS_OPTIONS)) {
-                    //TODO other options
-                    //schema
-                    //range
-                    //username
-                    //password
-                    //bodypartpreference
-                    //rm:RightsManagementSupport
+                    if(($el = self::$decoder->getElementStartTag(SYNC_ITEMOPERATIONS_OPTIONS)) && ($el[EN_FLAGS] & EN_FLAGS_CONTENT)) {
+                        //TODO other options
+                        //schema
+                        //range
+                        //username
+                        //password
+                        //bodypartpreference
+                        //rm:RightsManagementSupport
 
-                    // Save all OPTIONS into a ContentParameters object
-                    $operation["cpo"] = new ContentParameters();
-                    while(1) {
-                        // Android 4.3 sends empty options tag, so we don't have to look further
-                        $e = self::$decoder->peek();
-                        if($e[EN_TYPE] == EN_TYPE_ENDTAG) {
-                            break;
-                        }
+                        // Save all OPTIONS into a ContentParameters object
+                        $operation["cpo"] = new ContentParameters();
+                        while(1) {
+                            while (self::$decoder->getElementStartTag(SYNC_AIRSYNCBASE_BODYPREFERENCE)) {
+                                if(self::$decoder->getElementStartTag(SYNC_AIRSYNCBASE_TYPE)) {
+                                    $bptype = self::$decoder->getElementContent();
+                                    $operation["cpo"]->BodyPreference($bptype);
+                                    if(!self::$decoder->getElementEndTag()) {
+                                        return false;
+                                    }
+                                }
 
-                        while (self::$decoder->getElementStartTag(SYNC_AIRSYNCBASE_BODYPREFERENCE)) {
-                            if(self::$decoder->getElementStartTag(SYNC_AIRSYNCBASE_TYPE)) {
-                                $bptype = self::$decoder->getElementContent();
-                                $operation["cpo"]->BodyPreference($bptype);
-                                if(!self::$decoder->getElementEndTag()) {
+                                if(self::$decoder->getElementStartTag(SYNC_AIRSYNCBASE_TRUNCATIONSIZE)) {
+                                    $operation["cpo"]->BodyPreference($bptype)->SetTruncationSize(self::$decoder->getElementContent());
+                                    if(!self::$decoder->getElementEndTag())
+                                        return false;
+                                }
+
+                                if(self::$decoder->getElementStartTag(SYNC_AIRSYNCBASE_ALLORNONE)) {
+                                    $operation["cpo"]->BodyPreference($bptype)->SetAllOrNone(self::$decoder->getElementContent());
+                                    if(!self::$decoder->getElementEndTag())
+                                        return false;
+                                }
+
+                                if(self::$decoder->getElementStartTag(SYNC_AIRSYNCBASE_PREVIEW)) {
+                                    $operation["cpo"]->BodyPreference($bptype)->SetPreview(self::$decoder->getElementContent());
+                                    if(!self::$decoder->getElementEndTag())
+                                        return false;
+                                }
+
+                                if(!self::$decoder->getElementEndTag())
+                                    return false;//SYNC_AIRSYNCBASE_BODYPREFERENCE
+                            }
+
+                            if(self::$decoder->getElementStartTag(SYNC_MIMESUPPORT)) {
+                                $operation["cpo"]->SetMimeSupport(self::$decoder->getElementContent());
+                                if(!self::$decoder->getElementEndTag())
                                     return false;
+                            }
+
+                            if(self::$decoder->getElementStartTag(SYNC_ITEMOPERATIONS_RANGE)) {
+                                $operation["range"] = self::$decoder->getElementContent();
+                                if(!self::$decoder->getElementEndTag())
+                                    return false;
+                            }
+
+                            if(self::$decoder->getElementStartTag(SYNC_ITEMOPERATIONS_SCHEMA)) {
+                                // read schema tags
+                                while (1) {
+                                    // TODO save elements
+                                    $el = self::$decoder->getElement();
+                                    $e = self::$decoder->peek();
+                                    if($e[EN_TYPE] == EN_TYPE_ENDTAG) {
+                                        self::$decoder->getElementEndTag();
+                                        break;
+                                    }
                                 }
                             }
 
-                            if(self::$decoder->getElementStartTag(SYNC_AIRSYNCBASE_TRUNCATIONSIZE)) {
-                                $operation["cpo"]->BodyPreference($bptype)->SetTruncationSize(self::$decoder->getElementContent());
-                                if(!self::$decoder->getElementEndTag())
-                                    return false;
+                            //break if it reached the endtag
+                            $e = self::$decoder->peek();
+                            if($e[EN_TYPE] == EN_TYPE_ENDTAG) {
+                                self::$decoder->getElementEndTag();
+                                break;
                             }
-
-                            if(self::$decoder->getElementStartTag(SYNC_AIRSYNCBASE_ALLORNONE)) {
-                                $operation["cpo"]->BodyPreference($bptype)->SetAllOrNone(self::$decoder->getElementContent());
-                                if(!self::$decoder->getElementEndTag())
-                                    return false;
-                            }
-
-                            if(self::$decoder->getElementStartTag(SYNC_AIRSYNCBASE_PREVIEW)) {
-                                $operation["cpo"]->BodyPreference($bptype)->SetPreview(self::$decoder->getElementContent());
-                                if(!self::$decoder->getElementEndTag())
-                                    return false;
-                            }
-
-                            if(!self::$decoder->getElementEndTag())
-                                return false;//SYNC_AIRSYNCBASE_BODYPREFERENCE
-                        }
-
-                        if(self::$decoder->getElementStartTag(SYNC_MIMESUPPORT)) {
-                            $operation["cpo"]->SetMimeSupport(self::$decoder->getElementContent());
-                            if(!self::$decoder->getElementEndTag())
-                                return false;
-                        }
-
-                        if(self::$decoder->getElementStartTag(SYNC_ITEMOPERATIONS_RANGE)) {
-                            $operation["range"] = self::$decoder->getElementContent();
-                            if(!self::$decoder->getElementEndTag())
-                                return false;
-                        }
-
-                        if(self::$decoder->getElementStartTag(SYNC_ITEMOPERATIONS_SCHEMA)) {
-                            // read schema tags
-                            while (1) {
-                                // TODO save elements
-                                $el = self::$decoder->getElement();
-                                $e = self::$decoder->peek();
-                                if($e[EN_TYPE] == EN_TYPE_ENDTAG) {
-                                    self::$decoder->getElementEndTag();
-                                    break;
-                                }
-                            }
-                        }
-
-                        //break if it reached the endtag
-                        $e = self::$decoder->peek();
-                        if($e[EN_TYPE] == EN_TYPE_ENDTAG) {
-                            self::$decoder->getElementEndTag();
-                            break;
                         }
                     }
-                }
-            }
+                } // end if fetch
 
-            if ($efc) {
-                if(self::$decoder->getElementStartTag(SYNC_FOLDERID)) {
-                    $operation['folderid'] = self::$decoder->getElementContent();
-                    if(!self::$decoder->getElementEndTag())
-                        return false;//SYNC_FOLDERID
-                }
-                if(self::$decoder->getElementStartTag(SYNC_ITEMOPERATIONS_OPTIONS)) {
-                    if(self::$decoder->getElementStartTag(SYNC_ITEMOPERATIONS_DELETESUBFOLDERS)) {
-                        $operation['deletesubfolders'] = true;
-                        if (($dsf = self::$decoder->getElementContent()) !== false) {
-                            $operation['deletesubfolders'] = (boolean)$dsf;
-                            if(!self::$decoder->getElementEndTag())
-                                return false;
-                        }
+                if ($efc) {
+                    if(self::$decoder->getElementStartTag(SYNC_FOLDERID)) {
+                        $operation['folderid'] = self::$decoder->getElementContent();
+                        if(!self::$decoder->getElementEndTag())
+                            return false;//SYNC_FOLDERID
                     }
+                    if(self::$decoder->getElementStartTag(SYNC_ITEMOPERATIONS_OPTIONS)) {
+                        if(self::$decoder->getElementStartTag(SYNC_ITEMOPERATIONS_DELETESUBFOLDERS)) {
+                            $operation['deletesubfolders'] = true;
+                            if (($dsf = self::$decoder->getElementContent()) !== false) {
+                                $operation['deletesubfolders'] = (boolean)$dsf;
+                                if(!self::$decoder->getElementEndTag())
+                                    return false;
+                            }
+                        }
+                        self::$decoder->getElementEndTag();
+                    }
+                }
+
+                //TODO move
+
+                //break if it reached the endtag SYNC_ITEMOPERATIONS_FETCH or SYNC_ITEMOPERATIONS_EMPTYFOLDERCONTENTS or SYNC_ITEMOPERATIONS_MOVE
+                $e = self::$decoder->peek();
+                if($e[EN_TYPE] == EN_TYPE_ENDTAG) {
                     self::$decoder->getElementEndTag();
+                    break;
                 }
-            }
-
-            //TODO move
-
-            if(!self::$decoder->getElementEndTag())
-                return false; //SYNC_ITEMOPERATIONS_FETCH or SYNC_ITEMOPERATIONS_EMPTYFOLDERCONTENTS or SYNC_ITEMOPERATIONS_MOVE
+            } // end while operation
 
             $itemoperations[] = $operation;
             //break if it reached the endtag
@@ -236,11 +237,7 @@ class ItemOperations extends RequestProcessor {
                 self::$decoder->getElementEndTag(); //SYNC_ITEMOPERATIONS_ITEMOPERATIONS
                 break;
             }
-
-        }
-
-//         if(!self::$decoder->getElementEndTag())
-//             return false;//SYNC_ITEMOPERATIONS_ITEMOPERATIONS
+        } // end operations loop
 
         $status = SYNC_ITEMOPERATIONSSTATUS_SUCCESS;
 
