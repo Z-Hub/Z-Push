@@ -35,7 +35,7 @@ process control and shared memory.
 
 These packages vary in names between the distributions.
 - Generally install the packages:                   php-cli php-soap 
-- On Suse (SLES & OpenSuse) install the packages:   php5 php5-soap php5-pcntl php5-sysvshm php5-sysvsem
+- On Suse (SLES & OpenSuse) install the packages:   php53 php53-soap php53-pcntl php53-sysvshm php53-sysvsem php53-posix
 - On RHEL based systems install the package:        php-cli php-soap php-process
   To install this package you need to add an extra channel subscription from the 
   RHEL Server Optional channel.
