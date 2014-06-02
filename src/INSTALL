@@ -170,7 +170,7 @@ and re-create profiles on every device.
 
 *Important*
 States of Z-Push 2.0 and Z-Push 2.1 are not compatible. A state migration
-script is available in the tools folder.
+script called migrate-2.0.x-2.1.0.php is available in the tools folder.
 
 Please also observe the published release notes of the new Z-Push version.
 For some releases it is necessary to e.g. resynchronize the mobile. 
