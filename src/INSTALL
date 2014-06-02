@@ -172,6 +172,12 @@ and re-create profiles on every device.
 States of Z-Push 2.0 and Z-Push 2.1 are not compatible. A state migration
 script called migrate-2.0.x-2.1.0.php is available in the tools folder.
 
+*Important*
+When running Z-Push seperately from your Zarafa installation you had in 
+the past to configure MAPI_SERVER directly in the config.php of Z-Push.
+This setting has now moved to the config.php file of the Zarafa backend
+(backend/zarafa/config.php).
+
 Please also observe the published release notes of the new Z-Push version.
 For some releases it is necessary to e.g. resynchronize the mobile. 
 
