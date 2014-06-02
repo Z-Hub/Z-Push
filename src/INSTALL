@@ -143,7 +143,7 @@ Upgrade
 -------
 Upgrading to a newer Z-Push version follows the same path as the
 initial installation.
-When upgrading to a new minor version e.g. from Z-Push 1.4 t
+When upgrading to a new minor version e.g. from Z-Push 1.4 to
 Z-Push 1.4.1, the existing Z-Push directory can be overwritten
 when extracting the archive. When installing a new major version
 it is recommended to extract the tarball to another directory and
