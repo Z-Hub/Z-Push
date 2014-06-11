@@ -29,16 +29,16 @@ http://doc.zarafa.com/trunk/Administrator_Manual/en-US/html/_zpush.html
 
 Additional php packages
 ----------------------
-To use the full featureset of Z-Push 2 and the z-push-top command line utility, 
-additional php packages are required. These provide SOAP support, access to 
-process control and shared memory. 
+To use the full featureset of Z-Push 2 and the z-push-top command line utility,
+additional php packages are required. These provide SOAP support, access to
+process control and shared memory.
 
 These packages vary in names between the distributions.
 - Generally install the packages:                   php-cli php-soap 
 - On Suse (SLES & OpenSuse) install the packages:   php53 php53-soap php53-pcntl php53-sysvshm php53-sysvsem php53-posix
 - On RHEL based systems install the package:        php-cli php-soap php-process
-  To install this package you need to add an extra channel subscription from the 
-  RHEL Server Optional channel.
+  In order to install these packages you need to add an extra channel subscription
+  from the RHEL Server Optional channel.
 
 
 How to install
@@ -112,7 +112,7 @@ z-push directory so these settings are considered only there.
         php_flag short_open_tag on
     </Directory>
 
-If you don't set this up correctly, you will not be 
+If you don't set this up correctly, you will not be
 able to login correctly via z-push.
 
 Please also set a memory_limit for php to 128M in php.ini.
@@ -121,12 +121,12 @@ Z-Push writes files to your file system like logs or data from the
 FileStateMachine (which is default). In order to make this possible,
 you either need to disable the php-safe-mode in php.ini or .htaccess with
     php_admin_flag safe_mode off
-or configure it accordingly, so Z-Push is allowed to write to the 
+or configure it accordingly, so Z-Push is allowed to write to the
 log and state directories. 
 
 After doing this, you should be able to synchronize with your mobile device.
 
-To use the command line tools, access the installation directory 
+To use the command line tools, access the installation directory
 (usually /usr/share/z-push) and execute:
     ./z-push-top.php        and/or
     ./z-push-admin.php
@@ -135,7 +135,7 @@ To facilitate the access symbolic links can be created, by executing:
     ln -s /usr/share/z-push/z-push-admin.php /usr/sbin/z-push-admin
     ln -s /usr/share/z-push/z-push-top.php /usr/sbin/z-push-top
 
-With these symlinks in place the cli tools can be accessed from any 
+With these symlinks in place the cli tools can be accessed from any
 directory and without the php file extension.
 
 
@@ -173,13 +173,13 @@ States of Z-Push 2.0 and Z-Push 2.1 are not compatible. A state migration
 script called migrate-2.0.x-2.1.0.php is available in the tools folder.
 
 *Important*
-When running Z-Push seperately from your Zarafa installation you had in 
+When running Z-Push seperately from your Zarafa installation you had in
 the past to configure MAPI_SERVER directly in the config.php of Z-Push.
 This setting has now moved to the config.php file of the Zarafa backend
 (backend/zarafa/config.php).
 
 Please also observe the published release notes of the new Z-Push version.
-For some releases it is necessary to e.g. resynchronize the mobile. 
+For some releases it is necessary to e.g. resynchronize the mobile.
 
 
 S/MIME
@@ -205,7 +205,7 @@ Symantec or Comodo or community-driven e.g. CAcert.org.
 Both most popular directory services Microsoft Active Directory (MS AD)
 and free open source solution OpenLDAP allow to save certificates. Private
 keys/certificates reside in user’s directory or on a smartcard. Public
-certificates are saved in directory. MS AD and OpenLDAP both use 
+certificates are saved in directory. MS AD and OpenLDAP both use
 serCertificate attribute to save it.
 
 In Active Directory the public key for contacts from GAB is saved in
@@ -225,7 +225,7 @@ Other user plugin options like db or unix might not work correctly and
 are not supported.
 
 For in-depth information please refer to:
-http://www.zarafa.com/blog/post/2013/05/smime-z-push-signing-and-en-decrypting-emails-mobile-devices 
+http://www.zarafa.com/blog/post/2013/05/smime-z-push-signing-and-en-decrypting-emails-mobile-devices
 
 Setting up your mobile device
 -----------------------------
@@ -285,4 +285,4 @@ it works fine with the WebApp/Webaccess. The solution is to add:
 
 setlocale(LC_CTYPE, "en_US.UTF-8");
 
-to the config.php file. 
+to the config.php file.
