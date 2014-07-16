@@ -660,7 +660,7 @@ class ZPushTop {
         if ($this->wide === true)
             return sprintf("%s%s%s%s%s%s%s%s", $this->ptStr($l['pid'],6), $this->ptStr($l['ip'],16), $this->ptStr($l['user'],24), $this->ptStr($l['command'],16), $this->ptStr($this->sec2min($l['time']),8), $this->ptStr($l['devagent'],28), $this->ptStr($l['devid'],30, true), $l['addinfo']);
         else
-            return sprintf("%s%s%s%s%s%s%s%s", $this->ptStr($l['pid'],6), $this->ptStr($l['ip'],10), $this->ptStr($l['user'],8), $this->ptStr($l['command'],11), $this->ptStr($this->sec2min($l['time']),6), $this->ptStr($l['devagent'],20), $this->ptStr($l['devid'],12, true), $l['addinfo']);
+            return sprintf("%s%s%s%s%s%s%s%s", $this->ptStr($l['pid'],6), $this->ptStr($l['ip'],16), $this->ptStr($l['user'],8), $this->ptStr($l['command'],8), $this->ptStr($this->sec2min($l['time']),6), $this->ptStr($l['devagent'],20), $this->ptStr($l['devid'],12, true), $l['addinfo']);
     }
 
     /**
