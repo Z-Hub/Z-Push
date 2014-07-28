@@ -1180,6 +1180,20 @@ class BackendZarafa implements IBackend, ISearchProvider {
         }
     }
 
+    /**
+     * Returns the display name of the user. Used by autodiscover.
+     *
+     * @param string        $username           The username
+     *
+     * @access public
+     * @return string
+     */
+    public function GetUserFullname($username) {
+        ZLog::Write(LOGLEVEL_WBXML, sprintf("ZarafaBackend->GetUserFullname for '%s'.", $username));
+        $zarafauserinfo = @mapi_zarafa_getuser_by_name($this->defaultstore, $username);
+        return (isset($zarafauserinfo['fullname']) && $zarafauserinfo['fullname']) ? $zarafauserinfo['fullname'] : $username;
+    }
+
 
     /**----------------------------------------------------------------------------------------------------------
      * Private methods
