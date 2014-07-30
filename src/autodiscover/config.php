@@ -80,7 +80,6 @@
     define('LOGFILE', LOGFILEDIR . 'autodiscover.log');
     define('LOGERRORFILE', LOGFILEDIR . 'autodiscover-error.log');
     define('LOGLEVEL', LOGLEVEL_INFO);
-    define('LOGAUTHFAIL', false);
 
 /**********************************************************************************
  *  Backend settings
