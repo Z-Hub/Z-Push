@@ -289,6 +289,16 @@ interface IBackend {
      * @return SyncObject       $resolveRecipients
      */
     public function ResolveRecipients($resolveRecipients);
+
+    /**
+     * Returns the display name of the user. Used by autodiscover.
+     *
+     * @param string        $username           The username
+     *
+     * @access public
+     * @return string
+     */
+    public function GetUserFullname($username);
 }
 
 ?>

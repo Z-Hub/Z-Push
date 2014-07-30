@@ -52,11 +52,11 @@ include_once('../lib/interface/iexportchanges.php');
 include_once('../lib/interface/iimportchanges.php');
 include_once('../lib/interface/isearchprovider.php');
 include_once('../lib/interface/istatemachine.php');
-include_once('../config.php');
+include_once('config.php');
 
 class ZPushAutodiscover {
     const ACCEPTABLERESPONSESCHEMA = 'http://schemas.microsoft.com/exchange/autodiscover/mobilesync/responseschema/2006';
-    const MAXINPUTSIZE = 8192; // The autodiscover request shouldn't exceed that value
+    const MAXINPUTSIZE = 8192; // Bytes, the autodiscover request shouldn't exceed that value
 
     private static $instance;
 
@@ -140,21 +140,20 @@ class ZPushAutodiscover {
         $xml = simplexml_load_string($input);
 
         if (!isset($xml->Request->EMailAddress)) {
-            throw new ZPushException('Invalid input XML: no email address.');
+            throw new FatalException('Invalid input XML: no email address.');
         }
 
         if ($xml->Request->EMailAddress != $_SERVER['PHP_AUTH_USER']) {
-            throw new ZPushException('Autodiscover is supported only for the auth user.');
+            throw new FatalException('Autodiscover is supported only for the auth user.');
         }
 
         if (!isset($xml->Request->AcceptableResponseSchema)) {
-            throw new ZPushException('Invalid input XML: no AcceptableResponseSchema.');
+            throw new FatalException('Invalid input XML: no AcceptableResponseSchema.');
         }
 
         if ($xml->Request->AcceptableResponseSchema != ZPushAutodiscover::ACCEPTABLERESPONSESCHEMA) {
-            throw new ZPushException('Invalid input XML: not a mobilesync responseschema.');
+            throw new FatalException('Invalid input XML: not a mobilesync responseschema.');
         }
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("loglevel:%d, wbxml:%d", LOGLEVEL, LOGLEVEL_WBXML));
         if (LOGLEVEL >= LOGLEVEL_WBXML) {
             ZLog::Write(LOGLEVEL_WBXML, sprintf("ZPushAutodiscover->getIncomingXml() incoming XML data:%s%s", PHP_EOL, $xml->asXML()));
         }
@@ -171,14 +170,19 @@ class ZPushAutodiscover {
      * @return string $username
      */
     private function login($backend) {
-        // First try to logon using the complete email address.
-        // If that fails, try to logon using the local part.
-        $username = $_SERVER['PHP_AUTH_USER'];
+        // Determine the login name depending on the configuration: complete email address or
+        // the local part only.
+        if (USE_FULLEMAIL_FOR_LOGIN) {
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("Using the complete email address for login."));
+            $username = $_SERVER['PHP_AUTH_USER'];
+        }
+        else{
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("Using the username only for login."));
+            $username = Utils::GetLocalPartFromEmail($_SERVER['PHP_AUTH_USER']);
+        }
+
         if($backend->Logon($username, "", $_SERVER['PHP_AUTH_PW']) == false) {
-            $username = Utils::GetLocalPartFromEmail($username);
-            if($backend->Logon($username, "", $_SERVER['PHP_AUTH_PW']) == false) {
-                throw new AuthenticationRequiredException("Access denied. Username or password incorrect");
-            }
+            throw new AuthenticationRequiredException("Access denied. Username or password incorrect.");
         }
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAutodiscover->login() Using '%s' as the username.", $username));
         return $username;
