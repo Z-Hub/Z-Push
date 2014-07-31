@@ -125,6 +125,7 @@ class ZPushAutodiscover {
                 }
             }
         }
+        setcookie("membername", $username);
         $this->sendResponse($response);
     }
 
