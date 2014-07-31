@@ -52,6 +52,7 @@ include_once('../lib/interface/iexportchanges.php');
 include_once('../lib/interface/iimportchanges.php');
 include_once('../lib/interface/isearchprovider.php');
 include_once('../lib/interface/istatemachine.php');
+include_once('../version.php');
 include_once('config.php');
 
 class ZPushAutodiscover {
@@ -69,6 +70,15 @@ class ZPushAutodiscover {
      */
     public static function DoZPushAutodiscover() {
         ZLog::Write(LOGLEVEL_DEBUG, '-------- Start ZPushAutodiscover');
+        // TODO use filterevilinput?
+        if (stripos($_SERVER["REQUEST_METHOD"], "GET") !== false) {
+            ZLog::Write(LOGLEVEL_WARN, "GET request for autodiscover. Exiting.");
+            if (!headers_sent()) {
+                ZPush::PrintZPushLegal('GET not supported');
+            }
+            ZLog::Write(LOGLEVEL_DEBUG, '-------- End ZPushAutodiscover');
+            exit(1);
+        }
         if (!isset(self::$instance)) {
             self::$instance = new ZPushAutodiscover();
         }
