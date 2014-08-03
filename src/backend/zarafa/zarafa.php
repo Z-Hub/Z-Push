@@ -1564,7 +1564,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
         $searchLess = strtotime($cpo->GetSearchValueLess());
 
         if (version_compare(phpversion(),'5.3.4') < 0) {
-            ZLog::Write(LOGLEVEL_WARN, sprintf("Your system's PHP version (%s) might not correctly process unicode strings. Search containing such characters might not return correct results. It is recommended to update to at least PHP 5.3.4. See ZP- for more information.", phpversion()));
+            ZLog::Write(LOGLEVEL_WARN, sprintf("Your system's PHP version (%s) might not correctly process unicode strings. Search containing such characters might not return correct results. It is recommended to update to at least PHP 5.3.4. See ZP-541 for more information.", phpversion()));
         }
         // split the search on whitespache and look for every word
         $searchText = preg_split("/\W+/u", $searchText);
