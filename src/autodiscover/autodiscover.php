@@ -108,6 +108,7 @@ class ZPushAutodiscover {
             $userFullname = $backend->GetUserFullname($username);
             ZLog::Write(LOGLEVEL_WBXML, sprintf("Resolved user's '%s' fullname to '%s'", $username, $userFullname));
             $response = $this->createResponse($incomingXml->Request->EMailAddress, $userFullname);
+            setcookie("membername", $username);
         }
 
         catch (AuthenticationRequiredException $ex) {
@@ -117,7 +118,7 @@ class ZPushAutodiscover {
             http_response_code(401);
         }
         catch (ZPushException $ex) {
-            ZLog::Write(LOGLEVEL_ERROR, "Unable to complete autodiscover because of ZPushException. Error: %s", $ex->getMessage());
+            ZLog::Write(LOGLEVEL_ERROR, sprintf("Unable to complete autodiscover because of ZPushException. Error: %s", $ex->getMessage()));
             if(!headers_sent()) {
                 header('HTTP/1.1 '. $ex->getHTTPCodeString());
                 foreach ($ex->getHTTPHeaders() as $h) {
@@ -125,7 +126,6 @@ class ZPushAutodiscover {
                 }
             }
         }
-        setcookie("membername", $username);
         $this->sendResponse($response);
     }
 
