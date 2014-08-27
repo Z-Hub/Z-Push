@@ -105,9 +105,11 @@ class ZPushAutodiscover {
             $incomingXml = $this->getIncomingXml();
             $backend = ZPush::GetBackend();
             $username = $this->login($backend, $incomingXml);
-            $userFullname = $backend->GetUserFullname($username);
+            $userDetails = $backend->GetUserDetails($username);
+            $email = ($this->getAttribFromUserDetails($userDetails, 'emailaddress')) ? $this->getAttribFromUserDetails($userDetails, 'emailaddress') : $incomingXml->Request->EMailAddress;
+            $userFullname = ($this->getAttribFromUserDetails($userDetails, 'fullname')) ? $this->getAttribFromUserDetails($userDetails, 'fullname') : $email;
             ZLog::Write(LOGLEVEL_WBXML, sprintf("Resolved user's '%s' fullname to '%s'", $username, $userFullname));
-            $response = $this->createResponse($incomingXml->Request->EMailAddress, $userFullname);
+            $response = $this->createResponse($email, $userFullname);
             setcookie("membername", $username);
         }
 
@@ -236,6 +238,22 @@ class ZPushAutodiscover {
         fwrite($output, $response);
         fclose($output);
         ZLog::Write(LOGLEVEL_DEBUG, "ZPushAutodiscover->sendResponse() response sent.");
+    }
+
+    /**
+     * Gets an attribute from user details.
+     * @param Array $userDetails
+     * @param String $attrib
+     * @access private
+     *
+     * @return String or false on error.
+     */
+    private function getAttribFromUserDetails($userDetails, $attrib) {
+        if (isset($userDetails[$attrib]) && $userDetails[$attrib]) {
+            return $userDetails[$attrib];
+        }
+        ZLog::Write(LOGLEVEL_WARN, sprintf("The backend was not able to find attribute '%s' of the user. Fall back to the default value."));
+        return false;
     }
 }
 
