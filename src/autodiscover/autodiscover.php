@@ -104,7 +104,7 @@ class ZPushAutodiscover {
         try {
             $incomingXml = $this->getIncomingXml();
             $backend = ZPush::GetBackend();
-            $username = $this->login($backend);
+            $username = $this->login($backend, $incomingXml);
             $userFullname = $backend->GetUserFullname($username);
             ZLog::Write(LOGLEVEL_WBXML, sprintf("Resolved user's '%s' fullname to '%s'", $username, $userFullname));
             $response = $this->createResponse($incomingXml->Request->EMailAddress, $userFullname);
@@ -154,8 +154,9 @@ class ZPushAutodiscover {
             throw new FatalException('Invalid input XML: no email address.');
         }
 
-        if ($xml->Request->EMailAddress != $_SERVER['PHP_AUTH_USER']) {
-            throw new FatalException('Autodiscover is supported only for the auth user.');
+        if (Utils::GetLocalPartFromEmail($xml->Request->EMailAddress) != Utils::GetLocalPartFromEmail($_SERVER['PHP_AUTH_USER'])) {
+            ZLog::Write(LOGLEVEL_WARN, sprintf("The local part of the server auth user is different from the local part in the XML request ('%s' != '%s')",
+                Utils::GetLocalPartFromEmail($xml->Request->EMailAddress), Utils::GetLocalPartFromEmail($_SERVER['PHP_AUTH_USER'])));
         }
 
         if (!isset($xml->Request->AcceptableResponseSchema)) {
@@ -175,21 +176,22 @@ class ZPushAutodiscover {
      * Logins using the backend's Logon function.
      *
      * @param IBackend $backend
+     * @param String $incomingXml
      * @access private
      * @throws AuthenticationRequiredException if no login data was sent.
      *
      * @return string $username
      */
-    private function login($backend) {
+    private function login($backend, $incomingXml) {
         // Determine the login name depending on the configuration: complete email address or
         // the local part only.
         if (USE_FULLEMAIL_FOR_LOGIN) {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("Using the complete email address for login."));
-            $username = $_SERVER['PHP_AUTH_USER'];
+            $username = $incomingXml->Request->EMailAddress;
         }
         else{
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("Using the username only for login."));
-            $username = Utils::GetLocalPartFromEmail($_SERVER['PHP_AUTH_USER']);
+            $username = Utils::GetLocalPartFromEmail($incomingXml->Request->EMailAddress);
         }
 
         if($backend->Logon($username, "", $_SERVER['PHP_AUTH_PW']) == false) {
