@@ -188,7 +188,34 @@ class FolderSync extends RequestProcessor {
                     $exporter->InitializeExporter($changesMem);
 
                     // Stream all changes to the ImportExportChangesMem
-                    while(is_array($exporter->Synchronize()));
+                    $totalChanges = $exporter->GetChangeCount();
+                    $started = time();
+                    $exported = 0;
+                    $partial = false;
+                    while(is_array($exporter->Synchronize())) {
+                        $exported++;
+
+                        if (time() % 4 ) {
+                            self::$topCollector->AnnounceInformation(sprintf("Exported %d from %d folders", $exported, $totalChanges));
+                        }
+                        // stop if this takes more than 20 seconds
+                        if ((time() - $started) > 200) {
+                            ZLog::Write(LOGLEVEL_WARN, sprintf("Request->HandleFolderSync(): Exporting folders is too slow. In %d seconds only %d from %d changes were processed.",(time() - $started), $exported, $totalChanges));
+                            self::$topCollector->AnnounceInformation(sprintf("Partial export of %d folders", $totalChanges), true);
+                            self::$deviceManager->SetFolderSyncComplete(false);
+                            $partial = true;
+                            break;
+                        }
+                    }
+
+                    // update the foldersync complete flag
+                    if ($partial == false && self::$deviceManager->GetFolderSyncComplete() === false) {
+                        // say that we are done with partial synching
+                        self::$deviceManager->SetFolderSyncComplete(true);
+                        // reset the loop data to prevent any loop detection to kick in now
+                        self::$deviceManager->ClearLoopDetectionData(Request::GetAuthUser(), Request::GetDeviceId());
+                        ZLog::Write(LOGLEVEL_INFO, "Request->HandleFolderSync(): Chunked exporting of folders completed successfully");
+                    }
 
                     // get the new state from the backend
                     $newsyncstate = (isset($exporter))?$exporter->GetState():"";

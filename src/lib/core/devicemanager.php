@@ -595,6 +595,11 @@ class DeviceManager {
      * @return boolean
      */
     public function IsHierarchyFullResyncRequired() {
+        // do not check for loop detection, if the foldersync is not yet complete
+        if ($this->GetFolderSyncComplete() === false) {
+            ZLog::Write(LOGLEVEL_INFO, "DeviceManager->IsHierarchyFullResyncRequired(): aborted, as exporting of folders has not yet completed");
+            return false;
+        }
         // check for potential process loops like described in ZP-5
         return $this->loopdetection->ProcessLoopDetectionIsHierarchyResyncRequired();
     }
@@ -693,6 +698,45 @@ class DeviceManager {
         }
 
         return true;
+    }
+
+    /**
+     * Returns the indicator if the FolderSync was completed successfully  (all folders synchronized)
+     *
+     * @access public
+     * @return boolean
+     */
+    public function GetFolderSyncComplete() {
+        return $this->device->GetFolderSyncComplete();
+    }
+
+    /**
+     * Sets if the FolderSync was completed successfully (all folders synchronized)
+     *
+     * @param boolean   $complete   indicating if all folders were sent
+     *
+     * @access public
+     * @return boolean
+     */
+    public function SetFolderSyncComplete($complete, $user = false, $devid = false) {
+        $this->device->SetFolderSyncComplete($complete);
+    }
+
+    /**
+     * Removes the Loop detection data for a user & device
+     *
+     * @param string    $user
+     * @param string    $devid
+     *
+     * @access public
+     * @return boolean
+     */
+    public function ClearLoopDetectionData($user, $devid) {
+        if ($user == false || $devid == false) {
+            return false;
+        }
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("DeviceManager->ClearLoopDetectionData(): clearing data for user '%s' and device '%s'", $user, $devid));
+        return $this->loopdetection->ClearData($user, $devid);
     }
 
     /**

@@ -67,6 +67,7 @@ class ASDevice extends StateObject {
                                     'asversion' => false,
                                     'ignoredmessages' => array(),
                                     'announcedASversion' => false,
+                                    'foldersynccomplete' => true,
                                 );
 
     static private $loadedData;
