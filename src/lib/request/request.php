@@ -245,6 +245,9 @@ class Request {
             list(self::$authUser, self::$authDomain) = Utils::SplitDomainUser($_SERVER['PHP_AUTH_USER']);
             self::$authPassword = (isset($_SERVER['PHP_AUTH_PW']))?$_SERVER['PHP_AUTH_PW'] : "";
         }
+        if(defined('USE_FULLEMAIL_FOR_LOGIN') && ! USE_FULLEMAIL_FOR_LOGIN) {
+            self::$authUser = Utils::GetLocalPartFromEmail(self::$authUser);
+        }
         // authUser & authPassword are unfiltered!
         return (self::$authUser != "" && self::$authPassword != "");
     }
