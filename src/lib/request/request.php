@@ -113,8 +113,12 @@ class Request {
             self::$command = self::filterEvilInput($_GET["Cmd"], self::LETTERS_ONLY);
 
         // getUser is unfiltered, as everything is allowed.. even "/", "\" or ".."
-        if(isset($_GET["User"]))
+        if(isset($_GET["User"])) {
             self::$getUser = strtolower($_GET["User"]);
+            if(defined('USE_FULLEMAIL_FOR_LOGIN') && ! USE_FULLEMAIL_FOR_LOGIN) {
+                self::$getUser = Utils::GetLocalPartFromEmail(self::$getUser);
+            }
+        }
         if(isset($_GET["DeviceId"]))
             self::$devid = strtolower(self::filterEvilInput($_GET["DeviceId"], self::WORDCHAR_ONLY));
         if(isset($_GET["DeviceType"]))
@@ -140,8 +144,12 @@ class Request {
             if (!isset(self::$command) && isset($query['Command']))
                 self::$command = Utils::GetCommandFromCode($query['Command']);
 
-            if (!isset(self::$getUser) && isset($query[self::COMMANDPARAM_USER]))
+            if (!isset(self::$getUser) && isset($query[self::COMMANDPARAM_USER])) {
                 self::$getUser = strtolower($query[self::COMMANDPARAM_USER]);
+                if(defined('USE_FULLEMAIL_FOR_LOGIN') && ! USE_FULLEMAIL_FOR_LOGIN) {
+                    self::$getUser = Utils::GetLocalPartFromEmail(self::$getUser);
+                }
+            }
 
             if (!isset(self::$devid) && isset($query['DevID']))
                 self::$devid = strtolower(self::filterEvilInput($query['DevID'], self::WORDCHAR_ONLY));
@@ -172,8 +180,12 @@ class Request {
         }
 
         // in base64 encoded query string user is not necessarily set
-        if (!isset(self::$getUser) && isset($_SERVER['PHP_AUTH_USER']))
+        if (!isset(self::$getUser) && isset($_SERVER['PHP_AUTH_USER'])) {
             list(self::$getUser,) = Utils::SplitDomainUser(strtolower($_SERVER['PHP_AUTH_USER']));
+            if(defined('USE_FULLEMAIL_FOR_LOGIN') && ! USE_FULLEMAIL_FOR_LOGIN) {
+                self::$getUser = Utils::GetLocalPartFromEmail(self::$getUser);
+            }
+        }
     }
 
     /**
