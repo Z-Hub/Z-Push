@@ -155,11 +155,11 @@ class BackendZarafa implements IBackend, ISearchProvider {
      * @throws AuthenticationRequiredException
      */
     public function Logon($user, $domain, $pass) {
+        if(defined('USE_FULLEMAIL_FOR_LOGIN') && ! USE_FULLEMAIL_FOR_LOGIN) {
+            $user = Utils::GetLocalPartFromEmail($user);
+        }
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->Logon(): Trying to authenticate user '%s'..", $user));
         $this->mainUser = strtolower($user);
-        if(defined('USE_FULLEMAIL_FOR_LOGIN') && ! USE_FULLEMAIL_FOR_LOGIN) {
-            $this->mainUser = Utils::GetLocalPartFromEmail($this->mainUser);
-        }
 
         try {
             // check if notifications are available in php-mapi
