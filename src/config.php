@@ -201,6 +201,13 @@
     // this full list, so this feature is disabled by default. Enable with care.
     define('ALLOW_WEBSERVICE_USERS_ACCESS', false);
 
+    // Users with many folders can use the 'partial foldersync' feature, where the server
+    // actively stops processing the folder list if it takes too long. Other requests are
+    // then redirected to the FolderSync to synchronize the remaining items.
+    // Device compatibility for this procedure is not fully understood.
+    // NOTE: THIS IS AN EXPERIMENTAL FEATURE WHICH COULD PREVENT YOUR MOBILES FROM SYNCHRONIZING.
+    define('USE_PARTIAL_FOLDERSYNC', false);
+
 /**********************************************************************************
  *  Backend settings
  */

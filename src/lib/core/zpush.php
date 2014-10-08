@@ -282,6 +282,10 @@ class ZPush {
         else if ((!is_int(SYNC_CONTACTS_MAXPICTURESIZE) || SYNC_CONTACTS_MAXPICTURESIZE < 1))
             throw new FatalMisconfigurationException("The SYNC_CONTACTS_MAXPICTURESIZE value must be a number higher than 0.");
 
+        if (!defined('USE_PARTIAL_FOLDERSYNC')) {
+            define('USE_PARTIAL_FOLDERSYNC', false);
+        }
+
         // the check on additional folders will not throw hard errors, as this is probably changed on live systems
         if (isset($additionalFolders) && !is_array($additionalFolders))
             ZLog::Write(LOGLEVEL_ERROR, "ZPush::CheckConfig() : The additional folders synchronization not available as array.");

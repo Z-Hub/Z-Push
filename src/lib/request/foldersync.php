@@ -199,7 +199,7 @@ class FolderSync extends RequestProcessor {
                             self::$topCollector->AnnounceInformation(sprintf("Exported %d from %d folders", $exported, $totalChanges));
                         }
                         // stop if this takes more than 20 seconds
-                        if ((time() - $started) > 200) {
+                        if (USE_PARTIAL_FOLDERSYNC && (time() - $started) > 20) {
                             ZLog::Write(LOGLEVEL_WARN, sprintf("Request->HandleFolderSync(): Exporting folders is too slow. In %d seconds only %d from %d changes were processed.",(time() - $started), $exported, $totalChanges));
                             self::$topCollector->AnnounceInformation(sprintf("Partial export of %d folders", $totalChanges), true);
                             self::$deviceManager->SetFolderSyncComplete(false);
@@ -209,7 +209,7 @@ class FolderSync extends RequestProcessor {
                     }
 
                     // update the foldersync complete flag
-                    if ($partial == false && self::$deviceManager->GetFolderSyncComplete() === false) {
+                    if (USE_PARTIAL_FOLDERSYNC && $partial == false && self::$deviceManager->GetFolderSyncComplete() === false) {
                         // say that we are done with partial synching
                         self::$deviceManager->SetFolderSyncComplete(true);
                         // reset the loop data to prevent any loop detection to kick in now

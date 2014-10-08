@@ -64,13 +64,15 @@ class Sync extends RequestProcessor {
 
 
         // check if the hierarchySync was fully completed
-        if (self::$deviceManager->GetFolderSyncComplete() === false)  {
-            ZLog::Write(LOGLEVEL_INFO, "Request->HandleSync(): Sync request aborted, as exporting of folders has not yet completed");
-            self::$topCollector->AnnounceInformation("Aborted due incomple folder sync", true);
-            $status = SYNC_STATUS_FOLDERHIERARCHYCHANGED;
+        if (USE_PARTIAL_FOLDERSYNC) {
+            if (self::$deviceManager->GetFolderSyncComplete() === false)  {
+                ZLog::Write(LOGLEVEL_INFO, "Request->HandleSync(): Sync request aborted, as exporting of folders has not yet completed");
+                self::$topCollector->AnnounceInformation("Aborted due incomplete folder sync", true);
+                $status = SYNC_STATUS_FOLDERHIERARCHYCHANGED;
+            }
+            else
+                ZLog::Write(LOGLEVEL_INFO, "Request->HandleSync(): FolderSync marked as complete");
         }
-        else
-            ZLog::Write(LOGLEVEL_INFO, "Request->HandleSync(): FolderSync marked as complete");
 
         // Start Synchronize
         if(self::$decoder->getElementStartTag(SYNC_SYNCHRONIZE)) {
