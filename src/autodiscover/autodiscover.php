@@ -114,7 +114,12 @@ class ZPushAutodiscover {
         }
 
         catch (AuthenticationRequiredException $ex) {
-            ZLog::Write(LOGLEVEL_ERROR, sprintf("Unable to complete autodiscover because login failed for user with email '%s'", $incomingXml->Request->EMailAddress));
+            if (isset($incomingXml)) {
+                ZLog::Write(LOGLEVEL_ERROR, sprintf("Unable to complete autodiscover because login failed for user with email '%s'", $incomingXml->Request->EMailAddress));
+            }
+            else {
+                ZLog::Write(LOGLEVEL_ERROR, sprintf("Unable to complete autodiscover incorrect request: '%s'", $ex->getMessage()));
+            }
             header('HTTP/1.1 401 Unauthorized');
             header('WWW-Authenticate: Basic realm="ZPush"');
             http_response_code(401);
@@ -152,6 +157,10 @@ class ZPushAutodiscover {
         $input = @file_get_contents('php://input');
         $xml = simplexml_load_string($input);
 
+        if (LOGLEVEL >= LOGLEVEL_WBXML) {
+            ZLog::Write(LOGLEVEL_WBXML, sprintf("ZPushAutodiscover->getIncomingXml() incoming XML data:%s%s", PHP_EOL, $xml->asXML()));
+        }
+
         if (!isset($xml->Request->EMailAddress)) {
             throw new FatalException('Invalid input XML: no email address.');
         }
@@ -168,9 +177,7 @@ class ZPushAutodiscover {
         if ($xml->Request->AcceptableResponseSchema != ZPushAutodiscover::ACCEPTABLERESPONSESCHEMA) {
             throw new FatalException('Invalid input XML: not a mobilesync responseschema.');
         }
-        if (LOGLEVEL >= LOGLEVEL_WBXML) {
-            ZLog::Write(LOGLEVEL_WBXML, sprintf("ZPushAutodiscover->getIncomingXml() incoming XML data:%s%s", PHP_EOL, $xml->asXML()));
-        }
+
         return $xml;
     }
 
