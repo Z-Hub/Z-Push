@@ -314,6 +314,11 @@ class MAPIProvider {
 
         if (!isset($message->nativebodytype)) $message->nativebodytype = $this->getNativeBodyType($messageprops);
 
+        // If the user is working from a location other than the office the busystatus should be interpreted as free.
+        if (isset($message->busystatus) && $message->busystatus == fbWorkingElsewhere) {
+            $message->busystatus = fbFree;
+        }
+
         return $message;
     }
 
@@ -459,6 +464,10 @@ class MAPIProvider {
             if(!isset($syncMessage->exceptions))
                 $syncMessage->exceptions = array();
 
+            // If the user is working from a location other than the office the busystatus should be interpreted as free.
+            if (isset($exception->busystatus) && $exception->busystatus == fbWorkingElsewhere) {
+                $exception->busystatus = fbFree;
+            }
             array_push($syncMessage->exceptions, $exception);
         }
 

@@ -603,6 +603,7 @@ define('fbFree'                                  ,0);
 define('fbTentative'                             ,1);
 define('fbBusy'                                  ,2);
 define('fbOutOfOffice'                           ,3);
+define('fbWorkingElsewhere'                      ,4);
 
 /* ICS flags */
 
