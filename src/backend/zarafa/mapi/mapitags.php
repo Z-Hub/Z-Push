@@ -1165,6 +1165,15 @@ define('PR_EC_STATS_SESSION_LOCKED'                   ,mapi_prop_tag(PT_BOOLEAN,
 define('PR_EC_STATS_SESSION_BUSYSTATES'               ,mapi_prop_tag(PT_MV_STRING8,  PR_EC_BASE+0x47));
 define('PR_EC_COMPANY_NAME'                           ,mapi_prop_tag(PT_STRING8,     PR_EC_BASE+0x48));
 
+/* user features */
+define('PR_EC_ENABLED_FEATURES'                       ,mapi_prop_tag(PT_MV_TSTRING,  PR_EC_BASE+0xB3));
+define('PR_EC_ENABLED_FEATURES_A'                     ,mapi_prop_tag(PT_MV_STRING8,  PR_EC_BASE+0xB3));
+define('PR_EC_ENABLED_FEATURES_W'                     ,mapi_prop_tag(PT_MV_UNICODE,  PR_EC_BASE+0xB3));
+
+define('PR_EC_DISABLED_FEATURES'                      ,mapi_prop_tag(PT_MV_TSTRING,  PR_EC_BASE+0xB4));
+define('PR_EC_DISABLED_FEATURES_A'                    ,mapi_prop_tag(PT_MV_STRING8,  PR_EC_BASE+0xB4));
+define('PR_EC_DISABLED_FEATURES_W'                    ,mapi_prop_tag(PT_MV_UNICODE,  PR_EC_BASE+0xB4));
+
 /* WA properties */
 define('PR_EC_WA_ATTACHMENT_HIDDEN_OVERRIDE'          ,mapi_prop_tag(PT_BOOLEAN,     PR_EC_BASE+0xE0));
 

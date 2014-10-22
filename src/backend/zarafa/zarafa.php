@@ -91,6 +91,9 @@ class BackendZarafa implements IBackend, ISearchProvider {
     private $wastebasket;
     private $addressbook;
 
+    // ZCP config parameter for PR_EC_ENABLED_FEATURES / PR_EC_DISABLED_FEATURES
+    const ZPUSH_ENABLED = 'mobile';
+
     /**
      * Constructor of the Zarafa Backend
      *
@@ -199,6 +202,8 @@ class BackendZarafa implements IBackend, ISearchProvider {
         $this->storeName = $this->mainUser;
 
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->Logon(): User '%s' is authenticated",$user));
+
+        $this->isZPushEnabled();
 
         // check if this is a Zarafa 7 store with unicode support
         MAPIUtils::IsUnicodeStore($this->store);
@@ -1849,6 +1854,25 @@ class BackendZarafa implements IBackend, ISearchProvider {
             return false;
         }
         return $this->addressbook;
+    }
+
+    /**
+     * Checks if the user is not disabled for Z-Push.
+     *
+     * @access private
+     * @throws FatalException if user is disabled for Z-Push
+     *
+     * @return boolean
+     */
+    private function isZPushEnabled() {
+        $addressbook = $this->getAddressbook();
+        $userEntryid = mapi_getprops($this->store, array(PR_MAILBOX_OWNER_ENTRYID));
+        $mailuser = mapi_ab_openentry($addressbook, $userEntryid[PR_MAILBOX_OWNER_ENTRYID]);
+        $enabledFeatures = mapi_getprops($mailuser, array(PR_EC_DISABLED_FEATURES));
+        if (isset($enabledFeatures[PR_EC_DISABLED_FEATURES]) && is_array($enabledFeatures[PR_EC_DISABLED_FEATURES]) && in_array(self::ZPUSH_ENABLED, $enabledFeatures[PR_EC_DISABLED_FEATURES])) {
+            throw new FatalException("User is disabled for Z-Push.");
+        }
+        return true;
     }
 }
 
