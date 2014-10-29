@@ -581,6 +581,32 @@ class Request {
         return (isset(self::$headers["content-length"]))? (int) self::$headers["content-length"] : 0;
     }
 
+    /**
+     * Returns the amount of seconds this request is able to be kept open without the client
+     * closing it. This depends on the vendor.
+     *
+     * @access public
+     * @return boolean
+     */
+    static public function GetExpectedConnectionTimeout() {
+        // Different vendors implement different connection timeouts.
+        // In order to optimize processing, we return a specific time for the major
+        // classes currently known (feedback welcome).
+        // The amount of time returned is somehow lower than the max timeout so we have
+        // time for processing.
+
+        // Apple and Windows Phone have higher timeouts (4min = 240sec)
+        if (in_array(self::GetDeviceType(), array("iPod", "iPad", "iPhone", "WP"))) {
+            return 200;
+        }
+        // Samsung devices have a intermediate timeout (90sec)
+        if (in_array(self::GetDeviceType(), array("SAMSUNGGTI"))) {
+            return 50;
+        }
+
+        // for all other devices, a timeout of 30 seconds is expected
+        return 20;
+    }
 
     /**----------------------------------------------------------------------------------------------------------
      * Private stuff
