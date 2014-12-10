@@ -189,16 +189,13 @@ class PHPWrapper {
     /**
      * Imports a single folder change
      *
-     * @param mixed         $props     sourcekey of the changed folder
+     * @param array         $props     properties of the changed folder
      *
      * @access public
      * @return
      */
     function ImportFolderChange($props) {
-        $sourcekey = $props[PR_SOURCE_KEY];
-        $entryid = mapi_msgstore_entryidfromsourcekey($this->store, $sourcekey);
-        $mapifolder = mapi_msgstore_openentry($this->store, $entryid);
-        $folder = $this->mapiprovider->GetFolder($mapifolder);
+        $folder = $this->mapiprovider->GetFolder($props);
 
         // do not import folder if there is something "wrong" with it
         if ($folder === false)
