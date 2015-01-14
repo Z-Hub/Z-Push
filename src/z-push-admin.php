@@ -442,7 +442,7 @@ class ZPushAdminCLI {
             echo "\tno devices found\n";
         else {
             echo "All known devices and users and their last synchronization time\n\n";
-            echo str_pad("Device id", 36). str_pad("Synchronized user", 30)."Last sync time\n";
+            echo str_pad("Device id", 36). str_pad("Synchronized user", 31)."Last sync time\n";
             echo "-----------------------------------------------------------------------------------------------------\n";
         }
 
@@ -450,7 +450,7 @@ class ZPushAdminCLI {
             $users = ZPushAdmin::ListUsers($deviceId);
             foreach ($users as $user) {
                 $device = ZPushAdmin::GetDeviceDetails($deviceId, $user);
-                echo str_pad($deviceId, 36) . str_pad($user, 30). ($device->GetLastSyncTime() ? strftime("%Y-%m-%d %H:%M", $device->GetLastSyncTime()) : "never") . "\n";
+                echo str_pad($deviceId, 36) . str_pad($user, 30) . " " . ($device->GetLastSyncTime() ? strftime("%Y-%m-%d %H:%M", $device->GetLastSyncTime()) : "never") . "\n";
             }
         }
     }
