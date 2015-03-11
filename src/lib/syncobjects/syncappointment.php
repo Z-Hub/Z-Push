@@ -123,6 +123,7 @@ class SyncAppointment extends SyncObject {
                     // 1 = Tentative
                     // 2 = Busy
                     // 3 = Out of office
+                    // 4 = Working Elsewhere
                     SYNC_POOMCAL_BUSYSTATUS                             => array (  self::STREAMER_VAR      => "busystatus",
                                                                                     self::STREAMER_CHECKS   => array(   self::STREAMER_CHECK_REQUIRED   => self::STREAMER_CHECK_SETTWO,
                                                                                                                         self::STREAMER_CHECK_ONEVALUEOF => array(0,1,2,3,4) )),

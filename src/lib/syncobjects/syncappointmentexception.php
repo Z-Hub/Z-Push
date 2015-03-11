@@ -68,7 +68,7 @@ class SyncAppointmentException extends SyncAppointment {
         $this->mapping[SYNC_POOMCAL_STARTTIME][self::STREAMER_CHECKS]       = array(self::STREAMER_CHECK_CMPLOWER   => SYNC_POOMCAL_ENDTIME);
         $this->mapping[SYNC_POOMCAL_SUBJECT][self::STREAMER_CHECKS]         = array();
         $this->mapping[SYNC_POOMCAL_ENDTIME][self::STREAMER_CHECKS]         = array(self::STREAMER_CHECK_CMPHIGHER  => SYNC_POOMCAL_STARTTIME);
-        $this->mapping[SYNC_POOMCAL_BUSYSTATUS][self::STREAMER_CHECKS]      = array(self::STREAMER_CHECK_ONEVALUEOF => array(0,1,2,3) );
+        $this->mapping[SYNC_POOMCAL_BUSYSTATUS][self::STREAMER_CHECKS]      = array(self::STREAMER_CHECK_ONEVALUEOF => array(0,1,2,3,4) );
         $this->mapping[SYNC_POOMCAL_REMINDER][self::STREAMER_CHECKS]        = array(self::STREAMER_CHECK_CMPHIGHER  => -1);
         $this->mapping[SYNC_POOMCAL_EXCEPTIONS][self::STREAMER_CHECKS]      = array(self::STREAMER_CHECK_NOTALLOWED => true);
 

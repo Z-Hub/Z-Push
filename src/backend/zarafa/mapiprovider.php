@@ -321,6 +321,11 @@ class MAPIProvider {
             $message->busystatus = fbFree;
         }
 
+        // If the busystatus has the value of -1, we should be interpreted as tentative (1) / ZP-581
+        if (isset($message->busystatus) && $message->busystatus == -1) {
+            $message->busystatus = fbTentative;
+        }
+
         return $message;
     }
 
@@ -470,6 +475,12 @@ class MAPIProvider {
             if (isset($exception->busystatus) && $exception->busystatus == fbWorkingElsewhere) {
                 $exception->busystatus = fbFree;
             }
+
+            // If the busystatus has the value of -1, we should be interpreted as tentative (1) / ZP-581
+            if (isset($exception->busystatus) && $exception->busystatus == -1) {
+                $exception->busystatus = fbTentative;
+            }
+
             array_push($syncMessage->exceptions, $exception);
         }
 
@@ -623,6 +634,16 @@ class MAPIProvider {
             // Set sensitivity to 0 if missing
             if(!isset($message->meetingrequest->sensitivity))
                 $message->meetingrequest->sensitivity = 0;
+
+            // If the user is working from a location other than the office the busystatus should be interpreted as free.
+            if (isset($message->meetingrequest->busystatus) && $message->meetingrequest->busystatus == fbWorkingElsewhere) {
+                $message->meetingrequest->busystatus = fbFree;
+            }
+
+            // If the busystatus has the value of -1, we should be interpreted as tentative (1) / ZP-581
+            if (isset($message->meetingrequest->busystatus) && $message->meetingrequest->busystatus == -1) {
+                $message->meetingrequest->busystatus = fbTentative;
+            }
 
             // if a meeting request response hasn't been processed yet,
             // do it so that the attendee status is updated on the mobile

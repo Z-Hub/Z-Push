@@ -119,9 +119,10 @@ class SyncMeetingRequest extends SyncObject {
                     // 1 = Tentative
                     // 2 = Busy
                     // 3 = Out of office
+                    // 4 = Working Elsewhere
                     SYNC_POOMMAIL_BUSYSTATUS                            => array (  self::STREAMER_VAR      => "busystatus",
                                                                                     self::STREAMER_CHECKS   => array(   self::STREAMER_CHECK_REQUIRED   => self::STREAMER_CHECK_SETTWO,
-                                                                                                                        self::STREAMER_CHECK_ONEVALUEOF => array(0,1,2,3)  )),
+                                                                                                                        self::STREAMER_CHECK_ONEVALUEOF => array(0,1,2,3,4)  )),
 
                     SYNC_POOMMAIL_TIMEZONE                              => array (  self::STREAMER_VAR      => "timezone",
                                                                                     self::STREAMER_CHECKS   => array(   self::STREAMER_CHECK_REQUIRED   => base64_encode(pack("la64vvvvvvvv"."la64vvvvvvvv"."l",0,"",0,0,0,0,0,0,0,0,0,"",0,0,0,0,0,0,0,0,0)) )),
