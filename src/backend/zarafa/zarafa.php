@@ -1195,12 +1195,21 @@ class BackendZarafa implements IBackend, ISearchProvider {
      */
     public function GetUserDetails($username) {
         ZLog::Write(LOGLEVEL_WBXML, sprintf("ZarafaBackend->GetUserDetails for '%s'.", $username));
-        $zarafauserinfo = @mapi_zarafa_getuser_by_name($this->defaultstore, $username);
+        $zarafauserinfo = @mapi_zarafa_getuser_by_name($this->store, $username);
         $userDetails['emailaddress'] = (isset($zarafauserinfo['emailaddress']) && $zarafauserinfo['emailaddress']) ? $zarafauserinfo['emailaddress'] : false;
         $userDetails['fullname'] = (isset($zarafauserinfo['fullname']) && $zarafauserinfo['fullname']) ? $zarafauserinfo['fullname'] : false;
         return $userDetails;
     }
 
+    /**
+     * Returns the username of the currently active user
+     *
+     * @access public
+     * @return String
+     */
+    public function GetCurrentUsername() {
+        return $this->storeName;
+    }
 
     /**----------------------------------------------------------------------------------------------------------
      * Private methods

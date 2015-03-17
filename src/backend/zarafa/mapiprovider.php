@@ -648,12 +648,16 @@ class MAPIProvider {
             // if a meeting request response hasn't been processed yet,
             // do it so that the attendee status is updated on the mobile
             if(!isset($messageprops[$emailproperties["processed"]])) {
-                $req = new Meetingrequest($this->store, $mapimessage, $this->session);
-                if ($req->isMeetingRequestResponse()) {
-                    $req->processMeetingRequestResponse();
-                }
-                if ($req->isMeetingCancellation()) {
-                    $req->processMeetingCancellation();
+                // check if we are not sending the MR so we can process it - ZP-581
+                $cuser = ZPush::GetBackend()->GetUserDetails(ZPush::GetBackend()->GetCurrentUsername());
+                if(isset($cuser["emailaddress"]) && $cuser["emailaddress"] != $fromaddr) {
+                    $req = new Meetingrequest($this->store, $mapimessage, $this->session);
+                    if ($req->isMeetingRequestResponse()) {
+                        $req->processMeetingRequestResponse();
+                    }
+                    if ($req->isMeetingCancellation()) {
+                        $req->processMeetingCancellation();
+                    }
                 }
             }
             $message->contentclass = DEFAULT_CALENDAR_CONTENTCLASS;

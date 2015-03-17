@@ -215,6 +215,16 @@ abstract class Backend implements IBackend {
         return array('emailaddress' => $username, 'fullname' => $username);
     }
 
+    /**
+     * Returns the username and store of the currently active user
+     *
+     * @access public
+     * @return Array
+     */
+    public function GetCurrentUsername() {
+        return $this->GetUserDetails(Request::GetAuthUser());
+    }
+
     /**----------------------------------------------------------------------------------------------------------
      * Protected methods for BackendStorage
      *
