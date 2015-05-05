@@ -109,11 +109,8 @@ class ZPush {
                     "BackendMaildir"
                 );
 
+    // Versions 1.0, 2.0, 2.1 and 2.5 are deprecated (ZP-604)
     static private $supportedASVersions = array(
-                    self::ASV_1,
-                    self::ASV_2,
-                    self::ASV_21,
-                    self::ASV_25,
                     self::ASV_12,
                     self::ASV_121,
                     self::ASV_14
