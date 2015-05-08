@@ -465,10 +465,18 @@ class ZPushAdminCLI {
     static public function CommandDeviceUsers() {
         $users = ZPushAdmin::ListUsers(self::$device);
 
-        if (empty($users))
+        if (empty($users)) {
             echo "\tno user data synchronized to device\n";
+        }
+        // if a user is specified, we only want to see the devices of this one
+        else if (self::$user !== false && !in_array(self::$user, $users)) {
+            printf("\tuser '%s' not known in device data '%s'\n", self::$user, self::$device);
+        }
 
         foreach ($users as $user) {
+            if (self::$user !== false && strtolower($user) !== self::$user) {
+                continue;
+            }
             echo "Synchronized by user: ". $user. "\n";
             self::printDeviceData(self::$device, $user);
         }
