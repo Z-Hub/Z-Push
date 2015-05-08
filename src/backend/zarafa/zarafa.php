@@ -164,7 +164,15 @@ class BackendZarafa implements IBackend, ISearchProvider {
         try {
             // check if notifications are available in php-mapi
             if(function_exists('mapi_feature') && mapi_feature('LOGONFLAGS')) {
-                $this->session = @mapi_logon_zarafa($user, $pass, MAPI_SERVER, null, null, 0);
+                // send Z-Push version and user agent to ZCP - ZP-589
+                if (Utils::CheckMapiExtVersion('7.2.0')) {
+                    $zpush_version = 'Z-Push_' . @constant('ZPUSH_VERSION');
+                    $user_agent = $_SERVER['HTTP_USER_AGENT'];
+                    $this->session = @mapi_logon_zarafa($user, $pass, MAPI_SERVER, null, null, 0, $zpush_version, $user_agent);
+                }
+                else {
+                    $this->session = @mapi_logon_zarafa($user, $pass, MAPI_SERVER, null, null, 0);
+                }
                 $this->notifications = true;
             }
             // old fashioned session
