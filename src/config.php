@@ -191,8 +191,8 @@
     // in the semantic sanity checks and contacts with larger photos are not synchronized.
     // This limitation is not being followed by the ActiveSync clients which set much bigger
     // contact photos. You can override the default value of the max photo size.
-    // default: 49152 - 48 KB default max photo size in bytes
-    define('SYNC_CONTACTS_MAXPICTURESIZE', 49152);
+    // default: 5242880 - 5 MB default max photo size in bytes
+    define('SYNC_CONTACTS_MAXPICTURESIZE', 5242880);
 
     // Over the WebserviceUsers command it is possible to retrieve a list of all
     // known devices and users on this Z-Push system. The authenticated user needs to have
