@@ -140,6 +140,12 @@ class ZPushAdminCLI {
     const COMMAND_RESYNCFOLDER = 9;
     const COMMAND_FIXSTATES = 10;
 
+    const TYPE_OPTION_EMAIL = "email";
+    const TYPE_OPTION_CALENDAR = "calendar";
+    const TYPE_OPTION_CONTACT = "contact";
+    const TYPE_OPTION_TASK = "task";
+    const TYPE_OPTION_NOTE = "note";
+
     static private $command;
     static private $user = false;
     static private $device = false;
@@ -153,6 +159,7 @@ class ZPushAdminCLI {
      * @access public
      */
     static public function UsageInstructions() {
+        $types = "'".self::TYPE_OPTION_EMAIL."', '".self::TYPE_OPTION_CALENDAR."', '".self::TYPE_OPTION_CONTACT."', '".self::TYPE_OPTION_TASK."' or '".self::TYPE_OPTION_NOTE."'";
         return  "Usage:\n\tz-push-admin.php -a ACTION [options]\n\n" .
                 "Parameters:\n\t-a list/wipe/remove/resync/clearloop\n\t[-u] username\n\t[-d] deviceid\n\n" .
                 "Actions:\n" .
@@ -167,10 +174,10 @@ class ZPushAdminCLI {
                 "\tremove -d DEVICE\t\t Removes all state data of all users synchronized on device DEVICE\n" .
                 "\tremove -u USER -d DEVICE\t Removes all related state data of device DEVICE of user USER\n" .
                 "\tresync -u USER -d DEVICE\t Resynchronizes all data of device DEVICE of user USER\n" .
-                "\tresync -t TYPE \t\t\t Resynchronizes all folders of type 'email', 'calendar', 'contact', 'task' or 'note' for all devices and users.\n" .
-                "\tresync -t TYPE -u USER \t\t Resynchronizes all folders of type 'email', 'calendar', 'contact', 'task' or 'note' for the user USER.\n" .
-                "\tresync -t TYPE -u USER -d DEVICE Resynchronizes all folders of type 'email', 'calendar', 'contact', 'task' or 'note' for a specified device and user.\n" .
-                "\tresync -t FOLDERID -u USER\t Resynchronize the specified folder id only. The USER should be specified.\n" .
+                "\tresync -t TYPE \t\t\t Resynchronizes all folders of type $types for all devices and users.\n" .
+                "\tresync -t TYPE -u USER \t\t Resynchronizes all folders of type $types for the user USER.\n" .
+                "\tresync -t TYPE -u USER -d DEVICE Resynchronizes all folders of type $types for a specified device and user.\n" .
+                "\tresync -t FOLDERID -u USER\t Resynchronize the specified folder id only. The USER should be specified for better performance.\n" .
                 "\tclearloop\t\t\t Clears system wide loop detection data\n" .
                 "\tclearloop -d DEVICE -u USER\t Clears all loop detection data of a device DEVICE and an optional user USER\n" .
                 "\tfixstates\t\t\t Checks the states for integrity and fixes potential issues\n" .
@@ -227,6 +234,21 @@ class ZPushAdminCLI {
             self::$type = strtolower(trim($options['t']));
         elseif (isset($options['type']) && !empty($options['type']))
             self::$type = strtolower(trim($options['type']));
+
+        // if type is set, it must be one of known types or a 48 byte long folder id
+        if (self::$type !== false) {
+            if (self::$type !== self::TYPE_OPTION_EMAIL &&
+                self::$type !== self::TYPE_OPTION_CALENDAR &&
+                self::$type !== self::TYPE_OPTION_CONTACT &&
+                self::$type !== self::TYPE_OPTION_TASK &&
+                self::$type !== self::TYPE_OPTION_NOTE &&
+                strlen(self::$type) !== 48) {
+                    self::$errormessage = "Wrong 'type'. Possible values are: ".
+                        "'".self::TYPE_OPTION_EMAIL."', '".self::TYPE_OPTION_CALENDAR."', '".self::TYPE_OPTION_CONTACT."', '".self::TYPE_OPTION_TASK."', '".self::TYPE_OPTION_NOTE."' ".
+                        "or a 48 byte long folder id.";
+                    return;
+                }
+        }
 
         // get a command for the requested action
         switch ($action) {
