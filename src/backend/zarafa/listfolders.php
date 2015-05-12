@@ -47,6 +47,8 @@
 
 define("PHP_MAPI_PATH", "/usr/share/php/mapi/");
 define('MAPI_SERVER', 'file:///var/run/zarafa');
+define('SSLCERT_FILE', null);
+define('SSLCERT_PASS', null);
 
 $supported_classes = array (
     "IPF.Note"          => "SYNC_FOLDER_TYPE_USER_MAIL",
@@ -83,32 +85,40 @@ function listfolders_configure() {
 }
 
 function listfolders_handle() {
-    $shortoptions = "l:h:u:p:";
+    $shortoptions = "l:h:u:p:c:";
     $options = getopt($shortoptions);
 
     $mapi = MAPI_SERVER;
+    $sslcert_file = SSLCERT_FILE;
+    $sslcert_pass = SSLCERT_PASS;
     $user = "SYSTEM";
     $pass = "";
 
     if (isset($options['h']))
         $mapi = $options['h'];
 
+    // accept a remote user
     if (isset($options['u']) && isset($options['p'])) {
         $user = $options['u'];
         $pass = $options['p'];
     }
+    // accept a certificate and passwort for login
+    else if (isset($options['c']) && isset($options['p'])) {
+        $sslcert_file = $options['c'];
+        $sslcert_pass = $options['p'];
+    }
 
-    $zarafaAdmin = listfolders_zarafa_admin_setup($mapi, $user, $pass);
+    $zarafaAdmin = listfolders_zarafa_admin_setup($mapi, $user, $pass, $sslcert_file, $sslcert_pass);
     if (isset($zarafaAdmin['adminStore']) && isset($options['l'])) {
         listfolders_getlist($zarafaAdmin['adminStore'], $zarafaAdmin['session'], trim($options['l']));
     }
     else {
-        echo "Usage:\nlistfolders.php [actions] [options]\n\nActions: [-l username]\n\t-l username\tlist folders of user, for public folder use 'SYSTEM'\n\nGlobal options: [-h path] [[-u remoteuser] [-p password]]\n\t-h path\t\tconnect through <path>, e.g. file:///var/run/socket\n\t-u authuser\tlogin as authenticated administration user\n\t-p authpassword\tpassword of the remoteuser\n\n";
+        echo "Usage:\nlistfolders.php [actions] [options]\n\nActions: [-l username]\n\t-l username\tlist folders of user, for public folder use 'SYSTEM'\n\nGlobal options: [-h path] [[-u remoteuser] [-p password]] [[-c certificate_path] [-p password]]\n\t-h path\t\tconnect through <path>, e.g. file:///var/run/socket or https://10.0.0.1:237/zarafa\n\t-u remoteuser\tlogin as authenticated administration user\n\t-c certificate\tlogin with a ssl certificate located in this location, e.g. /etc/zarafa/ssl/client.pem\n\t-p password\tpassword of the remoteuser or certificate\n\n";
     }
 }
 
-function listfolders_zarafa_admin_setup ($mapi, $user, $pass) {
-    $session = @mapi_logon_zarafa($user, $pass, $mapi);
+function listfolders_zarafa_admin_setup ($mapi, $user, $pass, $sslcert_file, $sslcert_pass) {
+    $session = @mapi_logon_zarafa($user, $pass, $mapi, $sslcert_file, $sslcert_pass);
 
     if (!$session) {
         echo "User '$user' could not login. The script will exit. Errorcode: 0x". sprintf("%x", mapi_last_hresult()) . "\n";
