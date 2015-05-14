@@ -279,8 +279,9 @@ class MAPIProvider {
                 }
             }
 
-            //set attendee's status and type if they're available
-            if (isset($row[PR_RECIPIENT_TRACKSTATUS]))
+            //set attendee's status and type if they're available and if we are the organizer
+            $storeprops = $this->getStoreProps();
+            if (isset($row[PR_RECIPIENT_TRACKSTATUS]) && $messageprops[$appointmentprops["representingentryid"]] == $storeprops[PR_MAILBOX_OWNER_ENTRYID])
                 $attendee->attendeestatus = $row[PR_RECIPIENT_TRACKSTATUS];
             if (isset($row[PR_RECIPIENT_TYPE]))
                 $attendee->attendeetype = $row[PR_RECIPIENT_TYPE];
