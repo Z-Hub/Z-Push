@@ -62,7 +62,7 @@ class SyncFolder extends SyncObject {
                                                                                     self::STREAMER_CHECKS   => array(   self::STREAMER_CHECK_REQUIRED   => self::STREAMER_CHECK_SETZERO)),
 
                     SYNC_FOLDERHIERARCHY_DISPLAYNAME                    => array (  self::STREAMER_VAR      => "displayname",
-                                                                                    self::STREAMER_CHECKS   => array(   self::STREAMER_CHECK_REQUIRED   => self::STREAMER_CHECK_SETEMPTY)),
+                                                                                    self::STREAMER_CHECKS   => array(   self::STREAMER_CHECK_REQUIRED   => "Unknown")),
 
                     SYNC_FOLDERHIERARCHY_TYPE                           => array (  self::STREAMER_VAR      => "type",
                                                                                     self::STREAMER_CHECKS   => array(   self::STREAMER_CHECK_REQUIRED   => 18,
