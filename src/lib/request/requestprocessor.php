@@ -129,8 +129,11 @@ abstract class RequestProcessor {
 
         // if there is an error decoding wbxml, consume remaining data and include it in the WBXMLException
         if (!$handler->Handle(Request::GetCommandCode())) {
-            self::$decoder->readRemainingData();
-            $wbxmlLog = self::$decoder->getWBXMLLog();
+            $wbxmlLog = "no decoder";
+            if (self::$decoder) {
+                self::$decoder->readRemainingData();
+                $wbxmlLog = self::$decoder->getWBXMLLog();
+            }
             throw new WBXMLException("Debug data: " . $wbxmlLog);
         }
 
