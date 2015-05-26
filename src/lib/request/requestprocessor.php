@@ -127,8 +127,17 @@ abstract class RequestProcessor {
     static public function HandleRequest() {
         $handler = ZPush::GetRequestHandlerForCommand(Request::GetCommandCode());
 
-        // TODO handle WBXML exceptions here and print stack
-        return $handler->Handle(Request::GetCommandCode());
+        // if there is an error decoding wbxml, consume remaining data and include it in the WBXMLException
+        if (!$handler->Handle(Request::GetCommandCode())) {
+            self::$decoder->readRemainingData();
+            $wbxmlLog = self::$decoder->getWBXMLLog();
+            throw new WBXMLException("Debug data: " . $wbxmlLog);
+        }
+
+        // also log WBXML in happy case
+        if (self::$decoder && @constant('WBXML_DEBUG') === true) {
+            ZLog::Write(LOGLEVEL_WBXML, "WBXML-IN : ". self::$decoder->getWBXMLLog(), false);
+        }
     }
 
     /**

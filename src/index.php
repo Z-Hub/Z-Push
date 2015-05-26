@@ -52,6 +52,7 @@ include_once('lib/exceptions/exceptions.php');
 include_once('lib/utils/utils.php');
 include_once('lib/utils/compat.php');
 include_once('lib/utils/timezoneutil.php');
+include_once('lib/utils/stringstreamwrapper.php');
 include_once('lib/core/zpushdefs.php');
 include_once('lib/core/stateobject.php');
 include_once('lib/core/interprocessdata.php');
@@ -186,8 +187,7 @@ include_once('version.php');
         }
 
         RequestProcessor::Initialize();
-        if(!RequestProcessor::HandleRequest())
-            throw new WBXMLException(ZLog::GetWBXMLDebugInfo());
+        RequestProcessor::HandleRequest();
 
         // eventually the RequestProcessor wants to send other headers to the mobile
         foreach (RequestProcessor::GetSpecialHeaders() as $header)
@@ -265,7 +265,7 @@ include_once('version.php');
 
         // This could be a WBXML problem.. try to get the complete request
         else if ($ex instanceof WBXMLException) {
-            ZLog::Write(LOGLEVEL_FATAL, "Request could not be processed correctly due to a WBXMLException. Please report this.");
+            ZLog::Write(LOGLEVEL_FATAL, "Request could not be processed correctly due to a WBXMLException. Please report this including WBXML debug data logged. Be aware that the debug data could contain confidential information.");
         }
 
         // Try to output some kind of error information. This is only possible if

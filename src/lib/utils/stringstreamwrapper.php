@@ -7,7 +7,7 @@
 *
 * Created   :   24.11.2011
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2013, 2015 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -90,6 +90,39 @@ class StringStreamWrapper {
         $data = substr($this->stringstream, $this->position, $len);
         $this->position += strlen($data);
         return $data;
+    }
+
+    /**
+     * Writes data to the stream.
+     *
+     * @param string $data
+     * @return int
+     */
+    public function stream_write($data){
+        $l = strlen($data);
+        $this->stringstream = substr($this->stringstream, 0, $this->position) . $data . substr($this->stringstream, $this->position += $l);
+        $this->stringlength = strlen($this->stringstream);
+        return $l;
+    }
+
+    /**
+     * Stream "seek" functionality.
+     *
+     * @param int $offset
+     * @param int $whence
+     * @return boolean
+     */
+    public function stream_seek($offset, $whence = SEEK_SET) {
+        if ($whence == SEEK_CUR) {
+            $this->position += $offset;
+        }
+        else if ($whence == SEEK_END) {
+            $this->position = $this->stringlength + $offset;
+        }
+        else {
+            $this->position = $offset;
+        }
+        return true;
     }
 
     /**

@@ -593,7 +593,6 @@ class BackendIMAP extends BackendDiff {
         unset($mobj);
         unset($mail);
 
-        include_once('include/stringstreamwrapper.php');
         $attachment = new SyncItemOperationsAttachment();
         /* BEGIN fmbiete's contribution r1528, ZP-320 */
         $attachment->data = StringStreamWrapper::Open($mparts[$part]->body);

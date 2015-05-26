@@ -140,7 +140,6 @@ class BackendMaildir extends BackendDiff {
 
         $message = Mail_mimeDecode::decode(array('decode_headers' => true, 'decode_bodies' => true, 'include_bodies' => true, 'input' => $rfc822, 'crlf' => "\n", 'charset' => 'utf-8'));
 
-        include_once('include/stringstreamwrapper.php');
         $attachment = new SyncItemOperationsAttachment();
         $attachment->data = StringStreamWrapper::Open($message->parts[$part]->body);
         if (isset($message->parts[$part]->ctype_primary) && isset($message->parts[$part]->ctype_secondary))
