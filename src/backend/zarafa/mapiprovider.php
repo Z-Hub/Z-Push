@@ -1545,9 +1545,10 @@ class MAPIProvider {
             // "start" and "end" are in GMT when passing to class.recurrence
             // set recurrence start here because it's calculated differently for tasks and appointments
             $recur["start"] = $task->recurrence->start;
-            $recur["regen"] = $task->regenerate;
+            $recur["regen"] = (isset($task->recurrence->regenerate) && $task->recurrence->regenerate) ? 1 : 0;
             //Also add dates to $recur
             $recur["duedate"] = $task->duedate;
+            $recur["complete"] = (isset($task->complete) && $task->complete) ? 1 : 0;
             $recurrence->setRecurrence($recur);
         }
 

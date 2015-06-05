@@ -378,6 +378,7 @@ class MAPIMapping {
             "startdate"             => "PT_SYSTIME:PSETID_Task:0x8104",
             "subject"               => PR_SUBJECT,
             "rtf"                   => PR_RTF_COMPRESSED,
+            "html"                  => PR_HTML,
             );
     }
 

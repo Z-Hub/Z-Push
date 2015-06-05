@@ -57,6 +57,7 @@ class SyncTaskRecurrence extends SyncObject {
     public $dayofmonth;
     public $weekofmonth;
     public $monthofyear;
+    public $regenerate;
     public $deadoccur;
 
     function SyncTaskRecurrence() {
@@ -88,6 +89,7 @@ class SyncTaskRecurrence extends SyncObject {
 
                     //TODO: check iOS5 sends deadoccur inside of the recurrence
                     SYNC_POOMTASKS_DEADOCCUR                            => array (  self::STREAMER_VAR      => "deadoccur"),
+                    SYNC_POOMTASKS_REGENERATE                           => array (  self::STREAMER_VAR      => "regenerate"),
 
                     // DayOfWeek values
                     //   1 = Sunday
