@@ -258,6 +258,10 @@ class FolderSync extends RequestProcessor {
                 // everything fine, save the sync state for the next time
                 if ($synckey == $newsynckey)
                     self::$deviceManager->GetStateManager()->SetSyncState($newsynckey, $newsyncstate);
+
+                // Announce that everything is fine and that changes were exported
+                if ($changeCount > 0)
+                    self::$deviceManager->AnnounceProcessStatus(false, 0);
             }
         }
         self::$encoder->endTag();

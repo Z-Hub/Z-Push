@@ -217,7 +217,7 @@ class LoopDetection extends InterProcessData {
         $lookback = self::$start - 600; // look at the last 5 min
         foreach ($this->getProcessStack() as $se) {
             if ($se['time'] > $lookback && $se['time'] < (self::$start-1)) {
-                // look for sync command
+                // look for status codes of sync or ping commands
                 if (isset($se['stat']) && ($se['cc'] == ZPush::COMMAND_SYNC || $se['cc'] == ZPush::COMMAND_PING)) {
                     foreach($se['stat'] as $key => $value) {
                         if (!isset($seenFailed[$key]))
@@ -229,9 +229,14 @@ class LoopDetection extends InterProcessData {
                 // look for FolderSync command with previous failed commands
                 if ($se['cc'] == ZPush::COMMAND_FOLDERSYNC && !empty($seenFailed) && $se['id'] != self::GetProcessIdentifier()) {
                     // a full folderresync was already triggered
-                    if (isset($se['stat']) && isset($se['stat']['hierarchy']) && $se['stat']['hierarchy'] == SYNC_FSSTATUS_SYNCKEYERROR) {
-                        ZLog::Write(LOGLEVEL_DEBUG, "LoopDetection->ProcessLoopDetectionIsHierarchyResyncRequired(): a full FolderReSync was already requested. Resetting fail counter.");
-                        $seenFailed = array();
+                    if (isset($se['stat']) && isset($se['stat']['hierarchy']) && ($se['stat']['hierarchy'] == SYNC_FSSTATUS_SYNCKEYERROR || $se['stat']['hierarchy'] == 0)) { // 0 means changes have been exported, see FolderSync happy case
+                        if ($se['stat']['hierarchy'] == SYNC_FSSTATUS_SYNCKEYERROR) {
+                            ZLog::Write(LOGLEVEL_DEBUG, "LoopDetection->ProcessLoopDetectionIsHierarchyResyncRequired(): a full FolderReSync was already requested. Resetting fail counter.");
+                        }
+                        else {
+                            ZLog::Write(LOGLEVEL_DEBUG, "LoopDetection->ProcessLoopDetectionIsHierarchyResyncRequired(): FolderSync did export changes, resetting fail counter.");
+                        }
+                        $seenFailed['hierarchy'] = 0;
                     }
                     else {
                         $seenFolderSync = true;
