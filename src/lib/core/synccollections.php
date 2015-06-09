@@ -54,6 +54,7 @@ class SyncCollections implements Iterator {
     const ERROR_NO_COLLECTIONS = 1;
     const ERROR_WRONG_HIERARCHY = 2;
     const OBSOLETE_CONNECTION = 3;
+    const HIERARCHY_CHANGED = 4;
 
     private $stateManager;
 
@@ -473,7 +474,7 @@ class SyncCollections implements Iterator {
 
             // Check if a hierarchy sync is necessary
             if (ZPush::GetDeviceManager()->IsHierarchySyncRequired())
-                throw new StatusException("SyncCollections->CheckForChanges(): HierarchySync required.", self::ERROR_WRONG_HIERARCHY);
+                throw new StatusException("SyncCollections->CheckForChanges(): HierarchySync required.", self::HIERARCHY_CHANGED);
 
             // Check if there are newer requests
             // If so, this process should be terminated if more than 60 secs to go

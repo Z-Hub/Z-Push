@@ -174,6 +174,9 @@ class Ping extends RequestProcessor {
                 case SyncCollections::OBSOLETE_CONNECTION:
                     $foundchanges = false;
                     break;
+                case SyncCollections::HIERARCHY_CHANGED:
+                    $pingstatus = SYNC_PINGSTATUS_FOLDERHIERSYNCREQUIRED;
+                    break;
             }
         }
 
