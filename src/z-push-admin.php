@@ -235,17 +235,17 @@ class ZPushAdminCLI {
         elseif (isset($options['type']) && !empty($options['type']))
             self::$type = strtolower(trim($options['type']));
 
-        // if type is set, it must be one of known types or a 48 byte long folder id
+        // if type is set, it must be one of known types or a 44 byte long folder id
         if (self::$type !== false) {
             if (self::$type !== self::TYPE_OPTION_EMAIL &&
                 self::$type !== self::TYPE_OPTION_CALENDAR &&
                 self::$type !== self::TYPE_OPTION_CONTACT &&
                 self::$type !== self::TYPE_OPTION_TASK &&
                 self::$type !== self::TYPE_OPTION_NOTE &&
-                strlen(self::$type) !== 48) {
+                strlen(self::$type) !== 44) {
                     self::$errormessage = "Wrong 'type'. Possible values are: ".
                         "'".self::TYPE_OPTION_EMAIL."', '".self::TYPE_OPTION_CALENDAR."', '".self::TYPE_OPTION_CONTACT."', '".self::TYPE_OPTION_TASK."', '".self::TYPE_OPTION_NOTE."' ".
-                        "or a 48 byte long folder id.";
+                        "or a 44 byte long folder id (as hex).";
                     return;
                 }
         }
