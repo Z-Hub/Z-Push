@@ -474,10 +474,6 @@ class ImportChangesICS implements IImportChanges {
         if (strtolower($newfolder) == strtolower(bin2hex($this->folderid)) )
             throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Error, source and destination are equal", $id, $newfolder), SYNC_MOVEITEMSSTATUS_SAMESOURCEANDDEST);
 
-        // check if the source message is in the current syncinterval
-        if (!$this->isMessageInSyncInterval($id))
-            throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Source message is outside the sync interval. Move not performed.", $id, $newfolder), SYNC_MOVEITEMSSTATUS_INVALIDSOURCEID);
-
         // Get the entryid of the message we're moving
         $entryid = mapi_msgstore_entryidfromsourcekey($this->store, $this->folderid, hex2bin($id));
         if(!$entryid)
@@ -485,8 +481,18 @@ class ImportChangesICS implements IImportChanges {
 
         //open the source message
         $srcmessage = mapi_msgstore_openentry($this->store, $entryid);
-        if (!$srcmessage)
-            throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Error, unable to open source message: 0x%X", $id, $newfolder, mapi_last_hresult()), SYNC_MOVEITEMSSTATUS_INVALIDSOURCEID);
+        if (!$srcmessage) {
+            $code = SYNC_MOVEITEMSSTATUS_INVALIDSOURCEID;
+            // if we move to the trash and the source message is not found, we can also just tell the mobile that we successfully moved to avoid errors (ZP-624)
+            if ($newfolder == ZPush::GetBackend()->GetWasteBasket()) {
+                $code = SYNC_MOVEITEMSSTATUS_SUCCESS;
+            }
+            throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Error, unable to open source message: 0x%X", $id, $newfolder, mapi_last_hresult()), $code);
+        }
+
+        // check if the source message is in the current syncinterval
+        if (!$this->isMessageInSyncInterval($id))
+            throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Source message is outside the sync interval. Move not performed.", $id, $newfolder), SYNC_MOVEITEMSSTATUS_INVALIDSOURCEID);
 
         // get correct mapi store for the destination folder
         $dststore = ZPush::GetBackend()->GetMAPIStoreForFolderId(ZPush::GetAdditionalSyncFolderStore($newfolder), $newfolder);
