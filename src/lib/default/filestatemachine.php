@@ -383,6 +383,7 @@ class FileStateMachine implements IStateMachine {
      * @return array(mixed)
      */
     public function GetAllStatesForDevice($devid) {
+        $types = array(IStateMachine::DEVICEDATA, IStateMachine::FOLDERDATA, IStateMachine::FAILSAVE, IStateMachine::HIERARCHY, IStateMachine::BACKENDSTORAGE);
         $out = array();
         $devdir = $this->getDirectoryForDevice($devid) . "/$devid-";
 
@@ -392,8 +393,9 @@ class FileStateMachine implements IStateMachine {
 
             $state = array('type' => false, 'counter' => false, 'uuid' => false);
 
-            if (isset($parts[0]) && $parts[0] == IStateMachine::DEVICEDATA)
-                $state['type'] = IStateMachine::DEVICEDATA;
+            // part 0 could be "devicedata" or another type in broken states
+            if (isset($parts[0]) && in_array($parts[0], $types))
+                $state['type'] = $parts[0];
 
             if (isset($parts[0]) && strlen($parts[0]) == 8 &&
                 isset($parts[1]) && strlen($parts[1]) == 4 &&
@@ -411,7 +413,7 @@ class FileStateMachine implements IStateMachine {
                 if (is_int($parts[5]))
                     $state['counter'] = $parts[5];
 
-                else if (in_array($parts[5], array(IStateMachine::FOLDERDATA, IStateMachine::FAILSAVE, IStateMachine::HIERARCHY, IStateMachine::BACKENDSTORAGE)))
+                else if (in_array($parts[5], $types))
                     $state['type'] = $parts[5];
             }
             if (isset($parts[6]) && is_numeric($parts[6]))
