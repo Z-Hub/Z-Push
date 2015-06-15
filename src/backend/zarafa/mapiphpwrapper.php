@@ -117,6 +117,7 @@ class PHPWrapper {
 
         $mapimessage = mapi_msgstore_openentry($this->store, $entryid);
         try {
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("PHPWrapper->ImportMessageChange(): Getting message sourcekey '%s' from MAPIProvider", bin2hex($sourcekey)));
             $message = $this->mapiprovider->GetMessage($mapimessage, $this->contentparameters);
         }
         catch (SyncObjectBrokenException $mbe) {
