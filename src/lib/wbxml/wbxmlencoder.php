@@ -516,13 +516,20 @@ class WBXMLEncoder extends WBXMLDefs {
     }
 
     /**
-     * Writes the sent WBXML data to the log
+     * Writes the sent WBXML data to the log if it is not bigger than 512K.
      *
      * @access private
      * @return void
      */
     private function writeLog() {
-        ZLog::Write(LOGLEVEL_WBXML, "WBXML-OUT: ". base64_encode(stream_get_contents($this->_outLog, -1,0)), false);
+        $stat = fstat($this->_outLog);
+        if ($stat['size'] < 524288) {
+            $data = base64_encode(stream_get_contents($this->_outLog, -1,0));
+        }
+        else {
+            $data = "more than 512K of data";
+        }
+        ZLog::Write(LOGLEVEL_WBXML, "WBXML-OUT: ". $data, false);
     }
 }
 
