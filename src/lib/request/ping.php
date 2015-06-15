@@ -60,13 +60,23 @@ class Ping extends RequestProcessor {
         // Contains all requested folders (containers)
         $sc = new SyncCollections();
 
+        // read from stream to see if the symc params are being sent
+        $params_present = self::$decoder->getElementStartTag(SYNC_PING_PING);
+
         // Load all collections - do load states and check permissions
         try {
             $sc->LoadAllCollections(true, true, true);
         }
         catch (StateNotFoundException $snfex) {
-            $pingstatus = SYNC_PINGSTATUS_FOLDERHIERSYNCREQUIRED;
-            self::$topCollector->AnnounceInformation("StateNotFoundException: require HierarchySync", true);
+            // if no params are present, indicate to send params, else do hierarchy sync
+            if (!$params_present) {
+                $pingstatus = SYNC_PINGSTATUS_FAILINGPARAMS;
+                self::$topCollector->AnnounceInformation("StateNotFoundException: require PingParameters", true);
+            }
+            else {
+                $pingstatus = SYNC_PINGSTATUS_FOLDERHIERSYNCREQUIRED;
+                self::$topCollector->AnnounceInformation("StateNotFoundException: require HierarchySync", true);
+            }
         }
         catch (StateInvalidException $snfex) {
             // we do not have a ping status for this, but SyncCollections should have generated fake changes for the folders which are broken
@@ -83,7 +93,7 @@ class Ping extends RequestProcessor {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandlePing(): reference PolicyKey for PING: %s", $sc->GetReferencePolicyKey()));
 
         // receive PING initialization data
-        if(self::$decoder->getElementStartTag(SYNC_PING_PING)) {
+        if($params_present) {
             self::$topCollector->AnnounceInformation("Processing PING data");
             ZLog::Write(LOGLEVEL_DEBUG, "HandlePing(): initialization data received");
 

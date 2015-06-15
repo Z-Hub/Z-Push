@@ -157,6 +157,9 @@ class PHPWrapper {
      * @return
      */
     public function ImportMessageDeletion($flags, $sourcekeys) {
+        if (count($sourcekeys) > 1000) {
+            throw new StatusException("ImportChangesICS->ImportMessageDeletion(): Detected more than 1000 remove requests from ICS. Triggering folder re-sync.", SYNC_STATUS_INVALIDSYNCKEY, null, LOGLEVEL_ERROR);
+        }
         foreach($sourcekeys as $sourcekey) {
             $this->importer->ImportMessageDeletion(bin2hex($sourcekey));
         }
