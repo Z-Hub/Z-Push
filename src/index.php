@@ -213,7 +213,7 @@ include_once('version.php');
 
         // send vnd.ms-sync.wbxml content type header if there is no content
         // otherwise text/html content type is added which might break some devices
-        if ($len == 0)
+        if (!headers_sent() && $len == 0)
             header("Content-Type: application/vnd.ms-sync.wbxml");
 
         print $data;
