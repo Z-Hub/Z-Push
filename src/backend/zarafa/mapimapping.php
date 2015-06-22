@@ -519,6 +519,8 @@ class MAPIMapping {
                 "attachnum"             => PR_ATTACH_NUM,
                 "attachdatabin"         => PR_ATTACH_DATA_BIN,
                 "internetcpid"          => PR_INTERNET_CPID,
+                "rtf"                   => PR_RTF_COMPRESSED,
+                "rtfinsync"             => PR_RTF_IN_SYNC,
         );
     }
 }
