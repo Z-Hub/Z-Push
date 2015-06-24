@@ -122,7 +122,6 @@ class ZPushAutodiscover {
             }
             header('HTTP/1.1 401 Unauthorized');
             header('WWW-Authenticate: Basic realm="ZPush"');
-            http_response_code(401);
         }
         catch (ZPushException $ex) {
             ZLog::Write(LOGLEVEL_ERROR, sprintf("Unable to complete autodiscover because of ZPushException. Error: %s", $ex->getMessage()));
