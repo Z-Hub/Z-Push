@@ -162,10 +162,10 @@ class PHPWrapper {
     public function ImportMessageDeletion($flags, $sourcekeys) {
         $amount = count($sourcekeys);
         if ($amount > 1000) {
-            throw new StatusException(sprintf("ImportChangesICS->ImportMessageDeletion(): Received %d remove requests from ICS for folder '%s' (max. 1000 allowed). Triggering folder re-sync.", $amount, bin2hex($this->folderid)), SYNC_STATUS_INVALIDSYNCKEY, null, LOGLEVEL_ERROR);
+            throw new StatusException(sprintf("PHPWrapper->ImportMessageDeletion(): Received %d remove requests from ICS for folder '%s' (max. 1000 allowed). Triggering folder re-sync.", $amount, bin2hex($this->folderid)), SYNC_STATUS_INVALIDSYNCKEY, null, LOGLEVEL_ERROR);
         }
         else {
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ImportChangesICS->ImportMessageDeletion(): Received %d remove requests from ICS", $amount));
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("PHPWrapper->ImportMessageDeletion(): Received %d remove requests from ICS", $amount));
         }
         foreach($sourcekeys as $sourcekey) {
             $this->importer->ImportMessageDeletion(bin2hex($sourcekey));
