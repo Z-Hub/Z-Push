@@ -792,6 +792,14 @@ class MAPIProvider {
             $message->lastverbexecuted = Utils::GetLastVerbExecuted($message->lastverbexecuted);
         }
 
+        // OL 2013 doesn't show sender and subject for signed emails because the headers are missing
+        if(isset($message->messageclass) && strpos($message->messageclass, "IPM.Note.SMIME.MultipartSigned") === 0 ) {
+            ZLog::Write(LOGLEVEL_DEBUG, "Attach the transport message headers to a signed message");
+            $transportHeaders = array(PR_TRANSPORT_MESSAGE_HEADERS_W);
+            $messageHeaders = $this->getProps($mapimessage, $transportHeaders);
+            $message->asbody->data = $messageHeaders[PR_TRANSPORT_MESSAGE_HEADERS] ."\r\n\r\n" . $message->asbody->data;
+        }
+
         return $message;
     }
 
