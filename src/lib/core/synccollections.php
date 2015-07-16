@@ -506,15 +506,19 @@ class SyncCollections implements Iterator {
 
                 $validNotifications = false;
                 foreach ($notifications as $folderid) {
-                    // check if the notification on the folder is within our filter
-                    if ($this->CountChange($folderid)) {
-                        ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->CheckForChanges(): Notification received on folder '%s'", $folderid));
-                        $validNotifications = true;
-                        $this->waitingTime = time()-$started;
-                    }
-                    else {
-                        ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->CheckForChanges(): Notification received on folder '%s', but it is not relevant", $folderid));
-                    }
+                    // ZP-631 - temporary disable checking validity of notifications
+                    // notify mobile for all received notifications
+                    $this->changes[$folderid] = 1;
+                    $validNotifications = true;
+//                     // check if the notification on the folder is within our filter
+//                     if ($this->CountChange($folderid)) {
+//                         ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->CheckForChanges(): Notification received on folder '%s'", $folderid));
+//                         $validNotifications = true;
+//                         $this->waitingTime = time()-$started;
+//                     }
+//                     else {
+//                         ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->CheckForChanges(): Notification received on folder '%s', but it is not relevant", $folderid));
+//                     }
                 }
                 if ($validNotifications)
                     return true;
