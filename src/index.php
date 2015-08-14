@@ -120,7 +120,8 @@ include_once('lib/default/searchprovider.php');
 include_once('lib/request/request.php');
 include_once('lib/request/requestprocessor.php');
 
-include_once('config.php');
+if (!defined('ZPUSH_CONFIG')) define('ZPUSH_CONFIG', 'config.php');
+include_once(ZPUSH_CONFIG);
 include_once('version.php');
 
 
