@@ -6,7 +6,7 @@
 *
 * Created   :   18.04.2008
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2013, 2015 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -42,12 +42,13 @@
 ************************************************/
 
 if (!defined("ZPUSH_VERSION")) {
-    if (file_exists(".svn/entries")) {
-        $svn = file(".svn/entries");
-        define("ZPUSH_VERSION", "SVN " . substr(trim($svn[4]),stripos($svn[4],"z-push")+7) ." r".trim($svn[3]));
+	$commit = exec("type git && git log --date=short --pretty=format:'%h/%ad' -1");
+	if(preg_match("/^[\da-f]+\/\d{4}-\d{2}-\d{2}$/i", $commit)) {
+        define("ZPUSH_VERSION", "GIT " . $commit);
     }
-    else
-        define("ZPUSH_VERSION", "SVN checkout");
+    else {
+        define("ZPUSH_VERSION", "GIT");
+    }
 }
 
 ?>
