@@ -106,6 +106,16 @@
     define('LOGUSERLEVEL', LOGLEVEL_DEVICEID);
     $specialLogUsers = array();
 
+    // If you want to disable log to file, and log to syslog instead
+    define('LOG_SYSLOG_ENABLED', false);
+    // false will log to local syslog, otherwise put the remote syslog IP here
+    define('LOG_SYSLOG_HOST', false);
+    // Syslog port
+    define('LOG_SYSLOG_PORT', 514);
+    // Program showed in the syslog. Useful if you have more than one instance login to the same syslog
+    define('LOG_SYSLOG_PROGRAM', '[z-push]');
+
+
     // Location of the trusted CA, e.g. '/etc/ssl/certs/EmailCA.pem'
     // Uncomment and modify the following line if the validation of the certificates fails.
     // define('CAINFO', '/etc/ssl/certs/EmailCA.pem');
