@@ -258,7 +258,7 @@ class ZPushAutodiscover {
         if (isset($userDetails[$attrib]) && $userDetails[$attrib]) {
             return $userDetails[$attrib];
         }
-        ZLog::Write(LOGLEVEL_WARN, sprintf("The backend was not able to find attribute '%s' of the user. Fall back to the default value."));
+        ZLog::Write(LOGLEVEL_WARN, sprintf("The backend was not able to find attribute '%s' of the user. Fall back to the default value.", $attrib));
         return false;
     }
 }
