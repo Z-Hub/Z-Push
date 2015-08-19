@@ -138,7 +138,7 @@ class BackendSearchLDAP implements ISearchProvider {
             $querycnt = $searchresult['count'];
             //do not return more results as requested in range
             $querylimit = (($rangeend + 1) < $querycnt) ? ($rangeend + 1) : $querycnt;
-            $items['range'] = $rangestart.'-'.($querycnt-1);
+            $items['range'] = $rangestart.'-'.($querylimit-1);
             $items['searchtotal'] = $querycnt;
 
             $rc = 0;
