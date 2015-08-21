@@ -62,6 +62,7 @@ class BackendCombined extends Backend {
     public $backends;
     private $activeBackend;
     private $activeBackendID;
+    private $logon_done = false;
 
     /**
      * Constructor of the combined backend
@@ -116,6 +117,8 @@ class BackendCombined extends Backend {
                 return false;
             }
         }
+
+        $this->logon_done = true;
         ZLog::Write(LOGLEVEL_DEBUG, "Combined->Logon() success");
         return true;
     }
@@ -165,6 +168,10 @@ class BackendCombined extends Backend {
      * @return boolean
      */
     public function Logoff() {
+        // If no Logon in done, omit Logoff
+        if (!$this->logon_done)
+            return true;
+
         ZLog::Write(LOGLEVEL_DEBUG, "Combined->Logoff()");
         foreach ($this->backends as $i => $b){
             $this->backends[$i]->Logoff();
