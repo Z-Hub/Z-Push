@@ -63,7 +63,7 @@ include_once('lib/core/asdevice.php');
 include_once('lib/core/statemanager.php');
 include_once('lib/core/devicemanager.php');
 include_once('lib/core/zpush.php');
-include_once('lib/core/zsyslog.php');
+include_once('include/z_syslog.php');
 include_once('lib/core/zlog.php');
 include_once('lib/core/paddingfilter.php');
 include_once('lib/interface/ibackend.php');

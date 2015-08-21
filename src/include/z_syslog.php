@@ -1,6 +1,13 @@
 <?php
-// local, remote and papertrail compatible syslogclass
-// https://gist.github.com/coderofsalvation/11325307
+/**
+ * A class for sending log messages to syslog
+ *
+ * Based on https://gist.github.com/coderofsalvation/11325307 by Coder of Salvation / Leon van Kammen
+ *
+ * Author - Leon van Kammen
+ * Modifications - Francisco Miguel Biete
+ * License ??
+**/
 
 
 class ZSyslog {
