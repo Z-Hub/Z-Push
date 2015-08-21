@@ -57,7 +57,7 @@ require_once("backend/combined/config.php");
 require_once("backend/combined/importer.php");
 require_once("backend/combined/exporter.php");
 
-class BackendCombined extends Backend {
+class BackendCombined extends Backend implements ISearchProvider {
     public $config;
     public $backends;
     private $activeBackend;
@@ -449,6 +449,18 @@ class BackendCombined extends Backend {
     }
 
     /**
+     * Returns the BackendCombined as it implements the ISearchProvider interface
+     * This could be overwritten by the global configuration
+     *
+     * @access public
+     * @return object       Implementation of ISearchProvider
+     */
+    public function GetSearchProvider() {
+        return $this;
+    }
+
+
+    /**
      * Indicates which AS version is supported by the backend.
      * Return the lowest version supported by the backends used.
      *
@@ -465,5 +477,129 @@ class BackendCombined extends Backend {
         }
         return $version;
     }
+
+
+    /*-----------------------------------------------------------------------------------------
+    -- ISearchProvider
+    ------------------------------------------------------------------------------------------*/
+    /**
+     * Indicates if a search type is supported by this SearchProvider
+     * It supports all the search types, searches are delegated.
+     *
+     * @param string        $searchtype
+     *
+     * @access public
+     * @return boolean
+     */
+    public function SupportsType($searchtype) {
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("Combined->SupportsType('%s')", $searchtype));
+        $i = $this->getSearchBackend($searchtype);
+
+        return $i !== false;
+    }
+
+
+    /**
+     * Queries the LDAP backend
+     *
+     * @param string        $searchquery        string to be searched for
+     * @param string        $searchrange        specified searchrange
+     *
+     * @access public
+     * @return array        search results
+     */
+    public function GetGALSearchResults($searchquery, $searchrange) {
+        ZLog::Write(LOGLEVEL_DEBUG, "Combined->GetGALSearchResults()");
+        $i = $this->getSearchBackend(ISearchProvider::SEARCH_GAL);
+
+        $result = false;
+        if ($i !== false) {
+            $result = $this->backends[$i]->GetGALSearchResults($searchquery, $searchrange);
+        }
+
+        return $result;
+    }
+
+
+    /**
+     * Searches for the emails on the server
+     *
+     * @param ContentParameter $cpo
+     *
+     * @return array
+     */
+    public function GetMailboxSearchResults($cpo) {
+        ZLog::Write(LOGLEVEL_DEBUG, "Combined->GetMailboxSearchResults()");
+        $i = $this->getSearchBackend(ISearchProvider::SEARCH_MAILBOX);
+
+        $result = false;
+        if ($i !== false) {
+            //Convert $cpo GetSearchFolderid
+            $cpo->SetSearchFolderid($this->GetBackendFolder($cpo->GetSearchFolderid()));
+            $result = $this->backends[$i]->GetMailboxSearchResults($cpo, $i . $this->config['delimiter']);
+        }
+
+        return $result;
+    }
+
+
+    /**
+    * Terminates a search for a given PID
+    *
+    * @param int $pid
+    *
+    * @return boolean
+    */
+    public function TerminateSearch($pid) {
+        ZLog::Write(LOGLEVEL_DEBUG, "Combined->TerminateSearch()");
+        foreach ($this->backends as $i => $b) {
+            if ($this->backends[$i] instanceof ISearchProvider) {
+                $this->backends[$i]->TerminateSearch($pid);
+            }
+        }
+
+        return true;
+    }
+
+
+    /**
+     * Disconnects backends
+     *
+     * @access public
+     * @return boolean
+     */
+    public function Disconnect() {
+        ZLog::Write(LOGLEVEL_DEBUG, "Combined->Disconnect()");
+        foreach ($this->backends as $i => $b) {
+            if ($this->backends[$i] instanceof ISearchProvider) {
+                $this->backends[$i]->Disconnect();
+            }
+        }
+
+        return true;
+    }
+
+
+    /**
+     * Returns the first backend that support a search type
+     *
+     * @param string    $searchtype
+     *
+     * @access private
+     * @return string
+     */
+    private function getSearchBackend($searchtype) {
+        foreach ($this->backends as $i => $b) {
+            if ($this->backends[$i] instanceof ISearchProvider) {
+                if ($this->backends[$i]->SupportsType($searchtype)) {
+                    return $i;
+                }
+            }
+        }
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("Combined->getSearchBackend('%s') No support found!", $searchtype));
+
+        return false;
+    }
+
 }
 ?>
