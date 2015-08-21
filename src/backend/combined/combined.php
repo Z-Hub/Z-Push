@@ -369,6 +369,27 @@ class BackendCombined extends Backend {
         return $backend->MeetingResponse($requestid, $this->GetBackendFolder($folderid), $error);
     }
 
+
+    /**
+     * Deletes all contents of the specified folder.
+     * This is generally used to empty the trash (wastebasked), but could also be used on any
+     * other folder.
+     *
+     * @param string        $folderid
+     * @param boolean       $includeSubfolders      (opt) also delete sub folders, default true
+     *
+     * @access public
+     * @return boolean
+     * @throws StatusException
+     */
+    public function EmptyFolder($folderid, $includeSubfolders = true) {
+        $backend = $this->GetBackend($folderid);
+        if($backend === false)
+            return false;
+        return $backend->EmptyFolder($this->GetBackendFolder($folderid), $includeSubfolders);
+    }
+
+
     /**
      * Finds the correct backend for a folder
      *
