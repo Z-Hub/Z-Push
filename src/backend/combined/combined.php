@@ -73,10 +73,10 @@ class BackendCombined extends Backend {
         parent::Backend();
         $this->config = BackendCombinedConfig::GetBackendCombinedConfig();
 
-        foreach ($this->config['backends'] as $i => $b){
-            // load and instatiate backend
-            ZPush::IncludeBackend($b['name']);
-            $this->backends[$i] = new $b['name']();
+        $backend_values = array_unique(array_values($this->config['folderbackend']));
+        foreach ($backend_values as $i) {
+            ZPush::IncludeBackend($this->config['backends'][$i]['name']);
+            $this->backends[$i] = new $this->config['backends'][$i]['name']();
         }
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("Combined %d backends loaded.", count($this->backends)));
     }
