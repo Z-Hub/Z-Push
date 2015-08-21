@@ -77,7 +77,7 @@ class BackendCombined extends Backend {
             ZPush::IncludeBackend($b['name']);
             $this->backends[$i] = new $b['name']();
         }
-        ZLog::Write(LOGLEVEL_INFO, sprintf("Combined %d backends loaded.", count($this->backends)));
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("Combined %d backends loaded.", count($this->backends)));
     }
 
     /**
@@ -116,7 +116,7 @@ class BackendCombined extends Backend {
                 return false;
             }
         }
-        ZLog::Write(LOGLEVEL_INFO, "Combined->Logon() success");
+        ZLog::Write(LOGLEVEL_DEBUG, "Combined->Logon() success");
         return true;
     }
 
@@ -154,7 +154,7 @@ class BackendCombined extends Backend {
                 return false;
             }
         }
-        ZLog::Write(LOGLEVEL_INFO, "Combined->Setup() success");
+        ZLog::Write(LOGLEVEL_DEBUG, "Combined->Setup() success");
         return true;
     }
 
