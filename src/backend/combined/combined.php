@@ -362,11 +362,11 @@ class BackendCombined extends Backend {
      * @return string       id of the created/updated calendar obj
      * @throws StatusException
      */
-    public function MeetingResponse($requestid, $folderid, $error) {
+    public function MeetingResponse($requestid, $folderid, $response) {
         $backend = $this->GetBackend($folderid);
         if($backend === false)
             return false;
-        return $backend->MeetingResponse($requestid, $this->GetBackendFolder($folderid), $error);
+        return $backend->MeetingResponse($requestid, $this->GetBackendFolder($folderid), $response);
     }
 
     /**
