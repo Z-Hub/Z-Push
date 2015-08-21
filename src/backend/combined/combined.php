@@ -440,5 +440,23 @@ class BackendCombined extends Backend {
             return false;
         return substr($folderid,0,$pos);
     }
+
+    /**
+     * Indicates which AS version is supported by the backend.
+     * Return the lowest version supported by the backends used.
+     *
+     * @access public
+     * @return string       AS version constant
+     */
+    public function GetSupportedASVersion() {
+        $version = ZPush::ASV_14;
+        foreach ($this->backends as $i => $b) {
+            $subversion = $this->backends[$i]->GetSupportedASVersion();
+            if ($subversion < $version) {
+                $version = $subversion;
+            }
+        }
+        return $version;
+    }
 }
 ?>
