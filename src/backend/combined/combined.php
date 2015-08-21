@@ -62,6 +62,7 @@ class BackendCombined extends Backend {
     public $backends;
     private $activeBackend;
     private $activeBackendID;
+    private $numberChangesSink;
 
     /**
      * Constructor of the combined backend
@@ -367,6 +368,94 @@ class BackendCombined extends Backend {
         if($backend === false)
             return false;
         return $backend->MeetingResponse($requestid, $this->GetBackendFolder($folderid), $error);
+    }
+
+    /**
+     * Indicates if the backend has a ChangesSink.
+     * A sink is an active notification mechanism which does not need polling.
+     *
+     * @access public
+     * @return boolean
+     */
+    public function HasChangesSink() {
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCombined->HasChangesSink()"));
+
+        $this->numberChangesSink = 0;
+
+        foreach ($this->backends as $i => $b) {
+            if ($this->backends[$i]->HasChangesSink()) {
+                $this->numberChangesSink++;
+            }
+        }
+
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCombined->HasChangesSink - Number ChangesSink found: %d", $this->numberChangesSink));
+
+        return true;
+    }
+
+    /**
+     * The folder should be considered by the sink.
+     * Folders which were not initialized should not result in a notification
+     * of IBacken->ChangesSink().
+     *
+     * @param string        $folderid
+     *
+     * @access public
+     * @return boolean      false if there is any problem with that folder
+     */
+     public function ChangesSinkInitialize($folderid) {
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCombined->ChangesSinkInitialize('%s')", $folderid));
+
+        $backend = $this->GetBackend($folderid);
+        if($backend === false) {
+            // if not backend is found we return true, we don't want this to never cause an error
+            return true;
+        }
+
+        if ($backend->HasChangesSink()) {
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCombined->ChangesSinkInitialize('%s') is supported, initializing", $folderid));
+            return $backend->ChangesSinkInitialize($this->GetBackendFolder($folderid));
+        }
+        else {
+            // if the backend doesn't support ChangesSink, we also return true so we don't get an error
+            return true;
+        }
+     }
+
+    /**
+     * The actual ChangesSink.
+     * For max. the $timeout value this method should block and if no changes
+     * are available return an empty array.
+     * If changes are available a list of folderids is expected.
+     *
+     * @param int           $timeout        max. amount of seconds to block
+     *
+     * @access public
+     * @return array
+     */
+    public function ChangesSink($timeout = 30) {
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCombined->ChangesSink(%d)", $timeout));
+
+        $notifications = array();
+        if ($this->numberChangesSink == 0) {
+            ZLog::Write(LOGLEVEL_DEBUG, "BackendCombined doesn't include any Sinkable backends");
+        } else {
+            $time_each = $timeout / $this->numberChangesSink;
+            foreach ($this->backends as $i => $b) {
+                if ($this->backends[$i]->HasChangesSink()) {
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCombined->ChangesSink - Calling in '%s' with %d", get_class($b), $time_each));
+
+                    $notifications_backend = $this->backends[$i]->ChangesSink($time_each);
+                    //preppend backend delimiter
+                    for ($c = 0; $c < count($notifications_backend); $c++) {
+                        $notifications_backend[$c] = $i . $this->config['delimiter'] . $notifications_backend[$c];
+                    }
+                    $notifications = array_merge($notifications, $notifications_backend);
+                }
+            }
+        }
+
+        return $notifications;
     }
 
     /**
