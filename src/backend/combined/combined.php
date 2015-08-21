@@ -62,6 +62,7 @@ class BackendCombined extends Backend implements ISearchProvider {
     public $backends;
     private $activeBackend;
     private $activeBackendID;
+    private $logon_done = false;
 
     /**
      * Constructor of the combined backend
@@ -72,12 +73,12 @@ class BackendCombined extends Backend implements ISearchProvider {
         parent::Backend();
         $this->config = BackendCombinedConfig::GetBackendCombinedConfig();
 
-        foreach ($this->config['backends'] as $i => $b){
-            // load and instatiate backend
-            ZPush::IncludeBackend($b['name']);
-            $this->backends[$i] = new $b['name']();
+        $backend_values = array_unique(array_values($this->config['folderbackend']));
+        foreach ($backend_values as $i) {
+            ZPush::IncludeBackend($this->config['backends'][$i]['name']);
+            $this->backends[$i] = new $this->config['backends'][$i]['name']();
         }
-        ZLog::Write(LOGLEVEL_INFO, sprintf("Combined %d backends loaded.", count($this->backends)));
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("Combined %d backends loaded.", count($this->backends)));
     }
 
     /**
@@ -116,7 +117,9 @@ class BackendCombined extends Backend implements ISearchProvider {
                 return false;
             }
         }
-        ZLog::Write(LOGLEVEL_INFO, "Combined->Logon() success");
+
+        $this->logon_done = true;
+        ZLog::Write(LOGLEVEL_DEBUG, "Combined->Logon() success");
         return true;
     }
 
@@ -154,7 +157,7 @@ class BackendCombined extends Backend implements ISearchProvider {
                 return false;
             }
         }
-        ZLog::Write(LOGLEVEL_INFO, "Combined->Setup() success");
+        ZLog::Write(LOGLEVEL_DEBUG, "Combined->Setup() success");
         return true;
     }
 
@@ -165,6 +168,10 @@ class BackendCombined extends Backend implements ISearchProvider {
      * @return boolean
      */
     public function Logoff() {
+        // If no Logon in done, omit Logoff
+        if (!$this->logon_done)
+            return true;
+
         ZLog::Write(LOGLEVEL_DEBUG, "Combined->Logoff()");
         foreach ($this->backends as $i => $b){
             $this->backends[$i]->Logoff();
@@ -453,6 +460,25 @@ class BackendCombined extends Backend implements ISearchProvider {
     }
 
 
+    /**
+     * Indicates which AS version is supported by the backend.
+     * Return the lowest version supported by the backends used.
+     *
+     * @access public
+     * @return string       AS version constant
+     */
+    public function GetSupportedASVersion() {
+        $version = ZPush::ASV_14;
+        foreach ($this->backends as $i => $b) {
+            $subversion = $this->backends[$i]->GetSupportedASVersion();
+            if ($subversion < $version) {
+                $version = $subversion;
+            }
+        }
+        return $version;
+    }
+
+
     /*-----------------------------------------------------------------------------------------
     -- ISearchProvider
     ------------------------------------------------------------------------------------------*/
@@ -574,5 +600,6 @@ class BackendCombined extends Backend implements ISearchProvider {
 
         return false;
     }
+
 }
 ?>
