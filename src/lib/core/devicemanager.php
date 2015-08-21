@@ -753,6 +753,17 @@ class DeviceManager {
         return ($announced != $latest);
     }
 
+    /**
+     * Returns the User Agent. This data is consolidated with data from Request::GetUserAgent() 
+     * and the data saved in the ASDevice.
+     *
+     * @access public
+     * @return string
+     */
+    public function GetUserAgent() {
+        return $this->device->GetDeviceUserAgent();
+    }
+
     /**----------------------------------------------------------------------------------------------------------
      * private DeviceManager methods
      */
