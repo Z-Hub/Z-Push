@@ -234,7 +234,7 @@ class ExportChangesICS implements IExportChanges{
 
         $changes = mapi_exportchanges_getchangecount($this->exporter);
         if($changes || !($this->flags & BACKEND_DISCARD_DATA))
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ExportChangesICS->InitializeExporter() successfully. %d changes ready to sync.", $changes));
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ExportChangesICS->InitializeExporter() successfully. %d changes ready to sync for '%s'.", $changes, ($this->folderid)?bin2hex($this->folderid) : 'hierarchy'));
 
         return $ret;
     }
