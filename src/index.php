@@ -298,5 +298,12 @@ include_once('version.php');
         ZPush::GetDeviceManager()->Save();
 
     // end gracefully
-    ZLog::Write(LOGLEVEL_DEBUG, '-------- End');
+    if (version_compare(phpversion(), '5.4.0') < 0) {
+        $time_used = number_format(time() - $_SERVER["REQUEST_TIME"], 4);
+    }
+    else {
+        $time_used = number_format(microtime(true) - $_SERVER["REQUEST_TIME_FLOAT"], 4);
+    }
+
+    ZLog::Write(LOGLEVEL_DEBUG, sprintf("-------- End - max mem: %s/%s - time: %s - code: %s", memory_get_peak_usage(false), memory_get_peak_usage(true), $time_used, http_response_code()));
 ?>
