@@ -141,15 +141,24 @@ include_once('version.php');
         Request::Initialize();
         ZLog::Initialize();
 
+        $autenticationInfo = Request::AuthenticationInfo();
+        $GETUser = Request::GetGETUser();
+
         ZLog::Write(LOGLEVEL_DEBUG,"-------- Start");
         ZLog::Write(LOGLEVEL_INFO,
                     sprintf("Version='%s' method='%s' from='%s' cmd='%s' getUser='%s' devId='%s' devType='%s'",
                                     @constant('ZPUSH_VERSION'), Request::GetMethod(), Request::GetRemoteAddr(),
-                                    Request::GetCommand(), Request::GetGETUser(), Request::GetDeviceID(), Request::GetDeviceType()));
+                                    Request::GetCommand(), $GETUser, Request::GetDeviceID(), Request::GetDeviceType()));
 
         // Stop here if this is an OPTIONS request
-        if (Request::IsMethodOPTIONS())
-            throw new NoPostRequestException("Options request", NoPostRequestException::OPTIONS_REQUEST);
+        if (Request::IsMethodOPTIONS()) {
+            if (!$autenticationInfo || !$GETUser) {
+                throw new AuthenticationRequiredException("Access denied. Please send authentication information");
+            }
+            else {
+                throw new NoPostRequestException("Options request", NoPostRequestException::OPTIONS_REQUEST);
+            }
+        }
 
         ZPush::CheckAdvancedConfig();
 
@@ -164,7 +173,7 @@ include_once('version.php');
         $backend = ZPush::GetBackend();
 
         // always request the authorization header
-        if (! Request::AuthenticationInfo() || !Request::GetGETUser())
+        if (!$autenticationInfo || !$GETUser)
             throw new AuthenticationRequiredException("Access denied. Please send authorisation information");
 
         // check the provisioning information
