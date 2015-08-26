@@ -135,7 +135,7 @@ class SyncMeetingRequest extends SyncObject {
                                                                                     self::STREAMER_CHECK_ONEVALUEOF => array(0,1)  )),
                 );
 
-        if (Request::GetProtocolVersion() >= 14.0) {
+        if (Request::GetProtocolVersion() > 14.0) {
                     // MeetimgMessageType values
                     // 0 = A silent update was performed, or the message type is unspecified.
                     // 1 = Initial meeting request.
