@@ -8,7 +8,7 @@
 *
 * Created   :   01.10.2007
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2015 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -141,23 +141,19 @@ include_once('version.php');
         Request::Initialize();
         ZLog::Initialize();
 
-        $autenticationInfo = Request::AuthenticationInfo();
-        $GETUser = Request::GetGETUser();
-
         ZLog::Write(LOGLEVEL_DEBUG,"-------- Start");
         ZLog::Write(LOGLEVEL_INFO,
                     sprintf("Version='%s' method='%s' from='%s' cmd='%s' getUser='%s' devId='%s' devType='%s'",
                                     @constant('ZPUSH_VERSION'), Request::GetMethod(), Request::GetRemoteAddr(),
-                                    Request::GetCommand(), $GETUser, Request::GetDeviceID(), Request::GetDeviceType()));
+                                    Request::GetCommand(), Request::GetGETUser(), Request::GetDeviceID(), Request::GetDeviceType()));
 
-        // Stop here if this is an OPTIONS request
+        // always request the authorization header
+        if (! Request::AuthenticationInfo())
+            throw new AuthenticationRequiredException("Access denied. Please send authorization header.");
+
+        // Stop here if this is an OPTIONS request - Auth information is available but not verified
         if (Request::IsMethodOPTIONS()) {
-            if (!$autenticationInfo || !$GETUser) {
-                throw new AuthenticationRequiredException("Access denied. Please send authentication information");
-            }
-            else {
-                throw new NoPostRequestException("Options request", NoPostRequestException::OPTIONS_REQUEST);
-            }
+            throw new NoPostRequestException("Options request", NoPostRequestException::OPTIONS_REQUEST);
         }
 
         ZPush::CheckAdvancedConfig();
@@ -166,15 +162,11 @@ include_once('version.php');
         Request::ProcessHeaders();
 
         // Check required GET parameters
-        if(Request::IsMethodPOST() && (Request::GetCommandCode() === false || !Request::GetDeviceID() || !Request::GetDeviceType()))
+        if(Request::IsMethodPOST() && (Request::GetCommandCode() === false || !Request::GetDeviceID() || !Request::GetDeviceType() || !Request::GetGETUser()))
             throw new FatalException("Requested the Z-Push URL without the required GET parameters");
 
         // Load the backend
         $backend = ZPush::GetBackend();
-
-        // always request the authorization header
-        if (!$autenticationInfo || !$GETUser)
-            throw new AuthenticationRequiredException("Access denied. Please send authorisation information");
 
         // check the provisioning information
         if (PROVISIONING === true && Request::IsMethodPOST() && ZPush::CommandNeedsProvisioning(Request::GetCommandCode()) &&
