@@ -166,6 +166,27 @@ class ZLog {
         return (isset(self::$lastLogs[$loglevel]))?self::$lastLogs[$loglevel]:false;
     }
 
+
+    /**
+     * Writes info at the end of the request but only if the LOGLEVEL is DEBUG or more verbose
+     *
+     * @access public
+     * @return
+     */
+    static public function WriteEnd() {
+        if (LOGLEVEL_DEBUG <= LOGLEVEL) {
+            if (version_compare(phpversion(), '5.4.0') < 0) {
+                $time_used = number_format(time() - $_SERVER["REQUEST_TIME"], 4);
+            }
+            else {
+                $time_used = number_format(microtime(true) - $_SERVER["REQUEST_TIME_FLOAT"], 4);
+            }
+
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("Memory usage information: %s/%s - Execution time: %s - HTTP responde code: %s", memory_get_peak_usage(false), memory_get_peak_usage(true), $time_used, http_response_code()));
+            ZLog::Write(LOGLEVEL_DEBUG, "-------- End");
+        }
+    }
+
     /**----------------------------------------------------------------------------------------------------------
      * private log stuff
      */
