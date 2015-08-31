@@ -96,14 +96,16 @@ class Streamer implements Serializable {
                     $map = $this->mapping[$entity[EN_TAG]];
                     if (isset($map[self::STREAMER_ARRAY])) {
                         $this->$map[self::STREAMER_VAR] = array();
-                    } else if(!isset($map[self::STREAMER_TYPE])) {
+                    }
+                    else if (isset($map[self::STREAMER_PROP]) && $map[self::STREAMER_PROP] == self::STREAMER_TYPE_SEND_EMPTY) {
+                        $this->$map[self::STREAMER_VAR] = "1";
+                    }
+                    else if(!isset($map[self::STREAMER_TYPE])) {
                         $this->$map[self::STREAMER_VAR] = "";
                     }
                     else if ($map[self::STREAMER_TYPE] == self::STREAMER_TYPE_DATE || $map[self::STREAMER_TYPE] == self::STREAMER_TYPE_DATE_DASHES ) {
                         $this->$map[self::STREAMER_VAR] = "";
                     }
-                    else if (isset($map[self::STREAMER_PROP]) && $map[self::STREAMER_PROP] == self::STREAMER_TYPE_SEND_EMPTY)
-                        $this->$map[self::STREAMER_VAR] = "";
                     continue;
                 }
                 // Found a start tag
