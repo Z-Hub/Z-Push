@@ -299,5 +299,5 @@ include_once('version.php');
         ZPush::GetDeviceManager()->Save();
 
     // end gracefully
-    ZLog::Write(LOGLEVEL_DEBUG, '-------- End');
+    ZLog::WriteEnd();
 ?>
