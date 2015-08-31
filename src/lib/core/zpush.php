@@ -485,7 +485,7 @@ class ZPush {
                 $loaded = false;
                 foreach (self::$autoloadBackendPreference as $autoloadBackend) {
                     ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPush::GetBackend(): trying autoload backend '%s'", $autoloadBackend));
-                    $loaded = self::IncludeBackend($autoloadBackend);
+                    $loaded = class_exists($autoloadBackend) || self::IncludeBackend($autoloadBackend);
                     if ($loaded) {
                         $ourBackend = $autoloadBackend;
                         break;
@@ -494,7 +494,7 @@ class ZPush {
                 if (!$ourBackend || !$loaded)
                     throw new FatalMisconfigurationException("No Backend provider can not be loaded. Check your installation and configuration!");
             }
-            else
+            elseif (!class_exists($ourBackend))
                 self::IncludeBackend($ourBackend);
 
             if (class_exists($ourBackend))
