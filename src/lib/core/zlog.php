@@ -50,6 +50,7 @@ class ZLog {
     static private $lastLogs = array();
     static private $userLog = false;
     static private $unAuthCache = array();
+    static private $syslogEnabled = false;
 
     /**
      * Initializes the logging
@@ -59,6 +60,11 @@ class ZLog {
      */
     static public function Initialize() {
         global $specialLogUsers;
+
+        if (defined('LOG_SYSLOG_ENABLED') && LOG_SYSLOG_ENABLED) {
+            self::$syslogEnabled = true;
+            ZSyslog::Initialize();
+        }
 
         // define some constants for the logging
         if (!defined('LOGUSERLEVEL'))
@@ -111,7 +117,7 @@ class ZLog {
         $data = self::buildLogString($loglevel) . $message . "\n";
 
         if ($loglevel <= LOGLEVEL) {
-            @file_put_contents(LOGFILE, $data, FILE_APPEND);
+            self::writeToLog($loglevel, $data, LOGFILE);
         }
 
         // should we write this into the user log?
@@ -123,11 +129,11 @@ class ZLog {
             if (self::logToUserFile()) {
                 // something was logged before the user was authenticated, write this to the log
                 if (!empty(self::$unAuthCache)) {
-                    @file_put_contents(LOGFILEDIR . self::logToUserFile() . ".log", implode('', self::$unAuthCache), FILE_APPEND);
+                    self::writeToLog($loglevel, implode('', self::$unAuthCache), LOGFILEDIR . self::logToUserFile() . ".log");
                     self::$unAuthCache = array();
                 }
                 // only use plain old a-z characters for the generic log file
-                @file_put_contents(LOGFILEDIR . self::logToUserFile() . ".log", $data, FILE_APPEND);
+                self::writeToLog($loglevel, $data, LOGFILEDIR . self::logToUserFile() . ".log");
             }
             // the user is not authenticated yet, we save the log into memory for now
             else {
@@ -136,7 +142,7 @@ class ZLog {
         }
 
         if (($loglevel & LOGLEVEL_FATAL) || ($loglevel & LOGLEVEL_ERROR)) {
-            @file_put_contents(LOGERRORFILE, $data, FILE_APPEND);
+            self::writeToLog($loglevel, $data, LOGERRORFILE);
         }
 
         if ($loglevel & LOGLEVEL_WBXMLSTACK) {
@@ -205,7 +211,10 @@ class ZLog {
         if (!isset(self::$devid))
             self::$devid = '';
 
-        return Utils::GetFormattedTime() ." ". self::$pidstr . self::getLogLevelString($loglevel, (LOGLEVEL > LOGLEVEL_INFO)) ." ". self::$user . self::$devid;
+        if (self::$syslogEnabled)
+            return self::$pidstr . self::getLogLevelString($loglevel, (LOGLEVEL > LOGLEVEL_INFO)) . " " . self::$user . self::$devid;
+        else
+            return Utils::GetFormattedTime() . " " . self::$pidstr . self::getLogLevelString($loglevel, (LOGLEVEL > LOGLEVEL_INFO)) . " " . self::$user . self::$devid;
     }
 
     /**
@@ -231,6 +240,31 @@ class ZLog {
             case LOGLEVEL_WBXML: return "[WBXML]"; break;
             case LOGLEVEL_DEVICEID: return "[DEVICEID]"; break;
             case LOGLEVEL_WBXMLSTACK: return "[WBXMLSTACK]"; break;
+        }
+    }
+
+    /**
+     * Write the message to the log facility.
+     *
+     * @param int       $loglevel
+     * @param string    $data
+     * @param string    $logfile
+     *
+     * @access private
+     * @return void
+     */
+    static private function writeToLog($loglevel, $data, $logfile = null) {
+        if (self::$syslogEnabled) {
+            if (ZSyslog::send($loglevel, $data) === false) {
+                error_log("Unable to send to syslog");
+                error_log($data);
+            }
+        }
+        else {
+            if (@file_put_contents($logfile, $data, FILE_APPEND) === false) {
+                error_log(sprintf("Unable to write in %s", $logfile));
+                error_log($data);
+            }
         }
     }
 }
