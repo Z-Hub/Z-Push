@@ -96,7 +96,7 @@ class Streamer implements Serializable {
                     $map = $this->mapping[$entity[EN_TAG]];
                     if (isset($map[self::STREAMER_ARRAY])) {
                         $this->$map[self::STREAMER_VAR] = array();
-                    } 
+                    }
                     else if (isset($map[self::STREAMER_PROP]) && $map[self::STREAMER_PROP] == self::STREAMER_TYPE_SEND_EMPTY) {
                         $this->$map[self::STREAMER_VAR] = "1";
                     }
