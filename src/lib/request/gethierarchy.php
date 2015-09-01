@@ -78,4 +78,3 @@ class GetHierarchy extends RequestProcessor {
         return self::$deviceManager->InitializeFolderCache($folders);
     }
 }
-?>

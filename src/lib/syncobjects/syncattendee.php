@@ -68,4 +68,3 @@ class SyncAttendee extends SyncObject {
     }
 }
 
-?>

@@ -688,4 +688,3 @@ class ASDevice extends StateObject {
 
 }
 
-?>

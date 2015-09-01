@@ -197,4 +197,3 @@ class SyncMail extends SyncObject {
     }
 }
 
-?>

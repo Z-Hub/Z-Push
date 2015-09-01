@@ -101,4 +101,3 @@ class ResolveRecipients extends RequestProcessor {
         return true;
     }
 }
-?>

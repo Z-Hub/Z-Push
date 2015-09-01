@@ -332,4 +332,3 @@ function zarafa_error_handler($errno, $errstr, $errfile, $errline, $errcontext) 
 error_reporting(E_ALL);
 set_error_handler("zarafa_error_handler");
 
-?>

@@ -375,4 +375,3 @@ abstract class BackendDiff extends Backend {
     public abstract function MoveMessage($folderid, $id, $newfolderid, $contentParameters);
 
 }
-?>

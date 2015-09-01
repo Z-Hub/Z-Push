@@ -696,4 +696,3 @@ class WBXMLDecoder extends WBXMLDefs {
     }
 }
 
-?>

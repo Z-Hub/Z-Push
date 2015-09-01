@@ -48,4 +48,3 @@
 // Defines the server to which we want to connect
 define('MAPI_SERVER', 'file:///var/run/zarafa');
 
-?>

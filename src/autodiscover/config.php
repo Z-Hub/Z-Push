@@ -86,4 +86,3 @@
  */
     // the backend data provider
     define('BACKEND_PROVIDER', '');
-?>

@@ -229,4 +229,3 @@ class Settings extends RequestProcessor {
         return true;
     }
 }
-?>

@@ -104,4 +104,3 @@ interface ISearchProvider {
     public function Disconnect();
 }
 
-?>

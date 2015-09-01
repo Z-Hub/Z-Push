@@ -723,4 +723,3 @@ class SyncCollections implements Iterator {
      }
 }
 
-?>

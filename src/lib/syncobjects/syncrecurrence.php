@@ -117,4 +117,3 @@ class SyncRecurrence extends SyncObject {
         parent::SyncObject($mapping);
     }
 }
-?>

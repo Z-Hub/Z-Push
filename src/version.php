@@ -51,4 +51,3 @@ if (!defined("ZPUSH_VERSION")) {
     }
 }
 
-?>

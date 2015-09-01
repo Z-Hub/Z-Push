@@ -533,4 +533,3 @@ class WBXMLEncoder extends WBXMLDefs {
     }
 }
 
-?>

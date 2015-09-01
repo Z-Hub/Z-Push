@@ -893,4 +893,3 @@ class DeviceManager {
     }
 }
 
-?>

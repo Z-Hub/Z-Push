@@ -719,4 +719,3 @@ class BackendMaildir extends BackendDiff {
     }
 }
 
-?>

@@ -60,4 +60,3 @@ class SyncDevicePassword extends SyncObject {
         parent::SyncObject($mapping);
     }
 }
-?>

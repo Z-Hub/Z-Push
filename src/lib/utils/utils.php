@@ -970,4 +970,3 @@ function w2ui($string) { return windows1252_to_utf8($string, "//TRANSLIT"); }
 function u2wi($string) { return utf8_to_windows1252($string, "//TRANSLIT"); }
 
 
-?>

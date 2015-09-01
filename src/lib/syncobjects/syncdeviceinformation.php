@@ -82,4 +82,3 @@ class SyncDeviceInformation extends SyncObject {
         parent::SyncObject($mapping);
     }
 }
-?>

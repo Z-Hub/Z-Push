@@ -284,4 +284,3 @@ class GetItemEstimate extends RequestProcessor {
         return true;
     }
 }
-?>

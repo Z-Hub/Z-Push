@@ -86,4 +86,3 @@ class SimpleMutex extends InterProcessData {
         return true;
     }
 }
-?>

@@ -223,4 +223,3 @@ class BaseException extends Exception
 
     // @TODO getTrace and getTraceAsString
 }
-?>

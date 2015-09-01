@@ -309,4 +309,3 @@ interface IBackend {
     public function GetCurrentUsername();
 }
 
-?>

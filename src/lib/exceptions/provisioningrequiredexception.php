@@ -48,4 +48,3 @@ class ProvisioningRequiredException extends HTTPReturnCodeException {
     protected $httpReturnMessage = "Retry after sending a PROVISION command";
 }
 
-?>

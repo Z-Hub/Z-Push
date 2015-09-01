@@ -48,4 +48,3 @@ class NoPostRequestException extends FatalException {
     protected $defaultLogLevel = LOGLEVEL_DEBUG;
 }
 
-?>

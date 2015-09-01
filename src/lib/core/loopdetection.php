@@ -933,4 +933,3 @@ class LoopDetection extends InterProcessData {
     }
 }
 
-?>

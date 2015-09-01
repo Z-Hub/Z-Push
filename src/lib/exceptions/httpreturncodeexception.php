@@ -53,4 +53,3 @@ class HTTPReturnCodeException extends FatalException {
     }
 }
 
-?>

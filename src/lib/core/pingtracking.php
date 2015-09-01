@@ -153,4 +153,3 @@ class PingTracking extends InterProcessData {
     }
 }
 
-?>

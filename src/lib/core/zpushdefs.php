@@ -1064,4 +1064,3 @@ define("AS_REPLYTOSENDER", 1);
 define("AS_REPLYTOALL", 2);
 define("AS_FORWARD", 3);
 
-?>

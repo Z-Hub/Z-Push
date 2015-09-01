@@ -336,4 +336,3 @@ function getCalendarItems($store, $calendar, $viewstart, $viewend, $propsrequest
     // properties that the caller did not request (recurring, etc). This shouldn't be a problem though.
     return $result;
 }
-?>

@@ -443,4 +443,3 @@ class Search extends RequestProcessor {
         return true;
     }
 }
-?>

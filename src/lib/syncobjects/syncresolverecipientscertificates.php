@@ -71,4 +71,3 @@ class SyncRRCertificates extends SyncObject {
     }
 
 }
-?>

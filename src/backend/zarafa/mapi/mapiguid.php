@@ -71,4 +71,3 @@ define('PS_INTERNET_HEADERS',                   makeguid("{00020386-0000-0000-c0
 // sk added for Z-Push
 define ('PSETID_AirSync',                       makeguid("{71035549-0739-4DCB-9163-00F0580DBBDF}"));
 
-?>

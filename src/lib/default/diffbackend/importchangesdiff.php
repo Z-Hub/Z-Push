@@ -272,4 +272,3 @@ class ImportChangesDiff extends DiffState implements IImportChanges {
     }
 }
 
-?>

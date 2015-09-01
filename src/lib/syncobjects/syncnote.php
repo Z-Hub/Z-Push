@@ -72,4 +72,3 @@ class SyncNote extends SyncObject {
         parent::SyncObject($mapping);
     }
 }
-?>

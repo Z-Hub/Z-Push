@@ -75,4 +75,3 @@ define('IMAP_USE_IMAPMAIL', true);
 define('IMAP_EXCLUDED_FOLDERS', '');
 /* END fmbiete's contribution r1527, ZP-319 */
 
-?>

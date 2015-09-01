@@ -1256,4 +1256,3 @@ class Sync extends RequestProcessor {
     }
 }
 
-?>

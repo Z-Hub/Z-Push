@@ -346,4 +346,3 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
     }
 }
 
-?>

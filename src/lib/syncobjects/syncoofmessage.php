@@ -78,4 +78,3 @@ class SyncOOFMessage extends SyncObject {
     }
 
 }
-?>

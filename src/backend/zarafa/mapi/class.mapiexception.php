@@ -104,4 +104,3 @@
     if (function_exists('mapi_enable_exceptions')) {
        //mapi_enable_exceptions("mapiexception");
     }
-?>

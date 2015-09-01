@@ -43,4 +43,3 @@
 
 class FatalMisconfigurationException extends FatalException {}
 
-?>

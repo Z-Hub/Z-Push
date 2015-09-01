@@ -68,4 +68,3 @@ class SyncBaseAttachment extends SyncObject {
         parent::SyncObject($mapping);
     }
 }
-?>

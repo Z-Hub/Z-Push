@@ -135,4 +135,3 @@ class MoveItems extends RequestProcessor {
         return true;
     }
 }
-?>

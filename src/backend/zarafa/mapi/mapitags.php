@@ -1253,4 +1253,3 @@ define('PR_ZC_CONTACT_FOLDER_NAMES'                   ,mapi_prop_tag(PT_MV_TSTRI
 //Properties defined for Z-Push
 define('PR_TODO_ITEM_FLAGS'                           ,mapi_prop_tag(PT_LONG,        0x0E2B));
 
-?>

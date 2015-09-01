@@ -1834,4 +1834,3 @@ class BackendIMAP extends BackendDiff {
     /* END fmbiete's contribution r1528, ZP-320 */
 };
 
-?>

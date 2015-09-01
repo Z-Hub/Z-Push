@@ -87,4 +87,3 @@ class ValidateCert extends RequestProcessor {
         return true;
     }
 }
-?>

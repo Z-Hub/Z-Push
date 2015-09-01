@@ -1900,4 +1900,3 @@ class BackendZarafa implements IBackend, ISearchProvider {
  */
 class BackendICS extends BackendZarafa {}
 
-?>

@@ -156,4 +156,3 @@ class SyncTaskRecurrence extends SyncObject {
     }
 }
 
-?>

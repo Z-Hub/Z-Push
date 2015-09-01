@@ -46,4 +46,3 @@ class NotImplementedException extends ZPushException {
     protected $defaultLogLevel = LOGLEVEL_ERROR;
 }
 
-?>

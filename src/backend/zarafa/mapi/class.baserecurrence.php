@@ -1942,4 +1942,3 @@
             return $a["start"] == $b["start"] ? 0 : ($a["start"]  > $b["start"] ? 1 : -1 );
         }
     }
-?>

@@ -49,4 +49,3 @@ class AuthenticationRequiredException extends HTTPReturnCodeException {
     protected $showLegal = true;
 }
 
-?>

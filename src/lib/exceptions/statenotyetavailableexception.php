@@ -43,4 +43,3 @@
 
 class StateNotYetAvailableException extends StatusException {}
 
-?>

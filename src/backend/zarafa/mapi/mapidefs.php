@@ -665,4 +665,3 @@ define('fnevStatusObjectModified'                ,0x00000200);
 define('fnevReservedForMapi'                     ,0x40000000);
 define('fnevExtended'                            ,0x80000000);
 
-?>

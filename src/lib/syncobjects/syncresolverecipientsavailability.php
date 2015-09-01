@@ -63,4 +63,3 @@ class SyncRRAvailability extends SyncObject {
     }
 
 }
-?>

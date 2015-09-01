@@ -205,4 +205,3 @@ class SyncContact extends SyncObject {
     }
 }
 
-?>

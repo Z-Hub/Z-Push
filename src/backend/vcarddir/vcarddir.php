@@ -678,4 +678,3 @@ class BackendVCardDir extends BackendDiff {
         return $data;
     }
 };
-?>

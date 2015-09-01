@@ -247,4 +247,3 @@ define('SYNC_W_CLIENT_CHANGE_NEWER',                      make_mapi_s(0x821));
 
 
 
-?>

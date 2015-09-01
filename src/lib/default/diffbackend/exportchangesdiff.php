@@ -215,4 +215,3 @@ class ExportChangesDiff extends DiffState implements IExportChanges{
     }
 }
 
-?>

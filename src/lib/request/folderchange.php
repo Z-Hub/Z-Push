@@ -244,4 +244,3 @@ class FolderChange extends RequestProcessor {
         return true;
     }
 }
-?>
