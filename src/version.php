@@ -50,4 +50,3 @@ if (!defined("ZPUSH_VERSION")) {
         define("ZPUSH_VERSION", "GIT");
     }
 }
-

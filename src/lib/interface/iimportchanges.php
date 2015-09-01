@@ -139,4 +139,3 @@ interface IImportChanges extends IChanges {
     public function ImportFolderDeletion($id, $parent = false);
 
 }
-

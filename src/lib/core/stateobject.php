@@ -264,4 +264,3 @@ class StateObject implements Serializable {
         throw new StateInvalidException("Unserialization failed as class was not found or not compatible");
     }
 }
-

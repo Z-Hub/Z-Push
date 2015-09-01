@@ -722,4 +722,3 @@ class SyncCollections implements Iterator {
             $this->stateManager = ZPush::GetDeviceManager()->GetStateManager();
      }
 }
-

@@ -295,4 +295,3 @@ class TopCollector extends InterProcessData {
             $topdata[self::$devid][self::$user][self::$pid] = array();
     }
 }
-

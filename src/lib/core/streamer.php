@@ -463,4 +463,3 @@ class Streamer implements Serializable {
         return 0;
     }
 }
-

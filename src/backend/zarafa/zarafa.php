@@ -1899,4 +1899,3 @@ class BackendZarafa implements IBackend, ISearchProvider {
  * DEPRECATED legacy class
  */
 class BackendICS extends BackendZarafa {}
-

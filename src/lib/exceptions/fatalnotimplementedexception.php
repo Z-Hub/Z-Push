@@ -43,4 +43,3 @@
 ************************************************/
 
 class FatalNotImplementedException extends FatalException {}
-

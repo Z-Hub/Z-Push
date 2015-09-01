@@ -618,4 +618,3 @@ class ZPushAdmin {
     }
 
 }
-

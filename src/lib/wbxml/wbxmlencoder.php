@@ -532,4 +532,3 @@ class WBXMLEncoder extends WBXMLDefs {
         ZLog::Write(LOGLEVEL_WBXML, "WBXML-OUT: ". $data, false);
     }
 }
-

@@ -48,4 +48,3 @@ class AuthenticationRequiredException extends HTTPReturnCodeException {
     protected $httpHeaders = array('WWW-Authenticate: Basic realm="ZPush"');
     protected $showLegal = true;
 }
-

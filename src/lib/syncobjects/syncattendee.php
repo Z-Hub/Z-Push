@@ -67,4 +67,3 @@ class SyncAttendee extends SyncObject {
         parent::SyncObject($mapping);
     }
 }
-

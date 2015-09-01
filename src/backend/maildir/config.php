@@ -47,4 +47,3 @@
 
 define('MAILDIR_BASE', '/tmp');
 define('MAILDIR_SUBDIR', 'Maildir');
-

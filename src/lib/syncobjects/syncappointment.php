@@ -219,4 +219,3 @@ class SyncAppointment extends SyncObject {
         return true;
     }
 }
-

@@ -349,4 +349,3 @@ class ImportHierarchyChangesCombinedWrap {
         return $this->ihc->ImportFolderDeletion($this->backendid.$this->backend->config['delimiter'].$id);
     }
 }
-

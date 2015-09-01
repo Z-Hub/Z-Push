@@ -424,4 +424,3 @@ abstract class SyncObject extends Streamer {
         return true;
     }
 }
-
