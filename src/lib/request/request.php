@@ -634,4 +634,3 @@ class Request {
         return ($re) ? preg_replace($re, $replacevalue, $input) : '';
     }
 }
-?>

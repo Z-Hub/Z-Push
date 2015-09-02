@@ -1259,5 +1259,3 @@ class TimezoneUtil {
     }
 
 }
-
-?>

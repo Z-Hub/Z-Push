@@ -690,4 +690,3 @@ class BackendCombined extends Backend implements ISearchProvider {
     }
 
 }
-?>

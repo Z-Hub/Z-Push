@@ -47,5 +47,3 @@ class ProvisioningRequiredException extends HTTPReturnCodeException {
     protected $httpReturnCode = HTTP_CODE_449;
     protected $httpReturnMessage = "Retry after sending a PROVISION command";
 }
-
-?>

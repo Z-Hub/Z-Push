@@ -494,4 +494,3 @@ class FileStateMachine implements IStateMachine {
     }
 
 }
-?>

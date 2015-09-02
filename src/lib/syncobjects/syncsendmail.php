@@ -83,4 +83,3 @@ class SyncSendMail extends SyncObject {
         parent::SyncObject($mapping);
     }
 }
-?>

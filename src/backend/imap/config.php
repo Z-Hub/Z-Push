@@ -74,5 +74,3 @@ define('IMAP_USE_IMAPMAIL', true);
 // example: dovecot.sieve|archive|spam
 define('IMAP_EXCLUDED_FOLDERS', '');
 /* END fmbiete's contribution r1527, ZP-319 */
-
-?>

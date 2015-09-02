@@ -892,5 +892,3 @@ class DeviceManager {
         return $this->latestFolder;
     }
 }
-
-?>

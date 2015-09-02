@@ -869,6 +869,3 @@ class ZPushAdminCLI {
 
     }
 }
-
-
-?>

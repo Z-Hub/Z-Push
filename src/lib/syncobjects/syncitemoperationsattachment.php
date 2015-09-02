@@ -59,4 +59,3 @@ class SyncItemOperationsAttachment extends SyncObject {
         parent::SyncObject($mapping);
     }
 }
-?>

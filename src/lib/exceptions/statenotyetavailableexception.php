@@ -42,5 +42,3 @@
 ************************************************/
 
 class StateNotYetAvailableException extends StatusException {}
-
-?>

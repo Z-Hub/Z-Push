@@ -42,5 +42,3 @@
 ************************************************/
 
 class StateInvalidException extends StatusException {}
-
-?>

@@ -204,5 +204,3 @@ class SyncContact extends SyncObject {
         parent::SyncObject($mapping);
     }
 }
-
-?>

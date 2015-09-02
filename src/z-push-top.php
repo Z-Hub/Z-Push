@@ -765,5 +765,3 @@ class ZPushTop {
     }
 
 }
-
-?>

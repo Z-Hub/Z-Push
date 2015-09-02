@@ -65,4 +65,3 @@ class SyncBaseBody extends SyncObject {
         parent::SyncObject($mapping);
     }
 }
-?>

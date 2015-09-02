@@ -583,5 +583,3 @@ class MAPIUtils {
         return MAPI_E_NOT_FOUND;
     }
 }
-
-?>

@@ -136,4 +136,3 @@ class SendMail extends RequestProcessor {
         return $status;
     }
 }
-?>

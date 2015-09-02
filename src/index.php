@@ -301,4 +301,3 @@ include_once('version.php');
 
     // end gracefully
     ZLog::WriteEnd();
-?>

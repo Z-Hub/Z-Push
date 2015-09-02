@@ -63,4 +63,3 @@ class SyncRRPicture extends SyncObject {
     }
 
 }
-?>

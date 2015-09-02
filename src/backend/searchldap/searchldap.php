@@ -195,4 +195,3 @@ class BackendSearchLDAP implements ISearchProvider {
         return true;
     }
 }
-?>

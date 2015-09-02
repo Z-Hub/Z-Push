@@ -132,4 +132,3 @@ class WebserviceDevice {
         return true;
     }
 }
-?>

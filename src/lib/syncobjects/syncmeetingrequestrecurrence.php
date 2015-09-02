@@ -117,5 +117,3 @@ class SyncMeetingRequestRecurrence extends SyncObject {
         parent::SyncObject($mapping);
     }
 }
-
-?>

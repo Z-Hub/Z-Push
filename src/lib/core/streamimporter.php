@@ -258,4 +258,3 @@ class ImportChangesStream implements IImportChanges {
         return $this->importedMsgs;
     }
 }
-?>

@@ -718,4 +718,3 @@ class TNEFParser {
         return NOERROR;
     }
 }
-?>

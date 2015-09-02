@@ -195,5 +195,3 @@ interface IStateMachine {
      */
     public function GetAllStatesForDevice($devid);
 }
-
-?>

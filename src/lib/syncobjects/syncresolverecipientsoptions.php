@@ -69,4 +69,3 @@ class SyncRROptions extends SyncObject {
     }
 
 }
-?>

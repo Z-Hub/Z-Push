@@ -47,5 +47,3 @@ class NoPostRequestException extends FatalException {
     const GET_REQUEST = 2;
     protected $defaultLogLevel = LOGLEVEL_DEBUG;
 }
-
-?>

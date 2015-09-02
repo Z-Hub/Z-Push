@@ -69,4 +69,3 @@ class SyncValidateCert extends SyncObject {
     }
 
 }
-?>

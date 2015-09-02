@@ -75,5 +75,3 @@ class SyncUserInformation extends SyncObject {
         parent::SyncObject($mapping);
     }
 }
-
-?>

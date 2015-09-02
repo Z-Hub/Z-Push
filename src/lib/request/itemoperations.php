@@ -384,4 +384,3 @@ class ItemOperations extends RequestProcessor {
         return true;
     }
 }
-?>

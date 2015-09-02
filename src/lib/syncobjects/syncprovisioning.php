@@ -300,5 +300,3 @@ class SyncProvisioning extends SyncObject {
         $this->approvedapplist = array();
     }
 }
-
-?>

@@ -176,5 +176,3 @@ class SyncTask extends SyncObject {
         return true;
     }
 }
-
-?>

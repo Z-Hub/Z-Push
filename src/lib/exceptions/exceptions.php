@@ -62,5 +62,3 @@ include_once('statenotfoundexception.php');
 include_once('stateinvalidexception.php');
 include_once('nohierarchycacheavailableexception.php');
 include_once('statenotyetavailableexception.php');
-
-?>

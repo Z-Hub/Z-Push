@@ -74,4 +74,3 @@ class SyncResolveRecipient extends SyncObject {
     }
 
 }
-?>

@@ -265,4 +265,3 @@ class FolderSync extends RequestProcessor {
         return true;
     }
 }
-?>

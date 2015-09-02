@@ -932,5 +932,3 @@ class LoopDetection extends InterProcessData {
             $loopdata[self::$devid][self::$user][$folderid] = array();
     }
 }
-
-?>

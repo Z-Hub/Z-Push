@@ -2701,5 +2701,3 @@ class MAPIProvider {
         return $this->inboxProps;
     }
 }
-
-?>

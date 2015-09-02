@@ -82,5 +82,3 @@ interface IChanges {
      */
     public function GetState();
 }
-
-?>

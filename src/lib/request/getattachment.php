@@ -88,4 +88,3 @@ class GetAttachment extends RequestProcessor {
         return true;
     }
 }
-?>

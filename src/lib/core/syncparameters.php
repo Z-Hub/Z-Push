@@ -415,4 +415,3 @@ class SyncParameters extends StateObject {
         return true;
     }
 }
-?>

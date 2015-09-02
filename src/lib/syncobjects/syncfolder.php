@@ -76,4 +76,3 @@ class SyncFolder extends SyncObject {
         parent::SyncObject($mapping);
     }
 }
-?>

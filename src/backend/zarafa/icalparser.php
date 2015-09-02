@@ -197,5 +197,3 @@ class ICalParser{
         return gmmktime($regs[4], $regs[5], $regs[6], $regs[2], $regs[3], $regs[1]);
     }
 }
-
-?>

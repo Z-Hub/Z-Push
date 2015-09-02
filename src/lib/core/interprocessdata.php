@@ -293,5 +293,3 @@ abstract class InterProcessData {
     }
 
 }
-
-?>

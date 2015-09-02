@@ -196,5 +196,3 @@ class SyncMail extends SyncObject {
         parent::SyncObject($mapping);
     }
 }
-
-?>

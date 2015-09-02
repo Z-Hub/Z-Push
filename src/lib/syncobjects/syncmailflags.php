@@ -96,4 +96,3 @@ class SyncMailFlags extends SyncObject {
         parent::SyncObject($mapping);
     }
 }
-?>
