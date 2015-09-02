@@ -293,7 +293,7 @@ class Streamer implements Serializable {
                     if ($encoder->getMultipart() && isset($map[self::STREAMER_PROP]) && $map[self::STREAMER_PROP] == self::STREAMER_TYPE_MULTIPART) {
                         $encoder->addBodypartStream($this->$map[self::STREAMER_VAR]);
                         $encoder->startTag(SYNC_ITEMOPERATIONS_PART);
-                        $encoder->content(count($encoder->getBodypartsCount()));
+                        $encoder->content($encoder->getBodypartsCount());
                         $encoder->endTag();
                         continue;
                     }
