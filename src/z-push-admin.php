@@ -191,8 +191,8 @@ class ZPushAdminCLI {
      * @access public
      */
     static public function CheckEnv() {
-        if (!isset($_SERVER["TERM"]) || !isset($_SERVER["LOGNAME"]))
-            self::$errormessage = "This script should not be called in a browser.";
+        if (php_sapi_name() != "cli")
+            self::$errormessage = sprintf("This script should not be called in a browser. Called from: %s", php_sapi_name());
 
         if (!function_exists("getopt"))
             self::$errormessage = "PHP Function getopt not found. Please check your PHP version and settings.";

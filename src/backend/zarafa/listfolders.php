@@ -67,8 +67,8 @@ function main() {
 
 function listfolders_configure() {
 
-    if (!isset($_SERVER["TERM"]) || !isset($_SERVER["LOGNAME"])) {
-        echo "This script should not be called in a browser.\n";
+    if (php_sapi_name() != "cli") {
+        printf("This script should not be called in a browser. Called from: %s\n", php_sapi_name());
         exit(1);
     }
 

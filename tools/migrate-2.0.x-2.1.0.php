@@ -52,8 +52,8 @@ define('ZPUSH_BASE_PATH', "../src");
  * MAIN
 */
 try {
-    if (!isset($_SERVER["TERM"]) || !isset($_SERVER["LOGNAME"]))
-        die("This script should not be called in a browser.");
+    if (php_sapi_name() != "cli")
+        die(sprintf("This script should not be called in a browser. Called from: %s", php_sapi_name()));
 
     if (!defined('ZPUSH_BASE_PATH') || !file_exists(ZPUSH_BASE_PATH . "/config.php"))
         die("ZPUSH_BASE_PATH not set correctly or no config.php file found\n");
