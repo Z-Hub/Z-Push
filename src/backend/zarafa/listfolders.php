@@ -10,7 +10,7 @@
 *
 * Created   :   06.05.2011
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2013, 2015 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -68,7 +68,7 @@ function main() {
 function listfolders_configure() {
 
     if (php_sapi_name() != "cli") {
-        printf("This script should not be called in a browser. Called from: %s\n", php_sapi_name());
+        fwrite(STDERR, "This script can only be called from the CLI.\n");
         exit(1);
     }
 

@@ -9,7 +9,7 @@
 *
 * Created   :   14.05.2010
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2015 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -112,7 +112,7 @@ include('version.php');
         if (! ZPushAdminCLI::SureWhatToDo()) {
             // show error message if available
             if (ZPushAdminCLI::GetErrorMessage())
-                echo "ERROR: ". ZPushAdminCLI::GetErrorMessage() . "\n";
+                fwrite(STDERR, ZPushAdminCLI::GetErrorMessage() . "\n");
 
             echo ZPushAdminCLI::UsageInstructions();
             exit(1);
@@ -192,7 +192,7 @@ class ZPushAdminCLI {
      */
     static public function CheckEnv() {
         if (php_sapi_name() != "cli")
-            self::$errormessage = sprintf("This script should not be called in a browser. Called from: %s", php_sapi_name());
+            self::$errormessage = "This script can only be called from the CLI.";
 
         if (!function_exists("getopt"))
             self::$errormessage = "PHP Function getopt not found. Please check your PHP version and settings.";
