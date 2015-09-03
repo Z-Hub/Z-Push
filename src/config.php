@@ -95,7 +95,7 @@
     define('LOGFILEDIR', '/var/log/z-push/');
     define('LOGFILE', LOGFILEDIR . 'z-push.log');
     define('LOGERRORFILE', LOGFILEDIR . 'z-push-error.log');
-    define('LOGLEVEL', LOGLEVEL_INFO);
+    define('LOGLEVEL', LOGLEVEL_WBXML);
     define('LOGAUTHFAIL', false);
 
 
