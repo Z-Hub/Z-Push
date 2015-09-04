@@ -88,7 +88,20 @@ class DiffState implements IChanges {
      */
     public function ConfigContentParameters($contentparameters) {
         $this->contentparameters = $contentparameters;
-        $this->cutoffdate = Utils::GetCutOffDate($contentparameters->GetFilterType());
+
+        $filtertype = $contentparameters->GetFilterType();
+        switch($contentparameters->GetContentClass()) {
+            case "Email":
+            case "Calendar":
+                $this->cutoffdate = ($filtertype === false) ? 0 : Utils::GetCutOffDate($filtertype);
+                break;
+            case "Contacts":
+            case "Tasks":
+            case "Notes":
+            default:
+                $this->cutoffdate = false;
+                break;
+        }
     }
 
     /**
