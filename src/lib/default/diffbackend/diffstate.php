@@ -97,8 +97,9 @@ class DiffState implements IChanges {
                 break;
             case "Contacts":
             case "Tasks":
+            case "Notes":
             default:
-                $this->cutoffdate = 0;
+                $this->cutoffdate = false;
                 break;
         }
     }
