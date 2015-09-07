@@ -6,7 +6,7 @@
 *
 * Created   :   16.02.2012
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2015 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -108,7 +108,8 @@ class Ping extends RequestProcessor {
                     $spa->DelPingableFlag();
 
                 while(self::$decoder->getElementStartTag(SYNC_PING_FOLDER)) {
-                    while(1) {
+                    WBXMLDecoder::ResetInWhile("pingFolder");
+                    while(WBXMLDecoder::InWhile("pingFolder")) {
                         if(self::$decoder->getElementStartTag(SYNC_PING_SERVERENTRYID)) {
                             $folderid = self::$decoder->getElementContent();
                             self::$decoder->getElementEndTag();

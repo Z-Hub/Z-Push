@@ -6,7 +6,7 @@
 *
 * Created   :   16.02.2012
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2015 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -193,7 +193,8 @@ class Sync extends RequestProcessor {
                         // unsure if this is the correct approach, or if in this case some default list should be used
                         if ($se[EN_FLAGS] & EN_FLAGS_CONTENT) {
                             $supfields = array();
-                            while(1) {
+                            WBXMLDecoder::ResetInWhile("syncSupported");
+                            while(WBXMLDecoder::InWhile("syncSupported")) {
                                 $el = self::$decoder->getElement();
 
                                 if($el[EN_TYPE] == EN_TYPE_ENDTAG)
@@ -261,7 +262,8 @@ class Sync extends RequestProcessor {
 
                     while(self::$decoder->getElementStartTag(SYNC_OPTIONS)) {
                         $firstOption = true;
-                        while(1) {
+                        WBXMLDecoder::ResetInWhile("syncOptions");
+                        while(WBXMLDecoder::InWhile("syncOptions")) {
                             // foldertype definition
                             if(self::$decoder->getElementStartTag(SYNC_FOLDERTYPE)) {
                                 $foldertype = self::$decoder->getElementContent();
@@ -384,7 +386,8 @@ class Sync extends RequestProcessor {
                         $this->importer = false;
 
                         $nchanges = 0;
-                        while(1) {
+                        WBXMLDecoder::ResetInWhile("syncActions");
+                        while(WBXMLDecoder::InWhile("syncActions")) {
                             // ADD, MODIFY, REMOVE or FETCH
                             $element = self::$decoder->getElement();
 
@@ -905,7 +908,8 @@ class Sync extends RequestProcessor {
                             self::$encoder->startTag(SYNC_PERFORM);
 
                             $n = 0;
-                            while(1) {
+                            WBXMLDecoder::ResetInWhile("syncSynchronize");
+                            while(WBXMLDecoder::InWhile("syncSynchronize")) {
                                 try {
                                     $progress = $exporter->Synchronize();
                                     if(!is_array($progress))
