@@ -6,7 +6,7 @@
 *
 * Created   :   01.10.2007
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2015 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -62,7 +62,46 @@ class WBXMLDecoder extends WBXMLDefs {
     private $inputBuffer = "";
     private $isWBXML = true;
 
+    static private $loopCounter = array();
+    const MAXLOOP = 5000;
+
     const VERSION = 0x03;
+
+    /**
+     * Counts the amount of times a code part has been executed.
+     * When being executed too often, the code throws a WBMXLException.
+     *
+     * @access public
+     * @param String $name
+     * @throws WBXMLException
+     * @return boolean
+     */
+    static public function InWhile($name) {
+        if (!isset(self::$loopCounter[$name])) {
+            self::$loopCounter[$name] = 0;
+        }
+        else {
+            self::$loopCounter[$name]++;
+        }
+    
+        if (self::$loopCounter[$name] > self::MAXLOOP) {
+            throw new WBXMLException(sprintf("Loop count in while too high, code '%s' exceeded max. amount of permitted loops", $name));
+        }
+        return true;
+    }
+    
+    /**
+     * Resets the inWhile counter.
+     *
+     * @param String $name
+     * @return boolean
+     */
+    static public function ResetInWhile($name) {
+        if (isset(self::$loopCounter[$name])) {
+            unset(self::$loopCounter[$name]);
+        }
+        return true;
+    }
 
     /**
      * WBXML Decode Constructor
@@ -108,7 +147,8 @@ class WBXMLDecoder extends WBXMLDefs {
             case EN_TYPE_ENDTAG:
                 return $element;
             case EN_TYPE_CONTENT:
-                while(1) {
+                WBXMLDecoder::ResetInWhile("decoderGetElement");
+                while(WBXMLDecoder::InWhile("decoderGetElement")) {
                     $next = $this->getToken();
                     if($next == false)
                         return false;
@@ -334,7 +374,8 @@ class WBXMLDecoder extends WBXMLDefs {
         // Get the data from the input stream
         $element = array();
 
-        while(1) {
+        WBXMLDecoder::ResetInWhile("decoderGetToken");
+        while(WBXMLDecoder::InWhile("decoderGetToken")) {
             $byte = $this->getByte();
 
             if(!isset($byte))
@@ -441,7 +482,8 @@ class WBXMLDecoder extends WBXMLDefs {
         $attributes = array();
         $attr = "";
 
-        while(1) {
+        WBXMLDecoder::ResetInWhile("decoderGetAttributes");
+        while(WBXMLDecoder::InWhile("decoderGetAttributes")) {
             $byte = $this->getByte();
 
             if(count($byte) == 0)

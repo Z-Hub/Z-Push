@@ -12,7 +12,7 @@
 *
 * Created   :   01.10.2007
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2015 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -88,7 +88,8 @@ class Streamer implements Serializable {
      * @access public
      */
     public function Decode(&$decoder) {
-        while(1) {
+        WBXMLDecoder::ResetInWhile("decodeMain");
+        while(WBXMLDecoder::InWhile("decodeMain")) {
             $entity = $decoder->getElement();
 
             if($entity[EN_TYPE] == EN_TYPE_STARTTAG) {
@@ -119,7 +120,8 @@ class Streamer implements Serializable {
 
                     // Handle an array
                     if(isset($map[self::STREAMER_ARRAY])) {
-                        while(1) {
+                        WBXMLDecoder::ResetInWhile("decodeArray");
+                        while(WBXMLDecoder::InWhile("decodeArray")) {
                             //do not get start tag for an array without a container
                             if (!(isset($map[self::STREAMER_PROP]) && $map[self::STREAMER_PROP] == self::STREAMER_TYPE_NO_CONTAINER)) {
                                 if(!$decoder->getElementStartTag($map[self::STREAMER_ARRAY]))

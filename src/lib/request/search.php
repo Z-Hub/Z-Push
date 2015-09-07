@@ -6,7 +6,7 @@
 *
 * Created   :   16.02.2012
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2015 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -194,7 +194,8 @@ class Search extends RequestProcessor {
         }
 
         if(self::$decoder->getElementStartTag(SYNC_SEARCH_OPTIONS)) {
-            while(1) {
+            WBXMLDecoder::ResetInWhile("searchOptions");
+            while(WBXMLDecoder::InWhile("searchOptions")) {
                 if(self::$decoder->getElementStartTag(SYNC_SEARCH_RANGE)) {
                     $searchrange = self::$decoder->getElementContent();
                     $cpo->SetSearchRange($searchrange);

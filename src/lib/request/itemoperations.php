@@ -6,7 +6,7 @@
 *
 * Created   :   16.02.2012
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2015 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -91,7 +91,8 @@ class ItemOperations extends RequestProcessor {
             }
 
             // process operation
-            while(1) {
+            WBXMLDecoder::ResetInWhile("itemOperationsOperation");
+            while(WBXMLDecoder::InWhile("itemOperationsOperation")) {
                 if ($fetch) {
                     if(self::$decoder->getElementStartTag(SYNC_ITEMOPERATIONS_STORE)) {
                         $operation['store'] = self::$decoder->getElementContent();
@@ -134,7 +135,8 @@ class ItemOperations extends RequestProcessor {
 
                         // Save all OPTIONS into a ContentParameters object
                         $operation["cpo"] = new ContentParameters();
-                        while(1) {
+                        WBXMLDecoder::ResetInWhile("itemOperationsOptions");
+                        while(WBXMLDecoder::InWhile("itemOperationsOptions")) {
                             while (self::$decoder->getElementStartTag(SYNC_AIRSYNCBASE_BODYPREFERENCE)) {
                                 if(self::$decoder->getElementStartTag(SYNC_AIRSYNCBASE_TYPE)) {
                                     $bptype = self::$decoder->getElementContent();
