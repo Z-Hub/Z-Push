@@ -42,6 +42,85 @@
 * Consult LICENSE file for details
 ************************************************/
 
+interface IIpcBackend
+{
+    /**
+     * Constructor
+     *
+	 * @param int $type
+	 * @param int $allocate
+	 * @param string $class
+	 */
+    public function __construct($type, $allocate, $class);
+
+    /**
+     * Cleans up the shared memory block
+     *
+     * @access public
+     * @return boolean
+     */
+    public function Clean();
+
+    /**
+     * Indicates if the shared memory is active
+     *
+     * @access public
+     * @return boolean
+     */
+    public function IsActive();
+
+    /**
+     * Blocks the class mutex
+     * Method blocks until mutex is available!
+     * ATTENTION: make sure that you *always* release a blocked mutex!
+     *
+     * @access protected
+     * @return boolean
+     */
+    public function blockMutex();
+
+    /**
+     * Releases the class mutex
+     * After the release other processes are able to block the mutex themselfs
+     *
+     * @access protected
+     * @return boolean
+     */
+    public function releaseMutex();
+
+    /**
+     * Indicates if the requested variable is available in shared memory
+     *
+     * @param int   $id     int indicating the variable
+     *
+     * @access protected
+     * @return boolean
+     */
+    public function hasData($id = 2);
+
+    /**
+     * Returns the requested variable from shared memory
+     *
+     * @param int   $id     int indicating the variable
+     *
+     * @access protected
+     * @return mixed
+     */
+    public function getData($id = 2);
+
+    /**
+     * Writes the transmitted variable to shared memory
+     * Subclasses may never use an id < 2!
+     *
+     * @param mixed $data   data which should be saved into shared memory
+     * @param int   $id     int indicating the variable (bigger than 2!)
+     *
+     * @access protected
+     * @return boolean
+     */
+    public function setData($data, $id = 2);
+}
+
 abstract class InterProcessData {
     const CLEANUPTIME = 1;
 
@@ -51,20 +130,31 @@ abstract class InterProcessData {
     static protected $start;
     protected $type;
     protected $allocate;
-    private $mutexid;
-    private $memid;
 
-    /**
+	/**
+	 *
+	 * @var IIpcBackend
+	 */
+	private $backend;
+
+	/**
      * Constructor
      *
      * @access public
      */
-    public function InterProcessData() {
+    public function __construct() {
         if (!isset($this->type) || !isset($this->allocate))
             throw new FatalNotImplementedException(sprintf("Class InterProcessData can not be initialized. Subclass %s did not initialize type and allocable memory.", get_class($this)));
 
-        if ($this->InitSharedMem())
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("%s(): Initialized mutexid %s and memid %s.", get_class($this), $this->mutexid, $this->memid));
+		$ipc_backend = defined('IPC_BACKEND_CLASS') ? IPC_BACKEND_CLASS : 'IpcBackendShm';
+
+		try {
+			$this->backend = new $ipc_backend($this->type, $this->allocate, get_class($this));
+		}
+		catch (Exception $e) {
+			// backend could not initialise
+			ZLog::Write(LOGLEVEL_ERROR, __METHOD__."() could not initialise IPC backend '$ipc_backend': ".$e->getMessage());
+		}
     }
 
     /**
@@ -81,6 +171,110 @@ abstract class InterProcessData {
             self::$start = time();
         }
         return true;
+    }
+
+    /**
+     * Cleans up the shared memory block
+     *
+     * @access public
+     * @return boolean
+     */
+    public function Clean() {
+		return $this->backend ? $this->backend->Clean() : false;
+    }
+
+    /**
+     * Indicates if the shared memory is active
+     *
+     * @access public
+     * @return boolean
+     */
+    public function IsActive() {
+        return $this->backend ? $this->backend->IsActive() : false;
+    }
+
+    /**
+     * Blocks the class mutex
+     * Method blocks until mutex is available!
+     * ATTENTION: make sure that you *always* release a blocked mutex!
+     *
+     * @access protected
+     * @return boolean
+     */
+    protected function blockMutex() {
+        return $this->backend ? $this->backend->blockMutex() : false;
+    }
+
+    /**
+     * Releases the class mutex
+     * After the release other processes are able to block the mutex themselfs
+     *
+     * @access protected
+     * @return boolean
+     */
+    protected function releaseMutex() {
+        return $this->backend ? $this->backend->releaseMutex() : false;
+    }
+
+    /**
+     * Indicates if the requested variable is available in shared memory
+     *
+     * @param int   $id     int indicating the variable
+     *
+     * @access protected
+     * @return boolean
+     */
+    protected function hasData($id = 2) {
+        return $this->backend ? $this->backend->hasData($id) : false;
+    }
+
+    /**
+     * Returns the requested variable from shared memory
+     *
+     * @param int   $id     int indicating the variable
+     *
+     * @access protected
+     * @return mixed
+     */
+    protected function getData($id = 2) {
+        return $this->backend ? $this->backend->getData($id) : null;
+    }
+
+    /**
+     * Writes the transmitted variable to shared memory
+     * Subclasses may never use an id < 2!
+     *
+     * @param mixed $data   data which should be saved into shared memory
+     * @param int   $id     int indicating the variable (bigger than 2!)
+     *
+     * @access protected
+     * @return boolean
+     */
+    protected function setData($data, $id = 2) {
+        return $this->backend ? $this->backend->setData($data, $id) : false;
+    }
+}
+
+class IpcBackendShm implements IIpcBackend
+{
+    private $mutexid;
+    private $memid;
+    protected $type;
+    protected $allocate;
+
+    /**
+     * Constructor
+     *
+	 * @param int $type
+	 * @param int $allocate
+	 * @param string $class
+	 */
+    public function __construct($type, $allocate, $class) {
+		$this->type = $type;
+		$this->allocate = $allocate;
+
+        if ($this->InitSharedMem())
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("%s(): Initialized mutexid %s and memid %s.", $class, $this->mutexid, $this->memid));
     }
 
     /**
@@ -197,7 +391,7 @@ abstract class InterProcessData {
      * @access protected
      * @return boolean
      */
-    protected function blockMutex() {
+    public function blockMutex() {
         if ((isset($this->mutexid) && $this->mutexid !== false) && (isset($this->memid) && $this->memid !== false))
             return @sem_acquire($this->mutexid);
 
@@ -211,7 +405,7 @@ abstract class InterProcessData {
      * @access protected
      * @return boolean
      */
-    protected function releaseMutex() {
+    public function releaseMutex() {
         if ((isset($this->mutexid) && $this->mutexid !== false) && (isset($this->memid) && $this->memid !== false))
             return @sem_release($this->mutexid);
 
@@ -226,7 +420,7 @@ abstract class InterProcessData {
      * @access protected
      * @return boolean
      */
-    protected function hasData($id = 2) {
+    public function hasData($id = 2) {
         if ((isset($this->mutexid) && $this->mutexid !== false) && (isset($this->memid) && $this->memid !== false)) {
             if (function_exists("shm_has_var"))
                 return @shm_has_var($this->memid, $id);
@@ -246,7 +440,7 @@ abstract class InterProcessData {
      * @access protected
      * @return mixed
      */
-    protected function getData($id = 2) {
+    public function getData($id = 2) {
         if ((isset($this->mutexid) && $this->mutexid !== false) && (isset($this->memid) && $this->memid !== false))
             return @shm_get_var($this->memid, $id);
 
@@ -263,7 +457,7 @@ abstract class InterProcessData {
      * @access protected
      * @return boolean
      */
-    protected function setData($data, $id = 2) {
+    public function setData($data, $id = 2) {
         if ((isset($this->mutexid) && $this->mutexid !== false) && (isset($this->memid) && $this->memid !== false))
             return @shm_put_var($this->memid, $id, $data);
 
