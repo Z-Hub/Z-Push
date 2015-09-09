@@ -166,7 +166,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
                 // send Z-Push version and user agent to ZCP - ZP-589
                 if (Utils::CheckMapiExtVersion('7.2.0')) {
                     $zpush_version = 'Z-Push_' . @constant('ZPUSH_VERSION');
-                    $user_agent = ZPush::GetDeviceManager()->GetUserAgent();
+                    $user_agent = (Request::GetDeviceID()) ? ZPush::GetDeviceManager()->GetUserAgent() : "unknown";
                     $this->session = @mapi_logon_zarafa($user, $pass, MAPI_SERVER, null, null, 0, $zpush_version, $user_agent);
                 }
                 else {
