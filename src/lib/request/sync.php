@@ -61,6 +61,7 @@ class Sync extends RequestProcessor {
         $status = SYNC_STATUS_SUCCESS;
         $wbxmlproblem = false;
         $emptysync = false;
+        $globallyExportedItems = 0;
 
 
         // check if the hierarchySync was fully completed
@@ -525,6 +526,7 @@ class Sync extends RequestProcessor {
 
             if (self::$decoder->getElementStartTag(SYNC_WINDOWSIZE)) {
                 $sc->SetGlobalWindowSize(self::$decoder->getElementContent());
+                ZLog::Write(LOGLEVEL_DEBUG, "Sync(): Global WindowSize requested: ". $sc->GetGlobalWindowSize());
                 if(!self::$decoder->getElementEndTag()) // SYNC_WINDOWSIZE
                     return false;
             }
@@ -572,10 +574,6 @@ class Sync extends RequestProcessor {
             foreach($sc as $folderid => $spa) {
                 // manually set getchanges parameter for this collection
                 $sc->AddParameter($spa, "getchanges", true);
-
-                // set new global windowsize without marking the SPA as changed
-                if ($sc->GetGlobalWindowSize())
-                    $spa->SetWindowSize($sc->GetGlobalWindowSize(), false);
 
                 // announce WindowSize to DeviceManager
                 self::$deviceManager->SetWindowSize($folderid, $spa->GetWindowSize());
@@ -755,12 +753,26 @@ class Sync extends RequestProcessor {
                             continue;
                         }
 
-                        // Get a new sync key to output to the client if any changes have been send or will are available
+                        // Get a new sync key to output to the client if any changes have been send by the mobile or a new synckey is to be sent
                         if (!empty($actiondata["modifyids"]) ||
                             !empty($actiondata["clientids"]) ||
                             !empty($actiondata["removeids"]) ||
-                            $changecount > 0 || (! $spa->HasSyncKey() && $status == SYNC_STATUS_SUCCESS))
+                            (! $spa->HasSyncKey() && $status == SYNC_STATUS_SUCCESS)) {
                                 $spa->SetNewSyncKey(self::$deviceManager->GetStateManager()->GetNewSyncKey($spa->GetSyncKey()));
+                        }
+                        // get a new synckey only if we did not reach the global limit yet
+                        else {
+                            // when reaching the global limit for changes of all collections, stop processing other collections (ZP-697)
+                            if ($sc->GetGlobalWindowSize() <= $globallyExportedItems) {
+                                ZLog::Write(LOGLEVEL_DEBUG, "Global WindowSize for amount of exported changes reached, omitting output for collection.");
+                                continue;
+                            }
+
+                            // get a new synckey if there are changes are we did not reach the limit yet
+                            if ($changecount > 0) {
+                                $spa->SetNewSyncKey(self::$deviceManager->GetStateManager()->GetNewSyncKey($spa->GetSyncKey()));
+                            }
+                        }
 
                         self::$encoder->startTag(SYNC_FOLDER);
 
@@ -894,7 +906,14 @@ class Sync extends RequestProcessor {
 
                         if($sc->GetParameter($spa, "getchanges") && $spa->HasFolderId() && $spa->HasContentClass() && $spa->HasSyncKey()) {
                             $windowSize = self::$deviceManager->GetWindowSize($spa->GetFolderId(), $spa->GetContentClass(), $spa->GetUuid(), $spa->GetUuidCounter(), $changecount);
-
+                            
+                            // limit windowSize to the max available limit of the global window size left
+                            $globallyAvailable = $sc->GetGlobalWindowSize() - $globallyExportedItems;
+                            if ($changecount > $globallyAvailable) {
+                                ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleSync(): Limit window size to %d as the global window size limit will be reached", $globallyAvailable));
+                                $windowSize = $globallyAvailable;
+                            }
+                            // send <MoreAvailable/> if there are more changes than fit in the folder windowsize
                             if($changecount > $windowSize) {
                                 self::$encoder->startTag(SYNC_MOREAVAILABLE, false, true);
                             }
@@ -915,6 +934,8 @@ class Sync extends RequestProcessor {
                                     if(!is_array($progress))
                                         break;
                                     $n++;
+                                    if ($n % 10 == 0)
+                                        self::$topCollector->AnnounceInformation(sprintf("Streamed data of %d objects out of %d", $n, (($changecount > $windowSize)?$windowSize:$changecount)));
                                 }
                                 catch (SyncObjectBrokenException $mbe) {
                                     $brokenSO = $mbe->GetSyncObject();
@@ -953,6 +974,7 @@ class Sync extends RequestProcessor {
 
                             self::$encoder->endTag();
                             self::$topCollector->AnnounceInformation(sprintf("Outgoing %d objects%s", $n, ($n >= $windowSize)?" of ".$changecount:""), true);
+                            $globallyExportedItems += $n;
 
                             // update folder status, if there is something set
                             if ($spa->GetFolderSyncRemaining() && $changecount > 0) {
