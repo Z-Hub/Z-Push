@@ -334,11 +334,11 @@ class SyncCollections implements Iterator {
      * in a case of a heartbeat and/or partial sync
      *
      * @access public
-     * @return int/boolean          returns false if not set or not available
+     * @return int/boolean          returns 512 (max) if not set or not available
      */
     public function GetGlobalWindowSize() {
         if (!isset($this->globalWindowSize))
-            return false;
+            return 512;
 
         return $this->globalWindowSize;
     }
