@@ -331,3 +331,25 @@ function zarafa_error_handler($errno, $errstr, $errfile, $errline, $errcontext) 
 
 error_reporting(E_ALL);
 set_error_handler("zarafa_error_handler");
+
+
+function zpush_fatal_handler() {
+    $errfile = "unknown file";
+    $errstr  = "shutdown";
+    $errno   = E_CORE_ERROR;
+    $errline = 0;
+
+    $error = error_get_last();
+
+    if( $error !== null) {
+        $errno   = $error["type"];
+        $errfile = $error["file"];
+        $errline = $error["line"];
+        $errstr  = $error["message"];
+
+        if ($errno != 8192) {
+            ZLog::Write(LOGLEVEL_FATAL, sprintf("Fatal error: %s:%d - %s (%s)", $errfile, $errline, $errstr, $errno));
+        }
+    }
+}
+register_shutdown_function("zpush_fatal_handler");
