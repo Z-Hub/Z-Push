@@ -10,7 +10,7 @@
 *
 * Created   :   28.10.2012
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2013, 2015 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -45,13 +45,13 @@
 * Consult LICENSE file for details
 ************************************************/
 
-class SyncRRPicture extends SyncObject {
+class SyncResolveRecipientsPicture extends SyncObject {
     public $maxsize;
     public $maxpictures;
     public $status;
     public $data;
 
-    public function SyncRRPicture() {
+    public function SyncResolveRecipientsPicture() {
         $mapping = array (
             SYNC_RESOLVERECIPIENTS_MAXSIZE                  => array (  self::STREAMER_VAR      => "maxsize"),
             SYNC_RESOLVERECIPIENTS_MAXPICTURES              => array (  self::STREAMER_VAR      => "maxpictures"),

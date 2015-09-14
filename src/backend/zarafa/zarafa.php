@@ -10,7 +10,7 @@
 *
 * Created   :   01.10.2011
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2015 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -920,24 +920,37 @@ class BackendZarafa implements IBackend, ISearchProvider {
     public function ResolveRecipients($resolveRecipients) {
         if ($resolveRecipients instanceof SyncResolveRecipients) {
             $resolveRecipients->status = SYNC_RESOLVERECIPSSTATUS_SUCCESS;
-            $resolveRecipients->recipient = array();
+            $resolveRecipients->response = array();
+            // TODO handle free busy requests
             foreach ($resolveRecipients->to as $i => $to) {
+                $response = new SyncResolveRecipientsResponse();
+                $response->to = $to;
+                $response->status = SYNC_RESOLVERECIPSSTATUS_SUCCESS;
+
                 $recipient = $this->resolveRecipient($to);
-                if ($recipient instanceof SyncResolveRecipient) {
-                    $resolveRecipients->recipient[$i] = $recipient;
+                if (is_array($recipient) && !empty($recipient)) {
+                    $response->recipientcount = 0;
+                    foreach ($recipient as $entry) {
+                        if ($entry instanceof SyncResolveRecipient) {
+                            $response->recipientcount++;
+                            $response->recipient[] = $entry;
+                        }
+                        elseif (is_int($recipient)) {
+                            $response->status = $recipient;
+                        }
+                    }
                 }
-                elseif (is_int($recipient)) {
-                    $resolveRecipients->status = $recipient;
-                }
+
+                $resolveRecipients->response[$i] = $response;
             }
 
             return $resolveRecipients;
         }
+
         ZLog::Write(LOGLEVEL_WARN, "Not a valid SyncResolveRecipients object.");
         // return a SyncResolveRecipients object so that sync doesn't fail
         $r = new SyncResolveRecipients();
         $r->status = SYNC_RESOLVERECIPSSTATUS_PROTOCOLERROR;
-        $r->recipient = array();
         return $r;
     }
 
@@ -1652,18 +1665,16 @@ class BackendZarafa implements IBackend, ISearchProvider {
      * Resolves recipient from the GAL and gets his certificates.
      *
      * @param string $to
-     * @return SyncResolveRecipient|boolean
+     * @return array|boolean
      */
     private function resolveRecipientGAL($to) {
+        ZLog::Write(LOGLEVEL_WBXML, sprintf("Resolving recipient '%s' in GAL", $to));
         $addrbook = $this->getAddressbook();
-            $ab_entryid = mapi_ab_getdefaultdir($addrbook);
+        $ab_entryid = mapi_ab_getdefaultdir($addrbook);
         if ($ab_entryid)
             $ab_dir = mapi_ab_openentry($addrbook, $ab_entryid);
         if ($ab_dir)
             $table = mapi_folder_getcontentstable($ab_dir);
-
-        //         if (!$table)
-            //             throw new StatusException(sprintf("ZarafaBackend->resolveRecipient(): could not open addressbook: 0x%X", mapi_last_hresult()), SYNC_RESOLVERECIPSSTATUS_RESPONSE_UNRESOLVEDRECIP);
 
         if (!$table) {
             ZLog::Write(LOGLEVEL_WARN, sprintf("Unable to open addressbook:0x%X", mapi_last_hresult()));
@@ -1675,6 +1686,8 @@ class BackendZarafa implements IBackend, ISearchProvider {
 
         $querycnt = mapi_table_getrowcount($table);
         if ($querycnt > 0) {
+            $recipientGal = array();
+            // TODO multiple recipients possible if $to is a group or list
             $abentries = mapi_table_queryrows($table, array(PR_DISPLAY_NAME, PR_EMS_AB_TAGGED_X509_CERT), 0, 1);
             $certificates =
                 // check if there are any certificates available
@@ -1685,8 +1698,9 @@ class BackendZarafa implements IBackend, ISearchProvider {
                 ZLog::Write(LOGLEVEL_INFO, sprintf("No certificates found for '%s'", $to));
                 $certificates = $this->getCertificates(false);
             }
-            $recipient = $this->createResolveRecipient(SYNC_RESOLVERECIPIENTS_TYPE_GAL, w2u($abentries[0][PR_DISPLAY_NAME]), $to, $certificates);
-            return $recipient;
+            $recipientGal[] = $this->createResolveRecipient(SYNC_RESOLVERECIPIENTS_TYPE_GAL, w2u($abentries[0][PR_DISPLAY_NAME]), $to, $certificates);
+            ZLog::Write(LOGLEVEL_WBXML, "Found a recipient in GAL");
+            return $recipientGal;
         }
         else {
             ZLog::Write(LOGLEVEL_WARN, sprintf("No recipient found for: '%s'", $to));
@@ -1700,9 +1714,10 @@ class BackendZarafa implements IBackend, ISearchProvider {
      *
      * @param string $to
      *
-     * @return SyncResolveRecipient|boolean
+     * @return array|boolean
      */
     private function resolveRecipientContact($to) {
+        ZLog::Write(LOGLEVEL_WBXML, sprintf("Resolving recipient '%s' in user's contacts", $to));
         // go through all contact folders of the user and
         // check if there's a contact with the given email address
         $root = mapi_msgstore_openentry($this->defaultstore);
@@ -1714,6 +1729,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
         $recipients = array();
 
         if ($contacts !== false) {
+            ZLog::Write(LOGLEVEL_WBXML, "Found contacts");
             // create resolve recipient object
             foreach ($contacts as $contact) {
                 $certificates =
@@ -1722,24 +1738,30 @@ class BackendZarafa implements IBackend, ISearchProvider {
                 $this->getCertificates($contact[PR_USER_X509_CERTIFICATE], 1) : false;
 
                 if ($certificates !== false) {
-                    return $this->createResolveRecipient(SYNC_RESOLVERECIPIENTS_TYPE_CONTACT, u2w($contact[PR_DISPLAY_NAME]), $to, $certificates);
+                    $recipients[] = $this->createResolveRecipient(SYNC_RESOLVERECIPIENTS_TYPE_CONTACT, u2w($contact[PR_DISPLAY_NAME]), $to, $certificates);
+                    ZLog::Write(LOGLEVEL_WBXML, "Found a recipient in main contacts folder");
+                    return $recipients;
                 }
             }
         }
 
         $contactfolder = mapi_msgstore_openentry($this->defaultstore, $rootprops[PR_IPM_CONTACT_ENTRYID]);
         $subfolders = MAPIUtils::GetSubfoldersForType($contactfolder, "IPF.Contact");
-        foreach($subfolders as $folder) {
-            $contacts = $this->getContactsFromFolder($this->defaultstore, $folder[PR_ENTRYID], $to);
-            if ($contacts !== false) {
-                foreach ($contacts as $contact) {
-                    $certificates =
-                    // check if there are any certificates available
-                    (isset($contact[PR_USER_X509_CERTIFICATE]) && is_array($contact[PR_USER_X509_CERTIFICATE]) && count($contact[PR_USER_X509_CERTIFICATE])) ?
-                    $this->getCertificates($contact[PR_USER_X509_CERTIFICATE], 1) : false;
+        if ($subfolders !== false) {
+            foreach($subfolders as $folder) {
+                $contacts = $this->getContactsFromFolder($this->defaultstore, $folder[PR_ENTRYID], $to);
+                if ($contacts !== false) {
+                    foreach ($contacts as $contact) {
+                        $certificates =
+                        // check if there are any certificates available
+                        (isset($contact[PR_USER_X509_CERTIFICATE]) && is_array($contact[PR_USER_X509_CERTIFICATE]) && count($contact[PR_USER_X509_CERTIFICATE])) ?
+                        $this->getCertificates($contact[PR_USER_X509_CERTIFICATE], 1) : false;
 
-                    if ($certificates !== false) {
-                        return $this->createResolveRecipient(SYNC_RESOLVERECIPIENTS_TYPE_CONTACT, u2w($contact[PR_DISPLAY_NAME]), $to, $certificates);
+                        if ($certificates !== false) {
+                            $recipients[] = $this->createResolveRecipient(SYNC_RESOLVERECIPIENTS_TYPE_CONTACT, u2w($contact[PR_DISPLAY_NAME]), $to, $certificates);
+                            ZLog::Write(LOGLEVEL_WBXML, "Found a recipient in a contacts subfolder");
+                            return $recipients;
+                        }
                     }
                 }
             }
@@ -1769,7 +1791,9 @@ class BackendZarafa implements IBackend, ISearchProvider {
                                     $this->getCertificates($contact[PR_USER_X509_CERTIFICATE], 1) : false;
 
                                     if ($certificates !== false) {
-                                        return $this->createResolveRecipient(SYNC_RESOLVERECIPIENTS_TYPE_CONTACT, u2w($contact[PR_DISPLAY_NAME]), $to, $certificates);
+                                        $recipients[] = $this->createResolveRecipient(SYNC_RESOLVERECIPIENTS_TYPE_CONTACT, u2w($contact[PR_DISPLAY_NAME]), $to, $certificates);
+                                        ZLog::Write(LOGLEVEL_WBXML, "Found a recipient in a public folder");
+                                        return $recipients;
                                     }
                                 }
                             }
@@ -1784,19 +1808,20 @@ class BackendZarafa implements IBackend, ISearchProvider {
         }
 
         $certificates = $this->getCertificates(false);
-        return $this->createResolveRecipient(SYNC_RESOLVERECIPIENTS_TYPE_CONTACT, $to, $to, $certificates);
+        $recipients[] = $this->createResolveRecipient(SYNC_RESOLVERECIPIENTS_TYPE_CONTACT, $to, $to, $certificates);
+        return $recipients;
     }
 
     /**
-     * Creates SyncRRCertificates object for ResolveRecipients
+     * Creates SyncResolveRecipientsCertificates object for ResolveRecipients
      *
      * @param binary $certificates
      * @param int $recipientCount
      *
-     * @return SyncRRCertificates
+     * @return SyncResolveRecipientsCertificates
      */
     private function getCertificates($certificates, $recipientCount = 0) {
-        $cert = new SyncRRCertificates();
+        $cert = new SyncResolveRecipientsCertificates();
         if ($certificates === false) {
             $cert->status = SYNC_RESOLVERECIPSSTATUS_CERTIFICATES_NOVALIDCERT;
             return $cert;
@@ -1829,7 +1854,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
         if ($recipient->certificates === false) {
             // the recipient does not have a valid certificate, set the appropriate status
             ZLog::Write(LOGLEVEL_INFO, sprintf("No certificates found for '%s'", $email));
-            $cert = new SyncRRCertificates();
+            $cert = new SyncResolveRecipientsCertificates();
             $cert->status = SYNC_RESOLVERECIPSSTATUS_CERTIFICATES_NOVALIDCERT;
             $recipient->certificates = $cert;
         }
@@ -1851,7 +1876,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
         mapi_table_restrict($folderContent, MAPIUtils::GetEmailAddressRestriction($store, $email));
         // TODO max limit
         if (mapi_table_getrowcount($folderContent) > 0) {
-            return mapi_table_queryallrows($folderContent, array(PR_DISPLAY_NAME, PR_USER_X509_CERTIFICATE));
+            return mapi_table_queryallrows($folderContent, array(PR_DISPLAY_NAME, PR_USER_X509_CERTIFICATE, PR_ENTRYID));
         }
         return false;
     }

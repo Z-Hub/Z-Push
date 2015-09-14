@@ -10,7 +10,7 @@
 *
 * Created   :   28.10.2012
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2013, 2015 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -51,7 +51,7 @@ class SyncResolveRecipient extends SyncObject {
     public $emailaddress;
     public $availability;
     public $certificates;
-    public $pictures;
+    public $picture;
 
     public function SyncResolveRecipient() {
         $mapping = array (
@@ -60,14 +60,13 @@ class SyncResolveRecipient extends SyncObject {
             SYNC_RESOLVERECIPIENTS_EMAILADDRESS             => array (  self::STREAMER_VAR      => "emailaddress"),
 
             SYNC_RESOLVERECIPIENTS_AVAILABILITY             => array (  self::STREAMER_VAR      => "availability",
-                                                                        self::STREAMER_TYPE     => "SyncRRAvailability"),
+                                                                        self::STREAMER_TYPE     => "SyncResolveRecipientsAvailability"),
 
             SYNC_RESOLVERECIPIENTS_CERTIFICATES             => array (  self::STREAMER_VAR      => "certificates",
-                                                                        self::STREAMER_TYPE     => "SyncRRCertificates"),
+                                                                        self::STREAMER_TYPE     => "SyncResolveRecipientsCertificates"),
 
-            SYNC_RESOLVERECIPIENTS_PICTURE                  => array (  self::STREAMER_VAR      => "pictures",
-                                                                        self::STREAMER_TYPE     => "SyncRRPicture",
-                                                                        self::STREAMER_ARRAY    => SYNC_RESOLVERECIPIENTS_PICTURE),
+            SYNC_RESOLVERECIPIENTS_PICTURE                  => array (  self::STREAMER_VAR      => "picture",
+                                                                        self::STREAMER_TYPE     => "SyncResolveRecipientsPicture"),
         );
 
         parent::SyncObject($mapping);

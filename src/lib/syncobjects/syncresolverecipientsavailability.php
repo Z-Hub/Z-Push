@@ -10,7 +10,7 @@
 *
 * Created   :   28.12.2012
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2013, 2015 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -45,13 +45,13 @@
 * Consult LICENSE file for details
 ************************************************/
 
-class SyncRRAvailability extends SyncObject {
+class SyncResolveRecipientsAvailability extends SyncObject {
     public $starttime;
     public $endtime;
     public $status;
     public $mergedfreebusy;
 
-    public function SyncRRAvailability() {
+    public function SyncResolveRecipientsAvailability() {
         $mapping = array (
             SYNC_RESOLVERECIPIENTS_STARTTIME                => array (  self::STREAMER_VAR      => "starttime"),
             SYNC_RESOLVERECIPIENTS_ENDTIME                  => array (  self::STREAMER_VAR      => "endtime"),
