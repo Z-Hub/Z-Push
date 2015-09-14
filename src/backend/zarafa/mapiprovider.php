@@ -798,7 +798,8 @@ class MAPIProvider {
             ZLog::Write(LOGLEVEL_DEBUG, "Attach the transport message headers to a signed message");
             $transportHeaders = array(PR_TRANSPORT_MESSAGE_HEADERS_W);
             $messageHeaders = $this->getProps($mapimessage, $transportHeaders);
-            $message->asbody->data = $messageHeaders[PR_TRANSPORT_MESSAGE_HEADERS] ."\r\n\r\n" . $message->asbody->data;
+            // TODO fix, this is ugly as f*ck! Use a prepend filter?
+            $message->asbody->data = StringStreamWrapper::Open($messageHeaders[PR_TRANSPORT_MESSAGE_HEADERS] ."\r\n\r\n" . stream_get_contents($message->asbody->data));
         }
 
         return $message;
@@ -2349,11 +2350,12 @@ class MAPIProvider {
             $message->asbody = new SyncBaseBody();
             $message->asbody->type = $bpReturnType;
             if ($bpReturnType == SYNC_BODYPREFERENCE_RTF)
-                $message->asbody->data = base64_encode($body);
+                $message->asbody->data = StringStreamWrapper::Open(base64_encode($body));
             elseif (isset($message->internetcpid) && $bpReturnType == SYNC_BODYPREFERENCE_HTML)
-                $message->asbody->data = Utils::ConvertCodepageStringToUtf8($message->internetcpid, $body);
+                $message->asbody->data = StringStreamWrapper::Open(Utils::ConvertCodepageStringToUtf8($message->internetcpid, $body));
             else
-                $message->asbody->data = w2u($body);
+                $message->asbody->data = StringStreamWrapper::Open($body);
+            // TODO fix
             $message->asbody->estimatedDataSize = strlen($message->asbody->data);
         }
         else {
@@ -2401,8 +2403,7 @@ class MAPIProvider {
             if (Request::GetProtocolVersion() >= 12.0) {
                 if (!isset($message->asbody))
                     $message->asbody = new SyncBaseBody();
-                //TODO data should be wrapped in a MapiStreamWrapper
-                $message->asbody->data = mapi_stream_read($stream, $streamsize);
+                $message->asbody->data = MapiStreamWrapper::Open($stream);
                 $message->asbody->estimatedDataSize = $streamsize;
                 $message->asbody->truncated = 0;
             }
@@ -2451,7 +2452,12 @@ class MAPIProvider {
                     $message->asbody->estimatedDataSize > $bpo->GetTruncationSize() &&
                     $contentparameters->GetTruncation() != SYNC_TRUNCATION_ALL // do not truncate message if the whole is requested, e.g. on fetch
                 ) {
-                $message->asbody->data = Utils::Utf8_truncate($message->asbody->data, $bpo->GetTruncationSize());
+                
+                // read the data from the stream, 10 bytes more than requested
+                // TODO this should be done better! We could give another parameter (length) to the Stream wrappers so they truncate automatically after X bytes.
+                $dataChunk = fread($message->asbody->data, $bpo->GetTruncationSize() + 10);
+                $dataTruncated = Utils::Utf8_truncate($dataChunk, $bpo->GetTruncationSize());
+                $message->asbody->data = StringStreamWrapper::Open($dataTruncated);
                 $message->asbody->truncated = 1;
 
             }
@@ -2610,15 +2616,16 @@ class MAPIProvider {
      * @return void
      */
     private function setASbody($asbody, &$props, $appointmentprops) {
-        if (isset($asbody->type) && isset($asbody->data) && strlen($asbody->data) > 0) {
+        // TODO: fix checking for the length
+        if (isset($asbody->type) && isset($asbody->data) /*&& strlen($asbody->data) > 0*/) {
             switch ($asbody->type) {
                 case SYNC_BODYPREFERENCE_PLAIN:
                 default:
                 //set plain body if the type is not in valid range
-                    $props[$appointmentprops["body"]] = u2w($asbody->data);
+                    $props[$appointmentprops["body"]] = stream_get_contents($asbody->data);
                     break;
                 case SYNC_BODYPREFERENCE_HTML:
-                    $props[$appointmentprops["html"]] = u2w($asbody->data);
+                    $props[$appointmentprops["html"]] = stream_get_contents($asbody->data);
                     break;
                 case SYNC_BODYPREFERENCE_RTF:
                     break;
