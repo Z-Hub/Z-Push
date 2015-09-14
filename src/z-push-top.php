@@ -53,7 +53,8 @@ include('lib/core/topcollector.php');
 include('lib/utils/utils.php');
 include('lib/request/request.php');
 include('lib/request/requestprocessor.php');
-include('config.php');
+if (!defined('ZPUSH_CONFIG')) define('ZPUSH_CONFIG', 'config.php');
+include_once(ZPUSH_CONFIG);
 include('version.php');
 
 /************************************************

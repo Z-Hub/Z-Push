@@ -92,7 +92,8 @@ include('lib/syncobjects/syncuserinformation.php');
 include('lib/syncobjects/syncdeviceinformation.php');
 include('lib/syncobjects/syncdevicepassword.php');
 include('lib/syncobjects/syncitemoperationsattachment.php');
-include('config.php');
+if (!defined('ZPUSH_CONFIG')) define('ZPUSH_CONFIG', 'config.php');
+include_once(ZPUSH_CONFIG);
 include('version.php');
 
 /**
