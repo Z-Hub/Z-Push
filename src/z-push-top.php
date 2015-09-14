@@ -670,7 +670,7 @@ class ZPushTop {
     /**
      * Pads and trims string
      *
-     * @param string    $str     to be trimmed/padded
+     * @param string    $str        to be trimmed/padded
      * @param int       $size       characters to be considered
      * @param boolean   $cutmiddle  (optional) indicates where to long information should
      *                              be trimmed of, false means at the end
