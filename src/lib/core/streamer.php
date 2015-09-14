@@ -55,13 +55,15 @@ class Streamer implements Serializable {
     const STREAMER_TYPE_DATE = 1;
     const STREAMER_TYPE_HEX = 2;
     const STREAMER_TYPE_DATE_DASHES = 3;
-    const STREAMER_TYPE_STREAM = 4;
+    const STREAMER_TYPE_STREAM = 4; // deprecated
     const STREAMER_TYPE_IGNORE = 5;
     const STREAMER_TYPE_SEND_EMPTY = 6;
     const STREAMER_TYPE_NO_CONTAINER = 7;
     const STREAMER_TYPE_COMMA_SEPARATED = 8;
     const STREAMER_TYPE_SEMICOLON_SEPARATED = 9;
     const STREAMER_TYPE_MULTIPART = 10;
+    const STREAMER_TYPE_STREAM_ASBASE64 = 11;
+    const STREAMER_TYPE_STREAM_ASPLAIN = 12;
 
     protected $mapping;
     public $flags;
@@ -318,8 +320,11 @@ class Streamer implements Serializable {
                     else if(isset($map[self::STREAMER_TYPE]) && $map[self::STREAMER_TYPE] == self::STREAMER_TYPE_HEX) {
                         $encoder->content(strtoupper(bin2hex($this->$map[self::STREAMER_VAR])));
                     }
-                    else if(isset($map[self::STREAMER_TYPE]) && $map[self::STREAMER_TYPE] == self::STREAMER_TYPE_STREAM) {
-                        $encoder->content($this->$map[self::STREAMER_VAR]);
+                    else if(isset($map[self::STREAMER_TYPE]) && $map[self::STREAMER_TYPE] == self::STREAMER_TYPE_STREAM_ASPLAIN) {
+                        $encoder->contentStream($this->$map[self::STREAMER_VAR], false);
+                    }
+                    else if(isset($map[self::STREAMER_TYPE]) && ($map[self::STREAMER_TYPE] == self::STREAMER_TYPE_STREAM_ASBASE64 || $map[self::STREAMER_TYPE] == self::STREAMER_TYPE_STREAM)) {
+                        $encoder->contentStream($this->$map[self::STREAMER_VAR], true);
                     }
                     // implode comma or semicolon arrays into a string
                     else if(isset($map[self::STREAMER_TYPE]) && is_array($this->$map[self::STREAMER_VAR]) &&

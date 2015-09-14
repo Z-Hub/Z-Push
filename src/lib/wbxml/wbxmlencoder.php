@@ -165,31 +165,45 @@ class WBXMLEncoder extends WBXMLDefs {
     }
 
     /**
-     * Puts content on the output stack
+     * Puts content on the output stack.
      *
-     * @param string|resource $content
+     * @param string $content
      *
      * @access public
-     * @return string
+     * @return
      */
     public function content($content) {
-        if (is_resource($content)) {
-            if (($stat = fstat($content)) && isset($stat['size']) && !$stat['size']) {
-                ZLog::Write(LOGLEVEL_DEBUG, "Ommit writing 0 size stream to WBXML");
-                return;
-            }
-            fseek($content, 0, SEEK_SET);	// fstat seeks to end of file to determine size!
-        }
-        else {
-            // We need to filter out any \0 chars because it's the string terminator in WBXML. We currently
-            // cannot send \0 characters within the XML content anywhere.
-            $content = str_replace("\0","",$content);
+        // We need to filter out any \0 chars because it's the string terminator in WBXML. We currently
+        // cannot send \0 characters within the XML content anywhere.
+        $content = str_replace("\0","",$content);
 
-            if("x" . $content == "x")
-                return;
-        }
+        if("x" . $content == "x")
+            return;
         $this->_outputStack();
         $this->_content($content);
+    }
+
+    /**
+     * Puts content of a stream on the output stack.
+     *
+     * @param resource $stream
+     * @param boolean $asBase64     if true, the data will be encoded as base64, default: false
+     *
+     * @access public
+     * @return
+     */
+    public function contentStream($stream, $asBase64 = false) {
+        if (!$asBase64) {
+            include_once('lib/wbxml/replacenullcharfilter.php');
+            $rnc_filter = stream_filter_append($stream, 'replacenullchar');
+        }
+
+        $this->_outputStack();
+        $this->_contentStream($stream, $asBase64);
+
+        if (!$asBase64) {
+            stream_filter_remove($rnc_filter);
+        }
     }
 
     /**
@@ -278,19 +292,46 @@ class WBXMLEncoder extends WBXMLDefs {
     }
 
     /**
-     * Outputs actual data
+     * Outputs actual data.
      *
      * @access private
-     * @param string|resource $content
+     * @param string $content
      * @return
      */
     private function _content($content) {
         $this->logContent($content);
         $this->outByte(WBXML_STR_I);
-        if (is_resource($content))
-            $this->outTermStream ($content);
-        else
-            $this->outTermStr($content);
+        $this->outTermStr($content);
+    }
+
+    /**
+     * Outputs actual data coming from a stream, optionally encoded as base64.
+     *
+     * @access private
+     * @param resource $stream
+     * @param boolean  $asBase64
+     * @return
+     */
+    private function _contentStream($stream, $asBase64) {
+        // write full stream, including the finalizing terminator to the output stream (stuff outTermStr() would do)
+        $this->outByte(WBXML_STR_I);
+        if ($asBase64) {
+            $out_filter = stream_filter_append($this->_out, 'convert.base64-encode');
+        }
+        stream_copy_to_stream($stream, $this->_out);
+        if ($asBase64) {
+            stream_filter_remove($out_filter);
+        }
+        fwrite($this->_out, chr(0));
+
+        // data is out, do some logging
+        $stat = fstat($stream);
+        $logContent = sprintf("<<< %d bytes of %s data >>>", $stat['size'], $asBase64 ? "base64 encoded":"plain");
+        $this->logContent($logContent);
+
+        // write the meta data also to the _outLog stream, WBXML_STR_I was already written by outByte() above
+        fwrite($this->_outLog, $logContent);
+        fwrite($this->_outLog, chr(0));
     }
 
     /**
@@ -357,28 +398,6 @@ class WBXMLEncoder extends WBXMLDefs {
         }
         fwrite($this->_outLog, $content);
         fwrite($this->_outLog, chr(0));
-    }
-
-    /**
-     * Outputs stream content base64 encoded with string terminator
-     *
-     * @param resource $stream
-     *
-     * @access private
-     * @return
-     */
-    private function outTermStream($stream) {
-        $out_filter = stream_filter_append($this->_out, 'convert.base64-encode');
-		stream_copy_to_stream($stream, $this->_out);
-        stream_filter_remove($out_filter);
-        fwrite($this->_out, chr(0));
-        fseek($stream, 0, SEEK_SET);
-
-        $outLog_filter = stream_filter_append($this->_outLog, 'convert.base64-encode');
-        stream_copy_to_stream($stream, $this->_outLog);
-        stream_filter_remove($outLog_filter);
-        fwrite($this->_outLog, chr(0));
-        fseek($stream, 0, SEEK_SET);
     }
 
     /**
@@ -505,7 +524,7 @@ class WBXMLEncoder extends WBXMLDefs {
     /**
      * Logs content to ZLog
      *
-     * @param string|resource $content
+     * @param string $content
      *
      * @access private
      * @return
@@ -515,14 +534,7 @@ class WBXMLEncoder extends WBXMLDefs {
             return;
 
         $spaces = str_repeat(" ", count($this->logStack));
-        if (is_resource($content)) {
-            $stat = fstat($content);
-            fseek($content, 0, SEEK_SET);	// fstat seeks to end of file to determine size!
-            ZLog::Write(LOGLEVEL_WBXML,"O " . $spaces . " <<< ".$stat['size']." bytes of base64 encoded data >>>");
-        }
-        else {
-            ZLog::Write(LOGLEVEL_WBXML,"O " . $spaces . $content);
-        }
+        ZLog::Write(LOGLEVEL_WBXML,"O " . $spaces . $content);
     }
 
     /**
