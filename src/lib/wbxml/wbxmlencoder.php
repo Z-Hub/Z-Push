@@ -326,7 +326,8 @@ class WBXMLEncoder extends WBXMLDefs {
         fwrite($this->_out, chr(0));
 
         // data is out, do some logging
-        $logContent = sprintf("<<< %d bytes of %s data >>>", $written, $asBase64 ? "base64 encoded":"plain");
+        $stat = fstat($stream);
+        $logContent = sprintf("<<< written %d of %d bytes of %s data >>>", $written, $stat['size'], $asBase64 ? "base64 encoded":"plain");
         $this->logContent($logContent);
 
         // write the meta data also to the _outLog stream, WBXML_STR_I was already written by outByte() above
