@@ -509,10 +509,25 @@ class BackendZarafa implements IBackend, ISearchProvider {
             if(!isset($fwmessage) || !$fwmessage)
                 throw new StatusException(sprintf("ZarafaBackend->SendMail(): Could not open message id '%s' in folder id '%s' to be replied/forwarded: 0x%X", $sm->source->itemid, $sm->source->folderid, mapi_last_hresult()), SYNC_COMMONSTATUS_ITEMNOTFOUND);
 
-            //update icon when forwarding or replying message
-            if ($sm->forwardflag) mapi_setprops($fwmessage, array(PR_ICON_INDEX=>262));
-            elseif ($sm->replyflag) mapi_setprops($fwmessage, array(PR_ICON_INDEX=>261));
-            mapi_savechanges($fwmessage);
+            // update icon and last_verb when forwarding or replying message
+            // reply-all (verb 103) is not supported, as we cannot really detect this case
+            if ($sm->forwardflag) {
+                $props = array(    
+                    PR_ICON_INDEX           => 262,
+                    PR_LAST_VERB_EXECUTED   => 104,
+                );
+            }
+            elseif ($sm->replyflag) {
+                $props = array(    
+                    PR_ICON_INDEX           => 261,
+                    PR_LAST_VERB_EXECUTED   => 102,
+                );
+            }
+            if (isset($props)) {
+                $props[PR_LAST_VERB_EXECUTION_TIME] = time();
+                mapi_setprops($fwmessage,$props);
+                mapi_savechanges($fwmessage);
+            }
 
             // only attach the original message if the mobile does not send it itself
             if (!isset($sm->replacemime)) {
