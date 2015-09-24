@@ -512,20 +512,20 @@ class BackendZarafa implements IBackend, ISearchProvider {
             // update icon and last_verb when forwarding or replying message
             // reply-all (verb 103) is not supported, as we cannot really detect this case
             if ($sm->forwardflag) {
-                $props = array(    
+                $updateProps = array(    
                     PR_ICON_INDEX           => 262,
                     PR_LAST_VERB_EXECUTED   => 104,
                 );
             }
             elseif ($sm->replyflag) {
-                $props = array(    
+                $updateProps = array(    
                     PR_ICON_INDEX           => 261,
                     PR_LAST_VERB_EXECUTED   => 102,
                 );
             }
-            if (isset($props)) {
-                $props[PR_LAST_VERB_EXECUTION_TIME] = time();
-                mapi_setprops($fwmessage,$props);
+            if (isset($updateProps)) {
+                $updateProps[PR_LAST_VERB_EXECUTION_TIME] = time();
+                mapi_setprops($fwmessage, $updateProps);
                 mapi_savechanges($fwmessage);
             }
 
