@@ -43,6 +43,7 @@
 
 include_once('../lib/core/zpushdefs.php');
 include_once('../lib/exceptions/exceptions.php');
+include_once('../lib/utils/compat.php');
 include_once('../lib/utils/utils.php');
 include_once('../lib/core/zpush.php');
 include_once('../lib/core/zlog.php');
@@ -120,7 +121,7 @@ class ZPushAutodiscover {
             else {
                 ZLog::Write(LOGLEVEL_ERROR, sprintf("Unable to complete autodiscover incorrect request: '%s'", $ex->getMessage()));
             }
-            header('HTTP/1.1 401 Unauthorized');
+            http_response_code(401);
             header('WWW-Authenticate: Basic realm="ZPush"');
         }
         catch (ZPushException $ex) {
@@ -258,7 +259,7 @@ class ZPushAutodiscover {
         if (isset($userDetails[$attrib]) && $userDetails[$attrib]) {
             return $userDetails[$attrib];
         }
-        ZLog::Write(LOGLEVEL_WARN, sprintf("The backend was not able to find attribute '%s' of the user. Fall back to the default value."));
+        ZLog::Write(LOGLEVEL_WARN, sprintf("The backend was not able to find attribute '%s' of the user. Fall back to the default value.", $attrib));
         return false;
     }
 }

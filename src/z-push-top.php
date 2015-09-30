@@ -53,7 +53,8 @@ include('lib/core/topcollector.php');
 include('lib/utils/utils.php');
 include('lib/request/request.php');
 include('lib/request/requestprocessor.php');
-include('config.php');
+if (!defined('ZPUSH_CONFIG')) define('ZPUSH_CONFIG', 'config.php');
+include_once(ZPUSH_CONFIG);
 include('version.php');
 
 /************************************************
@@ -66,6 +67,9 @@ include('version.php');
         ZPush::CheckConfig();
         if (!function_exists("pcntl_signal"))
             throw new FatalException("Function pcntl_signal() is not available. Please install package 'php5-pcntl' (or similar) on your system.");
+
+        if (php_sapi_name() != "cli")
+            throw new FatalException("This script can only be called from the CLI.");
 
         $zpt = new ZPushTop();
 
@@ -85,7 +89,8 @@ include('version.php');
             echo "Z-Push shared memory interprocess communication is not available.\n";
     }
     catch (ZPushException $zpe) {
-        die(get_class($zpe) . ": ". $zpe->getMessage() . "\n");
+        fwrite(STDERR, get_class($zpe) . ": ". $zpe->getMessage() . "\n");
+        exit(1);
     }
 
     echo "terminated\n";

@@ -336,6 +336,12 @@ class WBXMLEncoder extends WBXMLDefs {
     private function outTermStr($content) {
         fwrite($this->_out, $content);
         fwrite($this->_out, chr(0));
+
+        // truncate data bigger than 10 KB on outLog
+        $l = strlen($content);
+        if ($l > 10240) {
+            $content = substr($content, 0, 5120) . sprintf("...<data with total %d bytes truncated>...", $l) . substr($content, -5120);
+        }
         fwrite($this->_outLog, $content);
         fwrite($this->_outLog, chr(0));
     }

@@ -197,7 +197,7 @@ class StateObject implements Serializable {
             return true;
         }
 
-        throw new FatalNotImplementedException(sprintf("StateObject->__call('%s'): not implemented. op: {$operator} args:". count($arguments), $name));
+        throw new FatalNotImplementedException(sprintf("StateObject->__call('%s'): not implemented. op: {%s} args: %d", $name, $operator, count($arguments)));
     }
 
     /**

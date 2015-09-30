@@ -478,7 +478,7 @@ class DeviceManager {
 
         if (defined("SYNC_MAX_ITEMS") && SYNC_MAX_ITEMS < $items) {
             if ($queuedmessages > SYNC_MAX_ITEMS)
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("DeviceManager->GetWindowSize() overwriting max itmes requested of %d by %d forced in configuration.", $items, SYNC_MAX_ITEMS));
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("DeviceManager->GetWindowSize() overwriting max items requested of %d by %d forced in configuration.", $items, SYNC_MAX_ITEMS));
             $items = SYNC_MAX_ITEMS;
         }
 
@@ -751,6 +751,17 @@ class DeviceManager {
         $this->device->SetAnnouncedASversion($latest);
 
         return ($announced != $latest);
+    }
+
+    /**
+     * Returns the User Agent. This data is consolidated with data from Request::GetUserAgent() 
+     * and the data saved in the ASDevice.
+     *
+     * @access public
+     * @return string
+     */
+    public function GetUserAgent() {
+        return $this->device->GetDeviceUserAgent();
     }
 
     /**----------------------------------------------------------------------------------------------------------

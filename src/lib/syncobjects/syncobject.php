@@ -129,8 +129,13 @@ abstract class SyncObject extends Streamer {
             $val = $v[self::STREAMER_VAR];
             // array of values?
             if (isset($v[self::STREAMER_ARRAY])) {
-                // seek for differences in the arrays
-                if (is_array($this->$val) && is_array($odo->$val)) {
+                // if neither array is created then don't fail the comparison
+                if (!isset($this->$val) && !isset($odo->$val)) {
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncObject->equals() array '%s' is NOT SET in either object", $val));
+                    continue;
+                }
+                elseif (is_array($this->$val) && is_array($odo->$val)) {
+                    // if both arrays exist then seek for differences in the arrays
                     if (count(array_diff($this->$val, $odo->$val)) + count(array_diff($odo->$val, $this->$val)) > 0) {
                         ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncObject->equals() items in array '%s' differ", $val));
                         return false;
