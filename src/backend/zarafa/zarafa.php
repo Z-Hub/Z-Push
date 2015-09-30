@@ -93,6 +93,8 @@ class BackendZarafa implements IBackend, ISearchProvider {
     // ZCP config parameter for PR_EC_ENABLED_FEATURES / PR_EC_DISABLED_FEATURES
     const ZPUSH_ENABLED = 'mobile';
 
+    const MAXAMBIGUOUSRECIPIENTS = 9999;
+
     /**
      * Constructor of the Zarafa Backend
      *
@@ -921,17 +923,39 @@ class BackendZarafa implements IBackend, ISearchProvider {
         if ($resolveRecipients instanceof SyncResolveRecipients) {
             $resolveRecipients->status = SYNC_RESOLVERECIPSSTATUS_SUCCESS;
             $resolveRecipients->response = array();
-            // TODO handle free busy requests
+            $resolveRecipientsOptions = new SyncResolveRecipientsOptions();
+
+            if (isset($resolveRecipients->options)) {
+                $resolveRecipientsOptions = $resolveRecipients->options;
+                // only limit ambiguous recipients if the client requests it.
+                $maxAmbiguousRecipients = self::MAXAMBIGUOUSRECIPIENTS;
+                if (isset($resolveRecipientsOptions->maxambiguousrecipients) &&
+                        $resolveRecipientsOptions->maxambiguousrecipients >= 0 &&
+                        $resolveRecipientsOptions->maxambiguousrecipients <= self::MAXAMBIGUOUSRECIPIENTS) {
+                    $maxAmbiguousRecipients = $resolveRecipientsOptions->maxambiguousrecipients;
+                }
+            }
+
             foreach ($resolveRecipients->to as $i => $to) {
                 $response = new SyncResolveRecipientsResponse();
                 $response->to = $to;
                 $response->status = SYNC_RESOLVERECIPSSTATUS_SUCCESS;
 
-                $recipient = $this->resolveRecipient($to);
+                $recipient = $this->resolveRecipient($to, $maxAmbiguousRecipients);
                 if (is_array($recipient) && !empty($recipient)) {
                     $response->recipientcount = 0;
                     foreach ($recipient as $entry) {
                         if ($entry instanceof SyncResolveRecipient) {
+                            // certificates are already set. Unset them if they weren't required.
+                            if (!isset($resolveRecipientsOptions->certificateretrieval)) {
+                                unset($entry->certificates);
+                            }
+                            if (isset($resolveRecipientsOptions->availability)) {
+                                // TODO implement availability retrieval of the recipient
+                            }
+                            if (isset($resolveRecipientsOptions->picture)) {
+                                // TODO implement picture retrieval of the recipient
+                            }
                             $response->recipientcount++;
                             $response->recipient[] = $entry;
                         }
@@ -987,6 +1011,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
         // only return users whose displayName or the username starts with $name
         //TODO: use PR_ANR for this restriction instead of PR_DISPLAY_NAME and PR_ACCOUNT
         $addrbook = $this->getAddressbook();
+        // FIXME: create a function to get the adressbook contentstable
         if ($addrbook)
             $ab_entryid = mapi_ab_getdefaultdir($addrbook);
         if ($ab_entryid)
@@ -1642,17 +1667,18 @@ class BackendZarafa implements IBackend, ISearchProvider {
      * Resolve recipient based on his email address.
      *
      * @param string $to
+     * @param int $maxAmbiguousRecipients
      *
      * @return SyncResolveRecipient|boolean
      */
-    private function resolveRecipient($to) {
-        $recipient = $this->resolveRecipientGAL($to);
+    private function resolveRecipient($to, $maxAmbiguousRecipients) {
+        $recipient = $this->resolveRecipientGAL($to, $maxAmbiguousRecipients);
 
         if ($recipient !== false) {
             return $recipient;
         }
 
-        $recipient = $this->resolveRecipientContact($to);
+        $recipient = $this->resolveRecipientContact($to, $maxAmbiguousRecipients);
 
         if ($recipient !== false) {
             return $recipient;
@@ -1665,11 +1691,13 @@ class BackendZarafa implements IBackend, ISearchProvider {
      * Resolves recipient from the GAL and gets his certificates.
      *
      * @param string $to
+     * @param int $maxAmbiguousRecipients
      * @return array|boolean
      */
-    private function resolveRecipientGAL($to) {
+    private function resolveRecipientGAL($to, $maxAmbiguousRecipients) {
         ZLog::Write(LOGLEVEL_WBXML, sprintf("Resolving recipient '%s' in GAL", $to));
         $addrbook = $this->getAddressbook();
+        // FIXME: create a function to get the adressbook contentstable
         $ab_entryid = mapi_ab_getdefaultdir($addrbook);
         if ($ab_entryid)
             $ab_dir = mapi_ab_openentry($addrbook, $ab_entryid);
@@ -1713,10 +1741,11 @@ class BackendZarafa implements IBackend, ISearchProvider {
      * Resolves recipient from the contact list and gets his certificates.
      *
      * @param string $to
+     * @param int $maxAmbiguousRecipients
      *
      * @return array|boolean
      */
-    private function resolveRecipientContact($to) {
+    private function resolveRecipientContact($to, $maxAmbiguousRecipients) {
         ZLog::Write(LOGLEVEL_WBXML, sprintf("Resolving recipient '%s' in user's contacts", $to));
         // go through all contact folders of the user and
         // check if there's a contact with the given email address
