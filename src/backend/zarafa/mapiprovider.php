@@ -2408,10 +2408,9 @@ class MAPIProvider {
                 $message->asbody->truncated = 0;
             }
             else {
-                $message->mimetruncated = 0;
-                //TODO mimedata should be a wrapped in a MapiStreamWrapper
-                $message->mimedata = mapi_stream_read($stream, $streamsize);
+                $message->mimedata = MapiStreamWrapper::Open($stream);
                 $message->mimesize = $streamsize;
+                $message->mimetruncated = 0;
             }
             unset($message->body, $message->bodytruncated);
             return true;
