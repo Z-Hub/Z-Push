@@ -49,6 +49,7 @@ class MAPIStreamWrapper {
     private $position;
     private $streamlength;
     private $writtenData;
+    private $toTruncate;
 
     /**
      * Opens the stream
@@ -71,6 +72,7 @@ class MAPIStreamWrapper {
         $this->position = 0;
 
         $this->writtenData = "";
+        $this->toTruncate = false;
 
         // this is our stream!
         $this->mapistream = $contextOptions[self::PROTOCOL]['stream'];
@@ -104,9 +106,17 @@ class MAPIStreamWrapper {
             $len = $len - strlen($data);
         }
         if ($len > 0) {
+            // read 4 additional bytes from the stream so we can always truncate correctly
+            if ($this->toTruncate)
+                $len += 4;
             $data .= mapi_stream_read($this->mapistream, $len);
         }
         $this->position += strlen($data);
+
+        // we need to truncate UTF8 compatible if ftruncate() was called
+        if ($this->toTruncate && $this->position >= $this->streamlength) {
+            $data = Utils::Utf8_truncate($data, $this->streamlength);
+        }
         return $data;
     }
 
@@ -171,6 +181,7 @@ class MAPIStreamWrapper {
      */
     public function stream_truncate ($new_size) {
         $this->streamlength = $new_size;
+        $this->toTruncate = true;
         
         if ($this->position > $this->streamlength) {
             ZLog::Write(LOGLEVEL_WARN, sprintf("MAPIStreamWrapper->stream_truncate(): stream position (%d) ahead of new size of %d. Repositioning pointer to end of stream.", $this->position, $this->streamlength));

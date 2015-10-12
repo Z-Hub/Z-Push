@@ -155,8 +155,8 @@ class StringStreamWrapper {
      */
     public function stream_truncate ($new_size) {
         // cut the string!
-        $this->stringstream = substr($this->stringstream, 0, $new_size);
-        $this->streamlength = $new_size;
+        $this->stringstream = Utils::Utf8_truncate($this->stringstream, $new_size);
+        $this->streamlength = strlen($this->stringstream);
     
         if ($this->position > $this->streamlength) {
             ZLog::Write(LOGLEVEL_WARN, sprintf("MAPIStreamWrapper->stream_truncate(): stream position (%d) ahead of new size of %d. Repositioning pointer to end of stream.", $this->position, $this->streamlength));
