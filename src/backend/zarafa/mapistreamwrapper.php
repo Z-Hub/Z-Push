@@ -97,7 +97,7 @@ class MAPIStreamWrapper {
         $data = "";
         $prependLength = strlen($this->writtenData);
         // prepend data at the beginning of the stream or when we are in the middle of it
-        if ($prependLength > 0 && ($position == 0 || $position < $prependLength)) {
+        if ($prependLength > 0 && ($this->position == 0 || $this->position < $prependLength)) {
             $prependDataLength = ($prependLength <= $len) ? $prependLength : $len;
             $data = substr($this->writtenData, $this->position, $prependDataLength);
             // is there remaining data to be read from the mapi stream? 
