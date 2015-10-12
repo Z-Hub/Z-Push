@@ -799,6 +799,7 @@ class MAPIProvider {
             $transportHeaders = array(PR_TRANSPORT_MESSAGE_HEADERS_W);
             $messageHeaders = $this->getProps($mapimessage, $transportHeaders);
 
+            // this prepends the transport headers to the mime stream
             fwrite($message->asbody->data, $messageHeaders[PR_TRANSPORT_MESSAGE_HEADERS] ."\r\n\r\n");
         }
 
@@ -2448,8 +2449,7 @@ class MAPIProvider {
             //only set the truncation size data if device set it in request
             if (    $bpo->GetTruncationSize() != false &&
                     $bpReturnType != SYNC_BODYPREFERENCE_MIME &&
-                    $message->asbody->estimatedDataSize > $bpo->GetTruncationSize() &&
-                    $contentparameters->GetTruncation() != SYNC_TRUNCATION_ALL // do not truncate message if the whole is requested, e.g. on fetch
+                    $message->asbody->estimatedDataSize > $bpo->GetTruncationSize()
                 ) {
                 // truncate data stream
                 ftruncate($message->asbody->data, $bpo->GetTruncationSize());
