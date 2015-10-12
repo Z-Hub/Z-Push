@@ -97,6 +97,27 @@ class MAPIStreamWrapper {
     }
 
     /**
+     * Stream "seek" functionality.
+     *
+     * @param int $offset
+     * @param int $whence
+     * @return boolean
+     */
+    public function stream_seek($offset, $whence = SEEK_SET) {
+        switch($whence) {
+            case SEEK_SET:
+                $mapiWhence = STREAM_SEEK_SET;
+                break;
+            case SEEK_END:
+                $mapiWhence = STREAM_SEEK_END;
+                break;
+            default:
+                $mapiWhence = STREAM_SEEK_CUR;
+        }
+        return mapi_stream_seek($this->mapistream, $offset, $mapiWhence);
+    }
+
+    /**
      * Returns the current position on stream
      *
      * @access public

@@ -315,10 +315,11 @@ class WBXMLEncoder extends WBXMLDefs {
     private function _contentStream($stream, $asBase64) {
         // write full stream, including the finalizing terminator to the output stream (stuff outTermStr() would do)
         $this->outByte(WBXML_STR_I);
+        fseek($stream, 0, SEEK_SET);
         if ($asBase64) {
             $out_filter = stream_filter_append($this->_out, 'convert.base64-encode');
         }
-        stream_copy_to_stream($stream, $this->_out);
+        $written = stream_copy_to_stream($stream, $this->_out);
         if ($asBase64) {
             stream_filter_remove($out_filter);
         }
@@ -326,7 +327,7 @@ class WBXMLEncoder extends WBXMLDefs {
 
         // data is out, do some logging
         $stat = fstat($stream);
-        $logContent = sprintf("<<< %d bytes of %s data >>>", $stat['size'], $asBase64 ? "base64 encoded":"plain");
+        $logContent = sprintf("<<< written %d of %d bytes of %s data >>>", $written, $stat['size'], $asBase64 ? "base64 encoded":"plain");
         $this->logContent($logContent);
 
         // write the meta data also to the _outLog stream, WBXML_STR_I was already written by outByte() above
