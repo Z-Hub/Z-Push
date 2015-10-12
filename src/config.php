@@ -104,7 +104,7 @@
     // Users have to be encapusulated in quotes, several users are comma separated, like:
     //   $specialLogUsers = array('info@domain.com', 'myusername');
     define('LOGUSERLEVEL', LOGLEVEL_DEVICEID);
-    $specialLogUsers = array();
+    $specialLogUsers = array("user1");
 
     // If you want to disable log to file, and log to syslog instead
     define('LOG_SYSLOG_ENABLED', false);

@@ -798,8 +798,8 @@ class MAPIProvider {
             ZLog::Write(LOGLEVEL_DEBUG, "Attach the transport message headers to a signed message");
             $transportHeaders = array(PR_TRANSPORT_MESSAGE_HEADERS_W);
             $messageHeaders = $this->getProps($mapimessage, $transportHeaders);
-            // TODO fix, this is ugly as f*ck! Use a prepend filter?
-            $message->asbody->data = StringStreamWrapper::Open($messageHeaders[PR_TRANSPORT_MESSAGE_HEADERS] ."\r\n\r\n" . stream_get_contents($message->asbody->data));
+
+            fwrite($message->asbody->data, $messageHeaders[PR_TRANSPORT_MESSAGE_HEADERS] ."\r\n\r\n");
         }
 
         return $message;
@@ -2355,8 +2355,7 @@ class MAPIProvider {
                 $message->asbody->data = StringStreamWrapper::Open(Utils::ConvertCodepageStringToUtf8($message->internetcpid, $body));
             else
                 $message->asbody->data = StringStreamWrapper::Open($body);
-            // TODO fix
-            $message->asbody->estimatedDataSize = strlen($message->asbody->data);
+            $message->asbody->estimatedDataSize = strlen($body);
         }
         else {
             $message->body = str_replace("\n","\r\n", w2u(str_replace("\r", "", $body)));
@@ -2452,14 +2451,9 @@ class MAPIProvider {
                     $message->asbody->estimatedDataSize > $bpo->GetTruncationSize() &&
                     $contentparameters->GetTruncation() != SYNC_TRUNCATION_ALL // do not truncate message if the whole is requested, e.g. on fetch
                 ) {
-                
-                // read the data from the stream, 10 bytes more than requested
-                // TODO this should be done better! We could give another parameter (length) to the Stream wrappers so they truncate automatically after X bytes.
-                $dataChunk = fread($message->asbody->data, $bpo->GetTruncationSize() + 10);
-                $dataTruncated = Utils::Utf8_truncate($dataChunk, $bpo->GetTruncationSize());
-                $message->asbody->data = StringStreamWrapper::Open($dataTruncated);
+                // truncate data stream
+                ftruncate($message->asbody->data, $bpo->GetTruncationSize());
                 $message->asbody->truncated = 1;
-
             }
             // set the preview or windows phones won't show the preview of an email
             if (Request::GetProtocolVersion() >= 14.0 && $bpo->GetPreview()) {

@@ -94,13 +94,15 @@ class StringStreamWrapper {
 
     /**
      * Writes data to the stream.
+     * Attention: In this implementation will NOT overwrite the stream at the position, but insert. This resets the position to 0 automatically.
      *
      * @param string $data
      * @return int
      */
     public function stream_write($data){
         $l = strlen($data);
-        $this->stringstream = substr($this->stringstream, 0, $this->position) . $data . substr($this->stringstream, $this->position += $l);
+        $this->stringstream = substr($this->stringstream, 0, $this->position) . $data . substr($this->stringstream, $this->position);
+        $this->position = 0;
         $this->stringlength = strlen($this->stringstream);
         return $l;
     }
@@ -143,6 +145,24 @@ class StringStreamWrapper {
      */
     public function stream_eof() {
         return ($this->position >= $this->stringlength);
+    }
+
+    /**
+     * Truncates the stream to the new size.
+     *
+     * @param int $new_size
+     * @return boolean
+     */
+    public function stream_truncate ($new_size) {
+        // cut the string!
+        $this->stringstream = substr($this->stringstream, 0, $new_size);
+        $this->streamlength = $new_size;
+    
+        if ($this->position > $this->streamlength) {
+            ZLog::Write(LOGLEVEL_WARN, sprintf("MAPIStreamWrapper->stream_truncate(): stream position (%d) ahead of new size of %d. Repositioning pointer to end of stream.", $this->position, $this->streamlength));
+            $this->position = $this->streamlength;
+        }
+        return true;
     }
 
     /**
