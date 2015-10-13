@@ -56,6 +56,7 @@ class SyncRecurrence extends SyncObject {
     public $dayofmonth;
     public $weekofmonth;
     public $monthofyear;
+    public $calendartype;
 
     function SyncRecurrence() {
         $mapping = array (
