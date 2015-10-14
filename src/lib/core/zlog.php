@@ -350,8 +350,8 @@ function zpush_fatal_handler() {
         $errline = $error["line"];
         $errstr  = $error["message"];
 
-		// do NOT log PHP Notice, Warning or Deprecated as FATAL
-        if ($errno & ~(E_NOTICE|E_WARNING|E_DEPRECATED)) {
+        // do NOT log PHP Notice, Warning, Deprecated or Strict as FATAL
+        if ($errno & ~(E_NOTICE|E_WARNING|E_DEPRECATED|E_STRICT)) {
             ZLog::Write(LOGLEVEL_FATAL, sprintf("Fatal error: %s:%d - %s (%s)", $errfile, $errline, $errstr, $errno));
         }
     }
