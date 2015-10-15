@@ -474,13 +474,7 @@ class DeviceManager {
         if (isset($this->windowSize[$folderid]))
             $items = $this->windowSize[$folderid];
         else
-            $items = (defined("SYNC_MAX_ITEMS")) ? SYNC_MAX_ITEMS : 100;
-
-        if (defined("SYNC_MAX_ITEMS") && SYNC_MAX_ITEMS < $items) {
-            if ($queuedmessages > SYNC_MAX_ITEMS)
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("DeviceManager->GetWindowSize() overwriting max items requested of %d by %d forced in configuration.", $items, SYNC_MAX_ITEMS));
-            $items = SYNC_MAX_ITEMS;
-        }
+            $items = WINDOW_SIZE_MAX; // 512 by default
 
         $this->setLatestFolder($folderid);
 
