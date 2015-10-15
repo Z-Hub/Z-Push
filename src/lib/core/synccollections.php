@@ -330,17 +330,28 @@ class SyncCollections implements Iterator {
     }
 
     /**
-     * Returns the global window size which should be used for all collections
-     * in a case of a heartbeat and/or partial sync
+     * Returns the global window size of items to be exported in total over all 
+     * requested collections.
      *
      * @access public
-     * @return int/boolean          returns 512 (max) if not set or not available
+     * @return int/boolean          returns requested windows size, 512 (max) or the 
+     *                              value of config SYNC_MAX_ITEMS if it is lower
      */
     public function GetGlobalWindowSize() {
-        if (!isset($this->globalWindowSize))
-            return 512;
+        // take the requested global windowsize or the max 512 if not defined
+        if (isset($this->globalWindowSize)) {
+            $globalWindowSize = $this->globalWindowSize;
+        }
+        else {
+            $globalWindowSize = WINDOW_SIZE_MAX; // 512 by default
+        }
 
-        return $this->globalWindowSize;
+        if (defined("SYNC_MAX_ITEMS") && SYNC_MAX_ITEMS < $globalWindowSize) {
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->GetGlobalWindowSize() overwriting requested global window size of %d by %d forced in configuration.", $globalWindowSize, SYNC_MAX_ITEMS));
+            $globalWindowSize = SYNC_MAX_ITEMS;
+        }
+
+        return $globalWindowSize;
     }
 
     /**
