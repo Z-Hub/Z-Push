@@ -52,6 +52,7 @@ class SyncResolveRecipient extends SyncObject {
     public $availability;
     public $certificates;
     public $picture;
+    public $id;
 
     public function SyncResolveRecipient() {
         $mapping = array (

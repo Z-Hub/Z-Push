@@ -94,6 +94,9 @@ class BackendZarafa implements IBackend, ISearchProvider {
     const ZPUSH_ENABLED = 'mobile';
 
     const MAXAMBIGUOUSRECIPIENTS = 9999;
+    const FREEBUSYENUMBLOCKS = 50;
+    const MAXFREEBUSYSLOTS = 32767; // max length of 32k for the MergedFreeBusy element is allowed
+    const HALFHOURSECONDS = 1800;
 
     /**
      * Constructor of the Zarafa Backend
@@ -953,7 +956,10 @@ class BackendZarafa implements IBackend, ISearchProvider {
                                 unset($entry->certificates);
                             }
                             if (isset($resolveRecipientsOptions->availability)) {
-                                // TODO implement availability retrieval of the recipient
+                                if (!isset($resolveRecipientsOptions->starttime)) {
+                                    // TODO error, the request must include a valid StartTime element value
+                                }
+                                $entry->availability = $this->getAvailability($to, $entry, $resolveRecipientsOptions);
                             }
                             if (isset($resolveRecipientsOptions->picture)) {
                                 // TODO implement picture retrieval of the recipient
@@ -1887,7 +1893,115 @@ class BackendZarafa implements IBackend, ISearchProvider {
             ZLog::Write(LOGLEVEL_INFO, sprintf("No certificate found for '%s' (requested email address: '%s')", $recipientProperties[PR_DISPLAY_NAME], $email));
         }
         $recipient->certificates = $certificates;
+
+        if (isset($recipientProperties[PR_ENTRYID])) {
+            $recipient->id = $recipientProperties[PR_ENTRYID];
+        }
         return $recipient;
+    }
+
+    /**
+     * Gets the availability of a user for the given time window.
+     *
+     * @param string $to
+     * @param SyncResolveRecipient $resolveRecipient
+     * @param SyncResolveRecipientsOptions $resolveRecipientsOptions
+     *
+     * @access private
+     * @return SyncResolveRecipientsAvailability
+     */
+    private function getAvailability($to, $resolveRecipient, $resolveRecipientsOptions) {
+        $availability = new SyncResolveRecipientsAvailability();
+        $availability->status = SYNC_RESOLVERECIPSSTATUS_AVAILABILITY_SUCCESS;
+
+        if (!isset($resolveRecipient->id)) {
+            // TODO this shouldn't happen but try to get the recipient in such a case
+        }
+
+        $fbsupport = mapi_freebusysupport_open($this->session);
+        if (mapi_last_hresult()) {
+            ZLog::Write(LOGLEVEL_WARN, sprintf("Unable to open free busy support (0x%08X)", mapi_last_hresult()));
+            $availability->status = SYNC_RESOLVERECIPSSTATUS_AVAILABILITY_FAILED;
+            return $availability;
+        }
+        $fbDataArray = mapi_freebusysupport_loaddata($fbsupport, array($resolveRecipient->id));
+
+        $start = strtotime($resolveRecipientsOptions->availability->starttime);
+        $end = strtotime($resolveRecipientsOptions->availability->endtime);
+        // Each digit in the MergedFreeBusy indicates the free/busy status for the user for every 30 minute interval.
+        $timeslots = intval(ceil(($end - $start) / self::HALFHOURSECONDS));
+
+        if ($timeslots > self::MAXFREEBUSYSLOTS) {
+            throw new StatusException("ZarafaBackend->getAvailability(): the requested free busy range is too large.", SYNC_RESOLVERECIPSSTATUS_PROTOCOLERROR);
+        }
+
+        if(is_array($fbDataArray) && !empty($fbDataArray)) {
+            foreach($fbDataArray as $fbDataUser) {
+                $rangeuser = mapi_freebusydata_getpublishrange($fbDataUser);
+                if($rangeuser == null) {
+                    ZLog::Write(LOGLEVEL_INFO, sprintf("Unable to retrieve mapi_freebusydata_getpublishrange (0x%X) for '%s'", mapi_last_hresult(), $resolveRecipient->displayname));
+                    $availability->status = SYNC_RESOLVERECIPSSTATUS_AVAILABILITY_FAILED;
+                    return $availability;
+                }
+
+                // if free busy information is available for the whole requested period,
+                // assume that the user is free for the requested range.
+                if ($rangeuser['start'] <= $start && $rangeuser['end'] >= $end) {
+                    $mergedFreeBusy = str_pad(fbFree, $timeslots, fbFree);
+                }
+                // free busy information is not available at the begin of the requested period
+                elseif ($rangeuser['start'] > $start && $rangeuser['end'] >= $end) {
+                    $missingSlots = intval(ceil(($rangeuser['start'] - $start) / self::HALFHOURSECONDS));
+                    $mergedFreeBusy = str_pad(fbNoData, $missingSlots, fbNoData) . str_pad(fbFree, ($timeslots - $missingSlots), fbFree);
+                }
+                // free busy information is not available at the end of the requested period
+                elseif ($rangeuser['start'] <= $start && $rangeuser['end'] < $end) {
+                    $missingSlots = intval(ceil(($rangeuser['end'] - $end) / self::HALFHOURSECONDS));
+                    $mergedFreeBusy = str_pad(fbFree, ($timeslots - $missingSlots), fbFree) . str_pad(fbNoData, $missingSlots, fbNoData) ;
+                }
+                // free busy information is not available at the begin and at the end of the requested period
+                else {
+                    $missingBeginSlots = intval(ceil(($rangeuser['start'] - $start) / self::HALFHOURSECONDS));
+                    $missingEndSlots = intval(ceil(($rangeuser['end'] - $end) / self::HALFHOURSECONDS));
+                    $mergedFreeBusy = str_pad(fbNoData, $missingBeginSlots, fbNoData) .
+                                        str_pad(fbFree, ($timeslots - $missingBeginSlots - $missingEndSlots), fbFree) .
+                                        str_pad(fbNoData, $missingEndSlots, fbNoData) ;
+                }
+
+                $enumblock = mapi_freebusydata_enumblocks($fbDataUser, $start, $end);
+                mapi_freebusyenumblock_reset($enumblock);
+
+                // FIXME: use WBXMLDecoder::ResetInWhile("freebusyEnumblock"); after merging back into develop branch
+                while(true) {
+                    $blocks = mapi_freebusyenumblock_next($enumblock, self::FREEBUSYENUMBLOCKS);
+                    if(!$blocks) {
+                        break;
+                    }
+
+                    foreach($blocks as $blockItem) {
+                        // calculate which timeslot of mergedFreeBusy should be replaced.
+                        $blockDuration = ($blockItem['end'] - $blockItem['start']) / self::HALFHOURSECONDS;
+                        $startSlot = intval(floor(($blockItem['start'] - $start) / self::HALFHOURSECONDS));
+                        $endSlot = intval(floor(($blockItem['end'] - $start) / self::HALFHOURSECONDS));
+                        // check if the end slot is the exact begin of the next slot from request; in such case it's necessary to reduce the endslot.
+                        if ($start + $endSlot * self::HALFHOURSECONDS == $blockItem['end'] && $endSlot > $startSlot) {
+                            $endSlot--;
+                        }
+
+                        for ($i = $startSlot; $i <= $endSlot; $i++) {
+                            // only set the new slot's free busy status if it's higher than the current one
+                            if ($blockItem['status'] > $mergedFreeBusy[$i]) {
+                                $mergedFreeBusy[$i] = $blockItem['status'];
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        mapi_freebusysupport_close($fbsupport);
+        $availability->mergedfreebusy = $mergedFreeBusy;
+        return $availability;
     }
 
     /**
