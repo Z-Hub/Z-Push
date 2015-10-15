@@ -343,7 +343,7 @@ class SyncCollections implements Iterator {
             $globalWindowSize = $this->globalWindowSize;
         }
         else {
-            $globalWindowSize = 512;
+            $globalWindowSize = WINDOW_SIZE_MAX; // 512 by default
         }
 
         if (defined("SYNC_MAX_ITEMS") && SYNC_MAX_ITEMS < $globalWindowSize) {

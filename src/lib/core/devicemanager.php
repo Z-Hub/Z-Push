@@ -474,7 +474,7 @@ class DeviceManager {
         if (isset($this->windowSize[$folderid]))
             $items = $this->windowSize[$folderid];
         else
-            $items = 512;
+            $items = WINDOW_SIZE_MAX; // 512 by default
 
         $this->setLatestFolder($folderid);
 
