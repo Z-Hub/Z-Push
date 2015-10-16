@@ -1723,8 +1723,17 @@ class BackendZarafa implements IBackend, ISearchProvider {
         $querycnt = mapi_table_getrowcount($table);
         if ($querycnt > 0) {
             $recipientGal = array();
+            $rowsToQuery = $maxAmbiguousRecipients;
+            // some devices request 0 ambiguous recipients
+            if ($querycnt == 1 && $maxAmbiguousRecipients == 0) {
+                $rowsToQuery = 1;
+            }
+            elseif ($querycnt > 1 && $maxAmbiguousRecipients == 0) {
+                ZLog::Write(LOGLEVEL_INFO, sprintf("GAL search found %d recipients but the device hasn't requested ambiguous recipients", $querycnt));
+                return $recipientGal;
+            }
             // get the certificate every time because caching the certificate is less expensive than opening addressbook entry again
-            $abentries = mapi_table_queryrows($table, array(PR_ENTRYID, PR_DISPLAY_NAME, PR_EMS_AB_TAGGED_X509_CERT, PR_OBJECT_TYPE), 0, $maxAmbiguousRecipients);
+            $abentries = mapi_table_queryrows($table, array(PR_ENTRYID, PR_DISPLAY_NAME, PR_EMS_AB_TAGGED_X509_CERT, PR_OBJECT_TYPE), 0, $rowsToQuery);
             for ($i = 0, $nrEntries = count($abentries); $i < $nrEntries; $i++) {
                 if ($abentries[$i][PR_OBJECT_TYPE] == MAPI_DISTLIST) {
                     // dist lists must be expanded into their members
