@@ -174,7 +174,7 @@ class ZLog {
      * @return
      */
     static public function WriteEnd() {
-        if (LOGLEVEL_DEBUG <= LOGLEVEL || (LOGLEVEL_DEBUG <= LOGUSERLEVEL && self::$userLog)) {
+        if (LOGLEVEL_DEBUG <= LOGLEVEL) {
             if (version_compare(phpversion(), '5.4.0') < 0) {
                 $time_used = number_format(time() - $_SERVER["REQUEST_TIME"], 4);
             }
