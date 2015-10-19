@@ -111,7 +111,7 @@ class WebserviceDevice {
     }
 
     /**
-     * Marks a device of the Request::GetGETUser() for resynchronization.
+     * Marks a a device of the Request::GetGETUser() for resynchronization
      *
      * @param string    $deviceId       the device id
      *
@@ -129,30 +129,6 @@ class WebserviceDevice {
         }
 
         ZPush::GetTopCollector()->AnnounceInformation(sprintf("Resync requested - device id '%s'", $deviceId), true);
-        return true;
-    }
-
-    /**
-     * Marks a folder of a device of the Request::GetGETUser() for resynchronization.
-     *
-     * @param string    $deviceId       the device id
-     * @param string    $folderId       the folder id
-     *
-     * @access public
-     * @return boolean
-     * @throws SoapFault
-     */
-    public function ResyncFolder($deviceId, $folderId) {
-        $deviceId = preg_replace("/[^A-Za-z0-9]/", "", $deviceId);
-        $folderId = preg_replace("/[^A-Za-z0-9]/", "", $folderId);
-        ZLog::Write(LOGLEVEL_INFO, sprintf("WebserviceDevice::ResyncFolder('%s','%s'): mark folder of a device of user '%s' for resynchronization", $deviceId, $folderId, Request::GetGETUser()));
-    
-        if (! ZPushAdmin::ResyncFolder(Request::GetGETUser(), $deviceId, $folderId)) {
-            ZPush::GetTopCollector()->AnnounceInformation(ZLog::GetLastMessage(LOGLEVEL_ERROR), true);
-            throw new SoapFault("ERROR", ZLog::GetLastMessage(LOGLEVEL_ERROR));
-        }
-    
-        ZPush::GetTopCollector()->AnnounceInformation(sprintf("Folder resync requested - device id '%s', folder id '%s", $deviceId, $folderId), true);
         return true;
     }
 }
