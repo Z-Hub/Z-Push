@@ -53,6 +53,7 @@ include_once('../lib/interface/iexportchanges.php');
 include_once('../lib/interface/iimportchanges.php');
 include_once('../lib/interface/isearchprovider.php');
 include_once('../lib/interface/istatemachine.php');
+include_once('../lib/request/request.php');
 include_once('../version.php');
 include_once('config.php');
 

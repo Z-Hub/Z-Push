@@ -903,10 +903,10 @@ class Sync extends RequestProcessor {
 
                         if($sc->GetParameter($spa, "getchanges") && $spa->HasFolderId() && $spa->HasContentClass() && $spa->HasSyncKey()) {
                             $windowSize = self::$deviceManager->GetWindowSize($spa->GetFolderId(), $spa->GetContentClass(), $spa->GetUuid(), $spa->GetUuidCounter(), $changecount);
-                            
+
                             // limit windowSize to the max available limit of the global window size left
                             $globallyAvailable = $sc->GetGlobalWindowSize() - $globallyExportedItems;
-                            if ($changecount > $globallyAvailable) {
+                            if ($changecount > $globallyAvailable && $windowSize > $globallyAvailable) {
                                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleSync(): Limit window size to %d as the global window size limit will be reached", $globallyAvailable));
                                 $windowSize = $globallyAvailable;
                             }
