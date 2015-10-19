@@ -56,7 +56,6 @@ class SyncMeetingRequestRecurrence extends SyncObject {
     public $dayofmonth;
     public $weekofmonth;
     public $monthofyear;
-    public $calendartype;
 
     function SyncMeetingRequestRecurrence() {
         $mapping = array (
@@ -114,10 +113,6 @@ class SyncMeetingRequestRecurrence extends SyncObject {
                     SYNC_POOMMAIL_MONTHOFYEAR                           => array (  self::STREAMER_VAR      => "monthofyear",
                                                                                     self::STREAMER_CHECKS   => array(   self::STREAMER_CHECK_ONEVALUEOF => array(1,2,3,4,5,6,7,8,9,10,11,12) )),
                 );
-
-        if(Request::GetProtocolVersion() >= 14.0) {
-            $mapping[SYNC_POOMMAIL2_CALENDARTYPE]                       = array (   self::STREAMER_VAR      => "calendartype");
-        }
 
         parent::SyncObject($mapping);
     }
