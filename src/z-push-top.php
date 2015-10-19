@@ -531,16 +531,14 @@ class ZPushTop {
                     $this->status = "resetted";
                     $this->statusexpire = $this->currenttime+2;
                 }
-                // enable/disable wide view
                 else if ($cmds[0] == "wide" || $cmds[0] == "w") {
-                    $this->wide = ! $this->wide;
-                    $this->status = ($this->wide)?"w i d e  view" : "normal view";
+                    $this->wide = true;
+                    $this->status = "w i d e  view";
                     $this->statusexpire = $this->currenttime+2;
                 }
                 else if ($cmds[0] == "help" || $cmds[0] == "h") {
                     $this->helpexpire = $this->currenttime+20;
                 }
-                // grep the log file
                 else if (($cmds[0] == "log" || $cmds[0] == "l") && isset($cmds[1]) ) {
                     if (!file_exists(LOGFILE)) {
                         $this->status = "Logfile can not be found: ". LOGFILE;
@@ -551,7 +549,6 @@ class ZPushTop {
                     }
                     $this->statusexpire = time()+5; // it might be much "later" now
                 }
-                // tail the log file
                 else if (($cmds[0] == "tail" || $cmds[0] == "t")) {
                     if (!file_exists(LOGFILE)) {
                         $this->status = "Logfile can not be found: ". LOGFILE;
@@ -563,23 +560,6 @@ class ZPushTop {
                         $secondary = "";
                         if (isset($cmds[1])) $secondary =  " -n 200 | grep ".escapeshellarg($cmds[1]);
                         system('bash -c "tail -f '. LOGFILE . $secondary . '" > `tty`');
-                        $this->doingTail = false;
-                        $this->status = "Returning from tail, updating data";
-                    }
-                    $this->statusexpire = time()+5; // it might be much "later" now
-                }
-                // tail the error log file
-                else if (($cmds[0] == "error" || $cmds[0] == "e")) {
-                    if (!file_exists(LOGERRORFILE)) {
-                        $this->status = "Error logfile can not be found: ". LOGERRORFILE;
-                    }
-                    else {
-                        $this->doingTail = true;
-                        $this->scrClear();
-                        $this->scrPrintAt(1,0,$this->scrAsBold("Press CTRL+C to return to Z-Push-Top\n\n"));
-                        $secondary = "";
-                        if (isset($cmds[1])) $secondary =  " -n 200 | grep ".escapeshellarg($cmds[1]);
-                        system('bash -c "tail -f '. LOGERRORFILE . $secondary . '" > `tty`');
                         $this->doingTail = false;
                         $this->status = "Returning from tail, updating data";
                     }
@@ -650,7 +630,6 @@ class ZPushTop {
         $h[] = "  ".$this->scrAsBold("f:")." or ".$this->scrAsBold("filter:")."\t\tWithout a search word: resets the filter.";
         $h[] = "  ".$this->scrAsBold("l:STR")." or ".$this->scrAsBold("log:STR")."\tIssues 'less +G' on the logfile, after grepping on the optional STR.";
         $h[] = "  ".$this->scrAsBold("t:STR")." or ".$this->scrAsBold("tail:STR")."\tIssues 'tail -f' on the logfile, grepping for optional STR.";
-        $h[] = "  ".$this->scrAsBold("e:STR")." or ".$this->scrAsBold("error:STR")."\tIssues 'tail -f' on the error logfile, grepping for optional STR.";
         $h[] = "  ".$this->scrAsBold("r")." or ".$this->scrAsBold("reset")."\t\tResets 'wide' or 'filter'.";
         $h[] = "  ".$this->scrAsBold("o:")." or ".$this->scrAsBold("option:")."\t\tSets display options. Valid options specified below";
         $h[] = "  ".$this->scrAsBold("  p")." or ".$this->scrAsBold("push")."\t\tLists/not lists active and open push connections.";
