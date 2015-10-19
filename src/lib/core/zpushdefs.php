@@ -998,7 +998,6 @@ define("HTTP_CODE_401", 401);
 define("HTTP_CODE_449", 449);
 define("HTTP_CODE_500", 500);
 
-define("WINDOW_SIZE_MAX", 512);
 
 //logging defs
 define("LOGLEVEL_OFF", 0);
