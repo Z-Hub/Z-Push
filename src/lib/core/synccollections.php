@@ -517,19 +517,15 @@ class SyncCollections implements Iterator {
 
                 $validNotifications = false;
                 foreach ($notifications as $folderid) {
-                    // ZP-631 - temporary disable checking validity of notifications
-                    // notify mobile for all received notifications
-                    $this->changes[$folderid] = 1;
-                    $validNotifications = true;
-//                     // check if the notification on the folder is within our filter
-//                     if ($this->CountChange($folderid)) {
-//                         ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->CheckForChanges(): Notification received on folder '%s'", $folderid));
-//                         $validNotifications = true;
-//                         $this->waitingTime = time()-$started;
-//                     }
-//                     else {
-//                         ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->CheckForChanges(): Notification received on folder '%s', but it is not relevant", $folderid));
-//                     }
+                     // check if the notification on the folder is within our filter
+                     if ($this->CountChange($folderid)) {
+                         ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->CheckForChanges(): Notification received on folder '%s'", $folderid));
+                         $validNotifications = true;
+                         $this->waitingTime = time()-$started;
+                     }
+                     else {
+                         ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->CheckForChanges(): Notification received on folder '%s', but it is not relevant", $folderid));
+                     }
                 }
                 if ($validNotifications)
                     return true;
@@ -586,6 +582,13 @@ class SyncCollections implements Iterator {
      */
      private function CountChange($folderid) {
         $spa = $this->GetCollection($folderid);
+
+        // prevent ZP-623 by checking if the states have been used before, if so force a sync on this folder
+        if (ZPush::GetDeviceManager()->CheckHearbeatStateIntegrity($spa->GetFolderId(), $spa->GetUuid(), $spa->GetUuidCounter())) {
+            ZLog::Write(LOGLEVEL_DEBUG, "SyncCollections->CountChange(): Cannot verify changes for state as it was already used. Forcing sync of folder.");
+            $this->changes[$folderid] = 1;
+            return true;
+        }
 
         // switch user store if this is a additional folder (additional true -> do not debug)
         ZPush::GetBackend()->Setup(ZPush::GetAdditionalSyncFolderStore($folderid, true));
