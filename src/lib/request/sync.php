@@ -427,7 +427,7 @@ class Sync extends RequestProcessor {
                                 $clientid = false;
 
                             // Get the SyncMessage if sent
-                            if(self::$decoder->getElementStartTag(SYNC_DATA)) {
+                            if(($el = self::$decoder->getElementStartTag(SYNC_DATA)) && ($el[EN_FLAGS] & EN_FLAGS_CONTENT)) {
                                 $message = ZPush::getSyncObjectFromFolderClass($spa->GetContentClass());
                                 $message->Decode(self::$decoder);
 
