@@ -801,7 +801,7 @@ class MAPIProvider {
             if (isset($messageHeaders[PR_TRANSPORT_MESSAGE_HEADERS]) && $messageHeaders[PR_TRANSPORT_MESSAGE_HEADERS]) {
                 ZLog::Write(LOGLEVEL_DEBUG, "Prepend the transport message headers to a signed message");
                 // this prepends the transport headers to the mime stream
-                fwrite($message->asbody->data, $messageHeaders[PR_TRANSPORT_MESSAGE_HEADERS] ."\r\n\r\n");
+                fwrite($message->asbody->data, $messageHeaders[PR_TRANSPORT_MESSAGE_HEADERS]);
             }
         }
 
