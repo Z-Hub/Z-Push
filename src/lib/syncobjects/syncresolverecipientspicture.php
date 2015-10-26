@@ -56,7 +56,8 @@ class SyncResolveRecipientsPicture extends SyncObject {
             SYNC_RESOLVERECIPIENTS_MAXSIZE                  => array (  self::STREAMER_VAR      => "maxsize"),
             SYNC_RESOLVERECIPIENTS_MAXPICTURES              => array (  self::STREAMER_VAR      => "maxpictures"),
             SYNC_RESOLVERECIPIENTS_STATUS                   => array (  self::STREAMER_VAR      => "status"),
-            SYNC_RESOLVERECIPIENTS_DATA                     => array (  self::STREAMER_VAR      => "data"),
+            SYNC_RESOLVERECIPIENTS_DATA                     => array (  self::STREAMER_VAR      => "data",
+                                                                        self::STREAMER_TYPE     => self::STREAMER_TYPE_STREAM_ASBASE64 ),
         );
 
         parent::SyncObject($mapping);
