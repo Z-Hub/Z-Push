@@ -604,6 +604,7 @@ define('fbTentative'                             ,1);
 define('fbBusy'                                  ,2);
 define('fbOutOfOffice'                           ,3);
 define('fbWorkingElsewhere'                      ,4);
+define('fbNoData'                                ,4);
 
 /* ICS flags */
 

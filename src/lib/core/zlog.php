@@ -180,7 +180,7 @@ class ZLog {
      * @return
      */
     static public function WriteEnd() {
-        if (LOGLEVEL_DEBUG <= LOGLEVEL) {
+        if (LOGLEVEL_DEBUG <= LOGLEVEL || (LOGLEVEL_DEBUG <= LOGUSERLEVEL && self::$userLog)) {
             if (version_compare(phpversion(), '5.4.0') < 0) {
                 $time_used = number_format(time() - $_SERVER["REQUEST_TIME"], 4);
             }
@@ -300,11 +300,14 @@ function debugLog($message) {
     ZLog::Write(LOGLEVEL_DEBUG, $message);
 }
 
+// E_DEPRECATED only available since PHP 5.3.0
+if (!defined('E_DEPRECATED')) define(E_DEPRECATED, 8192);
+
 // TODO review error handler
 function zarafa_error_handler($errno, $errstr, $errfile, $errline, $errcontext) {
     $bt = debug_backtrace();
     switch ($errno) {
-        case 8192:      // E_DEPRECATED since PHP 5.3.0
+        case E_DEPRECATED:
             // do not handle this message
             break;
 
@@ -347,7 +350,8 @@ function zpush_fatal_handler() {
         $errline = $error["line"];
         $errstr  = $error["message"];
 
-        if ($errno != 8192) {
+        // do NOT log PHP Notice, Warning, Deprecated or Strict as FATAL
+        if ($errno & ~(E_NOTICE|E_WARNING|E_DEPRECATED|E_STRICT)) {
             ZLog::Write(LOGLEVEL_FATAL, sprintf("Fatal error: %s:%d - %s (%s)", $errfile, $errline, $errstr, $errno));
         }
     }
