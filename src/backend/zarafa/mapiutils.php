@@ -610,11 +610,10 @@ class MAPIUtils {
                 }
             }
 
-            mapi_message_deleteattach($mapimessage, $attnum);
-
             if ($attnum !== false) {
                 $att = mapi_message_openattach($mapimessage, $attnum);
                 $data = mapi_openproperty($att, PR_ATTACH_DATA_BIN);
+                mapi_message_deleteattach($mapimessage, $attnum);
                 mapi_inetmapi_imtomapi($session, $store, $addressBook, $mapimessage, $data, array("parse_smime_signed" => 1));
                 ZLog::Write(LOGLEVEL_DEBUG, "Convert a smime signed message to a normal message.");
             }
