@@ -513,7 +513,7 @@ class MAPIProvider {
      * @return SyncEmail
      */
     private function getEmail($mapimessage, $contentparameters) {
-        MAPIUtils::parseSmime($this->session, $this->store, $this->getAddressbook(), $mapimessage);
+        MAPIUtils::ParseSmime($this->session, $this->store, $this->getAddressbook(), $mapimessage);
         $message = new SyncMail();
 
         $this->getPropsFromMAPI($message, $mapimessage, MAPIMapping::GetEmailMapping());

@@ -595,7 +595,7 @@ class MAPIUtils {
      * @access public
      * @return void
      */
-    public static function parseSmime($session, $store, $addressBook, &$mapimessage) {
+    public static function ParseSmime($session, $store, $addressBook, &$mapimessage) {
         $props = mapi_getprops($mapimessage, array(PR_MESSAGE_CLASS));
 
         if (isset($props[PR_MESSAGE_CLASS]) && stripos($props[PR_MESSAGE_CLASS], 'IPM.Note.SMIME.MultipartSigned') !== false) {
