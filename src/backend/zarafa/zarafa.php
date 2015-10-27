@@ -517,13 +517,13 @@ class BackendZarafa implements IBackend, ISearchProvider {
             // update icon and last_verb when forwarding or replying message
             // reply-all (verb 103) is not supported, as we cannot really detect this case
             if ($sm->forwardflag) {
-                $updateProps = array(    
+                $updateProps = array(
                     PR_ICON_INDEX           => 262,
                     PR_LAST_VERB_EXECUTED   => 104,
                 );
             }
             elseif ($sm->replyflag) {
-                $updateProps = array(    
+                $updateProps = array(
                     PR_ICON_INDEX           => 261,
                     PR_LAST_VERB_EXECUTED   => 102,
                 );
@@ -672,6 +672,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
         if(!$message)
             throw new StatusException(sprintf("ZarafaBackend->GetAttachmentData('%s'): Error, unable to open item for attachment data for id '%s' with: 0x%X", $attname, $id, mapi_last_hresult()), SYNC_ITEMOPERATIONSSTATUS_INVALIDATT);
 
+        MAPIUtils::ParseSmime($this->session, $this->defaultstore, $this->getAddressbook(), $message);
         $attach = mapi_message_openattach($message, $attachnum);
         if(!$attach)
             throw new StatusException(sprintf("ZarafaBackend->GetAttachmentData('%s'): Error, unable to open attachment number '%s' with: 0x%X", $attname, $attachnum, mapi_last_hresult()), SYNC_ITEMOPERATIONSSTATUS_INVALIDATT);

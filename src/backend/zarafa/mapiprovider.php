@@ -513,6 +513,7 @@ class MAPIProvider {
      * @return SyncEmail
      */
     private function getEmail($mapimessage, $contentparameters) {
+        MAPIUtils::ParseSmime($this->session, $this->store, $this->getAddressbook(), $mapimessage);
         $message = new SyncMail();
 
         $this->getPropsFromMAPI($message, $mapimessage, MAPIMapping::GetEmailMapping());
@@ -707,7 +708,15 @@ class MAPIProvider {
                         if (strtolower(substr($attach->displayname, -4)) != '.eml')
                             $attach->displayname .= '.eml';
                     }
-                    $attach->estimatedDataSize = $attachprops[PR_ATTACH_SIZE];
+                    // android devices require attachment size in order to display an attachment properly
+                    if (!isset($attachprops[PR_ATTACH_SIZE])) {
+                        $stream = mapi_openpropertytostream($mapiattach, PR_ATTACH_DATA_BIN);
+                        $stat = mapi_stream_stat($stream);
+                        $attach->estimatedDataSize = $stat['cb'];
+                    }
+                    else {
+                        $attach->estimatedDataSize = $attachprops[PR_ATTACH_SIZE];
+                    }
 
                     if (isset($attachprops[PR_ATTACH_CONTENT_ID]) && $attachprops[PR_ATTACH_CONTENT_ID])
                         $attach->contentid = $attachprops[PR_ATTACH_CONTENT_ID];
