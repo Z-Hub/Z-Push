@@ -69,6 +69,7 @@
      * true - use the complete email address.
      */
     define('USE_FULLEMAIL_FOR_LOGIN', false);
+
 /**********************************************************************************
  *  Default FileStateMachine settings
  */
@@ -217,6 +218,18 @@
     // Device compatibility for this procedure is not fully understood.
     // NOTE: THIS IS AN EXPERIMENTAL FEATURE WHICH COULD PREVENT YOUR MOBILES FROM SYNCHRONIZING.
     define('USE_PARTIAL_FOLDERSYNC', false);
+
+
+    // The minimum accepted time in second that a ping command should last.
+    // It is strongly advised to keep this config to false. Some device
+    // might not be able to send a higher value than the one specificied here and thus
+    // unable to start a push connection.
+    // If set to false, there will be no lower bound to the ping lifetime.
+    define('PING_LOWER_BOUND_LIFETIME', false);
+
+    // The maximum accepted time in second that a ping command should last.
+    // If set to false, there will be no higher bound to the ping lifetime.
+    define('PING_HIGHER_BOUND_LIFETIME', false);
 
 /**********************************************************************************
  *  Backend settings

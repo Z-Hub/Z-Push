@@ -154,6 +154,9 @@ class Ping extends RequestProcessor {
             if(!self::$decoder->getElementEndTag())
                 return false;
 
+            if(!$this->LifetimeBetweenBound($sc->GetLifetime())){
+                $pingstatus = SYNC_PINGSTATUS_HBOUTOFRANGE;
+            }
             // save changed data
             foreach ($sc as $folderid => $spa)
                 $sc->SaveCollection($spa);
@@ -165,7 +168,12 @@ class Ping extends RequestProcessor {
                 $pingstatus = SYNC_PINGSTATUS_FAILINGPARAMS;
                 ZLog::Write(LOGLEVEL_DEBUG, "HandlePing(): no pingable folders found and no initialization data sent. Returning SYNC_PINGSTATUS_FAILINGPARAMS.");
             }
+            elseif(!$this->LifetimeBetweenBound($sc->GetLifetime())){
+                $pingstatus = SYNC_PINGSTATUS_FAILINGPARAMS;
+                ZLog::Write(LOGLEVEL_DEBUG, "HandlePing(): ping lifetime not between bound (higher bound:`".PING_HIGHER_BOUND_LIFETIME."` lower bound:`".PING_LOWER_BOUND_LIFETIME."` current lifetime:`".$sc->GetLifetime()."`. Returning SYNC_PINGSTATUS_FAILINGPARAMS.");
+            }
         }
+
 
         // Check for changes on the default LifeTime, set interval and ONLY on pingable collections
         try {
@@ -220,9 +228,39 @@ class Ping extends RequestProcessor {
                 }
                 self::$encoder->endTag();
             }
+            elseif($pingstatus == SYNC_PINGSTATUS_HBOUTOFRANGE){
+                self::$encoder->startTag(SYNC_PING_LIFETIME);
+                if($sc->GetLifetime() > PING_HIGHER_BOUND_LIFETIME){
+                    self::$encoder->content(PING_HIGHER_BOUND_LIFETIME);
+                }
+                else{
+                    self::$encoder->content(PING_LOWER_BOUND_LIFETIME);
+                }
+                self::$encoder->endTag();
+            }
         }
+
         self::$encoder->endTag();
 
+        return true;
+    }
+
+    /**
+     * Return true if the ping lifetime is between the specified bound (PING_HIGHER_BOUND_LIFETIME and PING_LOWER_BOUND_LIFETIME). If no bound are specified, it returns true.
+     *
+     * @access private
+     * @return boolean
+     */
+    private function LifetimeBetweenBound($lifetime){
+        if(PING_HIGHER_BOUND_LIFETIME !== false && PING_LOWER_BOUND_LIFETIME !== false){
+            return ($lifetime <= PING_HIGHER_BOUND_LIFETIME && $lifetime >= PING_LOWER_BOUND_LIFETIME);
+        }
+        if(PING_HIGHER_BOUND_LIFETIME !== false){
+            return $lifetime <= PING_HIGHER_BOUND_LIFETIME;
+        }
+        if(PING_LOWER_BOUND_LIFETIME !== false){
+            return $lifetime >= PING_LOWER_BOUND_LIFETIME;
+        }
         return true;
     }
 }

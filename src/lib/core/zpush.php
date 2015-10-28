@@ -283,6 +283,22 @@ class ZPush {
             define('USE_PARTIAL_FOLDERSYNC', false);
         }
 
+        if (!defined('PING_LOWER_BOUND_LIFETIME')) {
+            define('PING_LOWER_BOUND_LIFETIME', false);
+        }
+        elseif(PING_LOWER_BOUND_LIFETIME !== false && (!is_int(PING_LOWER_BOUND_LIFETIME) || PING_LOWER_BOUND_LIFETIME < 1)){
+            throw new FatalMisconfigurationException("The PING_LOWER_BOUND_LIFETIME value must be 'false' or a number higher than 0.");
+        }
+        if (!defined('PING_HIGHER_BOUND_LIFETIME')) {
+            define('PING_HIGHER_BOUND_LIFETIME', false);
+        }
+        elseif(PING_HIGHER_BOUND_LIFETIME !== false && (!is_int(PING_HIGHER_BOUND_LIFETIME) || PING_HIGHER_BOUND_LIFETIME < 1)){
+            throw new FatalMisconfigurationException("The PING_HIGHER_BOUND_LIFETIME value must be 'false' or a number higher than 0.");
+        }
+        if(PING_HIGHER_BOUND_LIFETIME !== false && PING_LOWER_BOUND_LIFETIME !== false && PING_HIGHER_BOUND_LIFETIME < PING_LOWER_BOUND_LIFETIME){
+            throw new FatalMisconfigurationException("The PING_HIGHER_BOUND_LIFETIME value must be greater or equal to PING_LOWER_BOUND_LIFETIME.");
+        }
+
         // the check on additional folders will not throw hard errors, as this is probably changed on live systems
         if (isset($additionalFolders) && !is_array($additionalFolders))
             ZLog::Write(LOGLEVEL_ERROR, "ZPush::CheckConfig() : The additional folders synchronization not available as array.");
