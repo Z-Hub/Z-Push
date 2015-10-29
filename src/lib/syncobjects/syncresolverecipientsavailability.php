@@ -52,12 +52,14 @@ class SyncResolveRecipientsAvailability extends SyncObject {
     public $mergedfreebusy;
 
     public function SyncResolveRecipientsAvailability() {
-        $mapping = array (
-            SYNC_RESOLVERECIPIENTS_STARTTIME                => array (  self::STREAMER_VAR      => "starttime"),
-            SYNC_RESOLVERECIPIENTS_ENDTIME                  => array (  self::STREAMER_VAR      => "endtime"),
-            SYNC_RESOLVERECIPIENTS_STATUS                   => array (  self::STREAMER_VAR      => "status"),
-            SYNC_RESOLVERECIPIENTS_MERGEDFREEBUSY           => array (  self::STREAMER_VAR      => "mergedfreebusy"),
-        );
+        $mapping = array ();
+
+        if (Request::GetProtocolVersion() >= 14.0) {
+            $mapping[SYNC_RESOLVERECIPIENTS_STARTTIME]      = array (  self::STREAMER_VAR      => "starttime");
+            $mapping[SYNC_RESOLVERECIPIENTS_ENDTIME]        = array (  self::STREAMER_VAR      => "endtime");
+            $mapping[SYNC_RESOLVERECIPIENTS_STATUS]         = array (  self::STREAMER_VAR      => "status");
+            $mapping[SYNC_RESOLVERECIPIENTS_MERGEDFREEBUSY] = array (  self::STREAMER_VAR      => "mergedfreebusy");
+        }
 
         parent::SyncObject($mapping);
     }
