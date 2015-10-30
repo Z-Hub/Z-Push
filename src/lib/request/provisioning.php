@@ -75,7 +75,8 @@ class Provisioning extends RequestProcessor {
         // - DeviceInformation
         // - Policies
         // Each of them should only be once per request. 
-        while (1) {
+        WBXMLDecoder::ResetInWhile("provisioningMain");
+        while(WBXMLDecoder::InWhile("provisioningMain")) {
 			
             $requestName = "";
             if (self::$decoder->getElementStartTag(SYNC_PROVISION_REMOTEWIPE)) {
@@ -265,4 +266,3 @@ class Provisioning extends RequestProcessor {
         return true;
     }
 }
-?>
