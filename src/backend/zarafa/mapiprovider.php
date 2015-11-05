@@ -513,7 +513,13 @@ class MAPIProvider {
      * @return SyncEmail
      */
     private function getEmail($mapimessage, $contentparameters) {
-        MAPIUtils::ParseSmime($this->session, $this->store, $this->getAddressbook(), $mapimessage);
+        // This workaround fixes ZP-729 and still works with Outlook.
+        // FIXME: It should be properly fixed when refactoring.
+        if (($contentparameters->GetMimeSupport() == SYNC_MIMESUPPORT_NEVER) ||
+                ($key = array_search(SYNC_BODYPREFERENCE_MIME, $contentparameters->GetBodyPreference()) === false)) {
+            MAPIUtils::ParseSmime($this->session, $this->store, $this->getAddressbook(), $mapimessage);
+        }
+
         $message = new SyncMail();
 
         $this->getPropsFromMAPI($message, $mapimessage, MAPIMapping::GetEmailMapping());
