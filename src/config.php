@@ -225,10 +225,12 @@
     // might not be able to send a higher value than the one specificied here and thus
     // unable to start a push connection.
     // If set to false, there will be no lower bound to the ping lifetime.
+    // The minimum accepted value is 1 second. The maximum accepted value is 3540 seconds (59 minutes).
     define('PING_LOWER_BOUND_LIFETIME', false);
 
     // The maximum accepted time in second that a ping command should last.
     // If set to false, there will be no higher bound to the ping lifetime.
+    // The minimum accepted value is 1 second. The maximum accepted value is 3540 seconds (59 minutes).
     define('PING_HIGHER_BOUND_LIFETIME', false);
 
 /**********************************************************************************
