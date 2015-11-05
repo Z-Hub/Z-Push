@@ -154,7 +154,7 @@ class Ping extends RequestProcessor {
             if(!self::$decoder->getElementEndTag())
                 return false;
 
-            if(!$this->LifetimeBetweenBound($sc->GetLifetime())){
+            if(!$this->lifetimeBetweenBound($sc->GetLifetime())){
                 $pingstatus = SYNC_PINGSTATUS_HBOUTOFRANGE;
             }
             // save changed data
@@ -168,7 +168,7 @@ class Ping extends RequestProcessor {
                 $pingstatus = SYNC_PINGSTATUS_FAILINGPARAMS;
                 ZLog::Write(LOGLEVEL_DEBUG, "HandlePing(): no pingable folders found and no initialization data sent. Returning SYNC_PINGSTATUS_FAILINGPARAMS.");
             }
-            elseif(!$this->LifetimeBetweenBound($sc->GetLifetime())){
+            elseif(!$this->lifetimeBetweenBound($sc->GetLifetime())){
                 $pingstatus = SYNC_PINGSTATUS_FAILINGPARAMS;
                 ZLog::Write(LOGLEVEL_DEBUG, "HandlePing(): ping lifetime not between bound (higher bound:`".PING_HIGHER_BOUND_LIFETIME."` lower bound:`".PING_LOWER_BOUND_LIFETIME."` current lifetime:`".$sc->GetLifetime()."`. Returning SYNC_PINGSTATUS_FAILINGPARAMS.");
             }
@@ -248,10 +248,12 @@ class Ping extends RequestProcessor {
     /**
      * Return true if the ping lifetime is between the specified bound (PING_HIGHER_BOUND_LIFETIME and PING_LOWER_BOUND_LIFETIME). If no bound are specified, it returns true.
      *
+     * @param int       $lifetime
+     *
      * @access private
      * @return boolean
      */
-    private function LifetimeBetweenBound($lifetime){
+    private function lifetimeBetweenBound($lifetime){
         if(PING_HIGHER_BOUND_LIFETIME !== false && PING_LOWER_BOUND_LIFETIME !== false){
             return ($lifetime <= PING_HIGHER_BOUND_LIFETIME && $lifetime >= PING_LOWER_BOUND_LIFETIME);
         }
