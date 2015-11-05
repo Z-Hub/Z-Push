@@ -6,7 +6,7 @@
 *
 * Created   :   16.02.2012
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2013, 2015 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -57,7 +57,7 @@ class Provisioning extends RequestProcessor {
 
         $rwstatus = self::$deviceManager->GetProvisioningWipeStatus();
         $rwstatusWiped = false;
-		$deviceInfoSet = false;
+        $deviceInfoSet = false;
 
         // if this is a regular provisioning require that an authenticated remote user
         if ($rwstatus < SYNC_PROVISION_RWSTATUS_PENDING) {
@@ -77,7 +77,6 @@ class Provisioning extends RequestProcessor {
         // Each of them should only be once per request. 
         WBXMLDecoder::ResetInWhile("provisioningMain");
         while(WBXMLDecoder::InWhile("provisioningMain")) {
-			
             $requestName = "";
             if (self::$decoder->getElementStartTag(SYNC_PROVISION_REMOTEWIPE)) {
                 $requestName = SYNC_PROVISION_REMOTEWIPE;
@@ -171,10 +170,9 @@ class Provisioning extends RequestProcessor {
 
         }
 
-        if(!self::$decoder->getElementEndTag()) { //provision
-            ZLog::Write(LOGLEVEL_INFO, "No End Provision");
+        if(!self::$decoder->getElementEndTag()) //provision
             return false;
-		}
+
         if (PROVISIONING !== true) {
             ZLog::Write(LOGLEVEL_INFO, "No policies deployed to device");
             $policystatus = SYNC_PROVISION_POLICYSTATUS_NOPOLICY;
