@@ -219,7 +219,6 @@
     // NOTE: THIS IS AN EXPERIMENTAL FEATURE WHICH COULD PREVENT YOUR MOBILES FROM SYNCHRONIZING.
     define('USE_PARTIAL_FOLDERSYNC', false);
 
-
     // The minimum accepted time in second that a ping command should last.
     // It is strongly advised to keep this config to false. Some device
     // might not be able to send a higher value than the one specificied here and thus

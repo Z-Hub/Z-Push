@@ -156,6 +156,7 @@ class Ping extends RequestProcessor {
 
             if(!$this->lifetimeBetweenBound($sc->GetLifetime())){
                 $pingstatus = SYNC_PINGSTATUS_HBOUTOFRANGE;
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandlePing(): ping lifetime not between bound (higher bound:'%d' lower bound:'%d' current lifetime:'%d'. Returning SYNC_PINGSTATUS_HBOUTOFRANGE.", PING_HIGHER_BOUND_LIFETIME, PING_LOWER_BOUND_LIFETIME, $sc->GetLifetime()));
             }
             // save changed data
             foreach ($sc as $folderid => $spa)
@@ -170,7 +171,7 @@ class Ping extends RequestProcessor {
             }
             elseif(!$this->lifetimeBetweenBound($sc->GetLifetime())){
                 $pingstatus = SYNC_PINGSTATUS_FAILINGPARAMS;
-                ZLog::Write(LOGLEVEL_DEBUG, "HandlePing(): ping lifetime not between bound (higher bound:`".PING_HIGHER_BOUND_LIFETIME."` lower bound:`".PING_LOWER_BOUND_LIFETIME."` current lifetime:`".$sc->GetLifetime()."`. Returning SYNC_PINGSTATUS_FAILINGPARAMS.");
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandlePing(): ping lifetime not between bound (higher bound:'%d' lower bound:'%d' current lifetime:'%d'. Returning SYNC_PINGSTATUS_FAILINGPARAMS.", PING_HIGHER_BOUND_LIFETIME, PING_LOWER_BOUND_LIFETIME, $sc->GetLifetime()));
             }
         }
 
