@@ -9,7 +9,7 @@
 *
 * Created   :   07.09.2011
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2015 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -719,9 +719,9 @@ class ZPushTop {
      * @return array        'width' and 'height' as keys
      */
     private function scrGetSize() {
-		$tty = strtolower(exec('stty -a | fgrep columns'));
+        $tty = strtolower(exec('stty -a | fgrep columns'));
         if (preg_match_all("/rows.([0-9]+);.columns.([0-9]+);/", $tty, $output) ||
-			preg_match_all("/([0-9]+).rows;.([0-9]+).columns;/", $tty, $output))
+            preg_match_all("/([0-9]+).rows;.([0-9]+).columns;/", $tty, $output))
             return array('width' => $output[2][0], 'height' => $output[1][0]);
 
         return array('width' => 80, 'height' => 24);
