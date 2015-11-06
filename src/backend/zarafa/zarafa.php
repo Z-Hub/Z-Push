@@ -1189,6 +1189,11 @@ class BackendZarafa implements IBackend, ISearchProvider {
     */
     public function TerminateSearch($pid) {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->TerminateSearch(): terminating search for pid %d", $pid));
+        if (!isset($this->store) || $this->store === false) {
+            ZLog::Write(LOGLEVEL_WARN, sprintf("The store is not available. It is not possible to remove search folder with pid %d", $pid));
+            return false;
+        }
+
         $storeProps = mapi_getprops($this->store, array(PR_STORE_SUPPORT_MASK, PR_FINDER_ENTRYID));
         if (($storeProps[PR_STORE_SUPPORT_MASK] & STORE_SEARCH_OK) != STORE_SEARCH_OK) {
             ZLog::Write(LOGLEVEL_WARN, "Store doesn't support search folders. Public store doesn't have FINDER_ROOT folder");
