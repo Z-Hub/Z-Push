@@ -294,12 +294,6 @@ class ZLog {
  * Legacy debug stuff
  */
 
-// deprecated
-// backwards compatible
-function debugLog($message) {
-    ZLog::Write(LOGLEVEL_DEBUG, $message);
-}
-
 // E_DEPRECATED only available since PHP 5.3.0
 if (!defined('E_DEPRECATED')) define(E_DEPRECATED, 8192);
 
