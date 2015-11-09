@@ -298,7 +298,7 @@ class ZLog {
 if (!defined('E_DEPRECATED')) define(E_DEPRECATED, 8192);
 
 // TODO review error handler
-function zarafa_error_handler($errno, $errstr, $errfile, $errline, $errcontext) {
+function zpush_error_handler($errno, $errstr, $errfile, $errline, $errcontext) {
     $bt = debug_backtrace();
     switch ($errno) {
         case E_DEPRECATED:
@@ -327,7 +327,7 @@ function zarafa_error_handler($errno, $errstr, $errfile, $errline, $errcontext) 
 }
 
 error_reporting(E_ALL);
-set_error_handler("zarafa_error_handler");
+set_error_handler("zpush_error_handler");
 
 
 function zpush_fatal_handler() {
