@@ -246,9 +246,20 @@ include_once('version.php');
     }
 
     catch (Exception $ex) {
+        // Extract any previous exception message for logging purpose.
+        $exclass = get_class($ex);
+        $exception_message = $ex->getMessage();
+        if($ex->getPrevious()){
+            do {
+                $current_exception = $ex->getPrevious();
+                $exception_message .= ' -> ' . $current_exception->getMessage();
+            } while($current_exception->getPrevious());
+        }
+
         if (Request::GetUserAgent())
             ZLog::Write(LOGLEVEL_INFO, sprintf("User-agent: '%s'", Request::GetUserAgent()));
-        $exclass = get_class($ex);
+
+        ZLog::Write(LOGLEVEL_FATAL, sprintf('Exception: (%s) - %s', $exclass, $exception_message));
 
         if(!headers_sent()) {
             if ($ex instanceof ZPushException) {
@@ -260,8 +271,6 @@ include_once('version.php');
             else
                 header('HTTP/1.1 500 Internal Server Error');
         }
-        else
-            ZLog::Write(LOGLEVEL_FATAL, "Exception: ($exclass) - headers were already sent. Message: ". $ex->getMessage());
 
         if ($ex instanceof AuthenticationRequiredException) {
             ZPush::PrintZPushLegal($exclass, sprintf('<pre>%s</pre>',$ex->getMessage()));
