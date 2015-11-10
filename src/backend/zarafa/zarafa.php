@@ -82,7 +82,6 @@ class BackendZarafa implements IBackend, ISearchProvider {
     private $store;
     private $storeName;
     private $storeCache;
-    private $storeProps;
     private $importedFolders;
     private $notifications;
     private $changesSink;
@@ -109,7 +108,6 @@ class BackendZarafa implements IBackend, ISearchProvider {
         $this->store = false;
         $this->storeName = false;
         $this->storeCache = array();
-        $this->storeProps = array();
         $this->importedFolders = array();
         $this->notifications = false;
         $this->changesSink = false;
@@ -667,40 +665,13 @@ class BackendZarafa implements IBackend, ISearchProvider {
         if(!strpos($attname, ":"))
             throw new StatusException(sprintf("ZarafaBackend->GetAttachmentData('%s'): Error, attachment requested for non-existing item", $attname), SYNC_ITEMOPERATIONSSTATUS_INVALIDATT);
 
-        // backwards compatibility if the storeentryid is not available in the $attname
-        if (substr_count($attname, ':') == 1) {
-            list($id, $attachnum) = explode(":", $attname);
-        }
-        else {
-            list($storeEntryid, $id, $attachnum) = explode(":", $attname);
+        list($id, $attachnum, $parentEntryid) = explode(":", $attname);
+        if (isset($parentEntryid)) {
+            $this->Setup(ZPush::GetAdditionalSyncFolderStore($parentEntryid));
         }
 
-        // Assume that the attachment is in the user's store.
-        $store = $this->store;
         $entryid = hex2bin($id);
-        if (isset($storeEntryid)) {
-            $storeEntryid = hex2bin($storeEntryid);
-            $storeProps = $this->getStoreProps();
-            // If the attachment is not in the user's store, check if public store is available and it's there.
-            // Otherwise try to open the store.
-            if ($storeProps[PR_ENTRYID] != $storeEntryid) {
-                if (isset($this->storeCache['SYSTEM']) && $this->storeCache['SYSTEM'] == $storeEntryid) {
-                    ZLog::Write(LOGLEVEL_DEBUG, 'ZarafaBackend->GetAttachmentData the attachment is in a message in a public store.');
-                    $store = $this->storeCache['SYSTEM'];
-                }
-                else {
-                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("Open store %s", bin2hex($storeEntryid)));
-                    $store = @mapi_openmsgstore($this->session, $storeEntryid);
-
-                    if (!$store) {
-                        ZLog::Write(LOGLEVEL_WARN, sprintf("ZarafaBackend->GetAttachmentData: Could not open store %s", bin2hex($storeEntryid)));
-                        return false;
-                    }
-                }
-            }
-        }
-
-        $message = mapi_msgstore_openentry($store, $entryid);
+        $message = mapi_msgstore_openentry($this->store, $entryid);
         if(!$message)
             throw new StatusException(sprintf("ZarafaBackend->GetAttachmentData('%s'): Error, unable to open item for attachment data for id '%s' with: 0x%X", $attname, $id, mapi_last_hresult()), SYNC_ITEMOPERATIONSSTATUS_INVALIDATT);
 
@@ -2122,20 +2093,6 @@ class BackendZarafa implements IBackend, ISearchProvider {
             throw new FatalException("User is disabled for Z-Push.");
         }
         return true;
-    }
-
-    /**
-     * Gets the required store properties.
-     *
-     * @access private
-     * @return array
-     */
-    private function getStoreProps() {
-        if (empty($this->storeProps)) {
-            ZLog::Write(LOGLEVEL_DEBUG, "BackendZarafa->getStoreProps(): Getting store properties.");
-            $this->storeProps = mapi_getprops($this->store, array(PR_ENTRYID));
-        }
-        return $this->storeProps;
     }
 }
 
