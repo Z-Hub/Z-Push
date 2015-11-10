@@ -665,7 +665,10 @@ class BackendZarafa implements IBackend, ISearchProvider {
         if(!strpos($attname, ":"))
             throw new StatusException(sprintf("ZarafaBackend->GetAttachmentData('%s'): Error, attachment requested for non-existing item", $attname), SYNC_ITEMOPERATIONSSTATUS_INVALIDATT);
 
-        list($id, $attachnum) = explode(":", $attname);
+        list($id, $attachnum, $parentEntryid) = explode(":", $attname);
+        if (isset($parentEntryid)) {
+            $this->Setup(ZPush::GetAdditionalSyncFolderStore($parentEntryid));
+        }
 
         $entryid = hex2bin($id);
         $message = mapi_msgstore_openentry($this->store, $entryid);

@@ -677,6 +677,7 @@ class MAPIProvider {
         $attachtable = mapi_message_getattachmenttable($mapimessage);
         $rows = mapi_table_queryallrows($attachtable, array(PR_ATTACH_NUM));
         $entryid = bin2hex($messageprops[$emailproperties["entryid"]]);
+        $parentSourcekey = bin2hex($messageprops[$emailproperties["parentsourcekey"]]);
 
         foreach($rows as $row) {
             if(isset($row[PR_ATTACH_NUM])) {
@@ -708,7 +709,7 @@ class MAPIProvider {
 
                 // set AS version specific parameters
                 if (Request::GetProtocolVersion() >= 12.0) {
-                    $attach->filereference = $entryid.":".$row[PR_ATTACH_NUM];
+                    $attach->filereference = sprintf("%s:%s:%s", $entryid, $row[PR_ATTACH_NUM], $parentSourcekey);
                     $attach->method = (isset($attachprops[PR_ATTACH_METHOD])) ? $attachprops[PR_ATTACH_METHOD] : ATTACH_BY_VALUE;
 
                     // if displayname does not have the eml extension for embedde messages, android and WP devices won't open it
@@ -741,7 +742,7 @@ class MAPIProvider {
                 }
                 else {
                     $attach->attsize = $attachprops[PR_ATTACH_SIZE];
-                    $attach->attname = $entryid.":".$row[PR_ATTACH_NUM];
+                    $attach->attname = sprintf("%s:%s:%s", $entryid, $row[PR_ATTACH_NUM], $parentSourcekey);
                     if(!isset($message->attachments))
                         $message->attachments = array();
 
