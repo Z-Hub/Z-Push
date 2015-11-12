@@ -166,25 +166,25 @@ class ZPushAdminCLI {
         return  "Usage:\n\tz-push-admin.php -a ACTION [options]\n\n" .
                 "Parameters:\n\t-a list/wipe/remove/resync/clearloop\n\t[-u] username\n\t[-d] deviceid\n\n" .
                 "Actions:\n" .
-                "\tlist\t\t\t\t Lists all devices and synchronized users\n" .
-                "\tlist -u USER\t\t\t Lists all devices of user USER\n" .
-                "\tlist -d DEVICE\t\t\t Lists all users of device DEVICE\n" .
-                "\tlastsync\t\t\t Lists all devices and synchronized users and the last synchronization time\n" .
-                "\twipe -u USER\t\t\t Remote wipes all devices of user USER\n" .
-                "\twipe -d DEVICE\t\t\t Remote wipes device DEVICE\n" .
-                "\twipe -u USER -d DEVICE\t\t Remote wipes device DEVICE of user USER\n" .
-                "\tremove -u USER\t\t\t Removes all state data of all devices of user USER\n" .
-                "\tremove -d DEVICE\t\t Removes all state data of all users synchronized on device DEVICE\n" .
-                "\tremove -u USER -d DEVICE\t Removes all related state data of device DEVICE of user USER\n" .
-                "\tresync -u USER -d DEVICE\t Resynchronizes all data of device DEVICE of user USER\n" .
-                "\tresync -t TYPE \t\t\t Resynchronizes all folders of type $types for all devices and users.\n" .
-                "\tresync -t TYPE -u USER \t\t Resynchronizes all folders of type $types for the user USER.\n" .
-                "\tresync -t TYPE -u USER -d DEVICE Resynchronizes all folders of type $types for a specified device and user.\n" .
-                "\tresync -t FOLDERID -u USER\t Resynchronize the specified folder id only. The USER should be specified for better performance.\n" .
-                "\tresync -t hierarchy -u USER\t Resynchronize the hierarchy data for an optional USER and optional DEVICE.\n" .
-                "\tclearloop\t\t\t Clears system wide loop detection data\n" .
-                "\tclearloop -d DEVICE -u USER\t Clears all loop detection data of a device DEVICE and an optional user USER\n" .
-                "\tfixstates\t\t\t Checks the states for integrity and fixes potential issues\n" .
+                "\tlist\t\t\t\t\t Lists all devices and synchronized users\n" .
+                "\tlist -u USER\t\t\t\t Lists all devices of user USER\n" .
+                "\tlist -d DEVICE\t\t\t\t Lists all users of device DEVICE\n" .
+                "\tlastsync\t\t\t\t Lists all devices and synchronized users and the last synchronization time\n" .
+                "\twipe -u USER\t\t\t\t Remote wipes all devices of user USER\n" .
+                "\twipe -d DEVICE\t\t\t\t Remote wipes device DEVICE\n" .
+                "\twipe -u USER -d DEVICE\t\t\t Remote wipes device DEVICE of user USER\n" .
+                "\tremove -u USER\t\t\t\t Removes all state data of all devices of user USER\n" .
+                "\tremove -d DEVICE\t\t\t Removes all state data of all users synchronized on device DEVICE\n" .
+                "\tremove -u USER -d DEVICE\t\t Removes all related state data of device DEVICE of user USER\n" .
+                "\tresync -u USER -d DEVICE\t\t Resynchronizes all data of device DEVICE of user USER\n" .
+                "\tresync -t TYPE \t\t\t\t Resynchronizes all folders of type $types for all devices and users.\n" .
+                "\tresync -t TYPE -u USER \t\t\t Resynchronizes all folders of type $types for the user USER.\n" .
+                "\tresync -t TYPE -u USER -d DEVICE\t Resynchronizes all folders of type $types for a specified device and user.\n" .
+                "\tresync -t FOLDERID -u USER\t\t Resynchronize the specified folder id only. The USER should be specified for better performance.\n" .
+                "\tresync -t hierarchy -u USER -d DEVICE\t Resynchronize the folder hierarchy data for an optional USER and optional DEVICE.\n" .
+                "\tclearloop\t\t\t\t Clears system wide loop detection data\n" .
+                "\tclearloop -d DEVICE -u USER\t\t Clears all loop detection data of a device DEVICE and an optional user USER\n" .
+                "\tfixstates\t\t\t\t Checks the states for integrity and fixes potential issues\n" .
                 "\n";
     }
 
