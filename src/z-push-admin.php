@@ -140,12 +140,14 @@ class ZPushAdminCLI {
     const COMMAND_SHOWLASTSYNC = 8;
     const COMMAND_RESYNCFOLDER = 9;
     const COMMAND_FIXSTATES = 10;
+    const COMMAND_RESYNCHIERARCHY = 11;
 
     const TYPE_OPTION_EMAIL = "email";
     const TYPE_OPTION_CALENDAR = "calendar";
     const TYPE_OPTION_CONTACT = "contact";
     const TYPE_OPTION_TASK = "task";
     const TYPE_OPTION_NOTE = "note";
+    const TYPE_OPTION_HIERARCHY = "hierarchy";
 
     static private $command;
     static private $user = false;
@@ -179,6 +181,7 @@ class ZPushAdminCLI {
                 "\tresync -t TYPE -u USER \t\t Resynchronizes all folders of type $types for the user USER.\n" .
                 "\tresync -t TYPE -u USER -d DEVICE Resynchronizes all folders of type $types for a specified device and user.\n" .
                 "\tresync -t FOLDERID -u USER\t Resynchronize the specified folder id only. The USER should be specified for better performance.\n" .
+                "\tresync -t hierarchy -u USER\t Resynchronize the hierarchy data for an optional USER and optional DEVICE.\n" .
                 "\tclearloop\t\t\t Clears system wide loop detection data\n" .
                 "\tclearloop -d DEVICE -u USER\t Clears all loop detection data of a device DEVICE and an optional user USER\n" .
                 "\tfixstates\t\t\t Checks the states for integrity and fixes potential issues\n" .
@@ -243,9 +246,10 @@ class ZPushAdminCLI {
                 self::$type !== self::TYPE_OPTION_CONTACT &&
                 self::$type !== self::TYPE_OPTION_TASK &&
                 self::$type !== self::TYPE_OPTION_NOTE &&
+                self::$type !== self::TYPE_OPTION_HIERARCHY &&
                 strlen(self::$type) !== 44) {
                     self::$errormessage = "Wrong 'type'. Possible values are: ".
-                        "'".self::TYPE_OPTION_EMAIL."', '".self::TYPE_OPTION_CALENDAR."', '".self::TYPE_OPTION_CONTACT."', '".self::TYPE_OPTION_TASK."', '".self::TYPE_OPTION_NOTE."' ".
+                        "'".self::TYPE_OPTION_EMAIL."', '".self::TYPE_OPTION_CALENDAR."', '".self::TYPE_OPTION_CONTACT."', '".self::TYPE_OPTION_TASK."', '".self::TYPE_OPTION_NOTE."', ".self::TYPE_OPTION_HIERARCHY."' ".
                         "or a 44 byte long folder id (as hex).";
                     return;
                 }
@@ -299,6 +303,9 @@ class ZPushAdminCLI {
                         self::$errormessage = "Not possible to resynchronize device. Device and user must be specified.";
                     else
                         self::$command = self::COMMAND_RESYNCDEVICE;
+                }
+                else if (self::$type === self::TYPE_OPTION_HIERARCHY) {
+                    self::$command = self::COMMAND_RESYNCHIERARCHY;
                 }
                 else {
                     self::$command = self::COMMAND_RESYNCFOLDER;
@@ -408,6 +415,18 @@ class ZPushAdminCLI {
                         }
                     }
                     self::CommandResyncFolder();
+                    break;
+
+                case self::COMMAND_RESYNCHIERARCHY:
+                    if (self::$device == false && self::$user == false) {
+                        echo "Are you sure you want to re-synchronize the hierarchy of all devices and users [y/N]: ";
+                        $confirm  =  strtolower(trim(fgets(STDIN)));
+                        if ( !($confirm === 'y' || $confirm === 'yes')) {
+                            echo "Aborted!\n";
+                            exit(1);
+                        }
+                    }
+                    self::CommandResyncHierarchy();
                     break;
 
             case self::COMMAND_CLEARLOOP:
@@ -589,6 +608,36 @@ class ZPushAdminCLI {
     }
 
     /**
+     * Command "Resync hierarchy"
+     * Resyncs a folder type of a specific device/user or of all users
+     *
+     * @return
+     * @access public
+     */
+    static public function CommandResyncHierarchy() {
+        // if no device is specified, search for all devices of a user. If user is not set, all devices are returned.
+        if (self::$device === false) {
+            $devicelist = ZPushAdmin::ListDevices(self::$user);
+            if (empty($devicelist)) {
+                echo "\tno devices/users found\n";
+                return true;
+            }
+        }
+        else
+            $devicelist = array(self::$device);
+
+        foreach ($devicelist as $deviceId) {
+            $users = ZPushAdmin::ListUsers($deviceId);
+            foreach ($users as $user) {
+                if (self::$user && self::$user != $user)
+                    continue;
+                self::resyncHierarchy($deviceId, $user);
+            }
+        }
+
+    }
+
+    /**
      * Command to clear the loop detection data
      * Mobiles may enter loop detection (one-by-one synchring due to timeouts / erros).
      *
@@ -668,6 +717,20 @@ class ZPushAdminCLI {
 
         $stat = ZPushAdmin::ResyncFolder($user, $deviceId, $folders);
         echo sprintf("Resync of %d folders of type %s on device '%s' of user '%s': %s\n", count($folders), $type, $deviceId, $user, ($stat)?'Requested':ZLog::GetLastMessage(LOGLEVEL_ERROR));
+    }
+
+    /**
+     * Resynchronizes the hierarchy of a device & user
+     *
+     * @param string    $deviceId       the id of the device
+     * @param string    $user           the user
+     *
+     * @return
+     * @access private
+     */
+    static private function resyncHierarchy($deviceId, $user) {
+        $stat = ZPushAdmin::ResyncHierarchy($user, $deviceId);
+        echo sprintf("Removing hierarchy information for resync on device '%s' of user '%s': %s\n",  $deviceId, $user, ($stat)?'Requested':ZLog::GetLastMessage(LOGLEVEL_ERROR));
     }
 
     /**
