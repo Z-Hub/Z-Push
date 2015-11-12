@@ -179,7 +179,7 @@ function listfolders_getlist ($adminStore, $session, $user) {
     if (strtoupper($user) != 'SYSTEM') {
         $inbox = mapi_msgstore_getreceivefolder($userStore);
         if(mapi_last_hresult() != NOERROR) {
-            printf("Could not open inbox for %s (%08X). The script will exit.\n", $user, mapi_last_hresult());
+            printf("Could not open inbox for %s (0x%08X). The script will exit.\n", $user, mapi_last_hresult());
             exit (1);
         }
         $inboxProps = mapi_getprops($inbox, array(PR_SOURCE_KEY));
