@@ -176,16 +176,43 @@ function listfolders_getlist ($adminStore, $session, $user) {
         exit (1);
     }
 
-    $folder = @mapi_msgstore_openentry($userStore);
-    $h_table = @mapi_folder_gethierarchytable($folder, CONVENIENT_DEPTH);
-    $subfolders = @mapi_table_queryallrows($h_table, array(PR_ENTRYID, PR_DISPLAY_NAME, PR_CONTAINER_CLASS, PR_SOURCE_KEY));
+    if (strtoupper($user) != 'SYSTEM') {
+        $inbox = mapi_msgstore_getreceivefolder($userStore);
+        if(mapi_last_hresult() != NOERROR) {
+            printf("Could not open inbox for %s (%08X). The script will exit.\n", $user, mapi_last_hresult());
+            exit (1);
+        }
+        $inboxProps = mapi_getprops($inbox, array(PR_SOURCE_KEY));
+    }
+
+    $storeProps = mapi_getprops($userStore, array(PR_IPM_OUTBOX_ENTRYID, PR_IPM_SENTMAIL_ENTRYID, PR_IPM_WASTEBASKET_ENTRYID));
+    $root = @mapi_msgstore_openentry($userStore, null);
+    $h_table = @mapi_folder_gethierarchytable($root, CONVENIENT_DEPTH);
+    $subfolders = @mapi_table_queryallrows($h_table, array(PR_ENTRYID, PR_DISPLAY_NAME, PR_CONTAINER_CLASS, PR_SOURCE_KEY, PR_PARENT_SOURCE_KEY, PR_FOLDER_TYPE, PR_ATTR_HIDDEN));
 
     echo "Available folders in store '$user':\n" . str_repeat("-", 50) . "\n";
     foreach($subfolders as $folder) {
+        // do not display hidden and search folders
+        if ((isset($folder[PR_ATTR_HIDDEN]) && $folder[PR_ATTR_HIDDEN]) ||
+            (isset($folder[PR_FOLDER_TYPE]) && $folder[PR_FOLDER_TYPE] == FOLDER_SEARCH)) {
+
+            continue;
+        }
+
+        // handle some special folders
+        if ((strtoupper($user) != 'SYSTEM') &&
+            ((isset($inboxProps[PR_SOURCE_KEY]) && $folder[PR_SOURCE_KEY] == $inboxProps[PR_SOURCE_KEY]) ||
+            $folder[PR_ENTRYID] == $storeProps[PR_IPM_SENTMAIL_ENTRYID] ||
+            $folder[PR_ENTRYID] == $storeProps[PR_IPM_WASTEBASKET_ENTRYID])) {
+
+                $folder[PR_CONTAINER_CLASS] = "IPF.Note";
+        }
+
         if (isset($folder[PR_CONTAINER_CLASS]) && array_key_exists($folder[PR_CONTAINER_CLASS], $supported_classes)) {
             echo "Folder name:\t". $folder[PR_DISPLAY_NAME] . "\n";
             echo "Folder ID:\t". bin2hex($folder[PR_SOURCE_KEY]) . "\n";
             echo "Type:\t\t". $supported_classes[$folder[PR_CONTAINER_CLASS]] . "\n";
+
             echo "\n";
         }
     }
