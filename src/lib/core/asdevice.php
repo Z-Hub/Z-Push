@@ -542,7 +542,7 @@ class ASDevice extends StateObject {
         if ($folderid === false) {
             $this->hierarchyUuid = $uuid;
             // when unsetting the hierarchycache, also remove saved contentdata and ignoredmessages
-            if ($folderid === false) {
+            if ($folderid === false && $uuid === false) {
                 $this->contentData = array();
                 $this->ignoredMessageIds = array();
                 $this->ignoredMessages = array();

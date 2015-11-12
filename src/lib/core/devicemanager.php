@@ -557,12 +557,12 @@ class DeviceManager {
     public function ForceFullResync() {
         ZLog::Write(LOGLEVEL_INFO, "Full device resync requested");
 
-        // delete hierarchy states
-        StateManager::UnLinkState($this->device, false);
-
         // delete all other uuids
         foreach ($this->device->GetAllFolderIds() as $folderid)
             $uuid = StateManager::UnLinkState($this->device, $folderid);
+
+        // delete hierarchy states
+        StateManager::UnLinkState($this->device, false);
 
         return true;
     }
@@ -748,7 +748,7 @@ class DeviceManager {
     }
 
     /**
-     * Returns the User Agent. This data is consolidated with data from Request::GetUserAgent() 
+     * Returns the User Agent. This data is consolidated with data from Request::GetUserAgent()
      * and the data saved in the ASDevice.
      *
      * @access public
