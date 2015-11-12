@@ -212,7 +212,6 @@ function listfolders_getlist ($adminStore, $session, $user) {
             echo "Folder name:\t". $folder[PR_DISPLAY_NAME] . "\n";
             echo "Folder ID:\t". bin2hex($folder[PR_SOURCE_KEY]) . "\n";
             echo "Type:\t\t". $supported_classes[$folder[PR_CONTAINER_CLASS]] . "\n";
-
             echo "\n";
         }
     }
