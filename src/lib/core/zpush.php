@@ -220,24 +220,50 @@ class ZPush {
         else
             define('REAL_BASE_PATH', BASE_PATH);
 
-        if (!defined('LOGFILEDIR'))
-            throw new FatalMisconfigurationException("The LOGFILEDIR is not configured. Check if the config.php file is in place.");
+        if(!defined('LOGBACKEND')){
+            define('LOGBACKEND', 'filelog');
+        }
 
-        if (substr(LOGFILEDIR, -1,1) != "/")
-            throw new FatalMisconfigurationException("The LOGFILEDIR should terminate with a '/'");
+        if(LOGBACKEND == 'syslog') {
+            if(!defined('LOG_SYSLOG_FACILITY')) {
+                define('LOG_SYSLOG_FACILITY', LOG_LOCAL0);
+            }
+            if(!defined('LOG_SYSLOG_HOST')){
+                define('LOG_SYSLOG_HOST', false);
+            }
+            if(!defined('LOG_SYSLOG_PORT')){
+                define('LOG_SYSLOG_PORT', 514);
+            }
+            if(!defined('LOG_SYSLOG_PROGRAM')){
+                define('LOG_SYSLOG_PROGRAM', 'z-push');
+            }
+            if(!is_numeric(LOG_SYSLOG_PORT)){
+                throw new FatalMisconfigurationException("The LOG_SYSLOG_PORT must a be a number.");
+            }
+            if(LOG_SYSLOG_HOST && LOG_SYSLOG_PORT <= 0){
+                throw new FatalMisconfigurationException("LOG_SYSLOG_HOST is defined but the LOG_SYSLOG_PORT does not seem to be valid.");
+            }
+        }
+        elseif(LOGBACKEND == 'filelog'){
+            if (!defined('LOGFILEDIR'))
+                throw new FatalMisconfigurationException("The LOGFILEDIR is not configured. Check if the config.php file is in place.");
 
-        if (!file_exists(LOGFILEDIR))
-            throw new FatalMisconfigurationException("The configured LOGFILEDIR does not exist or can not be accessed.");
+            if (substr(LOGFILEDIR, -1,1) != "/")
+                throw new FatalMisconfigurationException("The LOGFILEDIR should terminate with a '/'");
 
-        if ((!file_exists(LOGFILE) && !touch(LOGFILE)) || !is_writable(LOGFILE))
-            throw new FatalMisconfigurationException("The configured LOGFILE can not be modified.");
+            if (!file_exists(LOGFILEDIR))
+                throw new FatalMisconfigurationException("The configured LOGFILEDIR does not exist or can not be accessed.");
 
-        if ((!file_exists(LOGERRORFILE) && !touch(LOGERRORFILE)) || !is_writable(LOGERRORFILE))
-            throw new FatalMisconfigurationException("The configured LOGERRORFILE can not be modified.");
+            if ((!file_exists(LOGFILE) && !touch(LOGFILE)) || !is_writable(LOGFILE))
+                throw new FatalMisconfigurationException("The configured LOGFILE can not be modified.");
 
-        // check ownership on the (eventually) just created files
-        Utils::FixFileOwner(LOGFILE);
-        Utils::FixFileOwner(LOGERRORFILE);
+            if ((!file_exists(LOGERRORFILE) && !touch(LOGERRORFILE)) || !is_writable(LOGERRORFILE))
+                throw new FatalMisconfigurationException("The configured LOGERRORFILE can not be modified.");
+
+            // check ownership on the (eventually) just created files
+            Utils::FixFileOwner(LOGFILE);
+            Utils::FixFileOwner(LOGERRORFILE);
+        }
 
         // set time zone
         // code contributed by Robert Scheck (rsc) - more information: https://developer.berlios.de/mantis/view.php?id=479

@@ -98,6 +98,8 @@
     define('LOGERRORFILE', LOGFILEDIR . 'z-push-error.log');
     define('LOGLEVEL', LOGLEVEL_WBXML);
     define('LOGAUTHFAIL', false);
+    // Either filelog or syslog or a custom log class in core/log/logclass
+    define('LOGBACKEND', 'filelog');
 
 
     // To save e.g. WBXML data only for selected users, add the usernames to the array
@@ -107,14 +109,14 @@
     define('LOGUSERLEVEL', LOGLEVEL_DEVICEID);
     $specialLogUsers = array();
 
-    // If you want to disable log to file, and log to syslog instead
-    define('LOG_SYSLOG_ENABLED', false);
     // false will log to local syslog, otherwise put the remote syslog IP here
     define('LOG_SYSLOG_HOST', false);
     // Syslog port
     define('LOG_SYSLOG_PORT', 514);
     // Program showed in the syslog. Useful if you have more than one instance login to the same syslog
-    define('LOG_SYSLOG_PROGRAM', '[z-push]');
+    define('LOG_SYSLOG_PROGRAM', 'z-push');
+    // Syslog facility
+    define('LOG_SYSLOG_FACILITY', LOG_LOCAL0);
 
 
     // Location of the trusted CA, e.g. '/etc/ssl/certs/EmailCA.pem'
