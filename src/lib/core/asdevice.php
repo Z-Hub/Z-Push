@@ -7,7 +7,7 @@
 *
 * Created   :   11.04.2011
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2015 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -68,6 +68,7 @@ class ASDevice extends StateObject {
                                     'ignoredmessages' => array(),
                                     'announcedASversion' => false,
                                     'foldersynccomplete' => true,
+                                    'additionalfolders' => array(),
                                 );
 
     static private $loadedData;
@@ -683,6 +684,157 @@ class ASDevice extends StateObject {
         }
 
         $this->contentData = $contentData;
+        return true;
+    }
+
+    /**----------------------------------------------------------------------------------------------------------
+     * Additional Folders operations
+     */
+
+    /**
+     * Returns a list of all additional folders of this device.
+     *
+     * @access public
+     * @return array
+     */
+    public function GetAdditionalFolders() {
+        return array_values($this->additionalfolders);
+    }
+
+    /**
+     * Returns an additional folder by folder ID.
+     *
+     * @param string    $folderid
+     *
+     * @access public
+     * @return false|array  Returns false if folder id is unknown. Else a list of properties.
+     */
+    public function GetAdditionalFolder($folderid) {
+        // check if the $folderid is one of our own - this will in mostly NOT be the case, so we do not log here
+        if (!isset($this->additionalfolders[$folderid])) {
+            return false;
+        }
+
+        return $this->additionalfolders[$folderid];
+    }
+
+    /**
+     * Adds an additional folder to this device & user.
+     *
+     * @param string    $store      the store where this folder is located, e.g. "SYSTEM" (for public folder) or a username.
+     * @param string    $folderid   the folder id of the additional folder.
+     * @param string    $name       the name of the addtional folder (has to be unique for all folders on the device).
+     * @param string    $type       AS foldertype of SYNC_FOLDER_TYPE_USER_*
+     *
+     * @access public
+     * @return boolean
+     */
+    public function AddAdditionalFolder($store, $folderid, $name, $type) {
+        // check if a folder with this ID is already in the list
+        if (isset($this->additionalfolders[$folderid])) {
+            ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->AddAdditionalFolder(): folder can not be added because there is already an additional folder with the same folder id: '%s'", $folderid));
+            return false;
+        }
+
+        // check if a folder with that Name is already in the list
+        foreach ($this->additionalfolders as $k => $folder) {
+            if ($folder['name'] == $name) {
+                ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->AddAdditionalFolder(): folder can not be added because there is already an additional folder with the same name: '%s'", $name));
+                return false;
+            }
+        }
+
+        // check if a folder with this ID or Name is already known on the device (regular folder)
+        foreach($this->GetHierarchyCache()->ExportFolders() as $syncedFolderid => $folder) {
+            if ($syncedFolderid == $folderid) {
+                ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->AddAdditionalFolder(): folder can not be added because there is already a folder with the same folder id synchronized: '%s'", $folderid));
+                return false;
+            }
+
+            // $folder is a SyncFolder object here
+            if ($folder->displayname == $name) {
+                ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->AddAdditionalFolder(): folder can not be added because there is already a folder with the same name synchronized: '%s'", $name));
+                return false;
+            }
+        }
+
+        // check if type is of a additional user type
+        if (!in_array($type, array(SYNC_FOLDER_TYPE_USER_CONTACT, SYNC_FOLDER_TYPE_USER_APPOINTMENT, SYNC_FOLDER_TYPE_USER_TASK, SYNC_FOLDER_TYPE_USER_MAIL, SYNC_FOLDER_TYPE_USER_NOTE, SYNC_FOLDER_TYPE_USER_JOURNAL))) {
+            ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->AddAdditionalFolder(): folder can not be added because the specified type '%s' is not a permitted user type.", $type));
+            return false;
+        }
+
+        // add the folder
+        $af = $this->additionalfolders;
+        $af[$folderid] = array(
+                            'store'     => $store,
+                            'folderid'  => $folderid,
+                            'name'      => $name,
+                            'type'      => $type,
+                         );
+        $this->additionalfolders = $af;
+
+        return true;
+    }
+
+    /**
+     * Edits (sets a new name) for an additional folder. Store, folderid and type can not be edited. Remove and add instead.
+     *
+     * @param string    $folderid   the folder id of the additional folder.
+     * @param string    $name       the name of the addtional folder (has to be unique for all folders on the device).
+     *
+     * @access public
+     * @return boolean
+     */
+    public function EditAdditionalFolder($folderid, $name) {
+        // check if a folder with this ID is known
+        if (!isset($this->additionalfolders[$folderid])) {
+            ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->EditAdditionalFolder(): folder can not be edited because there is no folder known with this folder id: '%s'. Add the folder first.", $folderid));
+            return false;
+        }
+
+        // check if a folder with that Name is already in the list
+        foreach ($this->additionalfolders as $k => $folder) {
+            if ($folder['name'] == $name) {
+                ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->EditAdditionalFolder(): folder can not be added because there is already an additional folder with the same name: '%s'", $name));
+                return false;
+            }
+        }
+
+        // check if a folder with the new name is already known on the device (regular folder)
+        foreach($this->GetHierarchyCache()->ExportFolders() as $syncedFolderid => $folder) {
+            // $folder is a SyncFolder object here
+            if ($folder->displayname == $name) {
+                ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->EditAdditionalFolder(): folder can not be added because there is already a folder with the same name synchronized: '%s'", $folderid));
+                return false;
+            }
+        }
+
+        // update the name
+        $af = $this->additionalfolders;
+        $af[$folderid]['name'] = $name;
+        $this->additionalfolders = $af;
+
+        return true;
+    }
+
+    /**
+     * Removes an additional folder from this device & user.
+     *
+     * @access public
+     * @return boolean
+     */
+    public function RemoveAdditionalFolder($folderid) {
+        // check if a folder with this ID is known
+        if (!isset($this->additionalfolders[$folderid])) {
+            ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->RemoveAdditionalFolder(): folder can not be removed because there is no folder known with this folder id: '%s'", $folderid));
+            return false;
+        }
+
+        // remove the folder
+        $af = $this->additionalfolders;
+        unset($af[$folderid]);
+        $this->additionalfolders = $af;
         return true;
     }
 
