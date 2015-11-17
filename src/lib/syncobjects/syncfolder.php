@@ -10,7 +10,7 @@
 *
 * Created   :   05.09.2011
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2015 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -52,6 +52,7 @@ class SyncFolder extends SyncObject {
     public $displayname;
     public $type;
     public $Store;
+    public $NoBackendFolder;
 
     function SyncFolder() {
         $mapping = array (
@@ -70,6 +71,9 @@ class SyncFolder extends SyncObject {
                                                                                                                         self::STREAMER_CHECK_CMPLOWER   => 20  )),
 
                     SYNC_FOLDERHIERARCHY_IGNORE_STORE                   => array (  self::STREAMER_VAR      => "Store",
+                                                                                    self::STREAMER_TYPE     => self::STREAMER_TYPE_IGNORE),
+
+                    SYNC_FOLDERHIERARCHY_IGNORE_NOBCKENDFLD             => array (  self::STREAMER_VAR      => "NoBackendFolder",
                                                                                     self::STREAMER_TYPE     => self::STREAMER_TYPE_IGNORE),
                 );
 

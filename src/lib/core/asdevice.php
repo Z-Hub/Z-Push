@@ -793,7 +793,7 @@ class ASDevice extends StateObject {
             return false;
         }
 
-        // check if a folder with that Name is already in the list
+        // check if a folder with the new name is already in the list
         foreach ($this->additionalfolders as $k => $folder) {
             if ($folder['name'] == $name) {
                 ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->EditAdditionalFolder(): folder can not be added because there is already an additional folder with the same name: '%s'", $name));

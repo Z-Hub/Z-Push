@@ -10,7 +10,7 @@
 *
 * Created   :   11.04.2011
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2015 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -401,6 +401,44 @@ class DeviceManager {
             throw new NotImplementedException(sprintf("Folderid '%s' is saved to be of type '%d' but this type is not implemented", $folderid, $typeFromCache));
 
         return $class;
+    }
+
+    /**
+     * Returns the additional folders as SyncFolder objects.
+     *
+     * @access public
+     * @return array of SyncFolder
+     */
+    public function GetAdditionalUserSyncFolders() {
+        $folders = array();
+        foreach($this->device->GetAdditionalFolders() as $df) {
+            $folder = new SyncFolder();
+            $folder->serverid = $df['folderid'];
+            $folder->parentid = 0;                  // only top folders are supported
+            $folder->displayname = $df['name'];
+            $folder->type = $df['type'];
+            // save store as custom property which is not streamed directly to the device
+            $folder->NoBackendFolder = true;
+            $folder->Store = $df['store'];
+
+            $folders[$folder->serverid] = $folder;
+        }
+        return $folders;
+    }
+
+    /**
+     * Get the store of an additional folder.
+     *
+     * @access public
+     * @return boolean|string
+     */
+    public function GetAdditionalUserSyncFolderStore($folderid) {
+        $f = $this->device->GetAdditionalFolder($folderid);
+        if ($f) {
+            return $f['store'];
+        }
+
+        return false;
     }
 
     /**
