@@ -159,7 +159,7 @@ class WebserviceDevice {
     /**
      * Returns a list of all additional folders of the given device and the Request::GetGETUser().
      *
-     * @param string    $devid          device id that should be listed.
+     * @param string    $deviceId       device id that should be listed.
      *
      * @access public
      * @return array
@@ -177,10 +177,10 @@ class WebserviceDevice {
     /**
      * Adds an additional folder to the given device and the Request::GetGETUser().
      *
-     * @param string    $devid          device id the folder should be added to.
+     * @param string    $deviceId       device id the folder should be added to.
      * @param string    $add_store      the store where this folder is located, e.g. "SYSTEM" (for public folder) or an username/email address.
      * @param string    $add_folderid   the folder id of the additional folder.
-     * @param string    $add_name       the name of the addtional folder (has to be unique for all folders on the device).
+     * @param string    $add_name       the name of the additional folder (has to be unique for all folders on the device).
      * @param string    $add_type       AS foldertype of SYNC_FOLDER_TYPE_USER_*
      *
      * @access public
@@ -206,9 +206,9 @@ class WebserviceDevice {
     /**
      * Updates the name of an additional folder to the given device and the Request::GetGETUser().
      *
-     * @param string    $devid          device id of where the folder should be updated.
+     * @param string    $deviceId       device id of where the folder should be updated.
      * @param string    $add_folderid   the folder id of the additional folder.
-     * @param string    $add_name       the name of the addtional folder (has to be unique for all folders on the device).
+     * @param string    $add_name       the name of the additional folder (has to be unique for all folders on the device).
      *
      * @access public
      * @return boolean
@@ -232,7 +232,7 @@ class WebserviceDevice {
     /**
      * Removes an additional folder from the given device and the Request::GetGETUser().
      *
-     * @param string    $devid          device id of where the folder should be removed.
+     * @param string    $deviceId       device id of where the folder should be removed.
      * @param string    $add_folderid   the folder id of the additional folder.
      *
      * @access public

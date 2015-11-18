@@ -517,7 +517,7 @@ class ZPushAdmin {
      * @param string    $devid          device id the folder should be added to.
      * @param string    $add_store      the store where this folder is located, e.g. "SYSTEM" (for public folder) or a username.
      * @param string    $add_folderid   the folder id of the additional folder.
-     * @param string    $add_name       the name of the addtional folder (has to be unique for all folders on the device).
+     * @param string    $add_name       the name of the additional folder (has to be unique for all folders on the device).
      * @param string    $add_type       AS foldertype of SYNC_FOLDER_TYPE_USER_*
      *
      * @access public
@@ -529,7 +529,7 @@ class ZPushAdmin {
         try {
             // set device data
             $device->SetData(ZPush::GetStateMachine()->GetState($devid, IStateMachine::DEVICEDATA), false);
-            // get the lastest hierarchy counter
+            // get the last hierarchy counter
             $spa = ZPush::GetStateMachine()->GetState($devid, IStateMachine::FOLDERDATA, $device->GetFolderUUID());
             list($uuid, $counter) = StateManager::ParseStateKey($spa->GetSyncKey());
             // instantiate hierarchycache
@@ -560,7 +560,7 @@ class ZPushAdmin {
      * @param string    $user           user of the device.
      * @param string    $devid          device id of where the folder should be updated.
      * @param string    $add_folderid   the folder id of the additional folder.
-     * @param string    $add_name       the name of the addtional folder (has to be unique for all folders on the device).
+     * @param string    $add_name       the name of the additional folder (has to be unique for all folders on the device).
      *
      * @access public
      * @return boolean
@@ -571,7 +571,7 @@ class ZPushAdmin {
         try {
             // set device data
             $device->SetData(ZPush::GetStateMachine()->GetState($devid, IStateMachine::DEVICEDATA), false);
-            // get the lastest hierarchy counter
+            // get the last hierarchy counter
             $spa = ZPush::GetStateMachine()->GetState($devid, IStateMachine::FOLDERDATA, $device->GetFolderUUID());
             list($uuid, $counter) = StateManager::ParseStateKey($spa->GetSyncKey());
             // instantiate hierarchycache
