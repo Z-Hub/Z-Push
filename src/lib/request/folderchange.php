@@ -6,7 +6,7 @@
 *
 * Created   :   16.02.2012
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2015 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -120,6 +120,9 @@ class FolderChange extends RequestProcessor {
         try {
             $syncstate = self::$deviceManager->GetStateManager()->GetSyncState($synckey);
             $newsynckey = self::$deviceManager->GetStateManager()->GetNewSyncKey($synckey);
+
+            // there are no SyncParameters for the hierarchy, but we use it to save the latest synckeys
+            $spa = self::$deviceManager->GetStateManager()->GetSynchedFolderState(false);
 
             // Over the ChangesWrapper the HierarchyCache is notified about all changes
             $changesMem = self::$deviceManager->GetHierarchyChangesWrapper();
@@ -238,8 +241,13 @@ class FolderChange extends RequestProcessor {
         self::$topCollector->AnnounceInformation(sprintf("Operation status %d", $status), true);
 
         // Save the sync state for the next time
-        if (isset($importer))
+        if (isset($importer)) {
             self::$deviceManager->GetStateManager()->SetSyncState($newsynckey, $importer->GetState());
+
+            // update SPA & save it
+            $spa->SetSyncKey($newsynckey);
+            self::$deviceManager->GetStateManager()->SetSynchedFolderState($spa);
+        }
 
         return true;
     }

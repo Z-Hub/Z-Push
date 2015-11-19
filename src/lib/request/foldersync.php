@@ -81,6 +81,9 @@ class FolderSync extends RequestProcessor {
 
             // We will be saving the sync state under 'newsynckey'
             $newsynckey = self::$deviceManager->GetStateManager()->GetNewSyncKey($synckey);
+
+            // there are no SyncParameters for the hierarchy, but we use it to save the latest synckeys
+            $spa = self::$deviceManager->GetStateManager()->GetSynchedFolderState(false);
         }
         catch (StateNotFoundException $snfex) {
                 $status = SYNC_FSSTATUS_SYNCKEYERROR;
@@ -257,8 +260,13 @@ class FolderSync extends RequestProcessor {
                 self::$topCollector->AnnounceInformation(sprintf("Outgoing %d folders",$changeCount), true);
 
                 // everything fine, save the sync state for the next time
-                if ($synckey == $newsynckey)
+                if ($synckey == $newsynckey) {
                     self::$deviceManager->GetStateManager()->SetSyncState($newsynckey, $newsyncstate);
+
+                    // update SPA & save it
+                    $spa->SetSyncKey($newsynckey);
+                    self::$deviceManager->GetStateManager()->SetSynchedFolderState($spa);
+                }
             }
         }
         self::$encoder->endTag();
