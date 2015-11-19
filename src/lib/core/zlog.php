@@ -42,15 +42,9 @@
 ************************************************/
 
 class ZLog {
-    static private $devid = ''; //done
-    static private $user = ''; // done
-    static private $authUser = false;
-    static private $pidstr; //done
     static private $wbxmlDebug = '';
     static private $lastLogs = array();
     static private $userLog = false;
-    static private $unAuthCache = array();
-    static private $syslogEnabled = false;
     /**
      * @var Log $logger
      */
