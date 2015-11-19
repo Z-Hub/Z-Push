@@ -166,7 +166,8 @@ class ZLog {
                 throw new \Exception('The class `'.$logger.'` does not exist.');
             }
 
-            $user = '['.Utils::SplitDomainUser(strtolower(Request::GetGETUser()))[0].']';
+            list($user) = Utils::SplitDomainUser(strtolower(Request::GetGETUser()));
+            $user = '['.$user.']';
 
             self::$logger = new $logger();
             self::$logger->SetUser($user);
