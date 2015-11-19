@@ -74,9 +74,7 @@ class Request {
     static private $input;
     static private $output;
     static private $headers;
-    static private $getparameters;
     static private $command;
-    static private $device;
     static private $method;
     static private $remoteAddr;
     static private $getUser;
@@ -91,8 +89,6 @@ class Request {
     static private $attachmentName;
     static private $collectionId;
     static private $itemId;
-    static private $longId; //TODO
-    static private $occurence; //TODO
     static private $saveInSent;
     static private $acceptMultipart;
 
