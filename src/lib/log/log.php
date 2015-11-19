@@ -4,7 +4,7 @@
  * Project   :   Z-Push
  * Descr     :   Logging functionalities
  *
- * Created   :   11.13.2015
+ * Created   :   13.11.2015
  *
  * Copyright 2007 - 2015 Zarafa Deutschland GmbH
  *
@@ -40,7 +40,7 @@
  *
  * Consult LICENSE file for details
  ************************************************/
-abstract class Log{
+abstract class Log {
 
     /**
      * @var string
@@ -73,8 +73,9 @@ abstract class Log{
     public function GetUser() {
         return $this->user;
     }
+
     /**
-     * @param string$value
+     * @param string $value
      *
      * @access public
      */
@@ -89,6 +90,7 @@ abstract class Log{
     public function GetDevid() {
         return $this->devid;
     }
+
     /**
      * @param string $value
      *
@@ -105,6 +107,7 @@ abstract class Log{
     public function GetPidstr() {
         return $this->pidstr;
     }
+
     /**
      * @param string $value
      *
@@ -134,6 +137,7 @@ abstract class Log{
         }
         return false;
     }
+
     /**
      * @access public
      * @return array
@@ -141,6 +145,7 @@ abstract class Log{
     public function GetSpecialLogUsers() {
         return $this->specialLogUsers;
     }
+
     /**
      * @param array $value
      *
@@ -150,7 +155,8 @@ abstract class Log{
         $this->specialLogUsers = $value;
     }
 
-    public function __construct() {}
+    public function __construct() {
+    }
 
     /**
      * @param int $loglevel
@@ -161,7 +167,7 @@ abstract class Log{
             $this->Write($loglevel, $message);
         }
         if ($loglevel <= LOGUSERLEVEL && $this->HasSpecialLogUsers()) {
-            if(RequestProcessor::isUserAuthenticated() && $this->IsUserInSpecialLogUsers(Request::GetAuthUser())) {
+            if (RequestProcessor::isUserAuthenticated() && $this->IsUserInSpecialLogUsers(Request::GetAuthUser())) {
                 // something was logged before the user was authenticated, write this to the log
                 if (!empty($this->unauthMessageCache)) {
                     foreach ($this->unauthMessageCache as $authcache) {
@@ -170,9 +176,8 @@ abstract class Log{
                     self::$unAuthCache = array();
                 }
                 $this->WriteForUser($loglevel, $message);
-            }
-            else {
-                $this->unauthMessageCache[] = [$loglevel, $message];
+            } else {
+                $this->unauthMessageCache[] = array($loglevel, $message);
             }
         }
 
@@ -182,21 +187,24 @@ abstract class Log{
     /**
      * This function is used as an event for log implementer.
      */
-    protected function afterLog($loglevel, $message) {}
+    protected function afterLog($loglevel, $message) {
+    }
 
     /**
      * Returns the string representation of the given $loglevel.
      * String can be padded
      *
-     * @param int             $loglevel                     one of the LOGLEVELs
-     * @param boolean     $pad
+     * @param int $loglevel one of the LOGLEVELs
+     * @param boolean $pad
      *
      * @access protected
      * @return string
      */
     protected function GetLogLevelString($loglevel, $pad = false) {
-        if ($pad) $s = " ";
-        else            $s = "";
+        if ($pad)
+            $s = " ";
+        else
+            $s = "";
         switch($loglevel) {
             case LOGLEVEL_OFF:     return ""; break;
             case LOGLEVEL_FATAL: return "[FATAL]"; break;

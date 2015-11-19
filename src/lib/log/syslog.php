@@ -4,7 +4,7 @@
  * Project   :   Z-Push
  * Descr     :   Logging functionalities
  *
- * Created   :   11.13.2015
+ * Created   :   13.11.2015
  *
  * Copyright 2007 - 2015 Zarafa Deutschland GmbH
  *
@@ -40,7 +40,7 @@
  *
  * Consult LICENSE file for details
  ************************************************/
-class Syslog extends Log{
+class Syslog extends Log {
 
     protected $program_name = '';
 
@@ -55,6 +55,7 @@ class Syslog extends Log{
     public function GetProgramName() {
         return $this->program_name;
     }
+
     /**
      * @param string $value
      *
@@ -71,6 +72,7 @@ class Syslog extends Log{
     public function GetHost() {
         return $this->host;
     }
+
     /**
      * @param string $value
      *
@@ -87,6 +89,7 @@ class Syslog extends Log{
     public function GetPort() {
         return $this->port;
     }
+
     /**
      * @param int $value
      *
@@ -101,9 +104,9 @@ class Syslog extends Log{
     public function __construct($program_name = null, $host = null, $port = null) {
         parent::__construct();
 
-        if(is_null($program_name)) $program_name = LOG_SYSLOG_PROGRAM;
-        if(is_null($host)) $host = LOG_SYSLOG_HOST;
-        if(is_null($port)) $port = LOG_SYSLOG_PORT;
+        if (is_null($program_name)) $program_name = LOG_SYSLOG_PROGRAM;
+        if (is_null($host)) $host = LOG_SYSLOG_HOST;
+        if (is_null($port)) $port = LOG_SYSLOG_PORT;
 
         $this->SetProgramName($program_name);
         $this->SetHost($host);
@@ -123,22 +126,21 @@ class Syslog extends Log{
         $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
         // Shift the "syslog.php" entry.
         array_shift($backtrace);
-        foreach($backtrace as $trace) {
+        foreach ($backtrace as $trace) {
             if (!isset($trace['file'])) {
                 continue;
             }
             if (strpos($trace['file'], REAL_BASE_PATH . 'backend/') !== false) {
                 preg_match('/\/backend\/([a-zA-Z]*)/', $trace['file'], $match);
                 if (isset($match[1])) {
-                    return $this->GetProgramName().'/'.$match[1];
+                    return $this->GetProgramName() . '/' . $match[1];
                 }
-            }
-            elseif (basename($trace['file'], '.php') != 'zlog') {
-                return $this->GetProgramName().'/core';
+            } elseif (basename($trace['file'], '.php') != 'zlog') {
+                return $this->GetProgramName() . '/core';
             }
         }
 
-        return $this->GetProgramName().'/core';
+        return $this->GetProgramName() . '/core';
     }
 
     /**
@@ -149,15 +151,15 @@ class Syslog extends Log{
      * @return int One of many LOG_* syslog level.
      */
     protected function GetZpushLogLevelToSyslogLogLevel($loglevel) {
-        switch($loglevel) {
-                case LOGLEVEL_FATAL: return LOG_ALERT; break;
-                case LOGLEVEL_ERROR: return LOG_ERR; break;
-                case LOGLEVEL_WARN:    return LOG_WARNING; break;
-                case LOGLEVEL_INFO:    return LOG_INFO; break;
-                case LOGLEVEL_DEBUG: return LOG_DEBUG; break;
-                case LOGLEVEL_WBXML: return LOG_DEBUG; break;
-                case LOGLEVEL_DEVICEID: return LOG_DEBUG; break;
-                case LOGLEVEL_WBXMLSTACK: return LOG_DEBUG; break;
+        switch ($loglevel) {
+            case LOGLEVEL_FATAL: return LOG_ALERT; break;
+            case LOGLEVEL_ERROR: return LOG_ERR; break;
+            case LOGLEVEL_WARN:    return LOG_WARNING; break;
+            case LOGLEVEL_INFO:    return LOG_INFO; break;
+            case LOGLEVEL_DEBUG: return LOG_DEBUG; break;
+            case LOGLEVEL_WBXML: return LOG_DEBUG; break;
+            case LOGLEVEL_DEVICEID: return LOG_DEBUG; break;
+            case LOGLEVEL_WBXMLSTACK: return LOG_DEBUG; break;
         }
         return null;
     }
@@ -174,7 +176,7 @@ class Syslog extends Log{
     public function BuildLogString($loglevel, $message) {
         $log = $this->GetLogLevelString($loglevel); // Never pad syslog log because syslog log are usually read with a software.
         $log .= $this->GetUser();
-        if($loglevel >= LOGLEVEL_DEVICEID) {
+        if ($loglevel >= LOGLEVEL_DEVICEID) {
             $log .= $this->GetDevid();
         }
         $log .= ' ' . $message;
@@ -190,15 +192,14 @@ class Syslog extends Log{
         if ($this->GetHost() && $this->GetPort()) {
             $sock = socket_create(AF_INET, SOCK_DGRAM, SOL_UDP);
             $facility = 1; // user level
-            $pri = ($facility*8) + $loglevel; // multiplying the Facility number by 8 + adding the level
+            $pri = ($facility * 8) + $loglevel; // multiplying the Facility number by 8 + adding the level
             $data = $this->buildLogString($loglevel, $message);
             if (strlen(trim($data)) > 0) {
-                $syslog_message = "<{$pri}>" . date('M d H:i:s ') . '['.$this->GetProgramName() . ']: ' . $data;
+                $syslog_message = "<{$pri}>" . date('M d H:i:s ') . '[' . $this->GetProgramName() . ']: ' . $data;
                 socket_sendto($sock, $syslog_message, strlen($syslog_message), 0, $this->GetHost(), $this->GetPort());
             }
             socket_close($sock);
-        }
-        else {
+        } else {
             openlog($this->GenerateProgramName(), LOG_PID, LOG_SYSLOG_FACILITY);
             syslog(
                 $this->GetZpushLogLevelToSyslogLogLevel($loglevel),

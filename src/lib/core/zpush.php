@@ -220,31 +220,38 @@ class ZPush {
         else
             define('REAL_BASE_PATH', BASE_PATH);
 
-        if(!defined('LOGBACKEND')){
+        if (!defined('LOGBACKEND')) {
             define('LOGBACKEND', 'filelog');
         }
 
-        if(LOGBACKEND == 'syslog') {
-            if(!defined('LOG_SYSLOG_FACILITY')) {
+        if (LOGBACKEND == 'syslog') {
+
+            if (!defined('LOG_SYSLOG_FACILITY')) {
                 define('LOG_SYSLOG_FACILITY', LOG_LOCAL0);
             }
-            if(!defined('LOG_SYSLOG_HOST')){
+
+            if (!defined('LOG_SYSLOG_HOST')) {
                 define('LOG_SYSLOG_HOST', false);
             }
-            if(!defined('LOG_SYSLOG_PORT')){
+
+            if (!defined('LOG_SYSLOG_PORT')) {
                 define('LOG_SYSLOG_PORT', 514);
             }
-            if(!defined('LOG_SYSLOG_PROGRAM')){
+
+            if (!defined('LOG_SYSLOG_PROGRAM')) {
                 define('LOG_SYSLOG_PROGRAM', 'z-push');
             }
-            if(!is_numeric(LOG_SYSLOG_PORT)){
+
+            if (!is_numeric(LOG_SYSLOG_PORT)) {
                 throw new FatalMisconfigurationException("The LOG_SYSLOG_PORT must a be a number.");
             }
-            if(LOG_SYSLOG_HOST && LOG_SYSLOG_PORT <= 0){
+
+            if (LOG_SYSLOG_HOST && LOG_SYSLOG_PORT <= 0) {
                 throw new FatalMisconfigurationException("LOG_SYSLOG_HOST is defined but the LOG_SYSLOG_PORT does not seem to be valid.");
             }
         }
-        elseif(LOGBACKEND == 'filelog'){
+        elseif (LOGBACKEND == 'filelog') {
+
             if (!defined('LOGFILEDIR'))
                 throw new FatalMisconfigurationException("The LOGFILEDIR is not configured. Check if the config.php file is in place.");
 

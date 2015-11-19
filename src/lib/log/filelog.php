@@ -4,7 +4,7 @@
  * Project   :   Z-Push
  * Descr     :   Logging functionalities
  *
- * Created   :   11.13.2015
+ * Created   :   13.11.2015
  *
  * Copyright 2007 - 2015 Zarafa Deutschland GmbH
  *
@@ -40,7 +40,7 @@
  *
  * Consult LICENSE file for details
  ************************************************/
-class FileLog extends Log{
+class FileLog extends Log {
 
     /**
      * @var string|bool
@@ -67,7 +67,8 @@ class FileLog extends Log{
         $this->log_to_user_file = $value;
     }
 
-    public function __construct(){}
+    public function __construct() {
+    }
 
     /**
      * Returns the string to be logged
@@ -79,7 +80,7 @@ class FileLog extends Log{
      * @return string
      */
     public function BuildLogString($loglevel, $message) {
-        $log = Utils::GetFormattedTime() . $this->GetPidstr() . $this->GetLogLevelString($loglevel, $loglevel >= LOGLEVEL_INFO) .' '. $this->GetUser();
+        $log = Utils::GetFormattedTime() . $this->GetPidstr() . $this->GetLogLevelString($loglevel, $loglevel >= LOGLEVEL_INFO) . ' ' . $this->GetUser();
         if ($loglevel >= LOGLEVEL_DEVICEID) {
             $log .= $this->GetDevid();
         }
@@ -91,7 +92,7 @@ class FileLog extends Log{
     // Implementation of Log
     //
 
-    protected function Write($loglevel, $message){
+    protected function Write($loglevel, $message) {
         $data = $this->buildLogString($loglevel, $message) . "\n";
         @file_put_contents(LOGFILE, $data, FILE_APPEND);
 
@@ -100,15 +101,15 @@ class FileLog extends Log{
         }
     }
 
-    public function WriteForUser($loglevel, $message){
+    public function WriteForUser($loglevel, $message) {
         $data = $this->buildLogString($loglevel, $message) . "\n";
         @file_put_contents(LOGFILEDIR . $this->getLogToUserFile(), $data, FILE_APPEND);
     }
 
-    protected function afterLog($loglevel, $message){
-      if (($loglevel & LOGLEVEL_FATAL) || ($loglevel & LOGLEVEL_ERROR)) {
-        $data = $this->buildLogString($loglevel, $message) . "\n";
-        @file_put_contents(LOGERRORFILE, $data, FILE_APPEND);
-      }
+    protected function afterLog($loglevel, $message) {
+        if (($loglevel & LOGLEVEL_FATAL) || ($loglevel & LOGLEVEL_ERROR)) {
+            $data = $this->buildLogString($loglevel, $message) . "\n";
+            @file_put_contents(LOGERRORFILE, $data, FILE_APPEND);
+        }
     }
 }

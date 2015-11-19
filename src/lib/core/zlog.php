@@ -101,10 +101,10 @@ class ZLog {
 
         self::$lastLogs[$loglevel] = $message;
 
-        try{
+        try {
             self::getLogger()->Log($loglevel, $message);
         }
-        catch(\Exception $e) {
+        catch (\Exception $e) {
             //@TODO How should we handle logging error ?
             // Ignore any error.
         }
