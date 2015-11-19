@@ -707,7 +707,7 @@ class ASDevice extends StateObject {
      * @param string    $folderid
      *
      * @access public
-     * @return false|array  Returns false if folder id is unknown. Else a list of properties.
+     * @return array|false Returns a list of properties. Else false if folder id is unknown.
      */
     public function GetAdditionalFolder($folderid) {
         // check if the $folderid is one of our own - this will in mostly NOT be the case, so we do not log here
@@ -723,7 +723,7 @@ class ASDevice extends StateObject {
      *
      * @param string    $store      the store where this folder is located, e.g. "SYSTEM" (for public folder) or a username.
      * @param string    $folderid   the folder id of the additional folder.
-     * @param string    $name       the name of the addtional folder (has to be unique for all folders on the device).
+     * @param string    $name       the name of the additional folder (has to be unique for all folders on the device).
      * @param string    $type       AS foldertype of SYNC_FOLDER_TYPE_USER_*
      *
      * @access public
@@ -781,7 +781,7 @@ class ASDevice extends StateObject {
      * Edits (sets a new name) for an additional folder. Store, folderid and type can not be edited. Remove and add instead.
      *
      * @param string    $folderid   the folder id of the additional folder.
-     * @param string    $name       the name of the addtional folder (has to be unique for all folders on the device).
+     * @param string    $name       the name of the additional folder (has to be unique for all folders on the device).
      *
      * @access public
      * @return boolean
