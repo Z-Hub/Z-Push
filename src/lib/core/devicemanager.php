@@ -429,6 +429,8 @@ class DeviceManager {
     /**
      * Get the store of an additional folder.
      *
+     * @param string    $folderid
+     *
      * @access public
      * @return boolean|string
      */
