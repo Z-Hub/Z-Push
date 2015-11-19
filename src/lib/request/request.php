@@ -186,6 +186,16 @@ class Request {
                 self::$getUser = Utils::GetLocalPartFromEmail(self::$getUser);
             }
         }
+
+        // authUser & authPassword are unfiltered!
+        // split username & domain if received as one
+        if (isset($_SERVER['PHP_AUTH_USER'])) {
+            list(self::$authUser, self::$authDomain) = Utils::SplitDomainUser($_SERVER['PHP_AUTH_USER']);
+            self::$authPassword = (isset($_SERVER['PHP_AUTH_PW']))?$_SERVER['PHP_AUTH_PW'] : "";
+        }
+        if(defined('USE_FULLEMAIL_FOR_LOGIN') && ! USE_FULLEMAIL_FOR_LOGIN) {
+            self::$authUser = Utils::GetLocalPartFromEmail(self::$authUser);
+        }
     }
 
     /**
@@ -234,21 +244,10 @@ class Request {
     }
 
     /**
-     * Reads and parses the HTTP-Basic-Auth data
-     *
      * @access public
      * @return boolean      data sent or not
      */
-    static public function AuthenticationInfo() {
-        // split username & domain if received as one
-        if (isset($_SERVER['PHP_AUTH_USER'])) {
-            list(self::$authUser, self::$authDomain) = Utils::SplitDomainUser($_SERVER['PHP_AUTH_USER']);
-            self::$authPassword = (isset($_SERVER['PHP_AUTH_PW']))?$_SERVER['PHP_AUTH_PW'] : "";
-        }
-        if(defined('USE_FULLEMAIL_FOR_LOGIN') && ! USE_FULLEMAIL_FOR_LOGIN) {
-            self::$authUser = Utils::GetLocalPartFromEmail(self::$authUser);
-        }
-        // authUser & authPassword are unfiltered!
+    static public function HasAuthenticationInfo() {
         return (self::$authUser != "" && self::$authPassword != "");
     }
 

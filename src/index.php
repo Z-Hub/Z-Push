@@ -167,7 +167,7 @@ include_once('version.php');
         $backend = ZPush::GetBackend();
 
         // always request the authorization header
-        if (! Request::AuthenticationInfo() || !Request::GetGETUser())
+        if (! Request::HasAuthenticationInfo() || !Request::GetGETUser())
             throw new AuthenticationRequiredException("Access denied. Please send authorisation information");
 
         // check the provisioning information
