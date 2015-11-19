@@ -93,7 +93,7 @@ class FileLog extends Log {
     //
 
     protected function Write($loglevel, $message) {
-        $data = $this->buildLogString($loglevel, $message) . "\n";
+        $data = $this->buildLogString($loglevel, $message) . PHP_EOL;
         @file_put_contents(LOGFILE, $data, FILE_APPEND);
 
         if (($loglevel & LOGLEVEL_FATAL) || ($loglevel & LOGLEVEL_ERROR)) {
@@ -102,13 +102,13 @@ class FileLog extends Log {
     }
 
     public function WriteForUser($loglevel, $message) {
-        $data = $this->buildLogString($loglevel, $message) . "\n";
+        $data = $this->buildLogString($loglevel, $message) . PHP_EOL;
         @file_put_contents(LOGFILEDIR . $this->getLogToUserFile(), $data, FILE_APPEND);
     }
 
     protected function afterLog($loglevel, $message) {
         if (($loglevel & LOGLEVEL_FATAL) || ($loglevel & LOGLEVEL_ERROR)) {
-            $data = $this->buildLogString($loglevel, $message) . "\n";
+            $data = $this->buildLogString($loglevel, $message) . PHP_EOL;
             @file_put_contents(LOGERRORFILE, $data, FILE_APPEND);
         }
     }

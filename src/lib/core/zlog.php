@@ -110,7 +110,7 @@ class ZLog {
         }
 
         if ($loglevel & LOGLEVEL_WBXMLSTACK) {
-            self::$wbxmlDebug .= $message. "\n";
+            self::$wbxmlDebug .= $message . PHP_EOL;
         }
     }
 
