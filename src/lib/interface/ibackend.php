@@ -46,6 +46,7 @@
 ************************************************/
 
 interface IBackend {
+    const HIERARCHYNOTIFICATION = 'hierarchynotification';
     /**
      * Returns a IStateMachine implementation used to save states
      *
