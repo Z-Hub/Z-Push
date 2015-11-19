@@ -80,6 +80,17 @@ class Streamer implements Serializable {
         $this->flags = false;
     }
 
+
+    /**
+     * Return the streamer mapping for this object 
+     *
+     * @access public
+     */
+    public function GetMapping() {
+        return $this->mapping;
+    }
+
+
     /**
      * Decodes the WBXML from a WBXMLdecoder until we reach the same depth level of WBXML.
      * This means that if there are multiple objects at this level, then only the first is

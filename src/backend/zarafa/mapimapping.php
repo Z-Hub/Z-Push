@@ -205,6 +205,7 @@ class MAPIMapping {
             "representingentryid"   => PR_SENT_REPRESENTING_ENTRYID,
             "sourcekey"             => PR_SOURCE_KEY,
             "entryid"               => PR_ENTRYID,
+            "parentsourcekey"       => PR_PARENT_SOURCE_KEY,
             "body"                  => PR_BODY,
             "rtfcompressed"         => PR_RTF_COMPRESSED,
             "html"                  => PR_HTML,

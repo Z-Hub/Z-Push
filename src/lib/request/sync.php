@@ -430,7 +430,7 @@ class Sync extends RequestProcessor {
                                 $clientid = false;
 
                             // Get the SyncMessage if sent
-                            if(self::$decoder->getElementStartTag(SYNC_DATA)) {
+                            if(($el = self::$decoder->getElementStartTag(SYNC_DATA)) && ($el[EN_FLAGS] & EN_FLAGS_CONTENT)) {
                                 $message = ZPush::getSyncObjectFromFolderClass($spa->GetContentClass());
                                 $message->Decode(self::$decoder);
 
@@ -572,11 +572,13 @@ class Sync extends RequestProcessor {
 
             // update a few values
             foreach($sc as $folderid => $spa) {
-                // manually set getchanges parameter for this collection
-                $sc->AddParameter($spa, "getchanges", true);
+                // manually set getchanges parameter for this collection if it is synchronized
+                if ($spa->HasSyncKey()) {
+                    $sc->AddParameter($spa, "getchanges", true);
 
-                // announce WindowSize to DeviceManager
-                self::$deviceManager->SetWindowSize($folderid, $spa->GetWindowSize());
+                    // announce WindowSize to DeviceManager
+                    self::$deviceManager->SetWindowSize($folderid, $spa->GetWindowSize());
+                }
             }
             if (!$sc->HasCollections())
                 $status = SYNC_STATUS_SYNCREQUESTINCOMPLETE;

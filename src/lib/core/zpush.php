@@ -6,7 +6,7 @@
 *
 * Created   :   12.04.2011
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2015 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -281,6 +281,22 @@ class ZPush {
 
         if (!defined('USE_PARTIAL_FOLDERSYNC')) {
             define('USE_PARTIAL_FOLDERSYNC', false);
+        }
+
+        if (!defined('PING_LOWER_BOUND_LIFETIME')) {
+            define('PING_LOWER_BOUND_LIFETIME', false);
+        }
+        elseif(PING_LOWER_BOUND_LIFETIME !== false && (!is_int(PING_LOWER_BOUND_LIFETIME) || PING_LOWER_BOUND_LIFETIME < 1 || PING_LOWER_BOUND_LIFETIME > 3540)){
+            throw new FatalMisconfigurationException("The PING_LOWER_BOUND_LIFETIME value must be 'false' or a number between 1 and 3540 inclusively.");
+        }
+        if (!defined('PING_HIGHER_BOUND_LIFETIME')) {
+            define('PING_HIGHER_BOUND_LIFETIME', false);
+        }
+        elseif(PING_HIGHER_BOUND_LIFETIME !== false && (!is_int(PING_HIGHER_BOUND_LIFETIME) || PING_HIGHER_BOUND_LIFETIME < 1 || PING_HIGHER_BOUND_LIFETIME > 3540)){
+            throw new FatalMisconfigurationException("The PING_HIGHER_BOUND_LIFETIME value must be 'false' or a number between 1 and 3540 inclusively.");
+        }
+        if(PING_HIGHER_BOUND_LIFETIME !== false && PING_LOWER_BOUND_LIFETIME !== false && PING_HIGHER_BOUND_LIFETIME < PING_LOWER_BOUND_LIFETIME){
+            throw new FatalMisconfigurationException("The PING_HIGHER_BOUND_LIFETIME value must be greater or equal to PING_LOWER_BOUND_LIFETIME.");
         }
 
         // the check on additional folders will not throw hard errors, as this is probably changed on live systems
@@ -620,7 +636,8 @@ class ZPush {
         More information about Z-Push can be found at:<br>
         <a href="http://z-push.org/">Z-Push homepage</a><br>
         <a href="http://z-push.org/download">Z-Push download page</a><br>
-        <a href="http://jira.zarafa.com/browse/ZP">Z-Push Bugtracker and Roadmap</a><br>
+        <a href="https://jira.z-hub.io/browse/ZP">Z-Push Bugtracker</a><br>
+        <a href="https://wiki.z-hub.io/display/ZP">Z-Push Wiki</a> and <a href="https://wiki.z-hub.io/display/ZP/Roadmap">Roadmap</a><br>
         <br>
         All modifications to this sourcecode must be published and returned to the community.<br>
         Please see <a href="http://www.gnu.org/licenses/agpl-3.0.html">AGPLv3 License</a> for details.<br>
