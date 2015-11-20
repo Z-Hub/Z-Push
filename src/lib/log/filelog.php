@@ -48,10 +48,10 @@ class FileLog extends Log {
     private $log_to_user_file = false;
 
     /**
-     * Get the log user file. If the parameter is false, it tries to generate it.
+     * Get the log user file.
      *
      * @access private
-     * @return string|bool False if the log user file is not set and could not be generated otherwise string.
+     * @return string
      */
     private function getLogToUserFile() {
         if ($this->log_to_user_file === false) {

@@ -68,6 +68,12 @@ abstract class Log {
     protected $specialLogUsers = array();
 
     /**
+     * Only used as a cache value for IsUserInSpecialLogUsers function
+     * @var array
+     */
+    private $isUserInSpecialLogUsers = array();
+
+    /**
      * @var array
      */
     private $unauthMessageCache = array();
@@ -155,8 +161,12 @@ abstract class Log {
      * @return bool
      */
     public function IsUserInSpecialLogUsers($user) {
-        if ($this->HasSpecialLogUsers()) {
-            return in_array($user, $this->GetSpecialLogUsers());
+        if (isset($this->isUserInSpecialLogUsers[$user])) {
+            return true;
+        }
+        if ($this->HasSpecialLogUsers() && in_array($user, $this->GetSpecialLogUsers())) {
+            $this->isUserInSpecialLogUsers[$user] = true;
+            return true;
         }
         return false;
     }
@@ -175,6 +185,7 @@ abstract class Log {
      * @access public
      */
     public function SetSpecialLogUsers(array $value) {
+        $this->isUserInSpecialLogUsers = array(); // reset cache
         $this->specialLogUsers = $value;
     }
 
@@ -189,8 +200,8 @@ abstract class Log {
         if ($loglevel <= LOGLEVEL) {
             $this->Write($loglevel, $message);
         }
-        if ($loglevel <= LOGUSERLEVEL && $this->HasSpecialLogUsers()) {
-            if (RequestProcessor::isUserAuthenticated() && $this->IsUserInSpecialLogUsers($this->GetAuthUser())) {
+        if ($loglevel <= LOGUSERLEVEL && $this->IsUserInSpecialLogUsers($this->GetAuthUser())) {
+            if (RequestProcessor::isUserAuthenticated()) {
                 // something was logged before the user was authenticated, write this to the log
                 if (!empty($this->unauthMessageCache)) {
                     foreach ($this->unauthMessageCache as $authcache) {
@@ -199,7 +210,8 @@ abstract class Log {
                     self::$unAuthCache = array();
                 }
                 $this->WriteForUser($loglevel, $message);
-            } else {
+            }
+            else {
                 $this->unauthMessageCache[] = array($loglevel, $message);
             }
         }
