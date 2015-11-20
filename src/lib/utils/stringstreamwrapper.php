@@ -94,15 +94,13 @@ class StringStreamWrapper {
 
     /**
      * Writes data to the stream.
-     * Attention: In this implementation will NOT overwrite the stream at the position, but insert. This resets the position to 0 automatically.
      *
      * @param string $data
      * @return int
      */
     public function stream_write($data){
         $l = strlen($data);
-        $this->stringstream = substr($this->stringstream, 0, $this->position) . $data . substr($this->stringstream, $this->position);
-        $this->position = 0;
+        $this->stringstream = substr($this->stringstream, 0, $this->position) . $data . substr($this->stringstream, $this->position += $l);
         $this->stringlength = strlen($this->stringstream);
         return $l;
     }

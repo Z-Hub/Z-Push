@@ -48,7 +48,6 @@ class MAPIStreamWrapper {
     private $mapistream;
     private $position;
     private $streamlength;
-    private $writtenData;
     private $toTruncate;
 
     /**
@@ -70,8 +69,6 @@ class MAPIStreamWrapper {
             return false;
 
         $this->position = 0;
-
-        $this->writtenData = "";
         $this->toTruncate = false;
 
         // this is our stream!
@@ -96,27 +93,18 @@ class MAPIStreamWrapper {
      */
     public function stream_read($len) {
         $len = ($this->position + $len > $this->streamlength) ? ($this->streamlength - $this->position) : $len;
-        $data = "";
-        $prependLength = strlen($this->writtenData);
-        // prepend data at the beginning of the stream or when we are in the middle of it
-        if ($prependLength > 0 && ($this->position == 0 || $this->position < $prependLength)) {
-            $prependDataLength = ($prependLength <= $len) ? $prependLength : $len;
-            $data = substr($this->writtenData, $this->position, $prependDataLength);
-            // is there remaining data to be read from the mapi stream? 
-            $len = $len - strlen($data);
-        }
-        if ($len > 0) {
-            // read 4 additional bytes from the stream so we can always truncate correctly
-            if ($this->toTruncate)
-                $len += 4;
-            $data .= mapi_stream_read($this->mapistream, $len);
-        }
+
+        // read 4 additional bytes from the stream so we can always truncate correctly
+        if ($this->toTruncate)
+            $len += 4;
+        $data = mapi_stream_read($this->mapistream, $len);
         $this->position += strlen($data);
 
         // we need to truncate UTF8 compatible if ftruncate() was called
         if ($this->toTruncate && $this->position >= $this->streamlength) {
             $data = Utils::Utf8_truncate($data, $this->streamlength);
         }
+
         return $data;
     }
 
@@ -142,18 +130,6 @@ class MAPIStreamWrapper {
     }
 
     /**
-     * Writes to the stream. 
-     * Attention: In this implementation it will always write to the beginning of the stream and not the current position of the stream and NOT overwrite the stream, but prepend.
-     * Several write operation will be concatinated and be prepended to the original MAPI stream. This resets the position to 0 automatically.
-     * @param unknown $data
-     */
-    public function stream_write($data) {
-        $this->writtenData .= $data;
-        $this->streamlength += strlen($data);
-        $this->position = 0;
-    }
-
-    /**
      * Returns the current position on stream
      *
      * @access public
@@ -175,14 +151,14 @@ class MAPIStreamWrapper {
 
     /**
      * Truncates the stream to the new size.
-     * 
+     *
      * @param int $new_size
-     * @return boolean 
+     * @return boolean
      */
     public function stream_truncate ($new_size) {
         $this->streamlength = $new_size;
         $this->toTruncate = true;
-        
+
         if ($this->position > $this->streamlength) {
             ZLog::Write(LOGLEVEL_WARN, sprintf("MAPIStreamWrapper->stream_truncate(): stream position (%d) ahead of new size of %d. Repositioning pointer to end of stream.", $this->position, $this->streamlength));
             $this->position = $this->streamlength;
