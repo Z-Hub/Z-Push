@@ -221,6 +221,14 @@ abstract class Log {
 
     /**
      * This function is used as an event for log implementer.
+     * It happens when the ZLog static class is finished with the initialization of this instance.
+     */
+    public function AfterInitialize() {
+    }
+
+    /**
+     * This function is used as an event for log implementer.
+     * It happens when the a call to the Log function is finished.
      */
     protected function afterLog($loglevel, $message) {
     }

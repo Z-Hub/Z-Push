@@ -175,6 +175,7 @@ class ZLog {
             self::$logger->SetSpecialLogUsers($specialLogUsers);
             self::$logger->SetDevid('['. Request::GetDeviceID() .']');
             self::$logger->SetPidstr('[' . str_pad(@getmypid(),5," ",STR_PAD_LEFT) . ']');
+            self::$logger->AfterInitialize();
         }
         return self::$logger;
     }
