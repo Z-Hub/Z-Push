@@ -528,8 +528,9 @@ class ZPush {
      * @return array
      */
     static public function GetAdditionalSyncFolders() {
-        // TODO if there are any user based folders which should be synchronized, they have to be returned here as well!!
-        return self::$addSyncFolders;
+        // get user based folders which should be synchronized
+        $userFolder = self::GetDeviceManager()->GetAdditionalUserSyncFolders();
+        return array_merge(self::$addSyncFolders, $userFolder);
     }
 
     /**
@@ -542,7 +543,13 @@ class ZPush {
      * @return string
      */
     static public function GetAdditionalSyncFolderStore($folderid, $noDebug = false) {
-        $val = (isset(self::$addSyncFolders[$folderid]->Store))? self::$addSyncFolders[$folderid]->Store : false;
+        if(isset(self::$addSyncFolders[$folderid]->Store)) {
+            $val = self::$addSyncFolders[$folderid]->Store;
+        }
+        else {
+            $val = self::GetDeviceManager()->GetAdditionalUserSyncFolderStore($folderid);
+        }
+
         if (!$noDebug)
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPush::GetAdditionalSyncFolderStore('%s'): '%s'", $folderid, Utils::PrintAsString($val)));
         return $val;
