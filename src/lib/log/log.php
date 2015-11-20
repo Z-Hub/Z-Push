@@ -46,6 +46,12 @@ abstract class Log {
      * @var string
      */
     protected $user = '';
+
+    /**
+     * @var string
+     */
+    protected $authUser = '';
+
     /**
      * @var string
      */
@@ -81,6 +87,23 @@ abstract class Log {
      */
     public function SetUser($value) {
         $this->user = $value;
+    }
+
+    /**
+     * @access public
+     * @return string
+     */
+    public function GetAuthUser() {
+        return $this->authUser;
+    }
+
+    /**
+     * @param string $value
+     *
+     * @access public
+     */
+    public function SetAuthUser($value) {
+        $this->authUser = $value;
     }
 
     /**
@@ -167,7 +190,7 @@ abstract class Log {
             $this->Write($loglevel, $message);
         }
         if ($loglevel <= LOGUSERLEVEL && $this->HasSpecialLogUsers()) {
-            if (RequestProcessor::isUserAuthenticated() && $this->IsUserInSpecialLogUsers(Request::GetAuthUser())) {
+            if (RequestProcessor::isUserAuthenticated() && $this->IsUserInSpecialLogUsers($this->GetAuthUser())) {
                 // something was logged before the user was authenticated, write this to the log
                 if (!empty($this->unauthMessageCache)) {
                     foreach ($this->unauthMessageCache as $authcache) {

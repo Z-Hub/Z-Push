@@ -55,7 +55,7 @@ class FileLog extends Log {
      */
     private function getLogToUserFile() {
         if ($this->log_to_user_file === false) {
-            $this->setLogToUserFile(preg_replace('/[^a-z0-9]/', '_', strtolower(Request::GetAuthUser())) . '.log');
+            $this->setLogToUserFile(preg_replace('/[^a-z0-9]/', '_', strtolower($this->GetAuthUser())) . '.log');
         }
         return $this->log_to_user_file;
     }
