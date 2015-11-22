@@ -224,6 +224,15 @@
     // the backend data provider
     define('BACKEND_PROVIDER', '');
 
+	// IPC backend class must either be already loaded, autoloadable or in lib/core/, like default IpcBackendShm!
+    if (!function_exists('sem_get') || !function_exists('shm_attach') || !function_exists('sem_acquire')|| !function_exists('shm_get_var'))
+	{
+       define('IPC_BACKEND_CLASS', 'IpcBackendShm');
+    }
+	// Memcached IPC backend configuration:
+	// $zpush_ipc_memcached_servers = array('localhost');	// or 'hostname:port'
+	// define('IPC_BACKEND_CLASS', 'IpcBackendMemcached');
+
 /**********************************************************************************
  *  Search provider settings
  *
