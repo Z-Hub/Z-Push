@@ -1,10 +1,9 @@
 <?php
 /***********************************************
-* File      :   interprocessdata.php
+* File      :   iipcbackend.php
 * Project   :   Z-Push
-* Descr     :   Class takes care of interprocess
-*               communicaton for different purposes
-*               using a backend implementing IIpcBackend
+* Descr     :   Interface for interprocess communication
+*               backends for different purposes
 *
 * Created   :   20.10.2011
 *
@@ -43,63 +42,16 @@
 * Consult LICENSE file for details
 ************************************************/
 
-abstract class InterProcessData {
-    const CLEANUPTIME = 1;
-
-    static protected $devid;
-    static protected $pid;
-    static protected $user;
-    static protected $start;
-    protected $type;
-    protected $allocate;
-
-	/**
-	 *
-	 * @var IIpcBackend
-	 */
-	private $backend;
-
-	/**
+interface IIpcBackend
+{
+    /**
      * Constructor
      *
-     * @access public
-     */
-    public function __construct() {
-        if (!isset($this->type) || !isset($this->allocate))
-            throw new FatalNotImplementedException(sprintf("Class InterProcessData can not be initialized. Subclass %s did not initialize type and allocable memory.", get_class($this)));
-
-		$ipc_backend = defined('IPC_BACKEND_CLASS') ? IPC_BACKEND_CLASS : 'IpcBackendShm';
-
-		// until z-push autoloads, manually load IpcBackend
-		if (!class_exists($ipc_backend))
-		{
-			include_onced('lib/core/'.strtolower($ipc_backend));
-		}
-
-		try {
-			$this->backend = new $ipc_backend($this->type, $this->allocate, get_class($this));
-		}
-		catch (Exception $e) {
-			// backend could not initialise
-			ZLog::Write(LOGLEVEL_ERROR, __METHOD__."() could not initialise IPC backend '$ipc_backend': ".$e->getMessage());
-		}
-    }
-
-    /**
-     * Initializes internal parameters
-     *
-     * @access public
-     * @return boolean
-     */
-    public function InitializeParams() {
-        if (!isset(self::$devid)) {
-            self::$devid = Request::GetDeviceID();
-            self::$pid = @getmypid();
-            self::$user = Request::GetAuthUser();
-            self::$start = time();
-        }
-        return true;
-    }
+	 * @param int $type
+	 * @param int $allocate
+	 * @param string $class
+	 */
+    public function __construct($type, $allocate, $class);
 
     /**
      * Cleans up the shared memory block
@@ -107,9 +59,7 @@ abstract class InterProcessData {
      * @access public
      * @return boolean
      */
-    public function Clean() {
-		return $this->backend ? $this->backend->Clean() : false;
-    }
+    public function Clean();
 
     /**
      * Indicates if the shared memory is active
@@ -117,9 +67,7 @@ abstract class InterProcessData {
      * @access public
      * @return boolean
      */
-    public function IsActive() {
-        return $this->backend ? $this->backend->IsActive() : false;
-    }
+    public function IsActive();
 
     /**
      * Blocks the class mutex
@@ -129,9 +77,7 @@ abstract class InterProcessData {
      * @access protected
      * @return boolean
      */
-    protected function blockMutex() {
-        return $this->backend ? $this->backend->blockMutex() : false;
-    }
+    public function blockMutex();
 
     /**
      * Releases the class mutex
@@ -140,9 +86,7 @@ abstract class InterProcessData {
      * @access protected
      * @return boolean
      */
-    protected function releaseMutex() {
-        return $this->backend ? $this->backend->releaseMutex() : false;
-    }
+    public function releaseMutex();
 
     /**
      * Indicates if the requested variable is available in shared memory
@@ -152,9 +96,7 @@ abstract class InterProcessData {
      * @access protected
      * @return boolean
      */
-    protected function hasData($id = 2) {
-        return $this->backend ? $this->backend->hasData($id) : false;
-    }
+    public function hasData($id = 2);
 
     /**
      * Returns the requested variable from shared memory
@@ -164,9 +106,7 @@ abstract class InterProcessData {
      * @access protected
      * @return mixed
      */
-    protected function getData($id = 2) {
-        return $this->backend ? $this->backend->getData($id) : null;
-    }
+    public function getData($id = 2);
 
     /**
      * Writes the transmitted variable to shared memory
@@ -178,7 +118,5 @@ abstract class InterProcessData {
      * @access protected
      * @return boolean
      */
-    protected function setData($data, $id = 2) {
-        return $this->backend ? $this->backend->setData($data, $id) : false;
-    }
+    public function setData($data, $id = 2);
 }
