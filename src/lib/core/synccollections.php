@@ -14,7 +14,7 @@
 *
 * Created   :   06.01.2012
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2015 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -330,11 +330,11 @@ class SyncCollections implements Iterator {
     }
 
     /**
-     * Returns the global window size of items to be exported in total over all 
+     * Returns the global window size of items to be exported in total over all
      * requested collections.
      *
      * @access public
-     * @return int/boolean          returns requested windows size, 512 (max) or the 
+     * @return int/boolean          returns requested windows size, 512 (max) or the
      *                              value of config SYNC_MAX_ITEMS if it is lower
      */
     public function GetGlobalWindowSize() {
@@ -517,6 +517,11 @@ class SyncCollections implements Iterator {
 
                 $validNotifications = false;
                 foreach ($notifications as $folderid) {
+                    if ($folderid == IBackend::HIERARCHYNOTIFICATION) {
+                        // TODO verify hierarchy notification by configuring an exporter with the latest changes.
+                        ZLog::Write(LOGLEVEL_DEBUG, "Found hierarchy notification.");
+                        continue;
+                    }
                      // check if the notification on the folder is within our filter
                      if ($this->CountChange($folderid)) {
                          ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->CheckForChanges(): Notification received on folder '%s'", $folderid));
