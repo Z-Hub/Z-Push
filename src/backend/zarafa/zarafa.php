@@ -900,7 +900,23 @@ class BackendZarafa implements IBackend, ISearchProvider {
     public function ChangesSink($timeout = 30) {
         $notifications = array();
         $sinkresult = @mapi_sink_timedwait($this->changesSink, $timeout * 1000);
+        // reverse array so that the changes on folders are before changes on messages and
+        // it's possible to filter such notifications
+        $sinkresult = array_reverse($sinkresult, true);
         foreach ($sinkresult as $sinknotif) {
+            // add a notification on a folder
+            if ($sinknotif['objtype'] == MAPI_FOLDER) {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendZarafa->ChangesSink() Hierarchy notification for folder %s", bin2hex($sinknotif['entryid'])));
+                $notifications[$sinknotif['entryid']] = IBackend::HIERARCHYNOTIFICATION;
+            }
+            // change on a message, remove hierarchy notification
+            if (isset($sinknotif['parentid']) && $sinknotif['objtype'] == MAPI_MESSAGE && isset($notifications[$sinknotif['parentid']])) {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendZarafa->ChangesSink() Remove hierarchy notification for %s because it is not relevant",
+                        bin2hex($sinknotif['parentid'])));
+                unset($notifications[$sinknotif['parentid']]);
+            }
+
+            // TODO check if adding $sinknotif['objtype'] = MAPI_MESSAGE wouldn't break anything
             // check if something in the monitored folders changed
             if (isset($sinknotif['parentid']) && array_key_exists($sinknotif['parentid'], $this->changesSinkFolders)) {
                 $notifications[] = $this->changesSinkFolders[$sinknotif['parentid']];
