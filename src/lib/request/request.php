@@ -89,6 +89,8 @@ class Request {
     static private $attachmentName;
     static private $collectionId;
     static private $itemId;
+    static private $longId; // TODO
+    static private $occurence; //TODO
     static private $saveInSent;
     static private $acceptMultipart;
 
