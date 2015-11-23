@@ -68,10 +68,16 @@ abstract class Log {
     protected $specialLogUsers = array();
 
     /**
-     * Only used as a cache value for IsUserInSpecialLogUsers function
+     * Only used as a cache value for IsUserInSpecialLogUsers.
      * @var array
      */
     private $isUserInSpecialLogUsers = array();
+
+    /**
+     * Only used as a cache value for IsAuthUserInSpecialLogUsers function
+     * @var bool
+     */
+    private $isAuthUserInSpecialLogUsers = false;
 
     /**
      * @var array
@@ -109,7 +115,27 @@ abstract class Log {
      * @access public
      */
     public function SetAuthUser($value) {
+        $this->isAuthUserInSpecialLogUsers = false;
         $this->authUser = $value;
+    }
+
+    /**
+     * Check that the current authUser ($this->GetAuthUser) is in the special log user array.
+     * This call is equivalent to `$this->IsUserInSpecialLogUsers($this->GetAuthUser())` at the exception that this
+     * call uses cache so there won't be more than one check to the specialLogUser for the AuthUser.
+     *
+     * @access public
+     * @return bool
+     */
+    public function IsAuthUserInSpecialLogUsers(){
+        if ($this->isAuthUserInSpecialLogUsers) {
+            return true;
+        }
+        if($this->IsUserInSpecialLogUsers($this->GetAuthUser())){
+            $this->isAuthUserInSpecialLogUsers = true;
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -200,7 +226,7 @@ abstract class Log {
         if ($loglevel <= LOGLEVEL) {
             $this->Write($loglevel, $message);
         }
-        if ($loglevel <= LOGUSERLEVEL && $this->IsUserInSpecialLogUsers($this->GetAuthUser())) {
+        if ($loglevel <= LOGUSERLEVEL && $this->IsAuthUserInSpecialLogUsers()) {
             if (RequestProcessor::isUserAuthenticated()) {
                 // something was logged before the user was authenticated, write this to the log
                 if (!empty($this->unauthMessageCache)) {
