@@ -70,6 +70,7 @@ class SyncCollections implements Iterator {
     private $lastSyncTime;
 
     private $waitingTime = 0;
+    private $hierarchyExporterChecked = false;
 
 
     /**
@@ -122,6 +123,10 @@ class SyncCollections implements Iterator {
                 $invalidStates = true;
         }
 
+        // load the hierarchy data - there are no permissions to verify so we just set it to false
+        if (! $this->LoadCollection(false, $loadState, false))
+            throw new StatusException("Invalid states found while loading hierarchy data. Forcing hierarchy sync");
+
         if ($invalidStates)
             throw new StateInvalidException("Invalid states found while loading collections. Forcing sync");
 
@@ -157,6 +162,10 @@ class SyncCollections implements Iterator {
         catch (StateInvalidException $sive) {
             // in case there is something wrong with the state, just stop here
             // later when trying to retrieve the SyncParameters nothing will be found
+
+            if ($folderid === false) {
+                throw new StatusException(sprintf("SyncCollections->LoadCollection(): could not get FOLDERDATA state of the hierarchy uuid: %s", $spa->GetUuid()), self::ERROR_WRONG_HIERARCHY);
+            }
 
             // we also generate a fake change, so a sync on this folder is triggered
             $this->changes[$folderid] = 1;
@@ -484,7 +493,7 @@ class SyncCollections implements Iterator {
                 throw new StatusException("SyncCollections->CheckForChanges(): PolicyKey changed. Provisioning required.", self::ERROR_WRONG_HIERARCHY);
 
             // Check if a hierarchy sync is necessary
-            if (ZPush::GetDeviceManager()->IsHierarchySyncRequired())
+            if ($this->countHierarchyChange())
                 throw new StatusException("SyncCollections->CheckForChanges(): HierarchySync required.", self::HIERARCHY_CHANGED);
 
             // Check if there are newer requests
@@ -517,20 +526,21 @@ class SyncCollections implements Iterator {
 
                 $validNotifications = false;
                 foreach ($notifications as $folderid) {
-                    if ($folderid == IBackend::HIERARCHYNOTIFICATION) {
-                        // TODO verify hierarchy notification by configuring an exporter with the latest changes.
-                        ZLog::Write(LOGLEVEL_DEBUG, "Found hierarchy notification.");
-                        continue;
+                    // Check hierarchy notifications
+                    if ($folderid === IBackend::HIERARCHYNOTIFICATION) {
+                        // check received hierarchy notifications by exporting
+                        if ($this->countHierarchyChange(true))
+                            throw new StatusException("SyncCollections->CheckForChanges(): HierarchySync required.", self::HIERARCHY_CHANGED);
                     }
-                     // check if the notification on the folder is within our filter
-                     if ($this->CountChange($folderid)) {
-                         ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->CheckForChanges(): Notification received on folder '%s'", $folderid));
-                         $validNotifications = true;
-                         $this->waitingTime = time()-$started;
-                     }
-                     else {
-                         ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->CheckForChanges(): Notification received on folder '%s', but it is not relevant", $folderid));
-                     }
+                    // check if the notification on the folder is within our filter
+                    else if ($this->CountChange($folderid)) {
+                        ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->CheckForChanges(): Notification received on folder '%s'", $folderid));
+                        $validNotifications = true;
+                        $this->waitingTime = time()-$started;
+                    }
+                    else {
+                        ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->CheckForChanges(): Notification received on folder '%s', but it is not relevant", $folderid));
+                    }
                 }
                 if ($validNotifications)
                     return true;
@@ -634,6 +644,56 @@ class SyncCollections implements Iterator {
         }
 
         return ($changecount > 0);
+     }
+
+     /**
+      * Checks the hierarchy for changes.
+      *
+      * @param boolean       export changes, default: false
+      *
+      * @access private
+      * @return boolean      indicating if changes were found or not
+      */
+     private function countHierarchyChange($exportChanges = false) {
+         $folderid = false;
+         $spa = $this->GetCollection($folderid);
+
+         // Check with device manager if the hierarchy should be reloaded.
+         // New additional folders are loaded here.
+         if (ZPush::GetDeviceManager()->IsHierarchySyncRequired()) {
+             ZLog::Write(LOGLEVEL_DEBUG, "SyncCollections->countHierarchyChange(): DeviceManager says HierarchySync is required.");
+             return true;
+         }
+
+         $changecount = false;
+         if ($exportChanges || $this->hierarchyExporterChecked === false) {
+             try {
+                 $changesMem = ZPush::GetDeviceManager()->GetHierarchyChangesWrapper();
+
+                 // the hierarchyCache should now fully be initialized - check for changes in the additional folders
+                 $changesMem->Config(ZPush::GetAdditionalSyncFolders());
+                 $exporter = ZPush::GetBackend()->GetExporter();
+                 if ($exporter !== false && isset($this->addparms[$folderid]["state"])) {
+                     $importer = false;
+
+                     $exporter->Config($this->addparms[$folderid]["state"]);
+                     $ret = $exporter->InitializeExporter($changesMem);
+
+                     if ($ret !== false)
+                         $changecount = $exporter->GetChangeCount();
+
+                     $this->hierarchyExporterChecked = true;
+                 }
+             }
+             catch (StatusException $ste) {
+                 throw new StatusException("SyncCollections->countHierarchyChange(): exporter can not be re-configured.", self::ERROR_WRONG_HIERARCHY, null, LOGLEVEL_WARN);
+             }
+
+             // start over if exporter can not be configured atm
+             if ($changecount === false )
+                 ZLog::Write(LOGLEVEL_WARN, "SyncCollections->countHierarchyChange(): no changes received from Exporter.");
+         }
+         return ($changecount > 0);
      }
 
     /**

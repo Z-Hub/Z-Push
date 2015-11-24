@@ -246,6 +246,7 @@ class FolderChange extends RequestProcessor {
 
             // update SPA & save it
             $spa->SetSyncKey($newsynckey);
+            $spa->SetFolderId(false);
             self::$deviceManager->GetStateManager()->SetSynchedFolderState($spa);
         }
 
