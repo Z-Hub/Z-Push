@@ -67,6 +67,7 @@ class DeviceManager {
 
     private $loopdetection;
     private $hierarchySyncRequired;
+    private $additionalFoldersHash;
 
     /**
      * Constructor
@@ -97,6 +98,8 @@ class DeviceManager {
 
         $this->stateManager = new StateManager();
         $this->stateManager->SetDevice($this->device);
+
+        $this->additionalFoldersHash = $this->getAdditionalFoldersHash();
     }
 
     /**
@@ -608,18 +611,29 @@ class DeviceManager {
     }
 
     /**
-     * Indicates if the hierarchy should be resynchronized
-     * e.g. during PING
+     * Indicates if the hierarchy should be resynchronized based on the general folder state and
+     * if additional folders changed.
      *
      * @access public
      * @return boolean
      */
     public function IsHierarchySyncRequired() {
+        $this->loadDeviceData();
+
+        // if the hash of the additional folders changed, we have to sync the hierarchy
+        if ($this->additionalFoldersHash != $this->getAdditionalFoldersHash()) {
+            $this->hierarchySyncRequired = true;
+        }
+
         // check if a hierarchy sync might be necessary
         if ($this->device->GetFolderUUID(false) === false)
             $this->hierarchySyncRequired = true;
 
         return $this->hierarchySyncRequired;
+    }
+
+    private function getAdditionalFoldersHash() {
+        return md5(serialize($this->device->GetAdditionalFolders()));
     }
 
     /**
