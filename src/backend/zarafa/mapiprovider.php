@@ -6,7 +6,7 @@
 *
 * Created   :   14.02.2011
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2015 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -846,6 +846,14 @@ class MAPIProvider {
         $folder = new SyncFolder();
 
         $storeprops = $this->getStoreProps();
+
+        // For ZCP 7.0.x we need to retrieve more properties explicitly, see ZP-780
+        if (isset($folderprops[PR_SOURCE_KEY]) && !isset($folderprops[PR_ENTRYID]) && !isset($folderprops[PR_CONTAINER_CLASS])) {
+            $entryid = mapi_msgstore_entryidfromsourcekey($this->store, $folderprops[PR_SOURCE_KEY]);
+            $mapifolder = mapi_msgstore_openentry($this->store, $entryid);
+            $folderprops = mapi_getprops($mapifolder, array(PR_DISPLAY_NAME, PR_PARENT_ENTRYID, PR_ENTRYID, PR_SOURCE_KEY, PR_PARENT_SOURCE_KEY, PR_CONTAINER_CLASS, PR_ATTR_HIDDEN));
+            ZLog::Write(LOGLEVEL_DEBUG, "MAPIProvider->GetFolder(): received insuffient of data from ICS. Fetching required data.");
+        }
 
         if(!isset($folderprops[PR_DISPLAY_NAME]) ||
            !isset($folderprops[PR_PARENT_ENTRYID]) ||
