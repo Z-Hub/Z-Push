@@ -12,7 +12,7 @@
 *
 * Created   :   14.02.2011
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2015 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -326,7 +326,7 @@ class ImportChangesICS implements IImportChanges {
             }
             // something really bad happened while exporting changes
             catch (StatusException $stex) {
-                ZLog::Write(LOGLEVEL_WARN, sprintf("ImportChangesICS->lazyLoadConflicts(): got StatusException code %d while exporting changes. Ignoring and mark conflicts as loaded.",$stex->getCode()));
+                ZLog::Write(LOGLEVEL_WARN, sprintf("ImportChangesICS->lazyLoadConflicts(): got StatusException code %d while exporting changes. Ignore and mark conflicts as loaded.",$stex->getCode()));
             }
             $this->conflictsLoaded = true;
         }
