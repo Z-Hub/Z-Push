@@ -12,7 +12,7 @@
 *
 * Created   :   14.02.2011
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2015 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -311,16 +311,22 @@ class ImportChangesICS implements IImportChanges {
             $potConflicts = $exporter->GetChangeCount();
             $started = time();
             $exported = 0;
-            while(is_array($exporter->Synchronize())) {
-                $exported++;
+            try {
+                while(is_array($exporter->Synchronize())) {
+                    $exported++;
 
-                // stop if this takes more than 15 seconds and there are more than 5 changes still to be exported
-                // within 20 seconds this should be finished or it will not be performed
-                if ((time() - $started) > 15 && ($potConflicts - $exported) > 5 ) {
-                    ZLog::Write(LOGLEVEL_WARN, sprintf("ImportChangesICS->lazyLoadConflicts(): conflict detection cancelled as operation is too slow. In %d seconds only %d from %d changes were processed.",(time() - $started), $exported, $potConflicts));
-                    $this->conflictsLoaded = true;
-                    return;
+                    // stop if this takes more than 15 seconds and there are more than 5 changes still to be exported
+                    // within 20 seconds this should be finished or it will not be performed
+                    if ((time() - $started) > 15 && ($potConflicts - $exported) > 5 ) {
+                        ZLog::Write(LOGLEVEL_WARN, sprintf("ImportChangesICS->lazyLoadConflicts(): conflict detection cancelled as operation is too slow. In %d seconds only %d from %d changes were processed.",(time() - $started), $exported, $potConflicts));
+                        $this->conflictsLoaded = true;
+                        return;
+                    }
                 }
+            }
+            // something really bad happened while exporting changes
+            catch (StatusException $stex) {
+                ZLog::Write(LOGLEVEL_WARN, sprintf("ImportChangesICS->lazyLoadConflicts(): got StatusException code %d while exporting changes. Ignore and mark conflicts as loaded.",$stex->getCode()));
             }
             $this->conflictsLoaded = true;
         }
