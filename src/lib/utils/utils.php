@@ -337,14 +337,10 @@ class Utils {
                 $back = 60 * 60 * 24 * 31 * 6;
                 break;
             default:
-                break;
+                return 0; // unlimited
         }
 
-        if(isset($back)) {
-            $date = time() - $back;
-            return $date;
-        } else
-            return 0; // unlimited
+        return time() - $back;
     }
 
     /**
