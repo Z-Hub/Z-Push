@@ -441,18 +441,18 @@ class Utils {
         $len = strlen($string) - 1;
         while ($len > 0) {
             //look for '&-' sequence and replace it with '&'
-            if ($len > 0 && $string{($len-1)} == '&' && $string{$len} == '-') {
+            if ($len > 0 && $string[$len-1] == '&' && $string[$len] == '-') {
                 $string = substr_replace($string, '&', $len - 1, 2);
                 $len--; //decrease $len as this char has alreasy been processed
             }
             //search for '&' which weren't found in if clause above and
             //replace them with '+' as they mark an utf7-encoded char
-            if ($len > 0 && $string{($len-1)} == '&') {
+            if ($len > 0 && $string[($len-1)] == '&') {
                 $string = substr_replace($string, '+', $len - 1, 1);
                 $len--; //decrease $len as this char has alreasy been processed
             }
             //finally "escape" all remaining '+' chars
-            if ($len > 0 && $string{($len-1)} == '+') {
+            if ($len > 0 && $string[$len-1] == '+') {
                 $string = substr_replace($string, '+-', $len - 1, 1);
             }
             $len--;
@@ -479,18 +479,18 @@ class Utils {
         $len = strlen($string) - 1;
         while ($len > 0) {
             //look for '&-' sequence and replace it with '&'
-            if ($len > 0 && $string{($len-1)} == '+' && $string{$len} == '-') {
+            if ($len > 0 && $string[$len-1] == '+' && $string[$len] == '-') {
                 $string = substr_replace($string, '+', $len - 1, 2);
                 $len--; //decrease $len as this char has alreasy been processed
             }
             //search for '&' which weren't found in if clause above and
             //replace them with '+' as they mark an utf7-encoded char
-            if ($len > 0 && $string{($len-1)} == '+') {
+            if ($len > 0 && $string[$len-1] == '+') {
                 $string = substr_replace($string, '&', $len - 1, 1);
                 $len--; //decrease $len as this char has alreasy been processed
             }
             //finally "escape" all remaining '+' chars
-            if ($len > 0 && $string{($len-1)} == '&') {
+            if ($len > 0 && $string[$len-1] == '&') {
                 $string = substr_replace($string, '&-', $len - 1, 1);
             }
             $len--;
