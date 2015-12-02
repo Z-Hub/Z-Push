@@ -474,13 +474,7 @@ class DeviceManager {
         if (isset($this->windowSize[$folderid]))
             $items = $this->windowSize[$folderid];
         else
-            $items = (defined("SYNC_MAX_ITEMS")) ? SYNC_MAX_ITEMS : 100;
-
-        if (defined("SYNC_MAX_ITEMS") && SYNC_MAX_ITEMS < $items) {
-            if ($queuedmessages > SYNC_MAX_ITEMS)
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("DeviceManager->GetWindowSize() overwriting max items requested of %d by %d forced in configuration.", $items, SYNC_MAX_ITEMS));
-            $items = SYNC_MAX_ITEMS;
-        }
+            $items = WINDOW_SIZE_MAX; // 512 by default
 
         $this->setLatestFolder($folderid);
 
@@ -563,12 +557,12 @@ class DeviceManager {
     public function ForceFullResync() {
         ZLog::Write(LOGLEVEL_INFO, "Full device resync requested");
 
-        // delete hierarchy states
-        StateManager::UnLinkState($this->device, false);
-
         // delete all other uuids
         foreach ($this->device->GetAllFolderIds() as $folderid)
             $uuid = StateManager::UnLinkState($this->device, $folderid);
+
+        // delete hierarchy states
+        StateManager::UnLinkState($this->device, false);
 
         return true;
     }
@@ -754,7 +748,7 @@ class DeviceManager {
     }
 
     /**
-     * Returns the User Agent. This data is consolidated with data from Request::GetUserAgent() 
+     * Returns the User Agent. This data is consolidated with data from Request::GetUserAgent()
      * and the data saved in the ASDevice.
      *
      * @access public

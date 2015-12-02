@@ -330,17 +330,28 @@ class SyncCollections implements Iterator {
     }
 
     /**
-     * Returns the global window size which should be used for all collections
-     * in a case of a heartbeat and/or partial sync
+     * Returns the global window size of items to be exported in total over all 
+     * requested collections.
      *
      * @access public
-     * @return int/boolean          returns 512 (max) if not set or not available
+     * @return int/boolean          returns requested windows size, 512 (max) or the 
+     *                              value of config SYNC_MAX_ITEMS if it is lower
      */
     public function GetGlobalWindowSize() {
-        if (!isset($this->globalWindowSize))
-            return 512;
+        // take the requested global windowsize or the max 512 if not defined
+        if (isset($this->globalWindowSize)) {
+            $globalWindowSize = $this->globalWindowSize;
+        }
+        else {
+            $globalWindowSize = WINDOW_SIZE_MAX; // 512 by default
+        }
 
-        return $this->globalWindowSize;
+        if (defined("SYNC_MAX_ITEMS") && SYNC_MAX_ITEMS < $globalWindowSize) {
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->GetGlobalWindowSize() overwriting requested global window size of %d by %d forced in configuration.", $globalWindowSize, SYNC_MAX_ITEMS));
+            $globalWindowSize = SYNC_MAX_ITEMS;
+        }
+
+        return $globalWindowSize;
     }
 
     /**
@@ -506,19 +517,15 @@ class SyncCollections implements Iterator {
 
                 $validNotifications = false;
                 foreach ($notifications as $folderid) {
-                    // ZP-631 - temporary disable checking validity of notifications
-                    // notify mobile for all received notifications
-                    $this->changes[$folderid] = 1;
-                    $validNotifications = true;
-//                     // check if the notification on the folder is within our filter
-//                     if ($this->CountChange($folderid)) {
-//                         ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->CheckForChanges(): Notification received on folder '%s'", $folderid));
-//                         $validNotifications = true;
-//                         $this->waitingTime = time()-$started;
-//                     }
-//                     else {
-//                         ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->CheckForChanges(): Notification received on folder '%s', but it is not relevant", $folderid));
-//                     }
+                     // check if the notification on the folder is within our filter
+                     if ($this->CountChange($folderid)) {
+                         ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->CheckForChanges(): Notification received on folder '%s'", $folderid));
+                         $validNotifications = true;
+                         $this->waitingTime = time()-$started;
+                     }
+                     else {
+                         ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->CheckForChanges(): Notification received on folder '%s', but it is not relevant", $folderid));
+                     }
                 }
                 if ($validNotifications)
                     return true;
@@ -575,6 +582,13 @@ class SyncCollections implements Iterator {
      */
      private function CountChange($folderid) {
         $spa = $this->GetCollection($folderid);
+
+        // prevent ZP-623 by checking if the states have been used before, if so force a sync on this folder
+        if (ZPush::GetDeviceManager()->CheckHearbeatStateIntegrity($spa->GetFolderId(), $spa->GetUuid(), $spa->GetUuidCounter())) {
+            ZLog::Write(LOGLEVEL_DEBUG, "SyncCollections->CountChange(): Cannot verify changes for state as it was already used. Forcing sync of folder.");
+            $this->changes[$folderid] = 1;
+            return true;
+        }
 
         // switch user store if this is a additional folder (additional true -> do not debug)
         ZPush::GetBackend()->Setup(ZPush::GetAdditionalSyncFolderStore($folderid, true));

@@ -515,6 +515,15 @@ class LoopDetection extends InterProcessData {
             $this->checkArrayStructure($loopdata, $folderid);
             $current = $loopdata[self::$devid][self::$user][$folderid];
 
+            if (!isset($current["uuid"])) {
+                $current["uuid"] = $uuid;
+            }
+            if (!isset($current["count"])) {
+                $current["count"] = $counter;
+            }
+            if (!isset($current["queued"])) {
+                $current["queued"] = 0;
+            }
 
             // update the usage flag
             $current["usage"] = $counter;
@@ -563,14 +572,22 @@ class LoopDetection extends InterProcessData {
                     $obsolete = true;
                 }
                 else {
-                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("LoopDetection->IsSyncStateObsolete(): check uuid counter: %d - last known counter: %d with %d queued objects", $counter, $current["count"], $current["queued"]));
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("LoopDetection->IsSyncStateObsolete(): check folderid: '%s' uuid '%s' counter: %d - last counter: %d with %d queued", 
+                            $folderid, $uuid, $counter, $current["count"], $current["queued"]));
 
-                    if ($current["uuid"] == $uuid && ($current["count"] > $counter || ($current["count"] == $counter && $current["queued"] > 0) || (isset($current["usage"]) && $current["usage"] >= $counter))) {
+                    if ($current["uuid"] == $uuid && (
+                            $current["count"] > $counter || 
+                            ($current["count"] == $counter && $current["queued"] > 0) || 
+                            (isset($current["usage"]) && $current["usage"] >= $counter)
+                          )) {
                         $usage = isset($current["usage"]) ? sprintf(" - counter %d already expired",$current["usage"]) : "";
                         ZLog::Write(LOGLEVEL_DEBUG, "LoopDetection->IsSyncStateObsolete(): yes, counter already processed". $usage);
                         $obsolete = true;
                     }
                 }
+            }
+            else {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("LoopDetection->IsSyncStateObsolete(): check folderid: '%s' uuid '%s' counter: %d - no data found: not obsolete", $folderid, $uuid, $counter));
             }
         }
 
@@ -609,6 +626,7 @@ class LoopDetection extends InterProcessData {
      * @return boolean      when returning true if a loop has been identified
      */
     public function Detect($folderid, $type, $uuid, $counter, $maxItems, $queuedMessages) {
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("LoopDetection->Detect(): folderid:'%s' type:'%s' uuid:'%s' counter:'%s' max:'%s' queued:'%s'", $folderid, $type, $uuid, $counter, $maxItems, $queuedMessages));
         $this->broken_message_uuid = $uuid;
         $this->broken_message_counter = $counter;
 
@@ -636,8 +654,14 @@ class LoopDetection extends InterProcessData {
             if (empty($current))
                 $current = array("type" => $type, "uuid" => $uuid, "count" => $counter-1, "queued" => $queuedMessages);
 
+            // if data was created by SetSyncStateUsage(), we need to set the type
+            // TODO ZP-741: type is not used anywhere and could be removed from the loop data
+            if (isset($current['uuid']) && $current['uuid'] == $uuid && !isset($current['type'])) {
+                $current['type'] = $type;
+            }
+
             // old UUID in cache - the device requested a new state!!
-            else if (isset($current['type']) && $current['type'] == $type && isset($current['uuid']) && $current['uuid'] != $uuid ) {
+            if (isset($current['type']) && $current['type'] == $type && isset($current['uuid']) && $current['uuid'] != $uuid ) {
                 ZLog::Write(LOGLEVEL_DEBUG, "LoopDetection->Detect(): UUID changed for folder");
 
                 // some devices (iPhones) may request new UUIDs after broken items were sent several times
@@ -682,6 +706,7 @@ class LoopDetection extends InterProcessData {
                         // case 1.2.1
                         // broken item not identified yet
                         if (!isset($current['ignored']) && $counter < $current['maxCount']) {
+                            $current['loopcount'] = 1;
                             $loop = true; // continue in loop-resolving
                             ZLog::Write(LOGLEVEL_DEBUG, "LoopDetection->Detect(): case 1.2.1 detected");
                         }

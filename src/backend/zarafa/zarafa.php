@@ -510,10 +510,25 @@ class BackendZarafa implements IBackend, ISearchProvider {
             if(!isset($fwmessage) || !$fwmessage)
                 throw new StatusException(sprintf("ZarafaBackend->SendMail(): Could not open message id '%s' in folder id '%s' to be replied/forwarded: 0x%X", $sm->source->itemid, $sm->source->folderid, mapi_last_hresult()), SYNC_COMMONSTATUS_ITEMNOTFOUND);
 
-            //update icon when forwarding or replying message
-            if ($sm->forwardflag) mapi_setprops($fwmessage, array(PR_ICON_INDEX=>262));
-            elseif ($sm->replyflag) mapi_setprops($fwmessage, array(PR_ICON_INDEX=>261));
-            mapi_savechanges($fwmessage);
+            // update icon and last_verb when forwarding or replying message
+            // reply-all (verb 103) is not supported, as we cannot really detect this case
+            if ($sm->forwardflag) {
+                $updateProps = array(
+                    PR_ICON_INDEX           => 262,
+                    PR_LAST_VERB_EXECUTED   => 104,
+                );
+            }
+            elseif ($sm->replyflag) {
+                $updateProps = array(
+                    PR_ICON_INDEX           => 261,
+                    PR_LAST_VERB_EXECUTED   => 102,
+                );
+            }
+            if (isset($updateProps)) {
+                $updateProps[PR_LAST_VERB_EXECUTION_TIME] = time();
+                mapi_setprops($fwmessage, $updateProps);
+                mapi_savechanges($fwmessage);
+            }
 
             // only attach the original message if the mobile does not send it itself
             if (!isset($sm->replacemime)) {
@@ -646,13 +661,17 @@ class BackendZarafa implements IBackend, ISearchProvider {
         if(!strpos($attname, ":"))
             throw new StatusException(sprintf("ZarafaBackend->GetAttachmentData('%s'): Error, attachment requested for non-existing item", $attname), SYNC_ITEMOPERATIONSSTATUS_INVALIDATT);
 
-        list($id, $attachnum) = explode(":", $attname);
+        list($id, $attachnum, $parentEntryid) = explode(":", $attname);
+        if (isset($parentEntryid)) {
+            $this->Setup(ZPush::GetAdditionalSyncFolderStore($parentEntryid));
+        }
 
         $entryid = hex2bin($id);
         $message = mapi_msgstore_openentry($this->store, $entryid);
         if(!$message)
             throw new StatusException(sprintf("ZarafaBackend->GetAttachmentData('%s'): Error, unable to open item for attachment data for id '%s' with: 0x%X", $attname, $id, mapi_last_hresult()), SYNC_ITEMOPERATIONSSTATUS_INVALIDATT);
 
+        MAPIUtils::ParseSmime($this->session, $this->defaultstore, $this->getAddressbook(), $message);
         $attach = mapi_message_openattach($message, $attachnum);
         if(!$attach)
             throw new StatusException(sprintf("ZarafaBackend->GetAttachmentData('%s'): Error, unable to open attachment number '%s' with: 0x%X", $attname, $attachnum, mapi_last_hresult()), SYNC_ITEMOPERATIONSSTATUS_INVALIDATT);
@@ -1128,6 +1147,11 @@ class BackendZarafa implements IBackend, ISearchProvider {
     */
     public function TerminateSearch($pid) {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->TerminateSearch(): terminating search for pid %d", $pid));
+        if (!isset($this->store) || $this->store === false) {
+            ZLog::Write(LOGLEVEL_WARN, sprintf("The store is not available. It is not possible to remove search folder with pid %d", $pid));
+            return false;
+        }
+
         $storeProps = mapi_getprops($this->store, array(PR_STORE_SUPPORT_MASK, PR_FINDER_ENTRYID));
         if (($storeProps[PR_STORE_SUPPORT_MASK] & STORE_SEARCH_OK) != STORE_SEARCH_OK) {
             ZLog::Write(LOGLEVEL_WARN, "Store doesn't support search folders. Public store doesn't have FINDER_ROOT folder");

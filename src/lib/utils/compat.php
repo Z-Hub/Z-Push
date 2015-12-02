@@ -148,4 +148,21 @@ if (!function_exists('http_response_code')) {
         return $code;
     }
 }
+
+if (!function_exists('memory_get_peak_usage')) {
+    /**
+     * memory_get_peak_usage is not available prior to PHP 5.2.
+     * This complementary function will return the value of memory_get_usage();
+     * @see http://php.net/manual/en/function.memory-get-usage.php
+     * @see http://php.net/manual/en/function.memory-get-peak-usage.php
+     *
+     * @param boolean $real_usage
+     */
+    function memory_get_peak_usage($real_usage = false) {
+        ZLog::Write(LOGLEVEL_DEBUG, "memory_get_peak_usage() is not available on this system. The value of memory_get_usage() will be used.");
+        return memory_get_usage();
+    }
+
+}
+
 ?>

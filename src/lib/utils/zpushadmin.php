@@ -430,6 +430,38 @@ class ZPushAdmin {
     }
 
     /**
+     * Removes the hierarchydata of a device of a user so it will be re-synchronizated.
+     *
+     * @param string    $user           user of the device
+     * @param string    $devid          device id which should be wiped
+     *
+     * @return boolean
+     * @access public
+     */
+    static public function ResyncHierarchy($user, $devid) {
+        // load device data
+        $device = new ASDevice($devid, ASDevice::UNDEFINED, $user, ASDevice::UNDEFINED);
+        try {
+            $device->SetData(ZPush::GetStateMachine()->GetState($devid, IStateMachine::DEVICEDATA), false);
+
+            if ($device->IsNewDevice()) {
+                ZLog::Write(LOGLEVEL_ERROR, sprintf("ZPushAdmin::ResyncHierarchy(): data of user '%s' not synchronized on device '%s'. Aborting.",$user, $devid));
+                return false;
+            }
+
+            // remove hierarchcache, but don't update the device, as the folder states are invalidated
+            StateManager::UnLinkState($device, false, false);
+
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::ResyncHierarchy(): deleted hierarchy states of device '%s' of user '%s'", $devid, $user));
+        }
+        catch (StateNotFoundException $e) {
+            ZLog::Write(LOGLEVEL_ERROR, sprintf("ZPushAdmin::ResyncHierarchy(): state for device '%s' of user '%s' can not be found or saved", $devid, $user));
+            return false;
+        }
+        return true;
+    }
+
+    /**
      * Clears loop detection data
      *
      * @param string    $user           (opt) user which data should be removed - user may not be specified without device id

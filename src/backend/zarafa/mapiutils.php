@@ -582,6 +582,45 @@ class MAPIUtils {
         }
         return MAPI_E_NOT_FOUND;
     }
+
+
+    /**
+     * Function will be used to decode smime messages and convert it to normal messages.
+     *
+     * @param MAPISession       $session
+     * @param MAPIStore         $store
+     * @param MAPIAdressBook    $addressBook
+     * @param MAPIMessage       $message smime message
+     *
+     * @access public
+     * @return void
+     */
+    public static function ParseSmime($session, $store, $addressBook, &$mapimessage) {
+        $props = mapi_getprops($mapimessage, array(PR_MESSAGE_CLASS));
+
+        if (isset($props[PR_MESSAGE_CLASS]) && stripos($props[PR_MESSAGE_CLASS], 'IPM.Note.SMIME.MultipartSigned') !== false) {
+            // this is a signed message. decode it.
+            $attachTable = mapi_message_getattachmenttable($mapimessage);
+            $rows = mapi_table_queryallrows($attachTable, array(PR_ATTACH_MIME_TAG, PR_ATTACH_NUM));
+            $attnum = false;
+
+            foreach($rows as $row) {
+                if (isset($row[PR_ATTACH_MIME_TAG]) && $row[PR_ATTACH_MIME_TAG] == 'multipart/signed') {
+                    $attnum = $row[PR_ATTACH_NUM];
+                }
+            }
+
+            if ($attnum !== false) {
+                $att = mapi_message_openattach($mapimessage, $attnum);
+                $data = mapi_openproperty($att, PR_ATTACH_DATA_BIN);
+                mapi_message_deleteattach($mapimessage, $attnum);
+                mapi_inetmapi_imtomapi($session, $store, $addressBook, $mapimessage, $data, array("parse_smime_signed" => 1));
+                ZLog::Write(LOGLEVEL_DEBUG, "Convert a smime signed message to a normal message.");
+            }
+            mapi_setprops($mapimessage, array(PR_MESSAGE_CLASS => 'IPM.Note.SMIME.MultipartSigned'));
+        }
+        // TODO check if we need to do this for encrypted (and signed?) message as well
+    }
 }
 
 ?>
