@@ -362,79 +362,79 @@ class WBXMLDecoder extends WBXMLDefs {
             $byte = ord($byte);
 
             switch($byte) {
-                case WBXML_SWITCH_PAGE:
+                case self::WBXML_SWITCH_PAGE:
                     $this->tagcp = $this->getByte();
                     break;
 
-                case WBXML_END:
+                case self::WBXML_END:
                     $element[EN_TYPE] = EN_TYPE_ENDTAG;
                     return $element;
 
-                case WBXML_ENTITY:
+                case self::WBXML_ENTITY:
                     $entity = $this->getMBUInt();
                     $element[EN_TYPE] = EN_TYPE_CONTENT;
                     $element[EN_CONTENT] = $this->entityToCharset($entity);
                     return $element;
 
-                case WBXML_STR_I:
+                case self::WBXML_STR_I:
                     $element[EN_TYPE] = EN_TYPE_CONTENT;
                     $element[EN_CONTENT] = $this->getTermStr();
                     return $element;
 
-                case WBXML_LITERAL:
+                case self::WBXML_LITERAL:
                     $element[EN_TYPE] = EN_TYPE_STARTTAG;
                     $element[EN_TAG] = $this->getStringTableEntry($this->getMBUInt());
                     $element[EN_FLAGS] = 0;
                     return $element;
 
-                case WBXML_EXT_I_0:
-                case WBXML_EXT_I_1:
-                case WBXML_EXT_I_2:
+                case self::WBXML_EXT_I_0:
+                case self::WBXML_EXT_I_1:
+                case self::WBXML_EXT_I_2:
                     $this->getTermStr();
                     // Ignore extensions
                     continue;
 
-                case WBXML_PI:
+                case self::WBXML_PI:
                     // Ignore PI
                     $this->getAttributes();
                     continue;
 
-                case WBXML_LITERAL_C:
+                case self::WBXML_LITERAL_C:
                     $element[EN_TYPE] = EN_TYPE_STARTTAG;
                     $element[EN_TAG] = $this->getStringTableEntry($this->getMBUInt());
                     $element[EN_FLAGS] = EN_FLAGS_CONTENT;
                     return $element;
 
-                case WBXML_EXT_T_0:
-                case WBXML_EXT_T_1:
-                case WBXML_EXT_T_2:
+                case self::WBXML_EXT_T_0:
+                case self::WBXML_EXT_T_1:
+                case self::WBXML_EXT_T_2:
                     $this->getMBUInt();
                     // Ingore extensions;
                     continue;
 
-                case WBXML_STR_T:
+                case self::WBXML_STR_T:
                     $element[EN_TYPE] = EN_TYPE_CONTENT;
                     $element[EN_CONTENT] = $this->getStringTableEntry($this->getMBUInt());
                     return $element;
 
-                case WBXML_LITERAL_A:
+                case self::WBXML_LITERAL_A:
                     $element[EN_TYPE] = EN_TYPE_STARTTAG;
                     $element[EN_TAG] = $this->getStringTableEntry($this->getMBUInt());
                     $element[EN_ATTRIBUTES] = $this->getAttributes();
                     $element[EN_FLAGS] = EN_FLAGS_ATTRIBUTES;
                     return $element;
-                case WBXML_EXT_0:
-                case WBXML_EXT_1:
-                case WBXML_EXT_2:
+                case self::WBXML_EXT_0:
+                case self::WBXML_EXT_1:
+                case self::WBXML_EXT_2:
                     continue;
 
-                case WBXML_OPAQUE:
+                case self::WBXML_OPAQUE:
                     $length = $this->getMBUInt();
                     $element[EN_TYPE] = EN_TYPE_CONTENT;
                     $element[EN_CONTENT] = $this->getOpaque($length);
                     return $element;
 
-                case WBXML_LITERAL_AC:
+                case self::WBXML_LITERAL_AC:
                     $element[EN_TYPE] = EN_TYPE_STARTTAG;
                     $element[EN_TAG] = $this->getStringTableEntry($this->getMBUInt());
                     $element[EN_ATTRIBUTES] = $this->getAttributes();
@@ -470,67 +470,67 @@ class WBXMLDecoder extends WBXMLDefs {
                 break;
 
             switch($byte) {
-                case WBXML_SWITCH_PAGE:
+                case self::WBXML_SWITCH_PAGE:
                     $this->attrcp = $this->getByte();
                     break;
 
-                case WBXML_END:
+                case self::WBXML_END:
                     if($attr != "")
                         $attributes += $this->splitAttribute($attr);
 
                     return $attributes;
 
-                case WBXML_ENTITY:
+                case self::WBXML_ENTITY:
                     $entity = $this->getMBUInt();
                     $attr .= $this->entityToCharset($entity);
                     return $attr; /* fmbiete's contribution r1534, ZP-324 */
 
-                case WBXML_STR_I:
+                case self::WBXML_STR_I:
                     $attr .= $this->getTermStr();
                     return $attr; /* fmbiete's contribution r1534, ZP-324 */
 
-                case WBXML_LITERAL:
+                case self::WBXML_LITERAL:
                     if($attr != "")
                         $attributes += $this->splitAttribute($attr);
 
                     $attr = $this->getStringTableEntry($this->getMBUInt());
                     return $attr; /* fmbiete's contribution r1534, ZP-324 */
 
-                case WBXML_EXT_I_0:
-                case WBXML_EXT_I_1:
-                case WBXML_EXT_I_2:
+                case self::WBXML_EXT_I_0:
+                case self::WBXML_EXT_I_1:
+                case self::WBXML_EXT_I_2:
                     $this->getTermStr();
                     continue;
 
-                case WBXML_PI:
-                case WBXML_LITERAL_C:
+                case self::WBXML_PI:
+                case self::WBXML_LITERAL_C:
                     // Invalid
                     return false;
 
-                case WBXML_EXT_T_0:
-                case WBXML_EXT_T_1:
-                case WBXML_EXT_T_2:
+                case self::WBXML_EXT_T_0:
+                case self::WBXML_EXT_T_1:
+                case self::WBXML_EXT_T_2:
                     $this->getMBUInt();
                     continue;
 
-                case WBXML_STR_T:
+                case self::WBXML_STR_T:
                     $attr .= $this->getStringTableEntry($this->getMBUInt());
                     return $attr; /* fmbiete's contribution r1534, ZP-324 */
 
-                case WBXML_LITERAL_A:
+                case self::WBXML_LITERAL_A:
                     return false;
 
-                case WBXML_EXT_0:
-                case WBXML_EXT_1:
-                case WBXML_EXT_2:
+                case self::WBXML_EXT_0:
+                case self::WBXML_EXT_1:
+                case self::WBXML_EXT_2:
                     continue;
 
-                case WBXML_OPAQUE:
+                case self::WBXML_OPAQUE:
                     $length = $this->getMBUInt();
                     $attr .= $this->getOpaque($length);
                     return $attr; /* fmbiete's contribution r1534, ZP-324 */
 
-                case WBXML_LITERAL_AC:
+                case self::WBXML_LITERAL_AC:
                     return false;
 
                 default:
