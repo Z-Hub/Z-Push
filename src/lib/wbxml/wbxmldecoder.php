@@ -578,17 +578,12 @@ class WBXMLDecoder extends WBXMLDefs {
      * @return string
      */
     private function getTermStr() {
-        $str = "";
-        while(1) {
-            $in = $this->getByte();
-
-            if($in == 0)
-                break;
-            else
-                $str .= chr($in);
-        }
-
-        return $str;
+        // there is no unlimited "length" for stream_get_line,
+        // so we use a huge value for "length" param (1Gb)
+        // (0 == PHP_SOCK_CHUNK_SIZE (8192))
+        // internaly php read at most PHP_SOCK_CHUNK_SIZE at a time,
+        // so we can use a huge value for "length" without problem
+        return stream_get_line($this->in, 1073741824, "\0");
     }
 
     /**
