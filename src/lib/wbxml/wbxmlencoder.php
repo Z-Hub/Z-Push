@@ -223,6 +223,8 @@ class WBXMLEncoder extends WBXMLDefs {
      * @return void
      */
     public function addBodypartStream($bp) {
+        if (!is_resource($bp))
+            throw new WBXMLException("WBXMLEncoder->addBodypartStream(): trying to add a ".gettype($bp)." instead of a stream");
         if ($this->multipart)
             $this->bodyparts[] = $bp;
     }
@@ -536,25 +538,20 @@ class WBXMLEncoder extends WBXMLDefs {
         $nrBodyparts = $this->getBodypartsCount();
         $blockstart = (($nrBodyparts + 1) * 2) * 4 + 4;
 
-        $data = pack("iii", ($nrBodyparts + 1), $blockstart, $len);
-
-        ob_start(null, 1048576);
+        fwrite($this->_out, pack("iii", ($nrBodyparts + 1), $blockstart, $len));
 
         foreach ($this->bodyparts as $bp) {
             $blockstart = $blockstart + $len;
             $len = fstat($bp);
             $len = (isset($len['size'])) ? $len['size'] : 0;
-            $data .= pack("ii", $blockstart, $len);
+            fwrite($this->_out, pack("ii", $blockstart, $len));
         }
 
-        fwrite($this->_out, $data);
         fwrite($this->_out, $buffer);
 
         foreach($this->bodyparts as $bp) {
-            while (!feof($bp)) {
-                $out = fread($bp, 4096);
-                fwrite($this->_out, $out);
-            }
+            stream_copy_to_stream($bp, $this->_out);
+            fclose($bp);
         }
     }
 
