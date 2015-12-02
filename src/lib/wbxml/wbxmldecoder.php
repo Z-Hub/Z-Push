@@ -263,11 +263,7 @@ class WBXMLDecoder extends WBXMLDefs {
      * @return string
      */
     public function GetPlainInputStream() {
-        $plain = $this->inputBuffer;
-        while($data = fread($this->in, 4096))
-            $plain .= $data;
-
-        return $plain;
+        return $this->inputBuffer.stream_get_contents($this->in);
     }
 
     /**
