@@ -61,24 +61,27 @@ class WBXMLDefs {
 
     const WBXML_SWITCH_PAGE = 0x00;
     const WBXML_END =         0x01;
-    const WBXML_ENTITY =      0x02;
+    const WBXML_ENTITY =      0x02; //not used in ActiveSync
     const WBXML_STR_I =       0x03;
-    const WBXML_LITERAL =     0x04;
-    const WBXML_EXT_I_0 =     0x40;
-    const WBXML_EXT_I_1 =     0x41;
-    const WBXML_EXT_I_2 =     0x42;
-    const WBXML_PI =          0x43;
-    const WBXML_LITERAL_C =   0x44;
-    const WBXML_EXT_T_0 =     0x80;
-    const WBXML_EXT_T_1 =     0x81;
-    const WBXML_EXT_T_2 =     0x82;
-    const WBXML_STR_T =       0x83;
-    const WBXML_LITERAL_A =   0x84;
-    const WBXML_EXT_0 =       0xC0;
-    const WBXML_EXT_1 =       0xC1;
-    const WBXML_EXT_2 =       0xC2;
+    const WBXML_LITERAL =     0x04; //not used in ActiveSync
+    const WBXML_EXT_I_0 =     0x40; //not used in ActiveSync
+    const WBXML_EXT_I_1 =     0x41; //not used in ActiveSync
+    const WBXML_EXT_I_2 =     0x42; //not used in ActiveSync
+    const WBXML_PI =          0x43; //not used in ActiveSync
+    const WBXML_LITERAL_C =   0x44; //not used in ActiveSync
+    const WBXML_EXT_T_0 =     0x80; //not used in ActiveSync
+    const WBXML_EXT_T_1 =     0x81; //not used in ActiveSync
+    const WBXML_EXT_T_2 =     0x82; //not used in ActiveSync
+    const WBXML_STR_T =       0x83; //not used in ActiveSync
+    const WBXML_LITERAL_A =   0x84; //not used in ActiveSync
+    const WBXML_EXT_0 =       0xC0; //not used in ActiveSync
+    const WBXML_EXT_1 =       0xC1; //not used in ActiveSync
+    const WBXML_EXT_2 =       0xC2; //not used in ActiveSync
     const WBXML_OPAQUE =      0xC3;
-    const WBXML_LITERAL_AC =  0xC4;
+    const WBXML_LITERAL_AC =  0xC4; //not used in ActiveSync
+
+    const WBXML_WITH_ATTRIBUTES = 0x80; //not used in ActiveSync
+    const WBXML_WITH_CONTENT = 0x40;
 
     /**
      * The WBXML DTDs

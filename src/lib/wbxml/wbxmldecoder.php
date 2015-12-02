@@ -45,19 +45,12 @@
 class WBXMLDecoder extends WBXMLDefs {
     private $in;
 
-    private $version;
-    private $publicid;
-    private $publicstringid;
-    private $charsetid;
-    private $stringtable;
+    private $inLog;
 
     private $tagcp = 0;
-    private $attrcp = 0;
-
     private $ungetbuffer;
-
+    private $log = false;
     private $logStack = array();
-
     private $inputBuffer = "";
     private $isWBXML = true;
 
@@ -104,30 +97,35 @@ class WBXMLDecoder extends WBXMLDefs {
 
     /**
      * WBXML Decode Constructor
+     * We only handle ActiveSync WBXML, which is a subset of WBXML
      *
      * @param  stream      $input          the incoming data stream
      *
      * @access public
      */
     public function WBXMLDecoder($input) {
-        // make sure WBXML_DEBUG is defined. It should be at this point
-        if (!defined('WBXML_DEBUG')) define('WBXML_DEBUG', false);
+        $this->log = defined('WBXML_DEBUG') && WBXML_DEBUG;
 
         $this->in = $input;
 
-        $this->readVersion();
-        if (isset($this->version) && $this->version != self::VERSION) {
+        $version = $this->getByte();
+        if($version != self::VERSION) {
+            $this->inputBuffer .= chr($version);
             $this->isWBXML = false;
             return;
         }
 
-        $this->publicid = $this->getMBUInt();
-        if($this->publicid == 0) {
-            $this->publicstringid = $this->getMBUInt();
-        }
+        $publicid = $this->getMBUInt();
+        if($publicid !== 1)
+            throw new WBXMLException("Wrong publicid : ".$publicid);
 
-        $this->charsetid = $this->getMBUInt();
-        $this->stringtable = $this->getStringTable();
+        $charsetid = $this->getMBUInt();
+        if ($charsetid !== 106)
+            throw new WBXMLException("Wrong charset : ".$charsetid);
+
+        $stringtablesize = $this->getMBUInt();
+        if ($stringtablesize !== 0)
+            throw new WBXMLException("Wrong string table size : ".$stringtablesize);
     }
 
     /**
@@ -306,7 +304,8 @@ class WBXMLDecoder extends WBXMLDefs {
         }
 
         $el = $this->_getToken();
-        $this->logToken($el);
+        if($this->log)
+            $this->logToken($el);
 
         return $el;
     }
@@ -320,9 +319,6 @@ class WBXMLDecoder extends WBXMLDefs {
      * @return
      */
     private function logToken($el) {
-        if(!WBXML_DEBUG)
-            return;
-
         $spaces = str_repeat(" ", count($this->logStack));
 
         switch($el[EN_TYPE]) {
@@ -370,63 +366,10 @@ class WBXMLDecoder extends WBXMLDefs {
                     $element[EN_TYPE] = EN_TYPE_ENDTAG;
                     return $element;
 
-                case self::WBXML_ENTITY:
-                    $entity = $this->getMBUInt();
-                    $element[EN_TYPE] = EN_TYPE_CONTENT;
-                    $element[EN_CONTENT] = $this->entityToCharset($entity);
-                    return $element;
-
                 case self::WBXML_STR_I:
                     $element[EN_TYPE] = EN_TYPE_CONTENT;
                     $element[EN_CONTENT] = $this->getTermStr();
                     return $element;
-
-                case self::WBXML_LITERAL:
-                    $element[EN_TYPE] = EN_TYPE_STARTTAG;
-                    $element[EN_TAG] = $this->getStringTableEntry($this->getMBUInt());
-                    $element[EN_FLAGS] = 0;
-                    return $element;
-
-                case self::WBXML_EXT_I_0:
-                case self::WBXML_EXT_I_1:
-                case self::WBXML_EXT_I_2:
-                    $this->getTermStr();
-                    // Ignore extensions
-                    continue;
-
-                case self::WBXML_PI:
-                    // Ignore PI
-                    $this->getAttributes();
-                    continue;
-
-                case self::WBXML_LITERAL_C:
-                    $element[EN_TYPE] = EN_TYPE_STARTTAG;
-                    $element[EN_TAG] = $this->getStringTableEntry($this->getMBUInt());
-                    $element[EN_FLAGS] = EN_FLAGS_CONTENT;
-                    return $element;
-
-                case self::WBXML_EXT_T_0:
-                case self::WBXML_EXT_T_1:
-                case self::WBXML_EXT_T_2:
-                    $this->getMBUInt();
-                    // Ingore extensions;
-                    continue;
-
-                case self::WBXML_STR_T:
-                    $element[EN_TYPE] = EN_TYPE_CONTENT;
-                    $element[EN_CONTENT] = $this->getStringTableEntry($this->getMBUInt());
-                    return $element;
-
-                case self::WBXML_LITERAL_A:
-                    $element[EN_TYPE] = EN_TYPE_STARTTAG;
-                    $element[EN_TAG] = $this->getStringTableEntry($this->getMBUInt());
-                    $element[EN_ATTRIBUTES] = $this->getAttributes();
-                    $element[EN_FLAGS] = EN_FLAGS_ATTRIBUTES;
-                    return $element;
-                case self::WBXML_EXT_0:
-                case self::WBXML_EXT_1:
-                case self::WBXML_EXT_2:
-                    continue;
 
                 case self::WBXML_OPAQUE:
                     $length = $this->getMBUInt();
@@ -434,137 +377,33 @@ class WBXMLDecoder extends WBXMLDefs {
                     $element[EN_CONTENT] = $this->getOpaque($length);
                     return $element;
 
-                case self::WBXML_LITERAL_AC:
-                    $element[EN_TYPE] = EN_TYPE_STARTTAG;
-                    $element[EN_TAG] = $this->getStringTableEntry($this->getMBUInt());
-                    $element[EN_ATTRIBUTES] = $this->getAttributes();
-                    $element[EN_FLAGS] = EN_FLAGS_ATTRIBUTES | EN_FLAGS_CONTENT;
-                    return $element;
-
-                default:
-                    $element[EN_TYPE] = EN_TYPE_STARTTAG;
-                    $element[EN_TAG] = $this->getMapping($this->tagcp, $byte & 0x3f);
-                    $element[EN_FLAGS] = ($byte & 0x80 ? EN_FLAGS_ATTRIBUTES : 0) | ($byte & 0x40 ? EN_FLAGS_CONTENT : 0);
-                    if($byte & 0x80)
-                        $element[EN_ATTRIBUTES] = $this->getAttributes();
-                    return $element;
-            }
-        }
-    }
-
-    /**
-     * Gets attributes
-     *
-     * @access private
-     * @return
-     */
-    private function getAttributes() {
-        $attributes = array();
-        $attr = "";
-
-        WBXMLDecoder::ResetInWhile("decoderGetAttributes");
-        while(WBXMLDecoder::InWhile("decoderGetAttributes")) {
-            $byte = $this->getByte();
-
-            if(count($byte) == 0)
-                break;
-
-            switch($byte) {
-                case self::WBXML_SWITCH_PAGE:
-                    $this->attrcp = $this->getByte();
-                    break;
-
-                case self::WBXML_END:
-                    if($attr != "")
-                        $attributes += $this->splitAttribute($attr);
-
-                    return $attributes;
-
                 case self::WBXML_ENTITY:
-                    $entity = $this->getMBUInt();
-                    $attr .= $this->entityToCharset($entity);
-                    return $attr; /* fmbiete's contribution r1534, ZP-324 */
-
-                case self::WBXML_STR_I:
-                    $attr .= $this->getTermStr();
-                    return $attr; /* fmbiete's contribution r1534, ZP-324 */
-
                 case self::WBXML_LITERAL:
-                    if($attr != "")
-                        $attributes += $this->splitAttribute($attr);
-
-                    $attr = $this->getStringTableEntry($this->getMBUInt());
-                    return $attr; /* fmbiete's contribution r1534, ZP-324 */
-
                 case self::WBXML_EXT_I_0:
                 case self::WBXML_EXT_I_1:
                 case self::WBXML_EXT_I_2:
-                    $this->getTermStr();
-                    continue;
-
                 case self::WBXML_PI:
                 case self::WBXML_LITERAL_C:
-                    // Invalid
-                    return false;
-
                 case self::WBXML_EXT_T_0:
                 case self::WBXML_EXT_T_1:
                 case self::WBXML_EXT_T_2:
-                    $this->getMBUInt();
-                    continue;
-
                 case self::WBXML_STR_T:
-                    $attr .= $this->getStringTableEntry($this->getMBUInt());
-                    return $attr; /* fmbiete's contribution r1534, ZP-324 */
-
                 case self::WBXML_LITERAL_A:
-                    return false;
-
                 case self::WBXML_EXT_0:
                 case self::WBXML_EXT_1:
                 case self::WBXML_EXT_2:
-                    continue;
-
-                case self::WBXML_OPAQUE:
-                    $length = $this->getMBUInt();
-                    $attr .= $this->getOpaque($length);
-                    return $attr; /* fmbiete's contribution r1534, ZP-324 */
-
                 case self::WBXML_LITERAL_AC:
-                    return false;
+                    throw new WBXMLException("Invalid token :".$byte);
 
                 default:
-                    if($byte < 128) {
-                        if($attr != "") {
-                            $attributes += $this->splitAttribute($attr);
-                            $attr = "";
-                        }
-                    }
-                    $attr .= $this->getMapping($this->attrcp, $byte);
-                    break;
+                    if($byte & self::WBXML_WITH_ATTRIBUTES)
+                        throw new WBXMLException("Attributes are not allowed :".$byte);
+                    $element[EN_TYPE] = EN_TYPE_STARTTAG;
+                    $element[EN_TAG] = $this->getMapping($this->tagcp, $byte & 0x3f);
+                    $element[EN_FLAGS] = ($byte & self::WBXML_WITH_CONTENT ? EN_FLAGS_CONTENT : 0);
+                    return $element;
             }
         }
-    }
-
-    /**
-     * Splits an attribute
-     *
-     * @param string $attr     attribute to be splitted
-     *
-     * @access private
-     * @return array
-     */
-    private function splitAttribute($attr) {
-        $attributes = array();
-
-        $pos = strpos($attr,chr(61)); // equals sign
-
-        if($pos)
-            $attributes[substr($attr, 0, $pos)] = substr($attr, $pos+1);
-        else
-            $attributes[$attr] = null;
-
-        return $attributes;
     }
 
     /**
@@ -638,22 +477,6 @@ class WBXMLDecoder extends WBXMLDefs {
     }
 
     /**
-     * Reads string table from the input stream
-     *
-     * @access private
-     * @return int
-     */
-    private function getStringTable() {
-        $stringtable = "";
-
-        $length = $this->getMBUInt();
-        if($length > 0)
-            $stringtable = fread($this->in, $length);
-
-        return $stringtable;
-    }
-
-    /**
      * Returns the mapping for a specified codepage and id
      *
      * @param $cp   codepage
@@ -670,21 +493,6 @@ class WBXMLDecoder extends WBXMLDefs {
                 return $this->dtd["namespaces"][$cp] . ":" . $this->dtd["codes"][$cp][$id];
             } else
                 return $this->dtd["codes"][$cp][$id];
-        }
-    }
-
-    /**
-     * Reads one byte from the input stream
-     *
-     * @access private
-     * @return void
-     */
-    private function readVersion() {
-        $ch = $this->getByte();
-
-        if($ch != NULL) {
-            $this->inputBuffer .= chr($ch);
-            $this->version = $ch;
         }
     }
 }
