@@ -44,7 +44,6 @@
 
 class WBXMLDecoder extends WBXMLDefs {
     private $in;
-    private $inLog;
 
     private $version;
     private $publicid;
@@ -115,7 +114,6 @@ class WBXMLDecoder extends WBXMLDefs {
         if (!defined('WBXML_DEBUG')) define('WBXML_DEBUG', false);
 
         $this->in = $input;
-        $this->inLog = StringStreamWrapper::Open("");
 
         $this->readVersion();
         if (isset($this->version) && $this->version != self::VERSION) {
@@ -291,20 +289,6 @@ class WBXMLDecoder extends WBXMLDefs {
     public function readRemainingData() {
         ZLog::Write(LOGLEVEL_DEBUG, "WBXMLDecoder->readRemainingData() reading remaining data from input stream");
         while($this->getElement());
-    }
-
-    /**
-     * Returns the WBXML data read from the stream
-     *
-     * @access public
-     * @return string - base64 encoded wbxml
-     */
-    public function getWBXMLLog() {
-        $out = "";
-        if ($this->inLog) {
-            $out = base64_encode(stream_get_contents($this->inLog, -1,0));
-        }
-        return $out;
     }
 
     /**----------------------------------------------------------------------------------------------------------
@@ -635,10 +619,8 @@ class WBXMLDecoder extends WBXMLDefs {
                 // Stream ends prematurely on instable connections and big mails
                 if ($data === false || feof($this->in))
                     throw new HTTPReturnCodeException(sprintf("WBXMLDecoder->getOpaque() connection unavailable while trying to read %d bytes from stream. Aborting after %d bytes read.", $len, strlen($d)), HTTP_CODE_500, null, LOGLEVEL_WARN);
-                else {
+                else
                     $d .= $data;
-                    fwrite($this->inLog, $data);
-                }
             }
             if (strlen($d) >= $len) break;
         }
@@ -653,10 +635,8 @@ class WBXMLDecoder extends WBXMLDefs {
      */
     private function getByte() {
         $ch = fread($this->in, 1);
-        if(strlen($ch) > 0) {
-            fwrite($this->inLog, $ch);
+        if(strlen($ch) > 0)
             return ord($ch);
-        }
         else
             return;
     }
@@ -694,10 +674,8 @@ class WBXMLDecoder extends WBXMLDefs {
         $stringtable = "";
 
         $length = $this->getMBUInt();
-        if($length > 0) {
+        if($length > 0)
             $stringtable = fread($this->in, $length);
-            fwrite($this->inLog, $stringtable);
-        }
 
         return $stringtable;
     }
