@@ -56,7 +56,7 @@ class SyncSendMail extends SyncObject {
     public $replyflag;
     public $forwardflag;
 
-    function SyncSendMail() {
+    function __construct() {
         $mapping = array (
                     SYNC_COMPOSEMAIL_CLIENTID                             => array (  self::STREAMER_VAR      => "clientid"),
 
@@ -80,6 +80,6 @@ class SyncSendMail extends SyncObject {
                                                                                       self::STREAMER_TYPE     => self::STREAMER_TYPE_IGNORE),
         );
 
-        parent::SyncObject($mapping);
+        parent::__construct($mapping);
     }
 }

@@ -53,7 +53,7 @@ class SyncOOF extends SyncObject {
     public $bodytype;
     public $Status;
 
-    public function SyncOOF() {
+    public function __construct() {
         $mapping = array (
             SYNC_SETTINGS_OOFSTATE      => array (  self::STREAMER_VAR      => "oofstate",
                                                     self::STREAMER_CHECKS   => array(   array(   self::STREAMER_CHECK_ONEVALUEOF => array(0,1,2) ))),
@@ -76,7 +76,7 @@ class SyncOOF extends SyncObject {
                                                     self::STREAMER_TYPE     => self::STREAMER_TYPE_IGNORE)
         );
 
-        parent::SyncObject($mapping);
+        parent::__construct($mapping);
     }
 
 }

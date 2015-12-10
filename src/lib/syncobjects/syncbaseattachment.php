@@ -54,7 +54,7 @@ class SyncBaseAttachment extends SyncObject {
     public $contentlocation;
     public $isinline;
 
-    function SyncBaseAttachment() {
+    function __construct() {
         $mapping = array(
                     SYNC_AIRSYNCBASE_DISPLAYNAME                        => array (self::STREAMER_VAR        => "displayname"),
                     SYNC_AIRSYNCBASE_FILEREFERENCE                      => array (self::STREAMER_VAR        => "filereference"),
@@ -65,6 +65,6 @@ class SyncBaseAttachment extends SyncObject {
                     SYNC_AIRSYNCBASE_ISINLINE                           => array (self::STREAMER_VAR        => "isinline"),
         );
 
-        parent::SyncObject($mapping);
+        parent::__construct($mapping);
     }
 }
