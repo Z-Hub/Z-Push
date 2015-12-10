@@ -76,7 +76,7 @@ class Streamer implements Serializable {
      * @param array     $mapping            internal mapping of variables
      * @access public
      */
-    function Streamer($mapping) {
+    function __construct($mapping) {
         $this->mapping = $mapping;
         $this->flags = false;
     }
