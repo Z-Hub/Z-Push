@@ -55,7 +55,7 @@ class ImportChangesCombined implements IImportChanges {
      *
      * @access public
      */
-    public function ImportChangesCombined(&$backend, $folderid = false, $icc = false) {
+    public function __construct(&$backend, $folderid = false, $icc = false) {
         $this->backend = $backend;
         $this->folderid = $folderid;
         $this->icc = &$icc;

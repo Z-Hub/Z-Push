@@ -65,8 +65,8 @@ class BackendCombined extends Backend implements ISearchProvider {
      *
      * @access public
      */
-    public function BackendCombined() {
-        parent::Backend();
+    public function __construct() {
+        parent::__construct();
         $this->config = BackendCombinedConfig::GetBackendCombinedConfig();
 
         $backend_values = array_unique(array_values($this->config['folderbackend']));
