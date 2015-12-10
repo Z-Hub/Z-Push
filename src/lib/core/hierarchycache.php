@@ -53,7 +53,7 @@ class HierarchyCache {
      * @access public
      * @return
      */
-    public function HierarchyCache() {
+    public function __construct() {
         $this->cacheById = array();
         $this->cacheByIdOld = $this->cacheById;
         $this->changed = true;
