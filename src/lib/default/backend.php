@@ -64,7 +64,7 @@ abstract class Backend implements IBackend {
      *
      * @access public
      */
-    public function Backend() {
+    public function __construct() {
     }
 
     /**
