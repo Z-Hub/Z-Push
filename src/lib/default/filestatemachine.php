@@ -60,7 +60,7 @@ class FileStateMachine implements IStateMachine {
      * @access public
      * @throws FatalMisconfigurationException
      */
-    public function FileStateMachine() {
+    public function __construct() {
         if (!defined('STATE_DIR'))
             throw new FatalMisconfigurationException("No configuration for the state directory available.");
 
