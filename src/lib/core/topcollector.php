@@ -56,7 +56,7 @@ class TopCollector extends InterProcessData {
      *
      * @access public
      */
-    public function TopCollector() {
+    public function __construct() {
         // initialize super parameters
         $this->allocate = 2097152; // 2 MB
         $this->type = 20;
