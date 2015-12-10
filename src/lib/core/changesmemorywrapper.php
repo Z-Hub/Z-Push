@@ -58,7 +58,7 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
      * @access public
      * @return
      */
-    public function ChangesMemoryWrapper() {
+    public function __construct() {
         $this->changes = array();
         $this->step = 0;
         parent::HierarchyCache();
