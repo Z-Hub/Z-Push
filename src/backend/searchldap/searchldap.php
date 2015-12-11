@@ -57,7 +57,7 @@ class BackendSearchLDAP implements ISearchProvider {
      * @return
      * @throws StatusException
      */
-    public function BackendSearchLDAP() {
+    public function __construct() {
         if (!function_exists("ldap_connect"))
             throw new StatusException("BackendSearchLDAP(): php-ldap is not installed. Search aborted.", SYNC_SEARCHSTATUS_STORE_SERVERERROR, null, LOGLEVEL_FATAL);
 
