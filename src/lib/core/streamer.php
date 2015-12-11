@@ -109,16 +109,16 @@ class Streamer implements Serializable {
                 if(! ($entity[EN_FLAGS] & EN_FLAGS_CONTENT)) {
                     $map = $this->mapping[$entity[EN_TAG]];
                     if (isset($map[self::STREAMER_ARRAY])) {
-                        $this->$map[self::STREAMER_VAR] = array();
+                        $this->{$map[self::STREAMER_VAR]} = array();
                     }
                     else if (isset($map[self::STREAMER_PROP]) && $map[self::STREAMER_PROP] == self::STREAMER_TYPE_SEND_EMPTY) {
-                        $this->$map[self::STREAMER_VAR] = "1";
+                        $this->{$map[self::STREAMER_VAR]} = "1";
                     }
                     else if(!isset($map[self::STREAMER_TYPE])) {
-                        $this->$map[self::STREAMER_VAR] = "";
+                        $this->{$map[self::STREAMER_VAR]} = "";
                     }
                     else if ($map[self::STREAMER_TYPE] == self::STREAMER_TYPE_DATE || $map[self::STREAMER_TYPE] == self::STREAMER_TYPE_DATE_DASHES ) {
-                        $this->$map[self::STREAMER_VAR] = "";
+                        $this->{$map[self::STREAMER_VAR]} = "";
                     }
                     continue;
                 }
@@ -149,10 +149,10 @@ class Streamer implements Serializable {
                                 $decoded = $decoder->getElementContent();
                             }
 
-                            if(!isset($this->$map[self::STREAMER_VAR]))
-                                $this->$map[self::STREAMER_VAR] = array($decoded);
+                            if(!isset($this->{$map[self::STREAMER_VAR]}))
+                                $this->{$map[self::STREAMER_VAR]} = array($decoded);
                             else
-                                array_push($this->$map[self::STREAMER_VAR], $decoded);
+                                array_push($this->{$map[self::STREAMER_VAR]}, $decoded);
 
                             if(!$decoder->getElementEndTag()) //end tag of a container element
                                 return false;
@@ -225,7 +225,7 @@ class Streamer implements Serializable {
                             }
                         }
                         // $decoded now contains data object (or string)
-                        $this->$map[self::STREAMER_VAR] = $decoded;
+                        $this->{$map[self::STREAMER_VAR]} = $decoded;
                     }
                 }
             }
@@ -251,13 +251,13 @@ class Streamer implements Serializable {
         // A return value if anything was streamed. We need for empty tags.
         $streamed = false;
         foreach($this->mapping as $tag => $map) {
-            if(isset($this->$map[self::STREAMER_VAR])) {
+            if(isset($this->{$map[self::STREAMER_VAR]})) {
                 // Variable is available
-                if(is_object($this->$map[self::STREAMER_VAR])) {
+                if(is_object($this->{$map[self::STREAMER_VAR]})) {
                     // Subobjects can do their own encoding
-                    if ($this->$map[self::STREAMER_VAR] instanceof Streamer) {
+                    if ($this->{$map[self::STREAMER_VAR]} instanceof Streamer) {
                         $encoder->startTag($tag);
-                        $res = $this->$map[self::STREAMER_VAR]->Encode($encoder);
+                        $res = $this->{$map[self::STREAMER_VAR]}->Encode($encoder);
                         $encoder->endTag();
                         // nothing was streamed in previous encode but it should be streamed empty anyway
                         if (!$res && isset($map[self::STREAMER_PROP]) && $map[self::STREAMER_PROP] == self::STREAMER_TYPE_SEND_EMPTY)
@@ -268,7 +268,7 @@ class Streamer implements Serializable {
                 }
                 // Array of objects
                 else if(isset($map[self::STREAMER_ARRAY])) {
-                    if (empty($this->$map[self::STREAMER_VAR]) && isset($map[self::STREAMER_PROP]) && $map[self::STREAMER_PROP] == self::STREAMER_TYPE_SEND_EMPTY) {
+                    if (empty($this->{$map[self::STREAMER_VAR]}) && isset($map[self::STREAMER_PROP]) && $map[self::STREAMER_PROP] == self::STREAMER_TYPE_SEND_EMPTY) {
                         $encoder->startTag($tag, false, true);
                     }
                     else {
@@ -277,7 +277,7 @@ class Streamer implements Serializable {
                         if (!isset($map[self::STREAMER_PROP]) || $map[self::STREAMER_PROP] != self::STREAMER_TYPE_NO_CONTAINER)
                             $encoder->startTag($tag);
 
-                        foreach ($this->$map[self::STREAMER_VAR] as $element) {
+                        foreach ($this->{$map[self::STREAMER_VAR]} as $element) {
                             if(is_object($element)) {
                                 $encoder->startTag($map[self::STREAMER_ARRAY]); // Outputs object container (eg Attachment)
                                 $element->Encode($encoder);
@@ -306,7 +306,7 @@ class Streamer implements Serializable {
                     }
 
                     if ($encoder->getMultipart() && isset($map[self::STREAMER_PROP]) && $map[self::STREAMER_PROP] == self::STREAMER_TYPE_MULTIPART) {
-                        $encoder->addBodypartStream($this->$map[self::STREAMER_VAR]);
+                        $encoder->addBodypartStream($this->{$map[self::STREAMER_VAR]});
                         $encoder->startTag(SYNC_ITEMOPERATIONS_PART);
                         $encoder->content($encoder->getBodypartsCount());
                         $encoder->endTag();
@@ -314,7 +314,7 @@ class Streamer implements Serializable {
                     }
 
                     // Simple type
-                    if(!isset($map[self::STREAMER_TYPE]) && strlen($this->$map[self::STREAMER_VAR]) == 0) {
+                    if(!isset($map[self::STREAMER_TYPE]) && strlen($this->{$map[self::STREAMER_VAR]}) == 0) {
                         // send empty tags
                         if (isset($map[self::STREAMER_PROP]) && $map[self::STREAMER_PROP] == self::STREAMER_TYPE_SEND_EMPTY)
                             $encoder->startTag($tag, false, true);
@@ -325,26 +325,26 @@ class Streamer implements Serializable {
                         $encoder->startTag($tag);
 
                     if(isset($map[self::STREAMER_TYPE]) && ($map[self::STREAMER_TYPE] == self::STREAMER_TYPE_DATE || $map[self::STREAMER_TYPE] == self::STREAMER_TYPE_DATE_DASHES)) {
-                        if($this->$map[self::STREAMER_VAR] != 0) // don't output 1-1-1970
-                            $encoder->content($this->formatDate($this->$map[self::STREAMER_VAR], $map[self::STREAMER_TYPE]));
+                        if($this->{$map[self::STREAMER_VAR]} != 0) // don't output 1-1-1970
+                            $encoder->content($this->formatDate($this->{$map[self::STREAMER_VAR]}, $map[self::STREAMER_TYPE]));
                     }
                     else if(isset($map[self::STREAMER_TYPE]) && $map[self::STREAMER_TYPE] == self::STREAMER_TYPE_HEX) {
-                        $encoder->content(strtoupper(bin2hex($this->$map[self::STREAMER_VAR])));
+                        $encoder->content(strtoupper(bin2hex($this->{$map[self::STREAMER_VAR]})));
                     }
                     else if(isset($map[self::STREAMER_TYPE]) && $map[self::STREAMER_TYPE] == self::STREAMER_TYPE_STREAM_ASPLAIN) {
-                        $encoder->contentStream($this->$map[self::STREAMER_VAR], false);
+                        $encoder->contentStream($this->{$map[self::STREAMER_VAR]}, false);
                     }
                     else if(isset($map[self::STREAMER_TYPE]) && ($map[self::STREAMER_TYPE] == self::STREAMER_TYPE_STREAM_ASBASE64 || $map[self::STREAMER_TYPE] == self::STREAMER_TYPE_STREAM)) {
-                        $encoder->contentStream($this->$map[self::STREAMER_VAR], true);
+                        $encoder->contentStream($this->{$map[self::STREAMER_VAR]}, true);
                     }
                     // implode comma or semicolon arrays into a string
-                    else if(isset($map[self::STREAMER_TYPE]) && is_array($this->$map[self::STREAMER_VAR]) &&
+                    else if(isset($map[self::STREAMER_TYPE]) && is_array($this->{$map[self::STREAMER_VAR]}) &&
                         ($map[self::STREAMER_TYPE] == self::STREAMER_TYPE_COMMA_SEPARATED || $map[self::STREAMER_TYPE] == self::STREAMER_TYPE_SEMICOLON_SEPARATED)) {
                         $glue = ($map[self::STREAMER_TYPE] == self::STREAMER_TYPE_COMMA_SEPARATED)?", ":"; ";
-                        $encoder->content(implode($glue, $this->$map[self::STREAMER_VAR]));
+                        $encoder->content(implode($glue, $this->{$map[self::STREAMER_VAR]}));
                     }
                     else {
-                        $encoder->content($this->$map[self::STREAMER_VAR]);
+                        $encoder->content($this->{$map[self::STREAMER_VAR]});
                     }
                     $encoder->endTag();
                     $streamed = true;
@@ -366,12 +366,12 @@ class Streamer implements Serializable {
      */
     public function StripData() {
         foreach ($this->mapping as $k=>$v) {
-            if (isset($this->$v[self::STREAMER_VAR])) {
-                if (is_object($this->$v[self::STREAMER_VAR]) && method_exists($this->$v[self::STREAMER_VAR], "StripData") ) {
-                    $this->$v[self::STREAMER_VAR]->StripData();
+            if (isset($this->{$v[self::STREAMER_VAR]})) {
+                if (is_object($this->{$v[self::STREAMER_VAR]}) && method_exists($this->{$v[self::STREAMER_VAR]}, "StripData") ) {
+                    $this->{$v[self::STREAMER_VAR]}->StripData();
                 }
-                else if (isset($v[self::STREAMER_ARRAY]) && !empty($this->$v[self::STREAMER_VAR])) {
-                    foreach ($this->$v[self::STREAMER_VAR] as $element) {
+                else if (isset($v[self::STREAMER_ARRAY]) && !empty($this->{$v[self::STREAMER_VAR]})) {
+                    foreach ($this->{$v[self::STREAMER_VAR]} as $element) {
                         if (is_object($element) && method_exists($element, "StripData") ) {
                             $element->StripData();
                         }
@@ -393,8 +393,8 @@ class Streamer implements Serializable {
     public function serialize() {
         $values = array();
         foreach ($this->mapping as $k=>$v) {
-            if (isset($this->$v[self::STREAMER_VAR]))
-                $values[$v[self::STREAMER_VAR]] = serialize($this->$v[self::STREAMER_VAR]);
+            if (isset($this->{$v[self::STREAMER_VAR]}))
+                $values[$v[self::STREAMER_VAR]] = serialize($this->{$v[self::STREAMER_VAR]});
         }
 
         return serialize($values);
