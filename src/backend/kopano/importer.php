@@ -86,7 +86,7 @@ class ImportChangesICS implements IImportChanges {
      * @access public
      * @throws StatusException
      */
-    public function ImportChangesICS($session, $store, $folderid = false) {
+    public function __construct($session, $store, $folderid = false) {
         $this->session = $session;
         $this->store = $store;
         $this->folderid = $folderid;

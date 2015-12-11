@@ -74,7 +74,7 @@ class PHPWrapper {
      * @access public
      * @return
      */
-    public function PHPWrapper($session, $store, $importer, $folderid) {
+    public function __construct($session, $store, $importer, $folderid) {
         $this->importer = &$importer;
         $this->store = $store;
         $this->mapiprovider = new MAPIProvider($session, $this->store);

@@ -87,7 +87,7 @@ class BackendKopano implements IBackend, ISearchProvider {
      *
      * @access public
      */
-    public function BackendKopano() {
+    public function __construct() {
         $this->session = false;
         $this->store = false;
         $this->storeName = false;
