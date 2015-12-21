@@ -736,7 +736,7 @@ class LoopDetection extends InterProcessData {
                         ZLog::Write(LOGLEVEL_DEBUG, "LoopDetection->Detect(): case 3.1 detected - loop detected, init loop mode");
                         $current['loopcount'] = 1;
                         // the MaxCount is the max number of messages exported before
-                        $current['maxCount'] = $counter + (($maxItems < $queuedMessages)? $maxItems: $queuedMessages);
+                        $current['maxCount'] = $counter + (($maxItems < $queuedMessages)? $maxItems : $queuedMessages);
                         $loop = true;   // loop mode!!
                     }
                     else if ($queuedMessages == 0) {
@@ -758,7 +758,7 @@ class LoopDetection extends InterProcessData {
                             ZLog::Write(LOGLEVEL_DEBUG, sprintf("LoopDetection->Detect(): case 3.3.1 detected - broken item should be next, attempt to ignore it - id '%s'", $current['potential']));
                             $this->ignore_messageid = $current['potential'];
                         }
-                        $current['maxCount'] = $counter + (($maxItems < $queuedMessages)? $maxItems: $queuedMessages);
+                        $current['maxCount'] = $counter + (($maxItems < $queuedMessages)? $maxItems : $queuedMessages);
                         $loop = true;   // loop mode!!
                     }
                 }
