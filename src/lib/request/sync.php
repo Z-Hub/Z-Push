@@ -1262,8 +1262,8 @@ class Sync extends RequestProcessor {
                                 $folderid = self::$backend->GetWasteBasket();
 
                                 if($folderid) {
-                                    $this->importer->ImportMessageMove($serverid, $folderid);
                                     $actiondata["statusids"][$serverid] = SYNC_STATUS_SUCCESS;
+                                    $this->importer->ImportMessageMove($serverid, $folderid);
                                     break;
                                 }
                                 else
@@ -1275,7 +1275,9 @@ class Sync extends RequestProcessor {
                         }
                     }
                     catch (StatusException $stex) {
-                       $actiondata["statusids"][$serverid] = $stex->getCode();
+                        if($stex->getCode() != SYNC_MOVEITEMSSTATUS_SUCCESS) {
+                            $actiondata["statusids"][$serverid] = SYNC_STATUS_OBJECTNOTFOUND;
+                        }
                     }
                     break;
             }
