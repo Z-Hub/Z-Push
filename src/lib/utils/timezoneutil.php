@@ -1100,25 +1100,42 @@ class TimezoneUtil {
         ZLog::Write(LOGLEVEL_DEBUG, "TimezoneUtil::GetFullTZ() for ". $phptimezone);
 
         $servertzname = self::guessTZNameFromPHPName($phptimezone);
-        $offset = self::$tzonesoffsets[$servertzname];
+        return self::GetFullTZFromTZName($servertzname);
+    }
+
+    /**
+     * Returns a full timezone array
+     *
+     * @param string   $tzname     a TZID value
+     *
+     * @access public
+     * @return array
+     */
+    static public function GetFullTZFromTZName($tzname) {
+        if (!array_key_exists($tzname, self::$tzonesoffsets)) {
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("TimezoneUtil::GetFullTZFromTZName('%s'): Is a PHP TimeZone, converting", $tzname));
+            $tzname = self::guessTZNameFromPHPName($tzname);
+        }
+
+        $offset = self::$tzonesoffsets[$tzname];
 
         $tz = array(
             "bias" => $offset[0],
-            "tzname" => self::encodeTZName(self::getMSTZnameFromTZName($servertzname)),
+            "tzname" => self::encodeTZName(self::getMSTZnameFromTZName($tzname)),
             "dstendyear" => $offset[3],
             "dstendmonth" => $offset[4],
-            "dstendday" => $offset[6],
-            "dstendweek" => $offset[5],
+            "dstendday" => $offset[5],
+            "dstendweek" => $offset[6],
             "dstendhour" => $offset[7],
             "dstendminute" => $offset[8],
             "dstendsecond" => $offset[9],
             "dstendmillis" => $offset[10],
             "stdbias" => $offset[1],
-            "tznamedst" => self::encodeTZName(self::getMSTZnameFromTZName($servertzname)),
+            "tznamedst" => self::encodeTZName(self::getMSTZnameFromTZName($tzname)),
             "dststartyear" => $offset[11],
             "dststartmonth" => $offset[12],
-            "dststartday" => $offset[14],
-            "dststartweek" => $offset[13],
+            "dststartday" => $offset[13],
+            "dststartweek" => $offset[14],
             "dststarthour" => $offset[15],
             "dststartminute" => $offset[16],
             "dststartsecond" => $offset[17],
@@ -1210,7 +1227,7 @@ class TimezoneUtil {
      * @access public
      * @return string
      */
-    static private function getMSTZnameFromTZName($name) {
+    static public function getMSTZnameFromTZName($name) {
         foreach (self::$mstzones as $mskey => $msdefs) {
             if ($name == $msdefs[0])
                 return $msdefs[1];
