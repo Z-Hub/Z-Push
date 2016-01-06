@@ -364,8 +364,14 @@ class ZPush {
             }
             else {
                 // Initialize the default StateMachine
-                include_once('lib/default/filestatemachine.php');
-                ZPush::$stateMachine = new FileStateMachine();
+                if (defined('STATE_MACHINE') && STATE_MACHINE == 'SQL') {
+                    include_once('lib/default/sqlstatemachine.php');
+                    ZPush::$stateMachine = new SqlStateMachine();
+                }
+                else {
+                    include_once('lib/default/filestatemachine.php');
+                    ZPush::$stateMachine = new FileStateMachine();
+                }
             }
 
             if (ZPush::$stateMachine->GetStateVersion() !== ZPush::GetLatestStateVersion()) {

@@ -71,9 +71,33 @@
     define('USE_FULLEMAIL_FOR_LOGIN', false);
 
 /**********************************************************************************
+ * Select StateMachine mechanism
+ *
+ * FILE => FileStateMachine, default
+ * SQL => SqlStateMachine
+ */
+    define('STATE_MACHINE', 'FILE');
+
+/**********************************************************************************
  *  Default FileStateMachine settings
  */
     define('STATE_DIR', '/var/lib/z-push/');
+
+
+/**********************************************************************************
+ * Optional SqlStateMachine settings
+ *
+ * DSN: formatted PDO connection string
+ *    mysql:host=xxx;port=xxx;dbname=xxx
+ *    DON'T FORGET TO INSTALL THE PHP-DRIVER PACKAGE!!!
+ * USER: username to DB
+ * PASSWORD: password to DB
+ * OPTIONS: array with options needed
+ */
+    define('STATE_SQL_DSN', '');
+    define('STATE_SQL_USER', '');
+    define('STATE_SQL_PASSWORD', '');
+    define('STATE_SQL_OPTIONS', serialize(array(PDO::ATTR_PERSISTENT => true)));
 
 
 /**********************************************************************************
