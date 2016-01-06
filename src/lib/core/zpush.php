@@ -364,7 +364,6 @@ class ZPush {
             }
             else {
                 // Initialize the default StateMachine
-                include_once('lib/default/filestatemachine.php');
                 ZPush::$stateMachine = new FileStateMachine();
             }
 

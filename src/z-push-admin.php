@@ -44,57 +44,9 @@
 * Consult LICENSE file for details
 ************************************************/
 
-include('lib/core/zpushdefs.php');
-include('lib/core/zpush.php');
-include('lib/core/stateobject.php');
-include('lib/core/syncparameters.php');
-include('lib/core/bodypreference.php');
-include('lib/core/contentparameters.php');
-include('lib/core/synccollections.php');
-include('lib/core/zlog.php');
-include('lib/core/statemanager.php');
-include('lib/core/streamer.php');
-include('lib/core/asdevice.php');
-include('lib/core/interprocessdata.php');
-include('lib/core/loopdetection.php');
-include('lib/exceptions/exceptions.php');
-include('lib/utils/utils.php');
-include('lib/utils/zpushadmin.php');
-include('lib/request/request.php');
-include('lib/request/requestprocessor.php');
-include('lib/interface/ibackend.php');
-include('lib/interface/ichanges.php');
-include('lib/interface/iexportchanges.php');
-include('lib/interface/iimportchanges.php');
-include('lib/interface/isearchprovider.php');
-include('lib/interface/istatemachine.php');
-include('lib/syncobjects/syncobject.php');
-include('lib/syncobjects/syncbasebody.php');
-include('lib/syncobjects/syncbaseattachment.php');
-include('lib/syncobjects/syncmailflags.php');
-include('lib/syncobjects/syncrecurrence.php');
-include('lib/syncobjects/syncappointment.php');
-include('lib/syncobjects/syncappointmentexception.php');
-include('lib/syncobjects/syncattachment.php');
-include('lib/syncobjects/syncattendee.php');
-include('lib/syncobjects/syncmeetingrequestrecurrence.php');
-include('lib/syncobjects/syncmeetingrequest.php');
-include('lib/syncobjects/syncmail.php');
-include('lib/syncobjects/syncnote.php');
-include('lib/syncobjects/synccontact.php');
-include('lib/syncobjects/syncfolder.php');
-include('lib/syncobjects/syncprovisioning.php');
-include('lib/syncobjects/synctaskrecurrence.php');
-include('lib/syncobjects/synctask.php');
-include('lib/syncobjects/syncoofmessage.php');
-include('lib/syncobjects/syncoof.php');
-include('lib/syncobjects/syncuserinformation.php');
-include('lib/syncobjects/syncdeviceinformation.php');
-include('lib/syncobjects/syncdevicepassword.php');
-include('lib/syncobjects/syncitemoperationsattachment.php');
+require_once 'vendor/autoload.php';
 if (!defined('ZPUSH_CONFIG')) define('ZPUSH_CONFIG', 'config.php');
 include_once(ZPUSH_CONFIG);
-include('version.php');
 
 /**
  * //TODO resync of single folders of a users device

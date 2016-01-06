@@ -209,7 +209,6 @@ class FileStateMachine implements IStateMachine {
      * @return boolean     indicating if the user was added or not (existed already)
      */
     public function LinkUserDevice($username, $devid) {
-        include_once("simplemutex.php");
         $mutex = new SimpleMutex();
         $changed = false;
 
@@ -254,7 +253,6 @@ class FileStateMachine implements IStateMachine {
      * @return boolean
      */
     public function UnLinkUserDevice($username, $devid) {
-        include_once("simplemutex.php");
         $mutex = new SimpleMutex();
         $changed = false;
 
