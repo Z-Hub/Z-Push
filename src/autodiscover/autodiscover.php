@@ -266,7 +266,7 @@ class ZPushAutodiscover {
 }
 
     // set time zone
-    // code contributed by Robert Scheck (rsc) 
+    // code contributed by Robert Scheck (rsc)
     if(defined('TIMEZONE') ? constant('TIMEZONE') : false) {
         if (! @date_default_timezone_set(TIMEZONE))
             throw new FatalMisconfigurationException(sprintf("The configured TIMEZONE '%s' is not valid. Please check supported timezones at http://www.php.net/manual/en/timezones.php", constant('TIMEZONE')));
