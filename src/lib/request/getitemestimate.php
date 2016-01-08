@@ -91,7 +91,7 @@ class GetItemEstimate extends RequestProcessor {
                 elseif(self::$decoder->getElementStartTag(SYNC_CONVERSATIONMODE)) {
                     $spa->SetConversationMode(true);
                     if(($conversationmode = self::$decoder->getElementContent()) !== false) {
-                        $spa->SetConversationMode((boolean)$conversationmode);
+                        $spa->SetConversationMode((bool)$conversationmode);
                         if(!self::$decoder->getElementEndTag())
                             return false;
                     }

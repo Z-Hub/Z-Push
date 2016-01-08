@@ -52,9 +52,6 @@ class FolderSync extends RequestProcessor {
      * @return boolean
      */
     public function Handle ($commandCode) {
-        // Maps serverid -> clientid for items that are received from the PIM
-        $map = array();
-
         // Parse input
         if(!self::$decoder->getElementStartTag(SYNC_FOLDERHIERARCHY_FOLDERSYNC))
             return false;
@@ -137,10 +134,6 @@ class FolderSync extends RequestProcessor {
                                 $serverid = $changesMem->ImportFolderDeletion($folder);
                                 break;
                         }
-
-                        // TODO what does $map??
-                        if($serverid)
-                            $map[$serverid] = $folder->clientid;
                     }
                     else {
                         ZLog::Write(LOGLEVEL_WARN, sprintf("Request->HandleFolderSync(): ignoring incoming folderchange for folder '%s' as status indicates problem.", $folder->displayname));

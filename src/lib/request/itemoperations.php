@@ -211,7 +211,7 @@ class ItemOperations extends RequestProcessor {
                         if(self::$decoder->getElementStartTag(SYNC_ITEMOPERATIONS_DELETESUBFOLDERS)) {
                             $operation['deletesubfolders'] = true;
                             if (($dsf = self::$decoder->getElementContent()) !== false) {
-                                $operation['deletesubfolders'] = (boolean)$dsf;
+                                $operation['deletesubfolders'] = (bool)$dsf;
                                 if(!self::$decoder->getElementEndTag())
                                     return false;
                             }
