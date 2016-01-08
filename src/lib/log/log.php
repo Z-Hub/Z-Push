@@ -233,7 +233,7 @@ abstract class Log {
                     foreach ($this->unauthMessageCache as $authcache) {
                         $this->WriteForUser($authcache[0], $authcache[1]);
                     }
-                    self::$unAuthCache = array();
+                    $this->unauthMessageCache = array();
                 }
                 $this->WriteForUser($loglevel, $message);
             }
@@ -275,15 +275,15 @@ abstract class Log {
         else
             $s = "";
         switch($loglevel) {
-            case LOGLEVEL_OFF:     return ""; break;
-            case LOGLEVEL_FATAL: return "[FATAL]"; break;
-            case LOGLEVEL_ERROR: return "[ERROR]"; break;
-            case LOGLEVEL_WARN:    return "[".$s."WARN]"; break;
-            case LOGLEVEL_INFO:    return "[".$s."INFO]"; break;
-            case LOGLEVEL_DEBUG: return "[DEBUG]"; break;
-            case LOGLEVEL_WBXML: return "[WBXML]"; break;
-            case LOGLEVEL_DEVICEID: return "[DEVICEID]"; break;
-            case LOGLEVEL_WBXMLSTACK: return "[WBXMLSTACK]"; break;
+            case LOGLEVEL_OFF:          return ""; break;
+            case LOGLEVEL_FATAL:        return "[FATAL]"; break;
+            case LOGLEVEL_ERROR:        return "[ERROR]"; break;
+            case LOGLEVEL_WARN:         return "[".$s."WARN]"; break;
+            case LOGLEVEL_INFO:         return "[".$s."INFO]"; break;
+            case LOGLEVEL_DEBUG:        return "[DEBUG]"; break;
+            case LOGLEVEL_WBXML:        return "[WBXML]"; break;
+            case LOGLEVEL_DEVICEID:     return "[DEVICEID]"; break;
+            case LOGLEVEL_WBXMLSTACK:   return "[WBXMLSTACK]"; break;
         }
     }
 
