@@ -6,7 +6,7 @@
 *
 * Created   :   01.10.2007
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -78,6 +78,12 @@
 
 /**********************************************************************************
  *  Logging settings
+ *
+ *  The LOGBACKEND specifies where the logs are sent to.
+ *  Either to file ("filelog") or to a "syslog" server or a custom log class in core/log/logclass.
+ *  filelog and syslog have several options that can be set below.
+ *  For more information about the syslog configuration, see https://wiki.z-hub.io/x/HIAT
+
  *  Possible LOGLEVEL and LOGUSERLEVEL values are:
  *  LOGLEVEL_OFF            - no logging
  *  LOGLEVEL_FATAL          - log only critical errors
@@ -92,37 +98,34 @@
  *  The verbosity increases from top to bottom. More verbose levels include less verbose
  *  ones, e.g. setting to LOGLEVEL_DEBUG will also output LOGLEVEL_FATAL, LOGLEVEL_ERROR,
  *  LOGLEVEL_WARN and LOGLEVEL_INFO level entries.
+ *
+ *  LOGAUTHFAIL is logged to the LOGBACKEND.
  */
+    define('LOGBACKEND', 'filelog');
     define('LOGLEVEL', LOGLEVEL_WBXML);
     define('LOGAUTHFAIL', false);
+
     // To save e.g. WBXML data only for selected users, add the usernames to the array
     // The data will be saved into a dedicated file per user in the LOGFILEDIR
     // Users have to be encapusulated in quotes, several users are comma separated, like:
     //   $specialLogUsers = array('info@domain.com', 'myusername');
     define('LOGUSERLEVEL', LOGLEVEL_DEVICEID);
     $specialLogUsers = array();
-    // Either filelog or syslog or a custom log class in core/log/logclass
-    define('LOGBACKEND', 'filelog');
 
-/**
- * Filelog settings
- */
+    // Filelog settings
     define('LOGFILEDIR', '/var/log/z-push/');
     define('LOGFILE', LOGFILEDIR . 'z-push.log');
     define('LOGERRORFILE', LOGFILEDIR . 'z-push-error.log');
 
-/**
- * Syslog settings
- */
+    // Syslog settings
     // false will log to local syslog, otherwise put the remote syslog IP here
     define('LOG_SYSLOG_HOST', false);
     // Syslog port
     define('LOG_SYSLOG_PORT', 514);
     // Program showed in the syslog. Useful if you have more than one instance login to the same syslog
     define('LOG_SYSLOG_PROGRAM', 'z-push');
-    // Syslog facility
+    // Syslog facility - use LOG_USER when running on Windows
     define('LOG_SYSLOG_FACILITY', LOG_LOCAL0);
-
 
     // Location of the trusted CA, e.g. '/etc/ssl/certs/EmailCA.pem'
     // Uncomment and modify the following line if the validation of the certificates fails.
