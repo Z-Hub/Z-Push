@@ -384,7 +384,7 @@ class WBXMLDecoder extends WBXMLDefs {
             switch($byte) {
                 case WBXML_SWITCH_PAGE:
                     $this->tagcp = $this->getByte();
-                    continue;
+                    break;
 
                 case WBXML_END:
                     $element[EN_TYPE] = EN_TYPE_ENDTAG;
