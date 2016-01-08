@@ -210,8 +210,8 @@ class SyncAppointment extends SyncObject {
             }
         }
 
-        // do not sync a recurrent appointment without a timezone
-        if (isset($this->recurrence) && !isset($this->timezone)) {
+        // do not sync a recurrent appointment without a timezone (except all day events)
+        if (isset($this->recurrence) && !isset($this->timezone) && empty($this->alldayevent)) {
             ZLog::Write(LOGLEVEL_ERROR, "SyncAppointment->Check(): timezone for a recurring appointment is not set.");
             return false;
         }
