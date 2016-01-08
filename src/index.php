@@ -69,8 +69,10 @@ include_once('lib/core/asdevice.php');
 include_once('lib/core/statemanager.php');
 include_once('lib/core/devicemanager.php');
 include_once('lib/core/zpush.php');
-include_once('include/z_syslog.php');
 include_once('lib/core/zlog.php');
+include_once('lib/log/log.php');
+include_once('lib/log/filelog.php');
+include_once('lib/log/syslog.php');
 include_once('lib/interface/ibackend.php');
 include_once('lib/interface/ichanges.php');
 include_once('lib/interface/iexportchanges.php');
@@ -165,7 +167,7 @@ include_once('version.php');
         $backend = ZPush::GetBackend();
 
         // always request the authorization header
-        if (! Request::AuthenticationInfo() || !Request::GetGETUser())
+        if (! Request::HasAuthenticationInfo() || !Request::GetGETUser())
             throw new AuthenticationRequiredException("Access denied. Please send authorisation information");
 
         // check the provisioning information
