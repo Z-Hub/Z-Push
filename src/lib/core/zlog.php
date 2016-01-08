@@ -163,7 +163,7 @@ class ZLog {
             global $specialLogUsers; // This variable comes from the configuration file (config.php)
             $logger = LOGBACKEND;
             if (!class_exists($logger)) {
-                throw new \Exception('The class `'.$logger.'` does not exist.');
+                throw new FatalNotImplementedException('The logging class `'.$logger.'` does not exist.');
             }
 
             list($user) = Utils::SplitDomainUser(strtolower(Request::GetGETUser()));
