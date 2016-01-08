@@ -929,6 +929,27 @@ class Utils {
         }
         return substr($email, 0, $pos);
     }
+
+    /**
+     * Safely write data to disk, using an unique tmp file (concurrent write),
+     * and using rename for atomicity
+     *
+     * If you use SafePutContents, you can safely use file_get_contents
+     * (you will always read a fully written file)
+     *
+     * @param string $filename
+     * @param string $data
+     * @return boolean|int
+     */
+    public static function SafePutContents($filename, $data) {
+        //put the 'tmp' as a prefix (and not suffix) so all glob call will not see temp files
+        $tmp = dirname($filename).DIRECTORY_SEPARATOR.'tmp-'.getmypid().'-'.basename($filename);
+        if (($res = file_put_contents($tmp, $data)) !== false)
+            if (rename($tmp, $filename) !== true)
+                $res = false;
+
+        return $res;
+    }
 }
 
 
