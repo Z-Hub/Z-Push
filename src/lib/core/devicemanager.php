@@ -639,6 +639,19 @@ class DeviceManager {
     }
 
     /**
+     * Indicates if an Outlook via ActiveSync is connected.
+     *
+     * @access public
+     * @return boolean
+     */
+    public function IsOutlookClient() {
+        if (Request::GetDeviceType() == "WindowsOutlook") {
+            return true;
+        }
+        return false;
+    }
+
+    /**
      * Adds an Exceptions to the process tracking
      *
      * @param Exception     $exception
