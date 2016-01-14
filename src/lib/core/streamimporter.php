@@ -108,6 +108,22 @@ class ImportChangesStream implements IImportChanges {
             return $stat;
         }
 
+        // Acacia ZO-3: Stream reply/forward flag and time as additional category to Outlook
+        if (ZPush::GetDeviceManager()->IsOutlookClient() && isset($message->lastverbexectime) && isset($message->lastverbexecuted) && $message->lastverbexecuted > 0) {
+            ZLog::Write(LOGLEVEL_DEBUG, "ImportChangesStream->ImportMessageChange('%s'): Outlook client detected. Adding LastVerb information as category.");
+            if (!isset($message->categories)){
+                $message->categories = array();
+            }
+
+            $s = "Push: Email ";
+            if     ($message->lastverbexecuted == 1) $s .= "replied";
+            elseif ($message->lastverbexecuted == 2) $s .= "replied-to-all";
+            elseif ($message->lastverbexecuted == 3) $s .= "forwarded";
+            $s .= " on " . gmdate("d-m-Y H:i:s", $message->lastverbexectime) . " GMT";
+
+            $message->categories[] = $s;
+        }
+
         if ($message->flags === false || $message->flags === SYNC_NEWMESSAGE)
             $this->encoder->startTag(SYNC_ADD);
         else {
