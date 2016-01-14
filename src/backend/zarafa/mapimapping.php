@@ -186,6 +186,7 @@ class MAPIMapping {
             "nativebodytype"        => PR_NATIVE_BODY_INFO,
             "lastverbexecuted"      => PR_LAST_VERB_EXECUTED,
             "lastverbexectime"      => PR_LAST_VERB_EXECUTION_TIME,
+            "categories"            => "PT_MV_STRING8:PS_PUBLIC_STRINGS:Keywords",
             );
     }
 
