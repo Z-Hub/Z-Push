@@ -1053,6 +1053,11 @@ class MAPIProvider {
      * @param SyncMail          $message
      */
     private function setEmail($mapimessage, $message) {
+        // update categories
+        //if (!isset($message->categories)) $message->categories = array();
+        $emailmap = MAPIMapping::GetEmailMapping();
+        $this->setPropsInMAPI($mapimessage, $message, array("categories" => $emailmap["categories"]));
+
         $flagmapping = MAPIMapping::GetMailFlagsMapping();
         $flagprops = MAPIMapping::GetMailFlagsProperties();
         $flagprops = array_merge($this->getPropIdsFromStrings($flagmapping), $this->getPropIdsFromStrings($flagprops));
