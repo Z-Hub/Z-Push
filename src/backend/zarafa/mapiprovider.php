@@ -1054,7 +1054,7 @@ class MAPIProvider {
      */
     private function setEmail($mapimessage, $message) {
         // update categories
-        //if (!isset($message->categories)) $message->categories = array();
+        if (!isset($message->categories)) $message->categories = array();
         $emailmap = MAPIMapping::GetEmailMapping();
         $this->setPropsInMAPI($mapimessage, $message, array("categories" => $emailmap["categories"]));
 
