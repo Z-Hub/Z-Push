@@ -6,7 +6,7 @@
 *
 * Created   :   12.04.2011
 *
-* Copyright 2007 - 2015 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -365,7 +365,7 @@ class ZPush {
             else {
                 // Initialize the default StateMachine
                 if (defined('STATE_MACHINE') && STATE_MACHINE == 'SQL') {
-                    include_once('lib/default/sqlstatemachine.php');
+                    include_once('backend/sqlstatemachine/sqlstatemachine.php');
                     ZPush::$stateMachine = new SqlStateMachine();
                 }
                 else {
