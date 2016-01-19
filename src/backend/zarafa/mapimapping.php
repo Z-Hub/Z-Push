@@ -460,7 +460,7 @@ class MAPIMapping {
     public static function GetNoteMapping() {
         return array(
             "categories"            => "PT_MV_STRING8:PS_PUBLIC_STRINGS:Keywords",
-            "lastmodificationtime"  => PR_LAST_MODIFICATION_TIME,
+            "lastmodified"          => PR_LAST_MODIFICATION_TIME,
             "messageclass"          => PR_MESSAGE_CLASS,
             "subject"               => PR_SUBJECT,
         );
