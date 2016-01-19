@@ -62,7 +62,7 @@ class SqlStateMachine implements IStateMachine {
      * @access public
      * @throws FatalMisconfigurationException
      */
-    public function SqlStateMachine() {
+    public function __construct() {
         ZLog::Write(LOGLEVEL_DEBUG, "SqlStateMachine(): init");
 
         if (!defined('STATE_SQL_DSN') || !defined('STATE_SQL_USER') || !defined('STATE_SQL_PASSWORD')) {
