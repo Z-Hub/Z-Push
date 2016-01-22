@@ -430,6 +430,31 @@ class BackendZarafa implements IBackend, ISearchProvider {
             throw new StatusException("ZarafaBackend->SendMail(): ZCP version is too old, INETMAPI_IMTOMAPI is not available. Install at least ZCP version 7.0.6 or later.", SYNC_COMMONSTATUS_MAILSUBMISSIONFAILED, null, LOGLEVEL_FATAL);
             return false;
         }
+
+        // Acacia ZO-6: grep for the OL header and set flags accordingly.
+        // The header has the values verb/message-source-key/folder-source-key
+        if (preg_match("/X-Push-Flags: (\d{3})\/([\da-f]+)\/([\da-f]+)/i", $sm->mime, $ol_flags)) {
+            // "reply" and "reply-all" are handled as "reply"
+            if ($ol_flags[1] == 102 || $ol_flags[1] == 103) {
+                $sm->replyflag = true;
+                $sm->forwardflag = false;
+            }
+            else if ($ol_flags[1] == 104) {
+                $sm->replyflag = false;
+                $sm->forwardflag = true;
+            }
+            // set source folder+item and replacemime
+            if (!isset($sm->source)) {
+                $sm->source = new SyncSendMailSource();
+            }
+            $sm->source->itemid = $ol_flags[2];
+            $sm->source->folderid = $ol_flags[3];
+            $sm->replacemime = true;
+
+            ZLog::Write(LOGLEVEL_DEBUG, "ZarafaBackend->SendMail(): Outlook support: overwrite reply/forward flag, set parent-id and item-id, replacemime-do not attach original message.");
+        }
+
+        // delayed logging to log to potentially log the parameters set for ZO-6
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->SendMail(): RFC822: %d bytes  forward-id: '%s' reply-id: '%s' parent-id: '%s' SaveInSent: '%s' ReplaceMIME: '%s'",
                                             strlen($sm->mime), Utils::PrintAsString($sm->forwardflag), Utils::PrintAsString($sm->replyflag),
                                             Utils::PrintAsString((isset($sm->source->folderid) ? $sm->source->folderid : false)),
