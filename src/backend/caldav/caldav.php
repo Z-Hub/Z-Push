@@ -560,7 +560,7 @@ class BackendCalDAV extends BackendDiff {
         $timezones = $ical->GetComponents("VTIMEZONE");
         $timezone = "";
         if (count($timezones) > 0) {
-            $timezone = Utils::ParseTimezone($timezones[0]->GetPValue("TZID"));
+            $timezone = TimezoneUtil::ParseTimezone($timezones[0]->GetPValue("TZID"));
         }
         if (!$timezone) {
             $timezone = date_default_timezone_get();
@@ -573,11 +573,11 @@ class BackendCalDAV extends BackendDiff {
             if (count($rec) > 0) {
                 $recurrence_id = reset($rec);
                 $exception = new SyncAppointmentException();
-                $tzid = Utils::ParseTimezone($recurrence_id->GetParameterValue("TZID"));
+                $tzid = TimezoneUtil::ParseTimezone($recurrence_id->GetParameterValue("TZID"));
                 if (!$tzid) {
                     $tzid = $timezone;
                 }
-                $exception->exceptionstarttime = Utils::MakeUTCDate($recurrence_id->Value(), $tzid);
+                $exception->exceptionstarttime = TimezoneUtil::MakeUTCDate($recurrence_id->Value(), $tzid);
                 $exception->deleted = "0";
                 $exception = $this->_ParseVEventToSyncObject($event, $exception, $truncsize);
                 if (!isset($message->exceptions)) {
@@ -606,11 +606,11 @@ class BackendCalDAV extends BackendDiff {
         foreach ($properties as $property) {
             switch ($property->Name()) {
                 case "LAST-MODIFIED":
-                    $message->dtstamp = Utils::MakeUTCDate($property->Value());
+                    $message->dtstamp = TimezoneUtil::MakeUTCDate($property->Value());
                     break;
 
                 case "DTSTART":
-                    $message->starttime = Utils::MakeUTCDate($property->Value(), Utils::ParseTimezone($property->GetParameterValue("TZID")));
+                    $message->starttime = TimezoneUtil::MakeUTCDate($property->Value(), TimezoneUtil::ParseTimezone($property->GetParameterValue("TZID")));
                     if (strlen($property->Value()) == 8) {
                         $message->alldayevent = "1";
                     }
@@ -638,7 +638,7 @@ class BackendCalDAV extends BackendDiff {
                     break;
 
                 case "DTEND":
-                    $message->endtime = Utils::MakeUTCDate($property->Value(), Utils::ParseTimezone($property->GetParameterValue("TZID")));
+                    $message->endtime = TimezoneUtil::MakeUTCDate($property->Value(), TimezoneUtil::ParseTimezone($property->GetParameterValue("TZID")));
                     if (strlen($property->Value()) == 8) {
                         $message->alldayevent = "1";
                     }
@@ -759,7 +759,7 @@ class BackendCalDAV extends BackendDiff {
                 case "EXDATE":
                     $exception = new SyncAppointmentException();
                     $exception->deleted = "1";
-                    $exception->exceptionstarttime = Utils::MakeUTCDate($property->Value());
+                    $exception->exceptionstarttime = TimezoneUtil::MakeUTCDate($property->Value());
                     if (!isset($message->exceptions)) {
                         $message->exceptions = array();
                     }
@@ -795,7 +795,7 @@ class BackendCalDAV extends BackendDiff {
                 if ($property->Name() == "TRIGGER") {
                     $parameters = $property->Parameters();
                     if (array_key_exists("VALUE", $parameters) && $parameters["VALUE"] == "DATE-TIME") {
-                        $trigger = date_create("@" . Utils::MakeUTCDate($property->Value()));
+                        $trigger = date_create("@" . TimezoneUtil::MakeUTCDate($property->Value()));
                         $begin = date_create("@" . $message->starttime);
                         $interval = date_diff($begin, $trigger);
                         $message->reminder = $interval->format("%i") + $interval->format("%h") * 60 + $interval->format("%a") * 60 * 24;
@@ -842,7 +842,7 @@ class BackendCalDAV extends BackendDiff {
                     break;
 
                 case "UNTIL":
-                    $recurrence->until = Utils::MakeUTCDate($rule[1]);
+                    $recurrence->until = TimezoneUtil::MakeUTCDate($rule[1]);
                     break;
 
                 case "COUNT":
@@ -1265,11 +1265,11 @@ class BackendCalDAV extends BackendDiff {
                     break;
 
                 case "COMPLETED":
-                    $message->datecompleted = Utils::MakeUTCDate($property->Value());
+                    $message->datecompleted = TimezoneUtil::MakeUTCDate($property->Value());
                     break;
 
                 case "DUE":
-                    $message->utcduedate = Utils::MakeUTCDate($property->Value());
+                    $message->utcduedate = TimezoneUtil::MakeUTCDate($property->Value());
                     break;
 
                 case "PRIORITY":
@@ -1301,7 +1301,7 @@ class BackendCalDAV extends BackendDiff {
                     break;
 
                 case "DTSTART":
-                    $message->utcstartdate = Utils::MakeUTCDate($property->Value());
+                    $message->utcstartdate = TimezoneUtil::MakeUTCDate($property->Value());
                     break;
 
                 case "SUMMARY":
@@ -1326,7 +1326,7 @@ class BackendCalDAV extends BackendDiff {
                 if ($property->Name() == "TRIGGER") {
                     $parameters = $property->Parameters();
                     if (array_key_exists("VALUE", $parameters) && $parameters["VALUE"] == "DATE-TIME") {
-                        $message->remindertime = Utils::MakeUTCDate($property->Value());
+                        $message->remindertime = TimezoneUtil::MakeUTCDate($property->Value());
                         $message->reminderset = "1";
                     }
                     elseif (!array_key_exists("VALUE", $parameters) || $parameters["VALUE"] == "DURATION") {
