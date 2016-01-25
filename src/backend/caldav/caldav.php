@@ -45,10 +45,6 @@
 
 // config file
 require_once("backend/caldav/config.php");
-// TODO: remove this after ZP-682 merge
-require_once("include/z_caldav.php");
-require_once("include/iCalendar.php");
-require_once("include/z_RTF.php");
 
 class BackendCalDAV extends BackendDiff {
     /**

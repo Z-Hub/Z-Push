@@ -43,8 +43,6 @@
 
 // config file
 require_once("backend/carddav/config.php");
-// TODO: remove this after ZP-682 merge
-require_once("include/z_carddav.php");
 
 class BackendCardDAV extends BackendDiff implements ISearchProvider {
 

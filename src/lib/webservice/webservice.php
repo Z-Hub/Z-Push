@@ -67,8 +67,6 @@ class Webservice {
         // the webservice command is handled by its class
         if ($commandCode == ZPush::COMMAND_WEBSERVICE_DEVICE) {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("Webservice::HandleWebservice('%s'): executing WebserviceDevice service", $commandCode));
-
-            include_once('webservicedevice.php');
             $this->server->setClass("WebserviceDevice");
         }
 
@@ -82,7 +80,6 @@ class Webservice {
             if(ZPush::GetBackend()->Setup("SYSTEM", true) == false)
                 throw new AuthenticationRequiredException(sprintf("User '%s' has no admin privileges", Request::GetAuthUser()));
 
-            include_once('webserviceusers.php');
             $this->server->setClass("WebserviceUsers");
         }
 

@@ -224,8 +224,8 @@ class ZPush {
             define('LOGBACKEND', 'filelog');
         }
 
-        if (LOGBACKEND == 'syslog') {
-
+        if (strtolower(LOGBACKEND) == 'syslog') {
+            define('LOGBACKEND_CLASS', 'Syslog');
             if (!defined('LOG_SYSLOG_FACILITY')) {
                 define('LOG_SYSLOG_FACILITY', LOG_LOCAL0);
             }
@@ -250,8 +250,8 @@ class ZPush {
                 throw new FatalMisconfigurationException("LOG_SYSLOG_HOST is defined but the LOG_SYSLOG_PORT does not seem to be valid.");
             }
         }
-        elseif (LOGBACKEND == 'filelog') {
-
+        elseif (strtolower(LOGBACKEND) == 'filelog') {
+            define('LOGBACKEND_CLASS', 'FileLog');
             if (!defined('LOGFILEDIR'))
                 throw new FatalMisconfigurationException("The LOGFILEDIR is not configured. Check if the config.php file is in place.");
 
@@ -270,6 +270,9 @@ class ZPush {
             // check ownership on the (eventually) just created files
             Utils::FixFileOwner(LOGFILE);
             Utils::FixFileOwner(LOGERRORFILE);
+        }
+        else {
+            define('LOGBACKEND_CLASS', LOGBACKEND);
         }
 
         // set time zone
@@ -397,7 +400,6 @@ class ZPush {
             }
             else {
                 // Initialize the default StateMachine
-                include_once('lib/default/filestatemachine.php');
                 ZPush::$stateMachine = new FileStateMachine();
             }
 
