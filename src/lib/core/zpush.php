@@ -225,7 +225,7 @@ class ZPush {
         }
 
         if (LOGBACKEND == 'syslog') {
-
+            define('LOGBACKEND_CLASS', 'Syslog');
             if (!defined('LOG_SYSLOG_FACILITY')) {
                 define('LOG_SYSLOG_FACILITY', LOG_LOCAL0);
             }
@@ -251,7 +251,7 @@ class ZPush {
             }
         }
         elseif (LOGBACKEND == 'filelog') {
-
+            define('LOGBACKEND_CLASS', 'FileLog');
             if (!defined('LOGFILEDIR'))
                 throw new FatalMisconfigurationException("The LOGFILEDIR is not configured. Check if the config.php file is in place.");
 
@@ -270,6 +270,9 @@ class ZPush {
             // check ownership on the (eventually) just created files
             Utils::FixFileOwner(LOGFILE);
             Utils::FixFileOwner(LOGERRORFILE);
+        }
+        else {
+            define('LOGBACKEND_CLASS', LOGBACKEND);
         }
 
         // set time zone
