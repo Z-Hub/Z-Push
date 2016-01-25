@@ -45,6 +45,7 @@
 ************************************************/
 
 require_once 'vendor/autoload.php';
+
 if (!defined('ZPUSH_CONFIG')) define('ZPUSH_CONFIG', 'config.php');
 include_once(ZPUSH_CONFIG);
 

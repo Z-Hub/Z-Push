@@ -55,6 +55,7 @@ else {
 ignore_user_abort(true);
 
 require_once 'vendor/autoload.php';
+
 if (!defined('ZPUSH_CONFIG')) define('ZPUSH_CONFIG', 'config.php');
 include_once(ZPUSH_CONFIG);
 
@@ -92,7 +93,7 @@ include_once(ZPUSH_CONFIG);
         $backend = ZPush::GetBackend();
 
         // always request the authorization header
-        if (! Request::AuthenticationInfo() || !Request::GetGETUser())
+        if (! Request::HasAuthenticationInfo() || !Request::GetGETUser())
             throw new AuthenticationRequiredException("Access denied. Please send authorisation information");
 
         // check the provisioning information
