@@ -175,6 +175,11 @@ class FileStateMachine implements IStateMachine {
      * @throws StateInvalidException
      */
     public function CleanStates($devid, $type, $key, $counter = false) {
+        // Don't remove permanent backend storage files, unless we explicitily want that
+        if ($key === false && $type === IStateMachine::BACKENDSTORAGE && $counter != IStateMachine::HIGHEST_COUNTER) {
+            return;
+        }
+
         $matching_files = glob($this->getFullFilePath($devid, $type, $key). "*", GLOB_NOSORT);
         if (is_array($matching_files)) {
             foreach($matching_files as $state) {
