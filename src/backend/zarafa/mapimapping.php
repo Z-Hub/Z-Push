@@ -186,6 +186,7 @@ class MAPIMapping {
             "nativebodytype"        => PR_NATIVE_BODY_INFO,
             "lastverbexecuted"      => PR_LAST_VERB_EXECUTED,
             "lastverbexectime"      => PR_LAST_VERB_EXECUTION_TIME,
+            "categories"            => "PT_MV_STRING8:PS_PUBLIC_STRINGS:Keywords",
             );
     }
 
@@ -459,7 +460,7 @@ class MAPIMapping {
     public static function GetNoteMapping() {
         return array(
             "categories"            => "PT_MV_STRING8:PS_PUBLIC_STRINGS:Keywords",
-            "lastmodificationtime"  => PR_LAST_MODIFICATION_TIME,
+            "lastmodified"          => PR_LAST_MODIFICATION_TIME,
             "messageclass"          => PR_MESSAGE_CLASS,
             "subject"               => PR_SUBJECT,
         );

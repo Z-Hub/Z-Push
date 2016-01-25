@@ -52,9 +52,6 @@ class FolderSync extends RequestProcessor {
      * @return boolean
      */
     public function Handle ($commandCode) {
-        // Maps serverid -> clientid for items that are received from the PIM
-        $map = array();
-
         // Parse input
         if(!self::$decoder->getElementStartTag(SYNC_FOLDERHIERARCHY_FOLDERSYNC))
             return false;
@@ -141,10 +138,6 @@ class FolderSync extends RequestProcessor {
                                 $serverid = $changesMem->ImportFolderDeletion($folder);
                                 break;
                         }
-
-                        // TODO what does $map??
-                        if($serverid)
-                            $map[$serverid] = $folder->clientid;
                     }
                     else {
                         ZLog::Write(LOGLEVEL_WARN, sprintf("Request->HandleFolderSync(): ignoring incoming folderchange for folder '%s' as status indicates problem.", $folder->displayname));
@@ -219,7 +212,7 @@ class FolderSync extends RequestProcessor {
                         // say that we are done with partial synching
                         self::$deviceManager->SetFolderSyncComplete(true);
                         // reset the loop data to prevent any loop detection to kick in now
-                        self::$deviceManager->ClearLoopDetectionData(Request::GetAuthUser(), Request::GetDeviceId());
+                        self::$deviceManager->ClearLoopDetectionData(Request::GetAuthUser(), Request::GetDeviceID());
                         ZLog::Write(LOGLEVEL_INFO, "Request->HandleFolderSync(): Chunked exporting of folders completed successfully");
                     }
 
