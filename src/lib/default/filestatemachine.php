@@ -443,8 +443,7 @@ class FileStateMachine implements IStateMachine {
      * @throws StateInvalidException
      */
     private function getFullFilePath($devid, $type, $key = false, $counter = false, $doNotCreateDirs = false) {
-        $user = preg_replace('/[^a-z0-9]/', '-', Request::GetAuthUser());
-        $testkey = $devid . (($key !== false)? "-". $key : "") . (($type !== "")? "-". $type : "") . (($type == IStateMachine::BACKENDSTORAGE)? "-". $user : "");
+        $testkey = $devid . (($key !== false)? "-". $key : "") . (($type !== "")? "-". $type : "");
         if (preg_match('/^[a-zA-Z0-9-]+$/', $testkey, $matches) || ($type == "" && $key === false))
             $internkey = $testkey . (($counter && is_int($counter))?"-".$counter:"");
         else
