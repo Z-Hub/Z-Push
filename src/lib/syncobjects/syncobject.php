@@ -82,7 +82,7 @@ abstract class SyncObject extends Streamer {
     public function emptySupported($supportedFields) {
         // Some devices do not send supported tag. In such a case remove all not set properties.
         if (($supportedFields === false || !is_array($supportedFields) || (empty($supportedFields)))) {
-            if (defined('UNSET_UNDEFINED_PROPERTIES') && UNSET_UNDEFINED_PROPERTIES && ($this instanceOf SyncContact || $this instanceOf SyncAppointment)) {
+            if (defined('UNSET_UNDEFINED_PROPERTIES') && UNSET_UNDEFINED_PROPERTIES && ($this instanceof SyncContact || $this instanceof SyncAppointment)) {
                 ZLog::Write(LOGLEVEL_INFO, sprintf("%s->emptySupported(): no supported list available, emptying all not set parameters", get_class($this)));
                 $supportedFields = array_keys($this->mapping);
             }
