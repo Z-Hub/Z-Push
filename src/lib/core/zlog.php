@@ -145,8 +145,11 @@ class ZLog {
             else {
                 $time_used = number_format(microtime(true) - $_SERVER["REQUEST_TIME_FLOAT"], 4);
             }
+            $peakUsage = memory_get_peak_usage(false);
+            $truePeakUsage = memory_get_peak_usage(true);
 
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("Memory usage information: %s/%s - Execution time: %s - HTTP responde code: %s", memory_get_peak_usage(false), memory_get_peak_usage(true), $time_used, http_response_code()));
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("Memory usage information: %s/%s (%s B/%s B) - Execution time: %s - HTTP responde code: %s",
+                    Utils::FormatBytes($peakUsage), Utils::FormatBytes($truePeakUsage), $peakUsage, $truePeakUsage, $time_used, http_response_code()));
             ZLog::Write(LOGLEVEL_DEBUG, "-------- End");
         }
     }
