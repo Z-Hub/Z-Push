@@ -401,6 +401,7 @@ class MAPIMapping {
             "status"                => "PT_LONG:PSETID_Task:0x8101",
             "icon"                  => PR_ICON_INDEX,
             "owner"                 => "PT_STRING8:PSETID_Task:0x811F",
+            "private"               => "PT_BOOLEAN:PSETID_Common:0x8506",
         );
     }
 
