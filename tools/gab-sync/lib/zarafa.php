@@ -50,6 +50,9 @@ class Zarafa extends Syncher {
         $this->mapiprops = getPropIdsFromStrings($this->store, $this->mapiprops);
     }
 
+    /************************************************************************************
+     * Implementing abstract methods from Syncher
+     */
 
     /**
      * Creates the hidden folder.
@@ -83,6 +86,7 @@ class Zarafa extends Syncher {
      * Deletes the hidden folder.
      *
      * @param string $folderid
+     *
      * @access protected
      * @return boolean
      */
@@ -127,20 +131,13 @@ class Zarafa extends Syncher {
      * Removes all messages that have not the same chunkType (chunk configuration changed!)
      *
      * @param string $folderid
+     *
      * @access protected
      * @return boolean
      */
     protected function ClearFolderContents($folderid) {
-        $folderentryid = mapi_msgstore_entryidfromsourcekey($this->store, hex2bin($folderid));
-        if (!$folderentryid)
-            $this->Log("Zarafa->ClearFolderContents: Error, unable to open folder (no entry id)", true);
-        $folder = mapi_msgstore_openentry($this->store, $folderentryid);
-
-        if (!$folder)
-             $this->Log("Zarafa->ClearFolderContents: Error, unable to open parent folder (open entry)", true);
-
-
-         $this->Log("Zarafa->ClearFolderContents: emptying folder");
+        $this->Log("Zarafa->ClearFolderContents: emptying folder");
+        $folder = $this->getFolder($folderid);
 
         // empty folder!
         $flags = 0;
@@ -155,6 +152,7 @@ class Zarafa extends Syncher {
      * Removes all messages that do not match the current ChunkType.
      *
      * @param string $folderid
+     *
      * @access protected
      * @return boolean
      */

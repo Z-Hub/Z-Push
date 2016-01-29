@@ -267,6 +267,7 @@ abstract class Syncher {
      * Deletes the hidden folder.
      *
      * @param string $folderid
+     *
      * @access protected
      * @return boolean
      */
@@ -284,6 +285,7 @@ abstract class Syncher {
      * Removes all messages that have not the same chunkType (chunk configuration changed!)
      *
      * @param string $folderid
+     *
      * @access protected
      * @return boolean
      */
@@ -293,6 +295,7 @@ abstract class Syncher {
      * Removes all messages that do not match the current ChunkType.
      *
      * @param string $folderid
+     *
      * @access protected
      * @return boolean
      */
