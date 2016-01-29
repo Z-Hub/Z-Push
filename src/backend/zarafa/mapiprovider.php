@@ -1589,7 +1589,7 @@ class MAPIProvider {
             $recurrence->setRecurrence($recur);
         }
 
-        $props[$taskprops["private"]] = (isset($task->sensitivity) && $task->sensitivity == SENSITIVITY_PRIVATE) ? true : false;
+        $props[$taskprops["private"]] = (isset($task->sensitivity) && $task->sensitivity >= SENSITIVITY_PRIVATE) ? true : false;
 
         //open addresss book for user resolve to set the owner
         $addrbook = $this->getAddressbook();
