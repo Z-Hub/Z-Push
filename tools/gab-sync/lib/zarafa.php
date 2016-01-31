@@ -66,7 +66,7 @@ class Zarafa extends SyncWorker {
         // mapi_folder_createfolder() fails if a folder with this name already exists -> MAPI_E_COLLISION
         $newfolder = mapi_folder_createfolder($parentfolder, HIDDEN_FOLDERNAME, "");
         if (mapi_last_hresult())
-            $this->Terminate(sprintf("Zarafa->CreateHiddenPublicFolder(): Error, mapi_folder_createfolder() failed: 0x%08X", mapi_last_hresult()));
+            $this->Terminate(sprintf("Zarafa->CreateHiddenFolder(): Error, mapi_folder_createfolder() failed: 0x%08X", mapi_last_hresult()));
 
         // TODO: set PR_HIDDEN
         mapi_setprops($newfolder, array(PR_CONTAINER_CLASS => "IPF.Appointment"));
@@ -78,7 +78,7 @@ class Zarafa extends SyncWorker {
             return $sourcekey;
         }
         else
-            $this->Terminate(sprintf("Zarafa->CreateHiddenPublicFolder(): Error, folder created but PR_SOURCE_KEY not available: 0x%08X", mapi_last_hresult()));
+            $this->Terminate(sprintf("Zarafa->CreateHiddenFolder(): Error, folder created but PR_SOURCE_KEY not available: 0x%08X", mapi_last_hresult()));
         return false;
     }
 
@@ -95,11 +95,11 @@ class Zarafa extends SyncWorker {
 
         $folderentryid = mapi_msgstore_entryidfromsourcekey($this->store, hex2bin($folderid));
         if (mapi_last_hresult())
-            $this->Terminate(sprintf("Zarafa->DeletesHiddenPublicFolder(): Error, could not get PR_ENTRYID for hidden folder: 0x%08X", mapi_last_hresult()));
+            $this->Terminate(sprintf("Zarafa->DeleteHiddenFolder(): Error, could not get PR_ENTRYID for hidden folder: 0x%08X", mapi_last_hresult()));
 
         mapi_folder_deletefolder($parentfolder, $folderentryid);
         if (mapi_last_hresult())
-            $this->Terminate(sprintf("Zarafa->DeletesHiddenPublicFolder(): Error, mapi_folder_deletefolder() failed: 0x%08X", mapi_last_hresult()));
+            $this->Terminate(sprintf("Zarafa->DeleteHiddenFolder(): Error, mapi_folder_deletefolder() failed: 0x%08X", mapi_last_hresult()));
 
         return true;
     }
@@ -206,7 +206,7 @@ class Zarafa extends SyncWorker {
         $addrbook = mapi_openaddressbook($this->session);
         $result = mapi_last_hresult();
         if ($result)
-            $this->Terminate(sprintf("Zarafa->GetFullGAB: Error opening addressbook 0x%08X", $result));
+            $this->Terminate(sprintf("Zarafa->GetGAB: Error opening addressbook 0x%08X", $result));
 
         if ($addrbook)
             $ab_entryid = mapi_ab_getdefaultdir($addrbook);
@@ -216,7 +216,7 @@ class Zarafa extends SyncWorker {
             $table = mapi_folder_getcontentstable($ab_dir);
 
         if (!$table)
-            $this->Terminate(sprintf("Zarafa->GetFullGAB: error, could not open addressbook: 0x%08X", $result));
+            $this->Terminate(sprintf("Zarafa->GetGAB: error, could not open addressbook: 0x%08X", $result));
 
         // restrict the table if we should only return one
         if ($uniqueId) {
@@ -402,11 +402,6 @@ class Zarafa extends SyncWorker {
      * @return boolean
      */
     private function openMessageStore($user) {
-        // During PING requests the operations store has to be switched constantly
-        // the cache prevents the same store opened several times
-        if (isset($this->storeCache[$user]))
-            return  $this->storeCache[$user];
-
         $entryid = false;
         $return_public = false;
 
@@ -441,19 +436,15 @@ class Zarafa extends SyncWorker {
             $store = @mapi_openmsgstore($this->session, $entryid);
 
             if (!$store) {
-                $this->Log(sprintf("Zarafa->openMessageStore('%s'): Could not open store", $user));
+                $this->Terminate(sprintf("Zarafa->openMessageStore(): Could not open store for '%s'. Aborting.", $user));
                 return false;
             }
 
-            // add this store to the cache
-            if (!isset($this->storeCache[$user]))
-                $this->storeCache[$user] = $store;
-
-            $this->Log(sprintf("ZarafaBackend->openMessageStore('%s'): Found '%s' store: '%s'", $user, (($return_public)?'PUBLIC':'DEFAULT'),$store));
+            $this->Log(sprintf("Zarafa->openMessageStore(): Found '%s' store of user '%s': '%s'", (($return_public)?'PUBLIC':'DEFAULT'), $user, $store));
             return $store;
         }
         else {
-            $this->Log(sprintf("ZarafaBackend->openMessageStore('%s'): No store found for this user", $user));
+            $this->Terminate(sprintf("Zarafa->openMessageStore(): No store found for user '%s'. Aborting.", $user));
             return false;
         }
     }
