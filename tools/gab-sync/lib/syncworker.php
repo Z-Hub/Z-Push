@@ -1,6 +1,6 @@
 <?php
 /***********************************************
-* File      :   syncher.php
+* File      :   synchworker.php
 * Project   :   Z-Push - tools - OL GAB sync
 * Descr     :   Main synchronization class.
 *
@@ -11,7 +11,7 @@
 
 include_once("gabentry.php");
 
-abstract class Syncher {
+abstract class SyncWorker {
     protected $chunkType;
     private $hashFieldId;
 

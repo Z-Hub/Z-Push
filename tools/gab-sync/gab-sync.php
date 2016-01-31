@@ -29,7 +29,7 @@ include_once(SYNC_CONFIG);
             echo GabSyncCLI::UsageInstructions();
             exit(1);
         }
-        else if (!GabSyncCLI::SetupSyncher()) {
+        else if (!GabSyncCLI::SetupSyncWorker()) {
             fwrite(STDERR, GabSyncCLI::GetErrorMessage() . PHP_EOL);
             exit(1);
         }
@@ -52,7 +52,7 @@ class GabSyncCLI {
     const COMMAND_CLEARALL = 4;
     const COMMAND_DELETEALL = 5;
 
-    static private $syncher;
+    static private $syncWorker;
     static private $command;
     static private $uniqueId = false;
     static private $errormessage;
@@ -79,25 +79,25 @@ class GabSyncCLI {
     }
 
     /**
-     * Setup of the Syncher implementation.
+     * Setup of the SyncWorker implementation.
      */
-    static public function SetupSyncher() {
-        $file = "lib/" .strtolower(SYNCHER).".php";
+    static public function SetupSyncWorker() {
+        $file = "lib/" .strtolower(SYNCWORKER).".php";
 
         if (!file_exists($file)) {
-            self::$errormessage = "Syncher file '".$file."' can not be found. Check your configuration.";
+            self::$errormessage = "SyncWorker file '".$file."' can not be found. Check your configuration.";
             return false;
         }
         else {
             include_once($file);
         }
 
-        if (!class_exists(SYNCHER)) {
-            self::$errormessage = "Syncher file loaded, but class '".SYNCHER."' can not be found. Check your implementation.";
+        if (!class_exists(SYNCWORKER)) {
+            self::$errormessage = "SyncWorker file loaded, but class '".SYNCWORKER."' can not be found. Check your implementation.";
         }
         else {
-            $s = @constant('SYNCHER');
-            self::$syncher = new $s();
+            $s = @constant('SYNCWORKER');
+            self::$syncWorker = new $s();
             return true;
         }
         return false;
@@ -210,22 +210,22 @@ class GabSyncCLI {
         echo PHP_EOL;
         switch(self::$command) {
             case self::COMMAND_SIMULATE:
-                self::$syncher->Simulate();
+                self::$syncWorker->Simulate();
                 break;
 
             case self::COMMAND_SYNC:
-                self::$syncher->Sync();
+                self::$syncWorker->Sync();
                 break;
 
             case self::COMMAND_SYNC_ONE:
-                self::$syncher->SyncOne(self::$uniqueId);
+                self::$syncWorker->SyncOne(self::$uniqueId);
                 break;
 
             case self::COMMAND_CLEARALL:
                 echo "Are you sure you want to remove all chunks and data from the public folder. ALL GAB data will be removed from ALL Outlook instances [y/N]: ";
                 $confirm  =  strtolower(trim(fgets(STDIN)));
                 if ( $confirm === 'y' || $confirm === 'yes')
-                    self::$syncher->ClearAll();
+                    self::$syncWorker->ClearAll();
                 else
                     echo "Aborted!".PHP_EOL;
                 break;
@@ -234,7 +234,7 @@ class GabSyncCLI {
                 echo "Are you sure you want to remove all chunks and data from the public folder and delete it? ALL GAB data will be removed from ALL Outlook instances [y/N]: ";
                 $confirm  =  strtolower(trim(fgets(STDIN)));
                 if ( $confirm === 'y' || $confirm === 'yes')
-                    self::$syncher->DeleteAll();
+                    self::$syncWorker->DeleteAll();
                 else
                     echo "Aborted!".PHP_EOL;
                 break;

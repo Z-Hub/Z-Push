@@ -2,14 +2,14 @@
 /***********************************************
 * File      :   zarafa.php
 * Project   :   Z-Push - tools - OL GAB sync
-* Descr     :   Zarafa implementation of Syncher.
+* Descr     :   Zarafa implementation of SyncWorker.
 *
 * Created   :   28.01.2016
 *
 * Copyright 2016 Zarafa Deutschland GmbH
 * ************************************************/
 
-include_once("syncher.php");
+include_once("syncworker.php");
 
 include_once('mapi/mapi.util.php');
 include_once('mapi/mapidefs.php');
@@ -19,8 +19,8 @@ include_once('mapi/mapiguid.php');
 
 define('PR_EMS_AB_THUMBNAIL_PHOTO', mapi_prop_tag(PT_BINARY, 0x8C9E));
 
-class Zarafa extends Syncher {
-    const NAME = "Z-Push Zarafa GAB Syncer";
+class Zarafa extends SyncWorker {
+    const NAME = "Z-Push Zarafa GAB Sync";
     const VERSION = "1.0";
     private $session;
     private $store;
@@ -51,7 +51,7 @@ class Zarafa extends Syncher {
     }
 
     /************************************************************************************
-     * Implementing abstract methods from Syncher
+     * Implementing abstract methods from SyncWorker
      */
 
     /**

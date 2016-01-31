@@ -14,8 +14,8 @@
 define('HASHFIELD', 'account');
 define('AMOUT_OF_CHUNKS', 10);
 
-// Syncer class to be used
-define('SYNCHER', 'Zarafa');
+// SyncWorker implementation to be used
+define('SYNCWORKER', 'Zarafa');
 
 // unique id to find a contact from the GAB (value to be supplied by -u on the command line)
 // Zarafa supports: 'account' and 'smtpAddress' (email)
