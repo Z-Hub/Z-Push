@@ -24,20 +24,20 @@ include_once(SYNC_CONFIG);
         if (! GabSyncCLI::SureWhatToDo()) {
             // show error message if available
             if (GabSyncCLI::GetErrorMessage())
-                fwrite(STDERR, GabSyncCLI::GetErrorMessage() . "\n\n");
+                fwrite(STDERR, GabSyncCLI::GetErrorMessage() . PHP_EOL.PHP_EOL);
 
             echo GabSyncCLI::UsageInstructions();
             exit(1);
         }
         else if (!GabSyncCLI::SetupSyncher()) {
-            fwrite(STDERR, GabSyncCLI::GetErrorMessage() . "\n");
+            fwrite(STDERR, GabSyncCLI::GetErrorMessage() . PHP_EOL);
             exit(1);
         }
 
         GabSyncCLI::RunCommand();
     }
     catch (Exception $ex) {
-        die(get_class($ex) . ": ". $ex->getMessage() . "\n");
+        die(get_class($ex) . ": ". $ex->getMessage() . PHP_EOL);
     }
 
 
@@ -64,15 +64,18 @@ class GabSyncCLI {
      * @access public
      */
     static public function UsageInstructions() {
-        return  "Usage:\n\tgab-sync.php -a ACTION [options]\n\n" .
-                "Parameters:\n\t-a simulate | sync | sync-one | clear-all | delete-all\n\t[-u] UNIQUE-ID\n\n" .
-                "Actions:\n" .
-                "\tsimulate\t\t Simulates the GAB synchronization and prints out statistics and configuration suggestions.\n" .
-                "\tsync\t\t\t Synchronizes all data from the GAB to the global folder, clearing all existing data if configuration changed!\n" .
-                "\tsync-one -u UNIQUE-ID\t Tries do find the entry with UNIQUE-ID and updates the chunk this entry belongs to.\n" .
-                "\tclear-all\t\t Removes all data from the global folder.\n" .
-                "\tdelete-all\t\t Like clear-all but also deletes the global folder.\n" .
-                "\n";
+        return  "Usage:" .PHP_EOL.
+                "\tgab-sync.php -a ACTION [options]" .PHP_EOL.PHP_EOL.
+                "Parameters:" .PHP_EOL.
+                 "\t-a simulate | sync | sync-one | clear-all | delete-all" .PHP_EOL.
+                 "\t[-u] UNIQUE-ID" .PHP_EOL.PHP_EOL.
+                "Actions:" .PHP_EOL.
+                "\tsimulate\t\t Simulates the GAB synchronization and prints out statistics and configuration suggestions." .PHP_EOL.
+                "\tsync\t\t\t Synchronizes all data from the GAB to the global folder, clearing all existing data if configuration changed!" .PHP_EOL.
+                "\tsync-one -u UNIQUE-ID\t Tries do find the entry with UNIQUE-ID and updates the chunk this entry belongs to." .PHP_EOL.
+                "\tclear-all\t\t Removes all data from the global folder." .PHP_EOL.
+                "\tdelete-all\t\t Like clear-all but also deletes the global folder." .PHP_EOL.
+                PHP_EOL;
     }
 
     /**
@@ -137,7 +140,7 @@ class GabSyncCLI {
         if (isset($options['a']) && !empty($options['a']))
             $action = strtolower(trim($options['a']));
         elseif (isset($options['action']) && !empty($options['action']))
-        $action = strtolower(trim($options['action']));
+            $action = strtolower(trim($options['action']));
 
         // get a command for the requested action
         switch ($action) {
@@ -204,7 +207,7 @@ class GabSyncCLI {
      * @access public
      */
     static public function RunCommand() {
-        echo "\n";
+        echo PHP_EOL;
         switch(self::$command) {
             case self::COMMAND_SIMULATE:
                 self::$syncher->Simulate();
@@ -224,7 +227,7 @@ class GabSyncCLI {
                 if ( $confirm === 'y' || $confirm === 'yes')
                     self::$syncher->ClearAll();
                 else
-                    echo "Aborted!\n";
+                    echo "Aborted!".PHP_EOL;
                 break;
 
             case self::COMMAND_DELETEALL:
@@ -233,10 +236,10 @@ class GabSyncCLI {
                 if ( $confirm === 'y' || $confirm === 'yes')
                     self::$syncher->DeleteAll();
                 else
-                    echo "Aborted!\n";
+                    echo "Aborted!".PHP_EOL;
                 break;
         }
-        echo "\n";
+        echo PHP_EOL;
     }
 
 }

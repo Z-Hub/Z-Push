@@ -27,7 +27,7 @@ abstract class Syncher {
      * Simulates the synchronization, showing statistics but without touching any data.
      */
     public function Simulate() {
-        $this->Log("Simulating the synchronization. NO DATA IS GOING TO BE WRITTEN.\n");
+        $this->Log("Simulating the synchronization. NO DATA IS GOING TO BE WRITTEN.".PHP_EOL);
         $this->Sync(false);
     }
 
@@ -159,7 +159,7 @@ abstract class Syncher {
     public function ClearAll() {
         $folderid = $this->GetHiddenFolderId();
         if (!$folderid) {
-            $this->Log("Could not locate folder. Aborting.", true);
+            $this->Terminate("Could not locate folder. Aborting.");
         }
 
         $status = $this->ClearFolderContents($folderid);
@@ -178,7 +178,7 @@ abstract class Syncher {
     public function DeleteAll() {
         $folderid = $this->GetHiddenFolderId();
         if (!$folderid) {
-            $this->Log("Could not locate folder. Aborting.", true);
+            $this->Terminate("Could not locate folder. Aborting.");
         }
         $emptystatus = $this->ClearFolderContents($folderid);
         if ($emptystatus) {
@@ -193,19 +193,26 @@ abstract class Syncher {
      * Logs a message to the command line.
      *
      * @param string  $msg          the message
-     * @param boolean $error        if set to true, message will be printed to STDERR and the script terminates.
      *
      * @access protected
      * @return void
      */
     protected function Log($msg, $error = false) {
-        if ($error) {
-            fwrite(STDERR, $msg);
-            echo "\n\n";
-            exit(1);
-        }
-        else
-            echo $msg . "\n";
+        echo $msg . PHP_EOL;
+    }
+
+    /**
+     * Writes a message to STDERR and terminates the script.
+     *
+     * @param string  $msg          the message
+     *
+     * @access protected
+     * @return void
+     */
+    protected function Terminate($msg) {
+        fwrite(STDERR, $msg);
+        echo PHP_EOL.PHP_EOL;
+        exit(1);
     }
 
     /**

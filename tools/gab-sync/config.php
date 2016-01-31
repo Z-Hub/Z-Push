@@ -23,8 +23,8 @@ define('UNIQUEID', 'account');
 
 // server connection settings
 define('SERVER', 'file:///var/run/zarafa');
-define('USERNAME', 'ahall');
-define('PASSWORD', 'ahall');
+define('USERNAME', '');
+define('PASSWORD', '');
 define('CERTIFICATE', null);
 define('CERTIFICATE_PASSWORD', null);
 

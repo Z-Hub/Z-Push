@@ -35,7 +35,7 @@ class Zarafa extends Syncher {
         parent::__construct();
         $this->session = mapi_logon_zarafa(USERNAME, PASSWORD, SERVER, CERTIFICATE, CERTIFICATE_PASSWORD, 0, self::VERSION, self::NAME. " ". self::VERSION);
         if (mapi_last_hresult()) {
-            $this->Log(sprintf("Zarafa: login failed with error code: 0x%08X", mapi_last_hresult()), true);
+            $this->Terminate(sprintf("Zarafa: login failed with error code: 0x%08X", mapi_last_hresult()));
         }
         $this->mainUser = USERNAME;
         $this->store = $this->openMessageStore(HIDDEN_FOLDERSTORE);
@@ -66,7 +66,7 @@ class Zarafa extends Syncher {
         // mapi_folder_createfolder() fails if a folder with this name already exists -> MAPI_E_COLLISION
         $newfolder = mapi_folder_createfolder($parentfolder, HIDDEN_FOLDERNAME, "");
         if (mapi_last_hresult())
-            $this->Log(sprintf("Zarafa->CreateHiddenPublicFolder(): Error, mapi_folder_createfolder() failed: 0x%08X", mapi_last_hresult()), true);
+            $this->Terminate(sprintf("Zarafa->CreateHiddenPublicFolder(): Error, mapi_folder_createfolder() failed: 0x%08X", mapi_last_hresult()));
 
         // TODO: set PR_HIDDEN
         mapi_setprops($newfolder, array(PR_CONTAINER_CLASS => "IPF.Appointment"));
@@ -78,7 +78,7 @@ class Zarafa extends Syncher {
             return $sourcekey;
         }
         else
-            $this->Log(sprintf("Zarafa->CreateHiddenPublicFolder(): Error, folder created but PR_SOURCE_KEY not available: 0x%08X", mapi_last_hresult()), true);
+            $this->Terminate(sprintf("Zarafa->CreateHiddenPublicFolder(): Error, folder created but PR_SOURCE_KEY not available: 0x%08X", mapi_last_hresult()));
         return false;
     }
 
@@ -95,11 +95,11 @@ class Zarafa extends Syncher {
 
         $folderentryid = mapi_msgstore_entryidfromsourcekey($this->store, hex2bin($folderid));
         if (mapi_last_hresult())
-            $this->Log(sprintf("Zarafa->DeletesHiddenPublicFolder(): Error, could not get PR_ENTRYID for hidden folder: 0x%08X", mapi_last_hresult()), true);
+            $this->Terminate(sprintf("Zarafa->DeletesHiddenPublicFolder(): Error, could not get PR_ENTRYID for hidden folder: 0x%08X", mapi_last_hresult()));
 
         mapi_folder_deletefolder($parentfolder, $folderentryid);
         if (mapi_last_hresult())
-            $this->Log(sprintf("Zarafa->DeletesHiddenPublicFolder(): Error, mapi_folder_deletefolder() failed: 0x%08X", mapi_last_hresult()), true);
+            $this->Terminate(sprintf("Zarafa->DeletesHiddenPublicFolder(): Error, mapi_folder_deletefolder() failed: 0x%08X", mapi_last_hresult()));
 
         return true;
     }
@@ -143,7 +143,7 @@ class Zarafa extends Syncher {
         $flags = 0;
         mapi_folder_emptyfolder($folder, $flags);
         if (mapi_last_hresult())
-            $this->Log("Zarafa->ClearFolderContents: Error, mapi_folder_emptyfolder() failed: 0x%08X", true);
+            $this->Terminate("Zarafa->ClearFolderContents: Error, mapi_folder_emptyfolder() failed: 0x%08X");
 
         return true;
     }
@@ -161,7 +161,7 @@ class Zarafa extends Syncher {
         $table = mapi_folder_getcontentstable($folder);
 
         if (!$table)
-            $this->Log("Zarafa->ClearAllNotCurrentChunkType: Error, unable to read contents table.", true);
+            $this->Terminate("Zarafa->ClearAllNotCurrentChunkType: Error, unable to read contents table.");
 
         $mapiprops = array("location" =>"PT_STRING8:PSETID_Appointment:0x8208");
         $mapiprops = getPropIdsFromStrings($this->store, $this->mapiprops);
@@ -206,7 +206,7 @@ class Zarafa extends Syncher {
         $addrbook = mapi_openaddressbook($this->session);
         $result = mapi_last_hresult();
         if ($result)
-            $this->Log(sprintf("Zarafa->GetFullGAB: Error opening addressbook 0x%08X", $result), true);
+            $this->Terminate(sprintf("Zarafa->GetFullGAB: Error opening addressbook 0x%08X", $result));
 
         if ($addrbook)
             $ab_entryid = mapi_ab_getdefaultdir($addrbook);
@@ -216,7 +216,7 @@ class Zarafa extends Syncher {
             $table = mapi_folder_getcontentstable($ab_dir);
 
         if (!$table)
-            $this->Log(sprintf("Zarafa->GetFullGAB: error, could not open addressbook: 0x%08X", $result), true);
+            $this->Terminate(sprintf("Zarafa->GetFullGAB: error, could not open addressbook: 0x%08X", $result));
 
         // restrict the table if we should only return one
         if ($uniqueId) {
@@ -225,10 +225,10 @@ class Zarafa extends Syncher {
             mapi_table_restrict($table, $restriction);
             $querycnt = mapi_table_getrowcount($table);
             if ($querycnt == 0) {
-                $this->Log(sprintf("Zarafa->GetGAB(): Single GAB entry '%s' requested but could not be found.", $uniqueId), true);
+                $this->Terminate(sprintf("Zarafa->GetGAB(): Single GAB entry '%s' requested but could not be found.", $uniqueId));
             }
             elseif ($querycnt > 1) {
-                $this->Log(sprintf("Zarafa->GetGAB(): Single GAB entry '%s' requested but %d entries found. Aborting.", $uniqueId, $querycnt), true);
+                $this->Terminate(sprintf("Zarafa->GetGAB(): Single GAB entry '%s' requested but %d entries found. Aborting.", $uniqueId, $querycnt));
             }
         }
 
@@ -483,11 +483,11 @@ class Zarafa extends Syncher {
             }
 
             if (!$parentfentryid)
-                $this->Log("Zarafa->getRootFolder(): Error, unable to open parent folder (no entry id)", true);
+                $this->Terminate("Zarafa->getRootFolder(): Error, unable to open parent folder (no entry id)");
 
             $parentfolder = mapi_msgstore_openentry($this->store, $parentfentryid);
             if (!$parentfolder)
-                $this->Log("Zarafa->CreateHiddenPublicFolder(): Error, unable to open parent folder (open entry)", true);
+                $this->Terminate("Zarafa->CreateHiddenPublicFolder(): Error, unable to open parent folder (open entry)");
 
             $this->folderCache[$rootId] = $parentfolder;
         }
@@ -505,7 +505,7 @@ class Zarafa extends Syncher {
         if (!isset($this->folderCache[$folderid])) {
             $folderentryid = mapi_msgstore_entryidfromsourcekey($this->store, hex2bin($folderid));
             if (!$folderentryid)
-                $this->Log("Zarafa->getFolder: Error, unable to open folder (no entry id).", true);
+                $this->Terminate("Zarafa->getFolder: Error, unable to open folder (no entry id).");
 
             $this->folderCache[$folderid] = mapi_msgstore_openentry($this->store, $folderentryid);
         }
@@ -532,7 +532,7 @@ class Zarafa extends Syncher {
                 break;
         }
         if (!$prop) {
-            $this->Log(sprintf("Zarafa->getPropertyForGABvalue: Could not get find a property for '%s'. Unsupported field.", $value), true);
+            $this->Terminate(sprintf("Zarafa->getPropertyForGABvalue: Could not get find a property for '%s'. Unsupported field.", $value));
         }
         return $prop;
     }
@@ -550,11 +550,11 @@ class Zarafa extends Syncher {
         $stream = mapi_openproperty($message, $prop, IID_IStream, 0, 0);
         $ret = mapi_last_hresult();
         if ($ret == MAPI_E_NOT_FOUND) {
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("MAPIUtils->readPropStream: property 0x%s not found. It is either empty or not set. It will be ignored.", str_pad(dechex($prop), 8, 0, STR_PAD_LEFT)));
+            $this->Log(sprintf("Zarafa>readPropStream: property 0x%s not found. It is either empty or not set. It will be ignored.", str_pad(dechex($prop), 8, 0, STR_PAD_LEFT)));
             return "";
         }
         elseif ($ret) {
-            ZLog::Write(LOGLEVEL_ERROR, "MAPIUtils->readPropStream error opening stream: 0X%X", $ret);
+            $this->Log("Zarafa->readPropStream error opening stream: 0x%08X", $ret);
             return "";
         }
         $data = "";
