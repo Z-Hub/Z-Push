@@ -518,7 +518,7 @@ class Zarafa extends SyncWorker {
     }
 
     /**
-     * Reads data of large properties from a stream
+     * Reads data of large properties from a stream.
      *
      * @param MAPIMessage $message
      * @param long $prop
