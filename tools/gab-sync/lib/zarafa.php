@@ -77,9 +77,9 @@ class Zarafa extends SyncWorker {
             $this->Log(sprintf("Created hidden public folder with id: '%s'", $sourcekey));
             return $sourcekey;
         }
-        else
+        else {
             $this->Terminate(sprintf("Zarafa->CreateHiddenFolder(): Error, folder created but PR_SOURCE_KEY not available: 0x%08X", mapi_last_hresult()));
-        return false;
+        }
     }
 
     /**
