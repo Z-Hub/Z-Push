@@ -58,7 +58,7 @@ class Zarafa extends SyncWorker {
      * Creates the hidden folder.
      *
      * @access protected
-     * @return boolean
+     * @return string
      */
     protected function CreateHiddenFolder() {
         $parentfolder = $this->getRootFolder();
@@ -108,7 +108,7 @@ class Zarafa extends SyncWorker {
      * Returns the internal identfier (folder-id) of the hidden folder.
      *
      * @access protected
-     * @return string
+     * @return string|boolean on error
     */
     protected function GetHiddenFolderId() {
         $parentfolder = $this->getRootFolder();
@@ -128,7 +128,7 @@ class Zarafa extends SyncWorker {
     }
 
     /**
-     * Removes all messages that have not the same chunkType (chunk configuration changed!)
+     * Removes all messages that have not the same chunkType (chunk configuration changed!).
      *
      * @param string $folderid
      *
@@ -159,12 +159,8 @@ class Zarafa extends SyncWorker {
     protected function ClearAllNotCurrentChunkType($folderid) {
         $folder = $this->getFolder($folderid);
         $table = mapi_folder_getcontentstable($folder);
-
         if (!$table)
-            $this->Terminate("Zarafa->ClearAllNotCurrentChunkType: Error, unable to read contents table.");
-
-        $mapiprops = array("location" =>"PT_STRING8:PSETID_Appointment:0x8208");
-        $mapiprops = getPropIdsFromStrings($this->store, $this->mapiprops);
+            $this->Terminate(sprintf("Zarafa->ClearAllNotCurrentChunkType: Error, unable to read contents table: 0x%08X", mapi_last_hresult()));
 
         $restriction = array(RES_PROPERTY, array(RELOP => RELOP_NE, ULPROPTAG => $this->mapiprops['chunktype'], VALUE => $this->chunkType));
         mapi_table_restrict($table, $restriction);
@@ -176,17 +172,21 @@ class Zarafa extends SyncWorker {
             $this->Log(sprintf("Zarafa->ClearAllNotCurrentChunkType: found %d invalid items, deleting", $querycnt));
             $deleted = 0;
             while($deleted <= $querycnt) {
-                $entries = mapi_table_queryallrows($table, array(PR_ENTRYID, $this->mapiprops['chunktype']));
+                $entries = mapi_table_queryrows($table, array(PR_ENTRYID, $this->mapiprops['chunktype']), $deleted, 20);
                 $entry_ids = array_reduce($entries, function ($result, $item) {
                                                         $result[] = $item[PR_ENTRYID];
                                                         return $result;
                                                     }, array());
-                mapi_folder_deletemessages($folder, array_values($entry_ids));
-                $deleted += 20;
+                $toDelete = count($entry_ids);
+                if ($toDelete > 0) {
+                    mapi_folder_deletemessages($folder, array_values($entry_ids));
+                }
+                $deleted += $toDelete;
             }
             $this->Log("Zarafa->ClearAllNotCurrentChunkType: done");
         }
         $this->Log("");
+        return true;
     }
 
     /**
@@ -204,19 +204,17 @@ class Zarafa extends SyncWorker {
         $data = array();
 
         $addrbook = mapi_openaddressbook($this->session);
-        $result = mapi_last_hresult();
-        if ($result)
-            $this->Terminate(sprintf("Zarafa->GetGAB: Error opening addressbook 0x%08X", $result));
-
-        if ($addrbook)
-            $ab_entryid = mapi_ab_getdefaultdir($addrbook);
-        if ($ab_entryid)
-            $ab_dir = mapi_ab_openentry($addrbook, $ab_entryid);
-        if ($ab_dir)
-            $table = mapi_folder_getcontentstable($ab_dir);
-
-        if (!$table)
-            $this->Terminate(sprintf("Zarafa->GetGAB: error, could not open addressbook: 0x%08X", $result));
+        if (mapi_last_hresult())
+            $this->Terminate(sprintf("Zarafa->GetGAB: Error opening addressbook 0x%08X", mapi_last_hresult()));
+        $ab_entryid = mapi_ab_getdefaultdir($addrbook);
+        if (mapi_last_hresult())
+            $this->Terminate(sprintf("Zarafa->GetGAB: Error, could not get default address directory: 0x%08X", mapi_last_hresult()));
+        $ab_dir = mapi_ab_openentry($addrbook, $ab_entryid);
+        if (mapi_last_hresult())
+            $this->Terminate(sprintf("Zarafa->GetGAB: Error, could not open default address directory: 0x%08X", mapi_last_hresult()));
+        $table = mapi_folder_getcontentstable($ab_dir);
+        if (mapi_last_hresult())
+            $this->Terminate(sprintf("Zarafa->GetGAB: error, could not open addressbook content table: 0x%08X", mapi_last_hresult()));
 
         // restrict the table if we should only return one
         if ($uniqueId) {
@@ -381,7 +379,8 @@ class Zarafa extends SyncWorker {
         $folder = $this->getFolder($folderid);
         $table = mapi_folder_getcontentstable($folder);
         if (!$table)
-            $this->Log("Zarafa->findChunk: Error, unable to read contents table to select and set chunk: ". $chunkId);
+            $this->Log(sprintf("Zarafa->findChunk: Error, unable to read contents table to find chunk '%d': 0x%08X", $chunkId, mapi_last_hresult()));
+
         $restriction = array(RES_PROPERTY, array(RELOP => RELOP_EQ, ULPROPTAG => PR_SUBJECT, VALUE => $chunkName));
         mapi_table_restrict($table, $restriction);
 
@@ -432,25 +431,21 @@ class Zarafa extends SyncWorker {
         else
             $entryid = @mapi_msgstore_createentryid($this->defaultstore, $user);
 
-        if($entryid) {
-            $store = @mapi_openmsgstore($this->session, $entryid);
-
-            if (!$store) {
-                $this->Terminate(sprintf("Zarafa->openMessageStore(): Could not open store for '%s'. Aborting.", $user));
-                return false;
-            }
-
-            $this->Log(sprintf("Zarafa->openMessageStore(): Found '%s' store of user '%s': '%s'", (($return_public)?'PUBLIC':'DEFAULT'), $user, $store));
-            return $store;
+        if(!$entryid) {
+            $this->Terminate(sprintf("Zarafa->openMessageStore(): No store found for user '%s': 0x%08X - Aborting.", $user, mapi_last_hresult));
         }
-        else {
-            $this->Terminate(sprintf("Zarafa->openMessageStore(): No store found for user '%s'. Aborting.", $user));
-            return false;
+
+        $store = @mapi_openmsgstore($this->session, $entryid);
+        if (!$store) {
+            $this->Terminate(sprintf("Zarafa->openMessageStore(): Could not open store for '%s': 0x%08X - Aborting.", $user, mapi_last_hresult));
         }
+
+        $this->Log(sprintf("Zarafa->openMessageStore(): Found '%s' store of user '%s': '%s'", (($return_public)?'PUBLIC':'DEFAULT'), $user, $store));
+        return $store;
     }
 
     /**
-     * Opens the root folder, either in a users' store or of the public folder.
+     * Opens the root folder, either in a user's store or of the public folder.
      *
      * @access private
      * @return ressource
@@ -474,11 +469,11 @@ class Zarafa extends SyncWorker {
             }
 
             if (!$parentfentryid)
-                $this->Terminate("Zarafa->getRootFolder(): Error, unable to open parent folder (no entry id)");
+                $this->Terminate(sprintf("Zarafa->getRootFolder(): Error, unable to open parent folder (no entry id): 0x%08X", mapi_last_hresult()));
 
             $parentfolder = mapi_msgstore_openentry($this->store, $parentfentryid);
             if (!$parentfolder)
-                $this->Terminate("Zarafa->CreateHiddenPublicFolder(): Error, unable to open parent folder (open entry)");
+                $this->Terminate(sprintf("Zarafa->CreateHiddenPublicFolder(): Error, unable to open parent folder (open entry): 0x%08X", mapi_last_hresult()));
 
             $this->folderCache[$rootId] = $parentfolder;
         }
@@ -496,7 +491,7 @@ class Zarafa extends SyncWorker {
         if (!isset($this->folderCache[$folderid])) {
             $folderentryid = mapi_msgstore_entryidfromsourcekey($this->store, hex2bin($folderid));
             if (!$folderentryid)
-                $this->Terminate("Zarafa->getFolder: Error, unable to open folder (no entry id).");
+                $this->Terminate(sprintf("Zarafa->getFolder: Error, unable to open folder (no entry id): 0x%08X", mapi_last_hresult()));
 
             $this->folderCache[$folderid] = mapi_msgstore_openentry($this->store, $folderentryid);
         }
@@ -509,7 +504,7 @@ class Zarafa extends SyncWorker {
      *
      * @param string $value
      *
-     * @access public
+     * @access private
      * @return mapi property
      */
     private function getPropertyForGABvalue($value) {
@@ -534,10 +529,10 @@ class Zarafa extends SyncWorker {
      * @param MAPIMessage $message
      * @param long $prop
      *
-     * @access public
+     * @access private
      * @return string
      */
-    public function readPropStream($message, $prop) {
+    private function readPropStream($message, $prop) {
         $stream = mapi_openproperty($message, $prop, IID_IStream, 0, 0);
         $ret = mapi_last_hresult();
         if ($ret == MAPI_E_NOT_FOUND) {
