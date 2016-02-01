@@ -1171,7 +1171,7 @@ class MAPIProvider {
         $props[$appointmentprops["responsestatus"]] = (isset($appointment->responsestatus)) ? $appointment->responsestatus : olResponseNone;
 
         //sensitivity is not enough to mark an appointment as private, so we use another mapi tag
-        $private = (isset($appointment->sensitivity) && $appointment->sensitivity == 0) ? false : true;
+        $private = (isset($appointment->sensitivity) && $appointment->sensitivity >= SENSITIVITY_PRIVATE) ? true : false;
 
         // Set commonstart/commonend to start/end and remindertime to start, duration, private and cleanGlobalObjectId
         $props[$appointmentprops["commonstart"]] = $appointment->starttime;
