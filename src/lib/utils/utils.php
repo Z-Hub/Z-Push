@@ -950,6 +950,24 @@ class Utils {
 
         return $res;
     }
+
+    /**
+     * Format bytes to a more human readable value.
+     * @param int $bytes
+     * @param int $precision
+     *
+     * @access public
+     * @return void|string
+     */
+    public static function FormatBytes($bytes, $precision = 2) {
+        if ($bytes <= 0) return '0 B';
+
+        $units = array('B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB');
+        $base = log ($bytes, 1024);
+        $fBase = floor($base);
+        $pow = pow(1024, $base - $fBase);
+        return sprintf ("%.{$precision}f %s", $pow, $units[$fBase]);
+    }
 }
 
 
