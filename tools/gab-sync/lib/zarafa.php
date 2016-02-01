@@ -170,19 +170,12 @@ class Zarafa extends SyncWorker {
         }
         else {
             $this->Log(sprintf("Zarafa->ClearAllNotCurrentChunkType: found %d invalid items, deleting", $querycnt));
-            $deleted = 0;
-            while($deleted <= $querycnt) {
-                $entries = mapi_table_queryrows($table, array(PR_ENTRYID, $this->mapiprops['chunktype']), $deleted, 20);
-                $entry_ids = array_reduce($entries, function ($result, $item) {
-                                                        $result[] = $item[PR_ENTRYID];
-                                                        return $result;
-                                                    }, array());
-                $toDelete = count($entry_ids);
-                if ($toDelete > 0) {
-                    mapi_folder_deletemessages($folder, array_values($entry_ids));
-                }
-                $deleted += $toDelete;
-            }
+            $entries = mapi_table_queryallrows($table, array(PR_ENTRYID, $this->mapiprops['chunktype']));
+            $entry_ids = array_reduce($entries, function ($result, $item) {
+                                                    $result[] = $item[PR_ENTRYID];
+                                                    return $result;
+                                                }, array());
+            mapi_folder_deletemessages($folder, array_values($entry_ids));
             $this->Log("Zarafa->ClearAllNotCurrentChunkType: done");
         }
         $this->Log("");
@@ -192,6 +185,7 @@ class Zarafa extends SyncWorker {
     /**
      * Returns a list with all GAB entries or a single entry specified by $uniqueId.
      * The search for that single entry is done using the configured UNIQUEID parameter.
+     * If no entry is found for a $uniqueId an empty array() must be returned.
      *
      * @param string $uniqueId      A value to be found in the configured UNIQUEID.
      *                              If set, only one item is returned. If false or not set, the entire GAB is returned.
@@ -223,7 +217,7 @@ class Zarafa extends SyncWorker {
             mapi_table_restrict($table, $restriction);
             $querycnt = mapi_table_getrowcount($table);
             if ($querycnt == 0) {
-                $this->Terminate(sprintf("Zarafa->GetGAB(): Single GAB entry '%s' requested but could not be found.", $uniqueId));
+                $this->Log(sprintf("Zarafa->GetGAB(): Single GAB entry '%s' requested but could not be found.", $uniqueId));
             }
             elseif ($querycnt > 1) {
                 $this->Terminate(sprintf("Zarafa->GetGAB(): Single GAB entry '%s' requested but %d entries found. Aborting.", $uniqueId, $querycnt));

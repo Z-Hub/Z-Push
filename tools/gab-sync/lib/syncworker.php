@@ -61,11 +61,15 @@ abstract class SyncWorker {
         // build the chunks
         $chunks = array();
         foreach ($gab as $entry) {
-            $id = $this->calculateChunkId($entry);
+            $key = $this->getHashFieldValue($entry);
+            // Ignore entries without the configured hash value. Warning is logged by getHashFieldValue().
+            if (!$key)
+                continue;
+
+            $id = $this->calculateChunkId($key);
             if (!isset($chunks[$id])) {
                 $chunks[$id] = array();
             }
-            $key = $entry->{$this->hashFieldId};
             $chunks[$id][$key] = $entry;
         }
 
@@ -124,17 +128,43 @@ abstract class SyncWorker {
 
         // search for the entry in the GAB
         $entries = $this->GetGAB($uniqueId);
-        $entry = $entries[0];
 
-        // get the chunkId and the data
-        $chunkId = $this->calculateChunkId($entry);
+        // if an entry is found, update the chunk
+        // if the entry is NOT found, we should remove it from the chunk (entry deleted)
+        if (isset($entries[0])) {
+            $entry = $entries[0];
+            $key = $this->getHashFieldValue($entry);
+            if (!$key) {
+                $this->Terminate("SyncOne: Unique key can't be found in entry from GAB. Aborting.");
+            }
+        }
+        else {
+            $entry = false;
+            $key = $uniqueId;
+        }
+
+        // get the data for the chunkId
         $folderid = $this->getFolderId();
+        $chunkId = $this->calculateChunkId($key);
         $chunkdata = $this->GetChunkData($folderid, $chunkId);
         $chunk = json_decode($chunkdata, true);
 
-        // update the entry
-        $key = $entry->{$this->hashFieldId};
-        $chunk[$key] = $entry;
+        // update or remove the entry
+        if ($entry) {
+            $chunk[$key] = $entry;
+            $this->Log("Updating entry.");
+        }
+        else {
+            // if we have the key in the chunk, it existed before and should be deleted
+            if (isset($chunk[$key])) {
+                unset($chunk[$key]);
+                $this->Log("Deleting entry.");
+            }
+            // if we get here, the entry was not found in the GAB but also not in the chunk data. Invalid entry, abort!
+            else {
+                $this->Terminate(sprintf("No entry for '%s' can be found in GAB or hashed entries. Nothing to do here. Aborting.", $uniqueId));
+            }
+        }
 
         // get the hash, sort the chunk and serialize it
         $amountEntries = count($chunk);
@@ -236,23 +266,32 @@ abstract class SyncWorker {
     }
 
     /**
-     * Calculates the chunk-id for a GABEntry.
+     * Returns the configured hash field from the GABEntry.
+     * If it is not available the method returns false.
      *
      * @param GABEntry $gabEntry
      *
      * @access protected
-     * @return boolean|number
+     * @return string|boolean
      */
-    protected function calculateChunkId($gabEntry) {
-        $value = false;
+    protected function getHashFieldValue($gabEntry) {
         if (property_exists($gabEntry, $this->hashFieldId)) {
-            $value = $gabEntry->{$this->hashFieldId};
+            return $gabEntry->{$this->hashFieldId};
         }
-        if (!$value) {
-            $this->Log("Calculate chunk-id: error, configured UNIQUEID is not set in GAB entry.");
+        else {
+            $this->Log("getHashFieldValue: error, configured UNIQUEID is not set in GAB entry.");
             return false;
         }
+    }
 
+    /**
+     * Calculated the chunk-id of a value.
+     *
+     * @parem string $value
+     * @access protected
+     * @return number
+     */
+    protected function calculateChunkId($value) {
         $hash = sprintf("%u", crc32($value));
         return fmod($hash, AMOUT_OF_CHUNKS);
     }
