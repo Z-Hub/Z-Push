@@ -86,6 +86,7 @@ class SyncMail extends SyncObject {
     public $lastverbexectime;
     public $receivedasbcc;
     public $sender;
+    public $categories;
 
     function SyncMail() {
         $mapping = array (

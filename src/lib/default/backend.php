@@ -183,8 +183,22 @@ abstract class Backend implements IBackend {
      * @return SyncObject   $settings
      */
     public function Settings($settings) {
-        if ($settings instanceof SyncOOF || $settings instanceof SyncUserInformation)
+        if ($settings instanceof SyncOOF) {
+            $isget = !empty($settings->bodytype);
+            $settings = new SyncOOF();
+            if ($isget) {
+                //oof get
+                $settings->oofstate = 0;
+                $settings->Status = SYNC_SETTINGSSTATUS_SUCCESS;
+            } else {
+                //oof set
+                $settings->Status = SYNC_SETTINGSSTATUS_PROTOCOLLERROR;
+            }
+        }
+        if ($settings instanceof SyncUserInformation) {
+            $settings->emailaddresses = array(ZPush::GetBackend()->GetUserDetails(Request::GetAuthUser())['emailaddress']);
             $settings->Status = SYNC_SETTINGSSTATUS_SUCCESS;
+        }
         return $settings;
     }
 
@@ -303,7 +317,7 @@ abstract class Backend implements IBackend {
         }
         if (isset($this->stateStorage)) {
             try {
-                $this->storage_state = ZPush::GetDeviceManager()->GetStateManager()->SetBackendStorage($this->stateStorage, StateManager::BACKENDSTORAGE_STATE);
+                ZPush::GetDeviceManager()->GetStateManager()->SetBackendStorage($this->stateStorage, StateManager::BACKENDSTORAGE_STATE);
             }
             catch (StateNotYetAvailableException $snyae) { }
             catch(StateNotFoundException $snfe) { }

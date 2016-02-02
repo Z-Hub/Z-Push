@@ -11,7 +11,7 @@
 *
 * Created   :   20.10.2011
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2015 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -108,7 +108,7 @@ class LoopDetection extends InterProcessData {
      */
     public static function GetProcessIdentifier() {
         if (!isset(self::$processident))
-            self::$processident = sprintf('%04x%04', mt_rand(0, 0xffff), mt_rand(0, 0xffff));
+            self::$processident = sprintf('%04x%04x', mt_rand(0, 0xffff), mt_rand(0, 0xffff));
 
         return self::$processident;
     }
@@ -572,12 +572,12 @@ class LoopDetection extends InterProcessData {
                     $obsolete = true;
                 }
                 else {
-                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("LoopDetection->IsSyncStateObsolete(): check folderid: '%s' uuid '%s' counter: %d - last counter: %d with %d queued", 
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("LoopDetection->IsSyncStateObsolete(): check folderid: '%s' uuid '%s' counter: %d - last counter: %d with %d queued",
                             $folderid, $uuid, $counter, $current["count"], $current["queued"]));
 
                     if ($current["uuid"] == $uuid && (
-                            $current["count"] > $counter || 
-                            ($current["count"] == $counter && $current["queued"] > 0) || 
+                            $current["count"] > $counter ||
+                            ($current["count"] == $counter && $current["queued"] > 0) ||
                             (isset($current["usage"]) && $current["usage"] >= $counter)
                           )) {
                         $usage = isset($current["usage"]) ? sprintf(" - counter %d already expired",$current["usage"]) : "";
@@ -736,7 +736,7 @@ class LoopDetection extends InterProcessData {
                         ZLog::Write(LOGLEVEL_DEBUG, "LoopDetection->Detect(): case 3.1 detected - loop detected, init loop mode");
                         $current['loopcount'] = 1;
                         // the MaxCount is the max number of messages exported before
-                        $current['maxCount'] = $counter + (($maxItems < $queuedMessages)? $maxItems: $queuedMessages);
+                        $current['maxCount'] = $counter + (($maxItems < $queuedMessages) ? $maxItems : $queuedMessages);
                         $loop = true;   // loop mode!!
                     }
                     else if ($queuedMessages == 0) {
@@ -758,7 +758,7 @@ class LoopDetection extends InterProcessData {
                             ZLog::Write(LOGLEVEL_DEBUG, sprintf("LoopDetection->Detect(): case 3.3.1 detected - broken item should be next, attempt to ignore it - id '%s'", $current['potential']));
                             $this->ignore_messageid = $current['potential'];
                         }
-                        $current['maxCount'] = $counter + $queuedMessages;
+                        $current['maxCount'] = $counter + (($maxItems < $queuedMessages) ? $maxItems : $queuedMessages);
                         $loop = true;   // loop mode!!
                     }
                 }

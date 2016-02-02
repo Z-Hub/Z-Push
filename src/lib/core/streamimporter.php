@@ -111,20 +111,23 @@ class ImportChangesStream implements IImportChanges {
         if ($message->flags === false || $message->flags === SYNC_NEWMESSAGE)
             $this->encoder->startTag(SYNC_ADD);
         else {
-            // on update of an SyncEmail we only export the flags
-            if($message instanceof SyncMail && isset($message->flag) && $message->flag instanceof SyncMailFlags) {
+            // on update of an SyncEmail we only export the flags and categories
+            if($message instanceof SyncMail && ((isset($message->flag) && $message->flag instanceof SyncMailFlags) || isset($message->categories))) {
                 $newmessage = new SyncMail();
                 $newmessage->read = $message->read;
-                $newmessage->flag = $message->flag;
-                if (isset($message->lastverbexectime)) $newmessage->lastverbexectime = $message->lastverbexectime;
-                if (isset($message->lastverbexecuted)) $newmessage->lastverbexecuted = $message->lastverbexecuted;
+                if (isset($message->flag))              $newmessage->flag = $message->flag;
+                if (isset($message->lastverbexectime))  $newmessage->lastverbexectime = $message->lastverbexectime;
+                if (isset($message->lastverbexecuted))  $newmessage->lastverbexecuted = $message->lastverbexecuted;
+                if (isset($message->categories))        $newmessage->categories = $message->categories;
                 $message = $newmessage;
                 unset($newmessage);
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("ImportChangesStream->ImportMessageChange('%s'): SyncMail message updated. Message content is striped, only flags are streamed.", $id));
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("ImportChangesStream->ImportMessageChange('%s'): SyncMail message updated. Message content is striped, only flags/categories are streamed.", $id));
             }
 
             $this->encoder->startTag(SYNC_MODIFY);
         }
+
+        // TAG: SYNC_ADD / SYNC_MODIFY
             $this->encoder->startTag(SYNC_SERVERENTRYID);
                 $this->encoder->content($id);
             $this->encoder->endTag();

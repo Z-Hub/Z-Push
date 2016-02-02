@@ -74,6 +74,15 @@ class BackendCombinedConfig {
                 'v' => array(
                     'name' => 'BackendVCardDir',
                 ),
+                'l' => array(
+                    'name' => 'BackendLDAP',
+                ),
+                'd' => array(
+                    'name' => 'BackendCardDAV',
+                ),
+                'c' => array(
+                    'name' => 'BackendCalDAV',
+                ),
             ),
             'delimiter' => '/',
             //force one type of folder to one backend

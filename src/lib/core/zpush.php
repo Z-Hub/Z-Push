@@ -220,35 +220,69 @@ class ZPush {
         else
             define('REAL_BASE_PATH', BASE_PATH);
 
-        if (!defined('LOGFILEDIR'))
-            throw new FatalMisconfigurationException("The LOGFILEDIR is not configured. Check if the config.php file is in place.");
+        if (!defined('LOGBACKEND')) {
+            define('LOGBACKEND', 'filelog');
+        }
 
-        if (substr(LOGFILEDIR, -1,1) != "/")
-            throw new FatalMisconfigurationException("The LOGFILEDIR should terminate with a '/'");
+        if (strtolower(LOGBACKEND) == 'syslog') {
+            define('LOGBACKEND_CLASS', 'Syslog');
+            if (!defined('LOG_SYSLOG_FACILITY')) {
+                define('LOG_SYSLOG_FACILITY', LOG_LOCAL0);
+            }
 
-        if (!file_exists(LOGFILEDIR))
-            throw new FatalMisconfigurationException("The configured LOGFILEDIR does not exist or can not be accessed.");
+            if (!defined('LOG_SYSLOG_HOST')) {
+                define('LOG_SYSLOG_HOST', false);
+            }
 
-        if ((!file_exists(LOGFILE) && !touch(LOGFILE)) || !is_writable(LOGFILE))
-            throw new FatalMisconfigurationException("The configured LOGFILE can not be modified.");
+            if (!defined('LOG_SYSLOG_PORT')) {
+                define('LOG_SYSLOG_PORT', 514);
+            }
 
-        if ((!file_exists(LOGERRORFILE) && !touch(LOGERRORFILE)) || !is_writable(LOGERRORFILE))
-            throw new FatalMisconfigurationException("The configured LOGERRORFILE can not be modified.");
+            if (!defined('LOG_SYSLOG_PROGRAM')) {
+                define('LOG_SYSLOG_PROGRAM', 'z-push');
+            }
 
-        // check ownership on the (eventually) just created files
-        Utils::FixFileOwner(LOGFILE);
-        Utils::FixFileOwner(LOGERRORFILE);
+            if (!is_numeric(LOG_SYSLOG_PORT)) {
+                throw new FatalMisconfigurationException("The LOG_SYSLOG_PORT must a be a number.");
+            }
+
+            if (LOG_SYSLOG_HOST && LOG_SYSLOG_PORT <= 0) {
+                throw new FatalMisconfigurationException("LOG_SYSLOG_HOST is defined but the LOG_SYSLOG_PORT does not seem to be valid.");
+            }
+        }
+        elseif (strtolower(LOGBACKEND) == 'filelog') {
+            define('LOGBACKEND_CLASS', 'FileLog');
+            if (!defined('LOGFILEDIR'))
+                throw new FatalMisconfigurationException("The LOGFILEDIR is not configured. Check if the config.php file is in place.");
+
+            if (substr(LOGFILEDIR, -1,1) != "/")
+                throw new FatalMisconfigurationException("The LOGFILEDIR should terminate with a '/'");
+
+            if (!file_exists(LOGFILEDIR))
+                throw new FatalMisconfigurationException("The configured LOGFILEDIR does not exist or can not be accessed.");
+
+            if ((!file_exists(LOGFILE) && !touch(LOGFILE)) || !is_writable(LOGFILE))
+                throw new FatalMisconfigurationException("The configured LOGFILE can not be modified.");
+
+            if ((!file_exists(LOGERRORFILE) && !touch(LOGERRORFILE)) || !is_writable(LOGERRORFILE))
+                throw new FatalMisconfigurationException("The configured LOGERRORFILE can not be modified.");
+
+            // check ownership on the (eventually) just created files
+            Utils::FixFileOwner(LOGFILE);
+            Utils::FixFileOwner(LOGERRORFILE);
+        }
+        else {
+            define('LOGBACKEND_CLASS', LOGBACKEND);
+        }
 
         // set time zone
-        // code contributed by Robert Scheck (rsc) - more information: https://developer.berlios.de/mantis/view.php?id=479
-        if(function_exists("date_default_timezone_set")) {
-            if(defined('TIMEZONE') ? constant('TIMEZONE') : false) {
-                if (! @date_default_timezone_set(TIMEZONE))
-                    throw new FatalMisconfigurationException(sprintf("The configured TIMEZONE '%s' is not valid. Please check supported timezones at http://www.php.net/manual/en/timezones.php", constant('TIMEZONE')));
-            }
-            else if(!ini_get('date.timezone')) {
-                date_default_timezone_set('Europe/Amsterdam');
-            }
+        // code contributed by Robert Scheck (rsc)
+        if(defined('TIMEZONE') ? constant('TIMEZONE') : false) {
+            if (! @date_default_timezone_set(TIMEZONE))
+                throw new FatalMisconfigurationException(sprintf("The configured TIMEZONE '%s' is not valid. Please check supported timezones at http://www.php.net/manual/en/timezones.php", constant('TIMEZONE')));
+        }
+        else if(!ini_get('date.timezone')) {
+            date_default_timezone_set('Europe/Amsterdam');
         }
 
         return true;
@@ -366,7 +400,6 @@ class ZPush {
             }
             else {
                 // Initialize the default StateMachine
-                include_once('lib/default/filestatemachine.php');
                 ZPush::$stateMachine = new FileStateMachine();
             }
 
@@ -528,8 +561,9 @@ class ZPush {
      * @return array
      */
     static public function GetAdditionalSyncFolders() {
-        // TODO if there are any user based folders which should be synchronized, they have to be returned here as well!!
-        return self::$addSyncFolders;
+        // get user based folders which should be synchronized
+        $userFolder = self::GetDeviceManager()->GetAdditionalUserSyncFolders();
+        return array_merge(self::$addSyncFolders, $userFolder);
     }
 
     /**
@@ -542,7 +576,13 @@ class ZPush {
      * @return string
      */
     static public function GetAdditionalSyncFolderStore($folderid, $noDebug = false) {
-        $val = (isset(self::$addSyncFolders[$folderid]->Store))? self::$addSyncFolders[$folderid]->Store : false;
+        if(isset(self::$addSyncFolders[$folderid]->Store)) {
+            $val = self::$addSyncFolders[$folderid]->Store;
+        }
+        else {
+            $val = self::GetDeviceManager()->GetAdditionalUserSyncFolderStore($folderid);
+        }
+
         if (!$noDebug)
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPush::GetAdditionalSyncFolderStore('%s'): '%s'", $folderid, Utils::PrintAsString($val)));
         return $val;
