@@ -1024,37 +1024,39 @@ class BackendIMAP extends BackendDiff {
             if (Request::GetProtocolVersion() >= 12.0) {
                 $output->asbody = new SyncBaseBody();
 
+                $data = "";
                 switch($bpReturnType) {
                     case SYNC_BODYPREFERENCE_PLAIN:
-                        $output->asbody->data = $plainBody;
+                        $data = $plainBody;
                         break;
                     case SYNC_BODYPREFERENCE_HTML:
                         if ($htmlBody == "") {
-                            $output->asbody->data = $plainBody;
+                            $data = $plainBody;
                             $bpReturnType = SYNC_BODYPREFERENCE_PLAIN;
                         }
                         else {
-                            $output->asbody->data = $htmlBody;
+                            $data = $htmlBody;
                         }
                         break;
                     case SYNC_BODYPREFERENCE_MIME:
                         //We don't need to create a new MIME mail, we already have one!!
-                        $output->asbody->data = $mail;
+                        $data = $mail;
                         break;
                     case SYNC_BODYPREFERENCE_RTF:
-                        ZLog::Write(LOGLEVEL_DEBUG, "BackendIMAP->GetMessage RTF Format NOT CHECKED");
-                        $output->asbody->data = base64_encode($plainBody);
+                        ZLog::Write(LOGLEVEL_DEBUG, "BackendIMAP->GetMessage RTF Format NOT SUPPORTED");
+                        // TODO: this is broken. This is no RTF.
+                        $data = base64_encode($plainBody);
                         break;
                 }
                 // truncate body, if requested
-                if(strlen($output->asbody->data) > $truncsize) {
-                    $output->asbody->data = Utils::Utf8_truncate($output->asbody->data, $truncsize);
+                if(strlen($data) > $truncsize) {
+                    $data = Utils::Utf8_truncate($data, $truncsize);
                     $output->asbody->truncated = 1;
                 }
-
+                $output->asbody->data = StringStreamWrapper::Open($data);
                 $output->asbody->type = $bpReturnType;
                 $output->nativebodytype = $bpReturnType;
-                $output->asbody->estimatedDataSize = strlen($output->asbody->data);
+                $output->asbody->estimatedDataSize = strlen($data);
 
                 $bpo = $contentparameters->BodyPreference($output->asbody->type);
                 if (Request::GetProtocolVersion() >= 14.0 && $bpo->GetPreview()) {
@@ -1068,28 +1070,22 @@ class BackendIMAP extends BackendDiff {
             else { // ASV_2.5
                 $output->bodytruncated = 0;
                 /* BEGIN fmbiete's contribution r1528, ZP-320 */
+                $data = "";
                 if ($bpReturnType == SYNC_BODYPREFERENCE_MIME) {
-                    if (strlen($mail) > $truncsize) {
-                        $output->mimedata = Utils::Utf8_truncate($mail, $truncsize);
-                        $output->mimetruncated = 1;
-                    }
-                    else {
-                        $output->mimetruncated = 0;
-                        $output->mimedata = $mail;
-                    }
-                    $output->mimesize = strlen($output->mimedata);
+                   $data = $mail;
                 }
                 else {
-                    // truncate body, if requested
-                    if (strlen($plainBody) > $truncsize) {
-                        $output->body = Utils::Utf8_truncate($plainBody, $truncsize);
-                        $output->bodytruncated = 1;
-                    }
-                    else {
-                        $output->body = $plainBody;
-                        $output->bodytruncated = 0;
-                    }
-                    $output->bodysize = strlen($output->body);
+                   $data = $plainBody;
+                }
+
+                $output->mimesize = strlen($data);
+                if (strlen($data) > $truncsize) {
+                    $output->mimedata = StringStreamWrapper::Open(Utils::Utf8_truncate($data, $truncsize));
+                    $output->mimetruncated = 1;
+                }
+                else {
+                    $output->mimetruncated = 0;
+                    $output->mimedata = StringStreamWrapper::Open($data);
                 }
                 /* END fmbiete's contribution r1528, ZP-320 */
             }
