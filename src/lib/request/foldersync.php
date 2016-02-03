@@ -249,8 +249,12 @@ class FolderSync extends RequestProcessor {
                 self::$topCollector->AnnounceInformation(sprintf("Outgoing %d folders",$changeCount), true);
 
                 // everything fine, save the sync state for the next time
-                if ($synckey == $newsynckey)
+                if ($synckey == $newsynckey) {
                     self::$deviceManager->GetStateManager()->SetSyncState($newsynckey, $newsyncstate);
+
+                    // invalidate all pingable flags
+                    SyncCollections::InvalidatePingableFlags();
+                }
             }
         }
         self::$encoder->endTag();
