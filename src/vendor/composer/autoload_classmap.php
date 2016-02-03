@@ -54,6 +54,7 @@ return array(
     'PingTracking' => $baseDir . '/lib/core/pingtracking.php',
     'Provisioning' => $baseDir . '/lib/request/provisioning.php',
     'ProvisioningRequiredException' => $baseDir . '/lib/exceptions/provisioningrequiredexception.php',
+    'ReplaceNullcharFilter' => $baseDir . '/lib/wbxml/replacenullcharfilter.php',
     'Request' => $baseDir . '/lib/request/request.php',
     'RequestProcessor' => $baseDir . '/lib/request/requestprocessor.php',
     'ResolveRecipients' => $baseDir . '/lib/request/resolverecipients.php',
@@ -129,6 +130,5 @@ return array(
     'iCalComponent' => $baseDir . '/include/iCalendar.php',
     'iCalProp' => $baseDir . '/include/iCalendar.php',
     'iCalendar' => $baseDir . '/include/iCalendar.php',
-    'replace_nullchar_filter' => $baseDir . '/lib/wbxml/replacenullcharfilter.php',
     'rtf' => $baseDir . '/include/z_RTF.php',
 );
