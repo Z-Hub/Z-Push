@@ -2365,24 +2365,41 @@ class MAPIProvider {
                 if (isset($message->asbody))
                     $message->asbody->type = $bpReturnType;
                 return $stat;
-       }
+        }
 
-        $body = mapi_message_openproperty($mapimessage, $property);
+        $stream = mapi_openproperty($mapimessage, $property, IID_IStream, 0, 0);
+        $stat = mapi_stream_stat($stream);
+        $streamsize = $stat['cb'];
+
         //set the properties according to supported AS version
         if (Request::GetProtocolVersion() >= 12.0) {
             $message->asbody = new SyncBaseBody();
             $message->asbody->type = $bpReturnType;
-            if ($bpReturnType == SYNC_BODYPREFERENCE_RTF)
+            if ($bpReturnType == SYNC_BODYPREFERENCE_RTF) {
+                $body = mapi_stream_read($stream, $streamsize);
                 $message->asbody->data = StringStreamWrapper::Open(base64_encode($body));
-            elseif (isset($message->internetcpid) && $bpReturnType == SYNC_BODYPREFERENCE_HTML)
-                $message->asbody->data = StringStreamWrapper::Open(Utils::ConvertCodepageStringToUtf8($message->internetcpid, $body));
-            else
-                $message->asbody->data = StringStreamWrapper::Open($body);
-            $message->asbody->estimatedDataSize = strlen($body);
+            }
+            elseif (isset($message->internetcpid) && $bpReturnType == SYNC_BODYPREFERENCE_HTML) {
+                // if PR_HTML is UTF-8 we can stream it directly, else we have to convert to UTF-8 & wrap it
+                if (Utils::GetCodepageCharset($message->internetcpid) == "utf-8") {
+                    $message->asbody->data = MAPIStreamWrapper::Open($stream);
+                    ZLog::Write(LOGLEVEL_DEBUG, "-------------------------------------------- HTML schon als utf-8");
+                }
+                else {
+                    $body = mapi_stream_read($stream, $streamsize);
+                    $message->asbody->data = StringStreamWrapper::Open(Utils::ConvertCodepageStringToUtf8($message->internetcpid, $body));
+                    ZLog::Write(LOGLEVEL_DEBUG, "-------------------------------------------- HTML schon als $message->internetcpid .. converting");
+                }
+            }
+            else {
+                $message->asbody->data = MAPIStreamWrapper::Open($stream);
+            }
+            $message->asbody->estimatedDataSize = $streamsize;
         }
         else {
+            $body = mapi_stream_read($stream, $streamsize);
             $message->body = str_replace("\n","\r\n", w2u(str_replace("\r", "", $body)));
-            $message->bodysize = strlen($message->body);
+            $message->bodysize = $streamsize;
             $message->bodytruncated = 0;
         }
 
