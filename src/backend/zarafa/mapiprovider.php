@@ -843,7 +843,6 @@ class MAPIProvider {
      * @return SyncFolder
      */
     public function GetFolder($folderprops) {
-
         $folder = new SyncFolder();
 
         $storeprops = $this->getStoreProps();
