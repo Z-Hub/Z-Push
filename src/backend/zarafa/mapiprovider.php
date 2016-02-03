@@ -2383,12 +2383,10 @@ class MAPIProvider {
                 // if PR_HTML is UTF-8 we can stream it directly, else we have to convert to UTF-8 & wrap it
                 if (Utils::GetCodepageCharset($message->internetcpid) == "utf-8") {
                     $message->asbody->data = MAPIStreamWrapper::Open($stream);
-                    ZLog::Write(LOGLEVEL_DEBUG, "-------------------------------------------- HTML schon als utf-8");
                 }
                 else {
                     $body = mapi_stream_read($stream, $streamsize);
                     $message->asbody->data = StringStreamWrapper::Open(Utils::ConvertCodepageStringToUtf8($message->internetcpid, $body));
-                    ZLog::Write(LOGLEVEL_DEBUG, "-------------------------------------------- HTML schon als $message->internetcpid .. converting");
                 }
             }
             else {
