@@ -194,6 +194,7 @@ class WBXMLEncoder extends WBXMLDefs {
      */
     public function contentStream($stream, $asBase64 = false) {
         if (!$asBase64) {
+            stream_filter_register('replacenullchar', 'ReplaceNullcharFilter');
             $rnc_filter = stream_filter_append($stream, 'replacenullchar');
         }
 
