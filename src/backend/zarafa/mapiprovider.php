@@ -851,7 +851,7 @@ class MAPIProvider {
         if (isset($folderprops[PR_SOURCE_KEY]) && !isset($folderprops[PR_ENTRYID]) && !isset($folderprops[PR_CONTAINER_CLASS])) {
             $entryid = mapi_msgstore_entryidfromsourcekey($this->store, $folderprops[PR_SOURCE_KEY]);
             $mapifolder = mapi_msgstore_openentry($this->store, $entryid);
-            $folderprops = mapi_getprops($mapifolder, array(PR_DISPLAY_NAME, PR_PARENT_ENTRYID, PR_ENTRYID, PR_SOURCE_KEY, PR_PARENT_SOURCE_KEY, PR_CONTAINER_CLASS, PR_ATTR_HIDDEN));
+            $folderprops = mapi_getprops($mapifolder, array(PR_DISPLAY_NAME, PR_PARENT_ENTRYID, PR_ENTRYID, PR_SOURCE_KEY, PR_PARENT_SOURCE_KEY, PR_CONTAINER_CLASS, PR_ATTR_HIDDEN, PR_EXTENDED_FOLDER_FLAGS));
             ZLog::Write(LOGLEVEL_DEBUG, "MAPIProvider->GetFolder(): received insuffient of data from ICS. Fetching required data.");
         }
 
@@ -875,6 +875,16 @@ class MAPIProvider {
         if (isset($folderprops[PR_CONTAINER_CLASS]) && $folderprops[PR_CONTAINER_CLASS] == "IPF.Note.OutlookHomepage") {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("MAPIProvider->GetFolder(): folder '%s' should not be synchronized", $folderprops[PR_DISPLAY_NAME]));
             return false;
+        }
+
+        // ignore suggested contacts folder
+        if (isset($folderprops[PR_CONTAINER_CLASS]) && $folderprops[PR_CONTAINER_CLASS] == "IPF.Contact" && isset($folderprops[PR_EXTENDED_FOLDER_FLAGS])) {
+            // the PR_EXTENDED_FOLDER_FLAGS is a binary value which consists of subproperties. 070403000000 indicates a suggested contacts folder
+            $extendedFlags = bin2hex($folderprops[PR_EXTENDED_FOLDER_FLAGS]);
+            if (substr_count($extendedFlags, "070403000000") > 0) {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("MAPIProvider->GetFolder(): folder '%s' should not be synchronized", $folderprops[PR_DISPLAY_NAME]));
+                return false;
+            }
         }
 
         $folder->serverid = bin2hex($folderprops[PR_SOURCE_KEY]);
