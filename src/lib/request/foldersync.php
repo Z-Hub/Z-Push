@@ -261,7 +261,7 @@ class FolderSync extends RequestProcessor {
                     self::$deviceManager->GetStateManager()->SetSynchedFolderState($spa);
 
                     // invalidate all pingable flags
-                    $sc = SyncCollections::InvalidatePingableFlags();
+                    SyncCollections::InvalidatePingableFlags();
                 }
             }
         }
