@@ -2375,24 +2375,39 @@ class MAPIProvider {
                 if (isset($message->asbody))
                     $message->asbody->type = $bpReturnType;
                 return $stat;
-       }
+        }
 
-        $body = mapi_message_openproperty($mapimessage, $property);
+        $stream = mapi_openproperty($mapimessage, $property, IID_IStream, 0, 0);
+        $stat = mapi_stream_stat($stream);
+        $streamsize = $stat['cb'];
+
         //set the properties according to supported AS version
         if (Request::GetProtocolVersion() >= 12.0) {
             $message->asbody = new SyncBaseBody();
             $message->asbody->type = $bpReturnType;
-            if ($bpReturnType == SYNC_BODYPREFERENCE_RTF)
-                $message->asbody->data = base64_encode($body);
-            elseif (isset($message->internetcpid) && $bpReturnType == SYNC_BODYPREFERENCE_HTML)
-                $message->asbody->data = Utils::ConvertCodepageStringToUtf8($message->internetcpid, $body);
-            else
-                $message->asbody->data = w2u($body);
-            $message->asbody->estimatedDataSize = strlen($message->asbody->data);
+            if ($bpReturnType == SYNC_BODYPREFERENCE_RTF) {
+                $body = mapi_stream_read($stream, $streamsize);
+                $message->asbody->data = StringStreamWrapper::Open(base64_encode($body));
+            }
+            elseif (isset($message->internetcpid) && $bpReturnType == SYNC_BODYPREFERENCE_HTML) {
+                // if PR_HTML is UTF-8 we can stream it directly, else we have to convert to UTF-8 & wrap it
+                if (Utils::GetCodepageCharset($message->internetcpid) == "utf-8") {
+                    $message->asbody->data = MAPIStreamWrapper::Open($stream);
+                }
+                else {
+                    $body = mapi_stream_read($stream, $streamsize);
+                    $message->asbody->data = StringStreamWrapper::Open(Utils::ConvertCodepageStringToUtf8($message->internetcpid, $body));
+                }
+            }
+            else {
+                $message->asbody->data = MAPIStreamWrapper::Open($stream);
+            }
+            $message->asbody->estimatedDataSize = $streamsize;
         }
         else {
+            $body = mapi_stream_read($stream, $streamsize);
             $message->body = str_replace("\n","\r\n", w2u(str_replace("\r", "", $body)));
-            $message->bodysize = strlen($message->body);
+            $message->bodysize = $streamsize;
             $message->bodytruncated = 0;
         }
 
@@ -2419,22 +2434,20 @@ class MAPIProvider {
                 if (Request::GetProtocolVersion() >= 12.0) {
                     if (!isset($message->asbody))
                         $message->asbody = new SyncBaseBody();
-                    //TODO data should be wrapped in a MapiStreamWrapper
-                    $message->asbody->data = mapi_stream_read($stream, $streamsize);
+                    $message->asbody->data = MapiStreamWrapper::Open($stream);
                     $message->asbody->estimatedDataSize = $streamsize;
                     $message->asbody->truncated = 0;
                 }
                 else {
-                    $message->mimetruncated = 0;
-                    //TODO mimedata should be a wrapped in a MapiStreamWrapper
-                    $message->mimedata = mapi_stream_read($stream, $streamsize);
+                    $message->mimedata = MapiStreamWrapper::Open($stream);
                     $message->mimesize = $streamsize;
+                    $message->mimetruncated = 0;
                 }
                 unset($message->body, $message->bodytruncated);
                 return true;
             }
             else {
-                ZLog::Write(LOGLEVEL_ERROR, sprintf("Error opening attachment for imtoinet"));
+                ZLog::Write(LOGLEVEL_ERROR, sprintf("MAPIProvider->imtoinet(): got no stream or content from mapi_inetmapi_imtoinet()"));
             }
         }
 
@@ -2468,12 +2481,11 @@ class MAPIProvider {
             //only set the truncation size data if device set it in request
             if (    $bpo->GetTruncationSize() != false &&
                     $bpReturnType != SYNC_BODYPREFERENCE_MIME &&
-                    $message->asbody->estimatedDataSize > $bpo->GetTruncationSize() &&
-                    $contentparameters->GetTruncation() != SYNC_TRUNCATION_ALL // do not truncate message if the whole is requested, e.g. on fetch
+                    $message->asbody->estimatedDataSize > $bpo->GetTruncationSize()
                 ) {
-                $message->asbody->data = Utils::Utf8_truncate($message->asbody->data, $bpo->GetTruncationSize());
+                // truncate data stream
+                ftruncate($message->asbody->data, $bpo->GetTruncationSize());
                 $message->asbody->truncated = 1;
-
             }
             // set the preview or windows phones won't show the preview of an email
             if (Request::GetProtocolVersion() >= 14.0 && $bpo->GetPreview()) {
@@ -2630,15 +2642,16 @@ class MAPIProvider {
      * @return void
      */
     private function setASbody($asbody, &$props, $appointmentprops) {
-        if (isset($asbody->type) && isset($asbody->data) && strlen($asbody->data) > 0) {
+        // TODO: fix checking for the length
+        if (isset($asbody->type) && isset($asbody->data) /*&& strlen($asbody->data) > 0*/) {
             switch ($asbody->type) {
                 case SYNC_BODYPREFERENCE_PLAIN:
                 default:
                 //set plain body if the type is not in valid range
-                    $props[$appointmentprops["body"]] = u2w($asbody->data);
+                    $props[$appointmentprops["body"]] = stream_get_contents($asbody->data);
                     break;
                 case SYNC_BODYPREFERENCE_HTML:
-                    $props[$appointmentprops["html"]] = u2w($asbody->data);
+                    $props[$appointmentprops["html"]] = stream_get_contents($asbody->data);
                     break;
                 case SYNC_BODYPREFERENCE_RTF:
                     break;

@@ -56,7 +56,8 @@ class SyncBaseBody extends SyncObject {
                     SYNC_AIRSYNCBASE_TYPE                               => array (self::STREAMER_VAR        => "type"),
                     SYNC_AIRSYNCBASE_ESTIMATEDDATASIZE                  => array (self::STREAMER_VAR        => "estimatedDataSize"),
                     SYNC_AIRSYNCBASE_TRUNCATED                          => array (self::STREAMER_VAR        => "truncated"),
-                    SYNC_AIRSYNCBASE_DATA                               => array (self::STREAMER_VAR        => "data"),
+                    SYNC_AIRSYNCBASE_DATA                               => array (self::STREAMER_VAR        => "data",
+                                                                                  self::STREAMER_TYPE       => self::STREAMER_TYPE_STREAM_ASPLAIN),
         );
         if(Request::GetProtocolVersion() >= 14.0) {
             $mapping[SYNC_AIRSYNCBASE_PREVIEW]                          =  array (self::STREAMER_VAR        => "preview");
