@@ -98,8 +98,11 @@ abstract class SyncWorker {
                 $maxSize = $size;
 
             // save/update the chunk data
-            if ($doWrite)
-                $this->SetChunkData($folderid, $chunkId, $amountEntries, $chunkData);
+            if ($doWrite) {
+                $chunkName = $this->chunkType . "/". $chunkId;
+                $chunkCRC = md5($chunkData);
+                $this->SetChunkData($folderid, $chunkName, $amountEntries, $chunkData, $chunkCRC);
+            }
         }
 
         // Calc the ideal amount of chunks (round up to 5)
@@ -146,7 +149,8 @@ abstract class SyncWorker {
         // get the data for the chunkId
         $folderid = $this->getFolderId();
         $chunkId = $this->calculateChunkId($key);
-        $chunkdata = $this->GetChunkData($folderid, $chunkId);
+        $chunkName = $this->chunkType . "/". $chunkId;
+        $chunkdata = $this->GetChunkData($folderid, $chunkName);
         $chunk = json_decode($chunkdata, true);
 
         // update or remove the entry
@@ -173,7 +177,8 @@ abstract class SyncWorker {
         $chunkData = json_encode($chunk);
 
         // update the chunk data
-        $status = $this->SetChunkData($folderid, $chunkId, $amountEntries, $chunkData);
+        $chunkCRC = md5($chunkData);
+        $status = $this->SetChunkData($folderid, $chunkName, $amountEntries, $chunkData, $chunkCRC);
         if ($status) {
             $this->Log("Success!");
         }
@@ -364,24 +369,28 @@ abstract class SyncWorker {
      * Returns the chunk data of the chunkId of the hidden folder.
      *
      * @param string    $folderid
-     * @param int       $chunkId        The id of the chunk (used to find the chunk message).
+     * @param string    $chunkName      The name of the chunk (used to find the chunk message).
+     *                                  The name is saved in the 'subject' of the chunk message.
      *
      * @access protected
      * @return json string
      */
-    protected abstract function GetChunkData($folderid, $chunkId);
+    protected abstract function GetChunkData($folderid, $chunkName);
 
     /**
      * Updates the chunk data in the hidden folder if it changed.
      * If the chunkId is not available, it's created.
      *
      * @param string    $folderid
-     * @param int       $chunkId        The id of the chunk (used to find the chunk message).
+     * @param string    $chunkName      The name of the chunk (used to find/update the chunk message).
+     *                                  The name is to be saved in the 'subject' of the chunk message.
      * @param int       $amountEntries  Amount of entries in the chunkdata.
      * @param string    $chunkData      The data containing all the data.
+     * @param string    $chunkCRC       A checksum of the chunk data. To be saved in the 'location' of
+     *                                  the chunk message. Used to identify changed chunks.
      *
      * @access protected
      * @return boolean
      */
-    protected abstract function SetChunkData($folderid, $chunkId, $amountEntries, $chunkData);
+    protected abstract function SetChunkData($folderid, $chunkName, $amountEntries, $chunkData, $chunkCRC);
 }
