@@ -283,14 +283,14 @@ class Zarafa extends SyncWorker {
      * Returns the chunk data of the chunkId of the hidden folder.
      *
      * @param string    $folderid
-     * @param int       $chunkId        The id of the chunk (used to find the chunk message).
+     * @param string    $chunkName      The name of the chunk (used to find the chunk message).
+     *                                  The name is saved in the 'subject' of the chunk message.
      *
      * @access protected
      * @return json string
      */
-    protected function GetChunkData($folderid, $chunkId) {
+    protected function GetChunkData($folderid, $chunkName) {
         // find the chunk message in the folder
-        $chunkName = $this->chunkType . "-chunk-". $chunkId;
         $chunkdata = $this->findChunk($folderid, $chunkName);
 
         if ($chunkdata[PR_ENTRYID]) {
@@ -308,21 +308,21 @@ class Zarafa extends SyncWorker {
      * If the chunkId is not available, it's created.
      *
      * @param string    $folderid
-     * @param int       $chunkId        The id of the chunk (used to find the chunk message).
+     * @param string    $chunkName      The name of the chunk (used to find/update the chunk message).
+     *                                  The name is to be saved in the 'subject' of the chunk message.
      * @param int       $amountEntries  Amount of entries in the chunkdata.
      * @param string    $chunkData      The data containing all the data.
+     * @param string    $chunkCRC       A checksum of the chunk data. To be saved in the 'location' of
+     *                                  the chunk message. Used to identify changed chunks.
      *
      * @access protected
      * @return boolean
      */
-    protected function SetChunkData($folderid, $chunkId, $amountEntries, $chunkData) {
-        // find the chunk message in the folder
-        $chunkName = $this->chunkType . "-chunk-". $chunkId;
-        $chunkCRC = md5($chunkData);
-
+    protected function SetChunkData($folderid, $chunkName, $amountEntries, $chunkData, $chunkCRC) {
         $log = sprintf("Zarafa->SetChunkData: %s\tEntries: %d\t Size: %d B\tCRC: %s  -  ", $chunkName, $amountEntries, strlen($chunkData), $chunkCRC);
-        $chunkdata = $this->findChunk($folderid, $chunkName);
 
+            // find the chunk message in the folder
+        $chunkdata = $this->findChunk($folderid, $chunkName);
         $message = false;
 
         // message not found, create it
