@@ -41,7 +41,7 @@
 * Consult LICENSE file for details
 ************************************************/
 
-class replace_nullchar_filter extends php_user_filter {
+class ReplaceNullcharFilter extends php_user_filter {
 
     /**
      * This method is called whenever data is read from or written to the attached stream.
@@ -66,5 +66,3 @@ class replace_nullchar_filter extends php_user_filter {
         return PSFS_PASS_ON;
     }
 }
-
-stream_filter_register('replacenullchar', 'replace_nullchar_filter');

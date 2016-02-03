@@ -176,6 +176,11 @@ class FileStateMachine implements IStateMachine {
      * @throws StateInvalidException
      */
     public function CleanStates($devid, $type, $key, $counter = false) {
+        // Don't remove permanent backend storage files, unless we explicitily want that
+        if ($key === false && $type === IStateMachine::BACKENDSTORAGE && $counter != IStateMachine::HIGHEST_COUNTER) {
+            return;
+        }
+
         $matching_files = glob($this->getFullFilePath($devid, $type, $key). "*", GLOB_NOSORT);
         if (is_array($matching_files)) {
             foreach($matching_files as $state) {
@@ -209,7 +214,6 @@ class FileStateMachine implements IStateMachine {
      * @return boolean     indicating if the user was added or not (existed already)
      */
     public function LinkUserDevice($username, $devid) {
-        include_once("simplemutex.php");
         $mutex = new SimpleMutex();
         $changed = false;
 
@@ -254,7 +258,6 @@ class FileStateMachine implements IStateMachine {
      * @return boolean
      */
     public function UnLinkUserDevice($username, $devid) {
-        include_once("simplemutex.php");
         $mutex = new SimpleMutex();
         $changed = false;
 
