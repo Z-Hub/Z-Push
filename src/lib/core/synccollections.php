@@ -629,6 +629,11 @@ class SyncCollections implements Iterator {
             }
         }
         catch (StatusException $ste) {
+            if ($ste->getCode() == SYNC_STATUS_FOLDERHIERARCHYCHANGED) {
+                ZLog::Write(LOGLEVEL_WARN, "SyncCollections->CountChange(): exporter can not be re-configured due to state error, emulating change in folder to force Sync.");
+                $this->changes[$folderid] = 1;
+                return true;
+            }
             throw new StatusException("SyncCollections->CountChange(): exporter can not be re-configured.", self::ERROR_WRONG_HIERARCHY, null, LOGLEVEL_WARN);
         }
 
