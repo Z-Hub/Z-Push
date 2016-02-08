@@ -850,11 +850,11 @@ class BackendCardDAV extends BackendDiff implements ISearchProvider {
                         else {
                             $items[$rc][SYNC_GAL_LASTNAME] = "";
                         }
-                        if (isset($contact->business2phonenumber)) {
-                            $items[$rc][SYNC_GAL_PHONE] = $contact->business2phonenumber;
+                        if (isset($contact->businessphonenumber)) {
+                            $items[$rc][SYNC_GAL_PHONE] = $contact->businessphonenumber;
                         }
-                        if (isset($contact->home2phonenumber)) {
-                            $items[$rc][SYNC_GAL_HOMEPHONE] = $contact->home2phonenumber;
+                        if (isset($contact->homephonenumber)) {
+                            $items[$rc][SYNC_GAL_HOMEPHONE] = $contact->homephonenumber;
                         }
                         if (isset($contact->mobilephonenumber)) {
                             $items[$rc][SYNC_GAL_MOBILEPHONE] = $contact->mobilephonenumber;
