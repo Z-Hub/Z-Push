@@ -71,6 +71,7 @@ class SyncParameters extends StateObject {
                                     'contentparameters' => array(),
                                     'foldersynctotal' => false,
                                     'foldersyncremaining' => false,
+                                    'folderstat' => false,
                                 );
 
     /**

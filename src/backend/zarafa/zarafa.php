@@ -89,6 +89,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
     private $changesSinkStores;
     private $wastebasket;
     private $addressbook;
+    private $folderStatCache;
 
     // ZCP config parameter for PR_EC_ENABLED_FEATURES / PR_EC_DISABLED_FEATURES
     const ZPUSH_ENABLED = 'mobile';
@@ -115,6 +116,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
         $this->changesSinkStores = array();
         $this->wastebasket = false;
         $this->session = false;
+        $this->folderStatCache = array();
 
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendZarafa using PHP-MAPI version: %s", phpversion("mapi")));
     }
@@ -1289,6 +1291,70 @@ class BackendZarafa implements IBackend, ISearchProvider {
      */
     public function GetCurrentUsername() {
         return $this->storeName;
+    }
+
+    /**
+     * Indicates if the Backend supports folder statistics.
+     *
+     * @access public
+     * @return boolean
+     */
+    public function HasFolderStats() {
+        // TODO set to true
+        return false;
+    }
+
+    /**
+     * Returns a status indication of the folder.
+     * If there are changes in the folder, the returned value must change.
+     * The returned values are compared with '===' to determine if a folder needs synchronization or not.
+     *
+     * @param string $store         the store where the folder resides
+     * @param string $folderid      the folder id
+     *
+     * @access public
+     * @return string
+     */
+    public function GetFolderStat($store, $folderid) {
+        list($user, $domain) = Utils::SplitDomainUser($store);
+        if ($user === false) {
+            $user = $this->mainUser;
+        }
+
+        if (!isset($this->folderStatCache[$user])) {
+            $this->folderStatCache[$user] = array();
+        }
+
+        // TODO remove nameCache
+        if (!isset($this->nameCache))
+            $this->nameCache = array();
+
+        // if there is nothing in the cache for a store, load the data for all folders of it
+        if (empty($this->folderStatCache[$user])) {
+            // get the store
+            $userstore = $this->openMessageStore($user);
+
+            $rootfolder = mapi_msgstore_openentry($userstore);
+            $hierarchy =  mapi_folder_gethierarchytable($rootfolder, CONVENIENT_DEPTH);
+            $rows = mapi_table_queryallrows($hierarchy, array(PR_SOURCE_KEY, PR_LOCAL_COMMIT_TIME_MAX, PR_DISPLAY_NAME));
+            // TODO this needs to be time()
+            $now = "not set";//time();
+            foreach($rows as $folder) {
+                $this->folderStatCache[$user][bin2hex($folder[PR_SOURCE_KEY])] = isset($folder[PR_LOCAL_COMMIT_TIME_MAX])? $folder[PR_LOCAL_COMMIT_TIME_MAX] : $now;
+                $this->nameCache[bin2hex($folder[PR_SOURCE_KEY])] = $folder[PR_DISPLAY_NAME];
+            }
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->GetFolderStat() fetched status information of %d folders for store '%s'", count($this->folderStatCache[$user]), $user));
+            $this->folderStatCache[$user]["now"] = $now;
+        }
+
+        if (isset($this->folderStatCache[$user][$folderid])) {
+            // TODO remove nameCache output
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->GetFolderStat() found stat for '%s': %s", $this->nameCache[$folderid], $this->folderStatCache[$user][$folderid]));
+            return $this->folderStatCache[$user][$folderid];
+        }
+        else {
+            return $this->folderStatCache[$user]["now"];
+        }
     }
 
     /**----------------------------------------------------------------------------------------------------------
