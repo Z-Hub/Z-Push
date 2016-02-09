@@ -772,8 +772,8 @@ class Sync extends RequestProcessor {
                 }
             }
 
-            // omit output for folder, if there were no incoming or outgoing changes and no Fetch
-            if (! $spa->HasNewSyncKey() && $changecount == 0 && empty($actiondata["fetchids"]) && $status == SYNC_STATUS_SUCCESS) {
+            // Fir AS 14.0+ omit output for folder, if there were no incoming or outgoing changes and no Fetch
+            if (Request::GetProtocolVersion() >= 14.0 && ! $spa->HasNewSyncKey() && $changecount == 0 && empty($actiondata["fetchids"]) && $status == SYNC_STATUS_SUCCESS) {
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleSync: No changes found for %s folder id '%s'. Omitting output.", $spa->GetContentClass(), $spa->GetFolderId()));
                 continue;
             }
