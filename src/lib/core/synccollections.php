@@ -70,6 +70,7 @@ class SyncCollections implements Iterator {
     private $lastSyncTime;
 
     private $waitingTime = 0;
+    private $loggedGlobalWindowSizeOverwrite = false;
 
 
     /**
@@ -368,7 +369,10 @@ class SyncCollections implements Iterator {
         }
 
         if (defined("SYNC_MAX_ITEMS") && SYNC_MAX_ITEMS < $globalWindowSize) {
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->GetGlobalWindowSize() overwriting requested global window size of %d by %d forced in configuration.", $globalWindowSize, SYNC_MAX_ITEMS));
+            if (!$this->loggedGlobalWindowSizeOverwrite) {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->GetGlobalWindowSize() overwriting requested global window size of %d by %d forced in configuration.", $globalWindowSize, SYNC_MAX_ITEMS));
+                $this->loggedGlobalWindowSizeOverwrite = true;
+            }
             $globalWindowSize = SYNC_MAX_ITEMS;
         }
 
