@@ -173,7 +173,7 @@ class ExportChangesCombined implements IExportChanges {
     public function InitializeExporter(&$importer) {
         ZLog::Write(LOGLEVEL_DEBUG, "ExportChangesCombined->InitializeExporter(...)");
         foreach ($this->exporters as $i => $e) {
-            if(!isset($this->_importwraps[$i])){
+            if(!isset($this->importwraps[$i])){
                 $this->importwraps[$i] = new ImportHierarchyChangesCombinedWrap($i, $this->backend, $importer);
             }
             $e->InitializeExporter($this->importwraps[$i]);
