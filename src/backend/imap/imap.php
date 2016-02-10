@@ -219,14 +219,6 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
         }
         unset($Mail_RFC822);
 
-        // overwrite CC and BCC with the decoded versions, because we will parse/validate the address in the sending method
-        if (isset($message->headers["cc"])) {
-            $message->headers["cc"] = $message->headers["cc"];
-        }
-        if (isset($message->headers["bcc"])) {
-            $message->headers["bcc"] = $message->headers["bcc"];
-        }
-
         $this->setReturnPathValue($message->headers, $fromaddr);
 
         $finalBody = "";
