@@ -583,7 +583,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             }
         }
         else {
-            throw new StatusException(sprintf("BackendIMAP->EmptyFolder('%s','%s'): Error, imap_delete() failed, the error will show at the logout", $folderid, Utils::PrintAsString($includeSubfolders)), SYNC_ITEMOPERATIONSSTATUS_SERVERERROR);
+            throw new StatusException(sprintf("BackendIMAP->EmptyFolder('%s','%s'): Error, imap_delete() failed; '%s'", $folderid, Utils::PrintAsString($includeSubfolders), @imap_last_error()), SYNC_ITEMOPERATIONSSTATUS_SERVERERROR);
         }
 
         return true;
