@@ -288,10 +288,14 @@ function parse_meeting_calendar($part, &$output, $is_sent_folder) {
                 $output->meetingrequest->sensitivity = "3";
                 break;
             default:
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->parse_meeting_calendar() - No sensitivity class. Using 2"));
-                $output->meetingrequest->sensitivity = "2";
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->parse_meeting_calendar() - Unknown VEVENT/CLASS '%s'. Using 0", $props[0]->Value()));
+                $output->meetingrequest->sensitivity = "0";
                 break;
         }
+    }
+    else {
+        ZLog::Write(LOGLEVEL_DEBUG, "BackendIMAP->parse_meeting_calendar() - No sensitivity class. Using 0");
+        $output->meetingrequest->sensitivity = "0";
     }
 
     // Get $tz from first timezone
