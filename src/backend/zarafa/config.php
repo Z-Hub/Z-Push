@@ -2,11 +2,11 @@
 /***********************************************
 * File      :   config.php
 * Project   :   Z-Push
-* Descr     :   VCardDir backend configuration file
+* Descr     :   Zarafa backend configuration file
 *
 * Created   :   27.11.2012
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -46,4 +46,4 @@
 // ************************
 
 // Defines the server to which we want to connect
-define('MAPI_SERVER', 'file:///var/run/zarafa');
+define('MAPI_SERVER', 'http://127.0.0.1:236/zarafa');
