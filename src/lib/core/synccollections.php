@@ -466,7 +466,7 @@ class SyncCollections implements Iterator {
 
         // use changes sink where available
         $changesSink = false;
-        $forceRealExport = 0;
+
         // do not create changessink if there are no folders
         if (!empty($classes) && ZPush::GetBackend()->HasChangesSink()) {
             $changesSink = true;
@@ -527,16 +527,6 @@ class SyncCollections implements Iterator {
 
             // Use changes sink if available
             if ($changesSink) {
-                // in some occasions we do realize a full export to see if there are pending changes
-                // every 5 minutes this is also done to see if there were "missed" notifications
-                if (SINK_FORCERECHECK !== false && $forceRealExport+SINK_FORCERECHECK <= $now) {
-                    if ($this->CountChanges($onlyPingable)) {
-                        ZLog::Write(LOGLEVEL_DEBUG, "SyncCollections->CheckForChanges(): Using ChangesSink but found relevant changes on regular export");
-                        return true;
-                    }
-                    $forceRealExport = $now;
-                }
-
                 ZPush::GetTopCollector()->AnnounceInformation(sprintf("Sink %d/%ds on %s", ($now-$started), $lifetime, $checkClasses));
                 $notifications = ZPush::GetBackend()->ChangesSink($nextInterval);
 
