@@ -165,11 +165,6 @@
     // a higher value if you have a high load on the server.
     define('PING_INTERVAL', 30);
 
-    // Interval in seconds to force a re-check of potentially missed notifications when
-    // using a changes sink. Default are 300 seconds (every 5 min).
-    // This can also be disabled by setting it to false
-    define('SINK_FORCERECHECK', 300);
-
     // Set the fileas (save as) order for contacts in the webaccess/webapp/outlook.
     // It will only affect new/modified contacts on the mobile which then are synced to the server.
     // Possible values are:
