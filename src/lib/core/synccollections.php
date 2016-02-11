@@ -70,6 +70,7 @@ class SyncCollections implements Iterator {
     private $lastSyncTime;
 
     private $waitingTime = 0;
+    private $loggedGlobalWindowSizeOverwrite = false;
 
 
     /**
@@ -368,7 +369,10 @@ class SyncCollections implements Iterator {
         }
 
         if (defined("SYNC_MAX_ITEMS") && SYNC_MAX_ITEMS < $globalWindowSize) {
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->GetGlobalWindowSize() overwriting requested global window size of %d by %d forced in configuration.", $globalWindowSize, SYNC_MAX_ITEMS));
+            if (!$this->loggedGlobalWindowSizeOverwrite) {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->GetGlobalWindowSize() overwriting requested global window size of %d by %d forced in configuration.", $globalWindowSize, SYNC_MAX_ITEMS));
+                $this->loggedGlobalWindowSizeOverwrite = true;
+            }
             $globalWindowSize = SYNC_MAX_ITEMS;
         }
 
@@ -454,29 +458,41 @@ class SyncCollections implements Iterator {
 
         $pingTracking = new PingTracking();
         $this->changes = array();
-        $changesAvailable = false;
 
         ZPush::GetDeviceManager()->AnnounceProcessAsPush();
         ZPush::GetTopCollector()->AnnounceInformation(sprintf("lifetime %ds", $lifetime), true);
         ZLog::Write(LOGLEVEL_INFO, sprintf("SyncCollections->CheckForChanges(): Waiting for %s changes... (lifetime %d seconds)", (empty($classes))?'policy':'store', $lifetime));
 
         // use changes sink where available
-        $changesSink = false;
-        $forceRealExport = 0;
-        // do not create changessink if there are no folders
-        if (!empty($classes) && ZPush::GetBackend()->HasChangesSink()) {
-            $changesSink = true;
+        $changesSink = ZPush::GetBackend()->HasChangesSink();
 
+        // create changessink and check folder stats if there are folders to Ping
+        if (!empty($classes)) {
             // initialize all possible folders
             foreach ($this->collections as $folderid => $spa) {
                 if ($onlyPingable && $spa->GetPingableFlag() !== true)
                     continue;
 
-                // switch user store if this is a additional folder and initialize sink
-                ZPush::GetBackend()->Setup(ZPush::GetAdditionalSyncFolderStore($folderid));
-                if (! ZPush::GetBackend()->ChangesSinkInitialize($folderid))
-                    throw new StatusException(sprintf("Error initializing ChangesSink for folder id '%s'", $folderid), self::ERROR_WRONG_HIERARCHY);
+                // get the user store if this is a additional folder
+                $store = ZPush::GetAdditionalSyncFolderStore($folderid);
+
+                // initialize sink if no immediate changes were found so far
+                if ($changesSink && empty($this->changes)) {
+                    ZPush::GetBackend()->Setup($store);
+                    if (! ZPush::GetBackend()->ChangesSinkInitialize($folderid))
+                        throw new StatusException(sprintf("Error initializing ChangesSink for folder id '%s'", $folderid), self::ERROR_WRONG_HIERARCHY);
+                }
+
+                // check if the folder stat changed since the last sync, if so generate a change for it (only on first run)
+                if ($this->waitingTime == 0 && ZPush::GetBackend()->HasFolderStats() && $spa->HasFolderStat() && ZPush::GetBackend()->GetFolderStat($store, $spa->GetFolderId()) !== $spa->GetFolderStat()) {
+                    $this->changes[$spa->GetFolderId()] = 1;
+                }
             }
+        }
+
+        if (!empty($this->changes)) {
+            ZLog::Write(LOGLEVEL_DEBUG, "SyncCollections->CheckForChanges(): Using ChangesSink but found changes verifying the folder stats");
+            return true;
         }
 
         // wait for changes
@@ -523,16 +539,6 @@ class SyncCollections implements Iterator {
 
             // Use changes sink if available
             if ($changesSink) {
-                // in some occasions we do realize a full export to see if there are pending changes
-                // every 5 minutes this is also done to see if there were "missed" notifications
-                if (SINK_FORCERECHECK !== false && $forceRealExport+SINK_FORCERECHECK <= $now) {
-                    if ($this->CountChanges($onlyPingable)) {
-                        ZLog::Write(LOGLEVEL_DEBUG, "SyncCollections->CheckForChanges(): Using ChangesSink but found relevant changes on regular export");
-                        return true;
-                    }
-                    $forceRealExport = $now;
-                }
-
                 ZPush::GetTopCollector()->AnnounceInformation(sprintf("Sink %d/%ds on %s", ($now-$started), $lifetime, $checkClasses));
                 $notifications = ZPush::GetBackend()->ChangesSink($nextInterval);
 
@@ -632,27 +638,22 @@ class SyncCollections implements Iterator {
             if ($ste->getCode() == SYNC_STATUS_FOLDERHIERARCHYCHANGED) {
                 ZLog::Write(LOGLEVEL_WARN, "SyncCollections->CountChange(): exporter can not be re-configured due to state error, emulating change in folder to force Sync.");
                 $this->changes[$folderid] = 1;
+                // make sure this folder is fully synched on next Sync request
+                if($spa->HasFolderStat()) {
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->CountChange(): removing folder stat '%s' for folderid '%s'", $spa->GetFolderStat(), $spa->GetFolderId()));
+                    $spa->DelFolderStat();
+                    $this->SaveCollection($spa);
+                }
                 return true;
             }
             throw new StatusException("SyncCollections->CountChange(): exporter can not be re-configured.", self::ERROR_WRONG_HIERARCHY, null, LOGLEVEL_WARN);
         }
 
         // start over if exporter can not be configured atm
-        if ($changecount === false )
+        if ($changecount === false)
             ZLog::Write(LOGLEVEL_WARN, "SyncCollections->CountChange(): no changes received from Exporter.");
 
         $this->changes[$folderid] = $changecount;
-
-        if(isset($this->addparms[$folderid]['savestate'])) {
-            try {
-                // Discard any data
-                while(is_array($exporter->Synchronize()));
-                $this->addparms[$folderid]['savestate'] = $exporter->GetState();
-            }
-            catch (StatusException $ste) {
-                throw new StatusException("SyncCollections->CountChange(): could not get new state from exporter", self::ERROR_WRONG_HIERARCHY, null, LOGLEVEL_WARN);
-            }
-        }
 
         return ($changecount > 0);
      }

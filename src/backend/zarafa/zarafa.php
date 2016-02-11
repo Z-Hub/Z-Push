@@ -89,6 +89,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
     private $changesSinkStores;
     private $wastebasket;
     private $addressbook;
+    private $folderStatCache;
 
     // ZCP config parameter for PR_EC_ENABLED_FEATURES / PR_EC_DISABLED_FEATURES
     const ZPUSH_ENABLED = 'mobile';
@@ -115,6 +116,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
         $this->changesSinkStores = array();
         $this->wastebasket = false;
         $this->session = false;
+        $this->folderStatCache = array();
 
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendZarafa using PHP-MAPI version: %s", phpversion("mapi")));
     }
@@ -1314,6 +1316,80 @@ class BackendZarafa implements IBackend, ISearchProvider {
      */
     public function GetCurrentUsername() {
         return $this->storeName;
+    }
+
+    /**
+     * Indicates if the Backend supports folder statistics.
+     *
+     * @access public
+     * @return boolean
+     */
+    public function HasFolderStats() {
+        return true;
+    }
+
+    /**
+     * Returns a status indication of the folder.
+     * If there are changes in the folder, the returned value must change.
+     * The returned values are compared with '===' to determine if a folder needs synchronization or not.
+     *
+     * @param string $store         the store where the folder resides
+     * @param string $folderid      the folder id
+     *
+     * @access public
+     * @return string
+     */
+    public function GetFolderStat($store, $folderid) {
+        list($user, $domain) = Utils::SplitDomainUser($store);
+        if ($user === false) {
+            $user = $this->mainUser;
+        }
+
+        if (!isset($this->folderStatCache[$user])) {
+            $this->folderStatCache[$user] = array();
+        }
+
+        // TODO remove nameCache
+        if (!isset($this->nameCache))
+            $this->nameCache = array();
+
+        // if there is nothing in the cache for a store, load the data for all folders of it
+        if (empty($this->folderStatCache[$user])) {
+            // get the store
+            $userstore = $this->openMessageStore($user);
+            $rootfolder = mapi_msgstore_openentry($userstore);
+            $hierarchy =  mapi_folder_gethierarchytable($rootfolder, CONVENIENT_DEPTH);
+            $rows = mapi_table_queryallrows($hierarchy, array(PR_SOURCE_KEY, PR_LOCAL_COMMIT_TIME_MAX, PR_CONTENT_COUNT, PR_CONTENT_UNREAD, PR_DELETED_MSG_COUNT, PR_DISPLAY_NAME));
+
+            if (count($rows) == 0) {
+                ZLog::Write(LOGLEVEL_INFO, sprintf("ZarafaBackend->GetFolderStat(): could not access folder statistics for user '%s'. Probably missing 'read' permissions on the root folder! Folders of this store will be synchronized ONCE per hour only!", $user));
+            }
+
+            foreach($rows as $folder) {
+                $commit_time = isset($folder[PR_LOCAL_COMMIT_TIME_MAX])? $folder[PR_LOCAL_COMMIT_TIME_MAX] : "0000000000";
+                $content_count = isset($folder[PR_CONTENT_COUNT])? $folder[PR_CONTENT_COUNT] : -1;
+                $content_unread = isset($folder[PR_CONTENT_UNREAD])? $folder[PR_CONTENT_UNREAD] : -1;
+                $content_deleted = isset($folder[PR_DELETED_MSG_COUNT])? $folder[PR_DELETED_MSG_COUNT] : -1;
+
+                $this->folderStatCache[$user][bin2hex($folder[PR_SOURCE_KEY])] = $commit_time ."/". $content_count ."/". $content_unread ."/". $content_deleted;
+                $this->nameCache[bin2hex($folder[PR_SOURCE_KEY])] = $folder[PR_DISPLAY_NAME];
+            }
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->GetFolderStat() fetched status information of %d folders for store '%s'", count($this->folderStatCache[$user]), $user));
+            // TODO remove logging
+            foreach($this->folderStatCache[$user] as $fid => $stat) {
+                ZLog::Write(LOGLEVEL_INFO, sprintf("FolderStat: %s %s %s\t%s", $user, $fid, $stat, $this->nameCache[$fid]));
+            }
+        }
+
+        if (isset($this->folderStatCache[$user][$folderid])) {
+            // TODO remove nameCache output
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->GetFolderStat() found stat for '%s': %s", $this->nameCache[$folderid], $this->folderStatCache[$user][$folderid]));
+            return $this->folderStatCache[$user][$folderid];
+        }
+        else {
+            // a timestamp that changes once per hour is returned in case there is no data found for this folder. It will be synchronized only once per hour.
+            return gmdate("Y-m-d-H");
+        }
     }
 
     /**----------------------------------------------------------------------------------------------------------

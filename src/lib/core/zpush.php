@@ -301,12 +301,6 @@ class ZPush {
         if (!is_array($specialLogUsers))
             throw new FatalMisconfigurationException("The WBXML log users is not an array.");
 
-        if (!defined('SINK_FORCERECHECK')) {
-            define('SINK_FORCERECHECK', 300);
-        }
-        else if (SINK_FORCERECHECK !== false && (!is_int(SINK_FORCERECHECK) || SINK_FORCERECHECK < 1))
-            throw new FatalMisconfigurationException("The SINK_FORCERECHECK value must be 'false' or a number higher than 0.");
-
         if (!defined('SYNC_CONTACTS_MAXPICTURESIZE')) {
             define('SYNC_CONTACTS_MAXPICTURESIZE', 49152);
         }
