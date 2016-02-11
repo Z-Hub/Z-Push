@@ -483,8 +483,8 @@ class SyncCollections implements Iterator {
                         throw new StatusException(sprintf("Error initializing ChangesSink for folder id '%s'", $folderid), self::ERROR_WRONG_HIERARCHY);
                 }
 
-                // check if the folder stat changed since the last sync, if so generate a change for it
-                if (ZPush::GetBackend()->HasFolderStats() && $spa->HasFolderStat() && ZPush::GetBackend()->GetFolderStat($store, $spa->GetFolderId()) !== $spa->GetFolderStat()) {
+                // check if the folder stat changed since the last sync, if so generate a change for it (only on first run)
+                if ($this->waitingTime == 0 && ZPush::GetBackend()->HasFolderStats() && $spa->HasFolderStat() && ZPush::GetBackend()->GetFolderStat($store, $spa->GetFolderId()) !== $spa->GetFolderStat()) {
                     $this->changes[$spa->GetFolderId()] = 1;
                 }
             }
