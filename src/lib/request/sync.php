@@ -695,59 +695,81 @@ class Sync extends RequestProcessor {
             $changecount = false;
             $exporter = false;
             $streamimporter = false;
+            $newFolderStat = false;
+            $setupExporter = true;
 
             // TODO we could check against $sc->GetChangedFolderIds() on heartbeat so we do not need to configure all exporter again
             if($status == SYNC_STATUS_SUCCESS && ($sc->GetParameter($spa, "getchanges") || ! $spa->HasSyncKey())) {
 
-                //make sure the states are loaded
-                $status = $this->loadStates($sc, $spa, $actiondata);
-
-                if($status == SYNC_STATUS_SUCCESS) {
-                    try {
-                        // if this is an additional folder the backend has to be setup correctly
-                        if (!self::$backend->Setup(ZPush::GetAdditionalSyncFolderStore($spa->GetFolderId())))
-                            throw new StatusException(sprintf("HandleSync() could not Setup() the backend for folder id '%s'", $spa->GetFolderId()), SYNC_STATUS_FOLDERHIERARCHYCHANGED);
-
-                        // Use the state from the importer, as changes may have already happened
-                        $exporter = self::$backend->GetExporter($spa->GetFolderId());
-
-                        if ($exporter === false)
-                            throw new StatusException(sprintf("HandleSync() could not get an exporter for folder id '%s'", $spa->GetFolderId()), SYNC_STATUS_FOLDERHIERARCHYCHANGED);
+                // compare the folder statistics if the backend supports this
+                if (self::$backend->HasFolderStats()) {
+                    // check if the folder stats changed -> if not, don't setup the exporter, there are no changes!
+                    $newFolderStat = self::$backend->GetFolderStat(ZPush::GetAdditionalSyncFolderStore($spa->GetFolderId()), $spa->GetFolderId());
+                    if ($newFolderStat === $spa->GetFolderStat()) {
+                        $changecount = 0;
+                        $setupExporter = false;
+                        ZLog::Write(LOGLEVEL_DEBUG, "Sync(): Folder stat from the backend indicates that the folder did not change. Exporter will not run.");
                     }
-                    catch (StatusException $stex) {
-                       $status = $stex->getCode();
-                    }
-                    try {
-                        // Stream the messages directly to the PDA
-                        $streamimporter = new ImportChangesStream(self::$encoder, ZPush::getSyncObjectFromFolderClass($spa->GetContentClass()));
+                }
 
-                        if ($exporter !== false) {
-                            $exporter->Config($sc->GetParameter($spa, "state"));
-                            $exporter->ConfigContentParameters($spa->GetCPO());
-                            $exporter->InitializeExporter($streamimporter);
+                // no need to run the exporter if the globalwindowsize is already full
+                if ($sc->GetGlobalWindowSize() - $this->globallyExportedItems == 0) {
+                    ZLog::Write(LOGLEVEL_DEBUG, "Sync(): no exporter setup as GlobalWindowSize is full.");
+                    $setupExporter = false;
+                }
 
-                            $changecount = $exporter->GetChangeCount();
+                // Do a full Exporter setup if we can't avoid it
+                if ($setupExporter) {
+                    //make sure the states are loaded
+                    $status = $this->loadStates($sc, $spa, $actiondata);
+
+                    if($status == SYNC_STATUS_SUCCESS) {
+                        try {
+                            // if this is an additional folder the backend has to be setup correctly
+                            if (!self::$backend->Setup(ZPush::GetAdditionalSyncFolderStore($spa->GetFolderId())))
+                                throw new StatusException(sprintf("HandleSync() could not Setup() the backend for folder id '%s'", $spa->GetFolderId()), SYNC_STATUS_FOLDERHIERARCHYCHANGED);
+
+                            // Use the state from the importer, as changes may have already happened
+                            $exporter = self::$backend->GetExporter($spa->GetFolderId());
+
+                            if ($exporter === false)
+                                throw new StatusException(sprintf("HandleSync() could not get an exporter for folder id '%s'", $spa->GetFolderId()), SYNC_STATUS_FOLDERHIERARCHYCHANGED);
+                        }
+                        catch (StatusException $stex) {
+                           $status = $stex->getCode();
+                        }
+                        try {
+                            // Stream the messages directly to the PDA
+                            $streamimporter = new ImportChangesStream(self::$encoder, ZPush::getSyncObjectFromFolderClass($spa->GetContentClass()));
+
+                            if ($exporter !== false) {
+                                $exporter->Config($sc->GetParameter($spa, "state"));
+                                $exporter->ConfigContentParameters($spa->GetCPO());
+                                $exporter->InitializeExporter($streamimporter);
+
+                                $changecount = $exporter->GetChangeCount();
+                            }
+                        }
+                        catch (StatusException $stex) {
+                            if ($stex->getCode() === SYNC_FSSTATUS_CODEUNKNOWN && $spa->HasSyncKey())
+                                $status = SYNC_STATUS_INVALIDSYNCKEY;
+                            else
+                                $status = $stex->getCode();
+                        }
+
+                        if (! $spa->HasSyncKey()) {
+                            self::$topCollector->AnnounceInformation(sprintf("Exporter registered. %d objects queued.", $changecount), true);
+                            // update folder status as initialized
+                            $spa->SetFolderSyncTotal($changecount);
+                            $spa->SetFolderSyncRemaining($changecount);
+                            if ($changecount > 0) {
+                                self::$deviceManager->SetFolderSyncStatus($folderid, DeviceManager::FLD_SYNC_INITIALIZED);
+                            }
+                        }
+                        else if ($status != SYNC_STATUS_SUCCESS) {
+                            self::$topCollector->AnnounceInformation(sprintf("StatusException code: %d", $status), true);
                         }
                     }
-                    catch (StatusException $stex) {
-                        if ($stex->getCode() === SYNC_FSSTATUS_CODEUNKNOWN && $spa->HasSyncKey())
-                            $status = SYNC_STATUS_INVALIDSYNCKEY;
-                        else
-                            $status = $stex->getCode();
-                    }
-
-                    if (! $spa->HasSyncKey()) {
-                        self::$topCollector->AnnounceInformation(sprintf("Exporter registered. %d objects queued.", $changecount), true);
-                        // update folder status as initialized
-                        $spa->SetFolderSyncTotal($changecount);
-                        $spa->SetFolderSyncRemaining($changecount);
-                        if ($changecount > 0) {
-                            self::$deviceManager->SetFolderSyncStatus($folderid, DeviceManager::FLD_SYNC_INITIALIZED);
-                        }
-                    }
-                    else if ($status != SYNC_STATUS_SUCCESS)
-                        self::$topCollector->AnnounceInformation(sprintf("StatusException code: %d", $status), true);
-
                 }
             }
 
@@ -773,13 +795,13 @@ class Sync extends RequestProcessor {
             }
 
             // Fir AS 14.0+ omit output for folder, if there were no incoming or outgoing changes and no Fetch
-            if (Request::GetProtocolVersion() >= 14.0 && ! $spa->HasNewSyncKey() && $changecount == 0 && empty($actiondata["fetchids"]) && $status == SYNC_STATUS_SUCCESS) {
+            if (Request::GetProtocolVersion() >= 14.0 && ! $spa->HasNewSyncKey() && $changecount == 0 && empty($actiondata["fetchids"]) && $status == SYNC_STATUS_SUCCESS && $spa->GetFolderStat() === $newFolderStat) {
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleSync: No changes found for %s folder id '%s'. Omitting output.", $spa->GetContentClass(), $spa->GetFolderId()));
                 continue;
             }
 
             // there is something to send here, sync folder to output
-            $this->syncFolder($sc, $spa, $exporter, $changecount, $streamimporter, $status);
+            $this->syncFolder($sc, $spa, $exporter, $changecount, $streamimporter, $status, $newFolderStat);
 
             // reset status for the next folder
             $status = SYNC_STATUS_SUCCESS;
@@ -827,16 +849,18 @@ class Sync extends RequestProcessor {
     /**
      * Synchronizes a folder to the output stream. Changes for this folders are expected.
      *
-     * @param SyncCollections $sc
-     * @param SyncParameters $spa
-     * @param IExportChanges $exporter                  Fully configured exporter for this folder
-     * @param int $changecount                          Amount of changes expected
-     * @param ImportChangesStream $streamimporter       Output stream
-     * @param int  $status                              current status of the folder processing
+     * @param SyncCollections       $sc
+     * @param SyncParameters        $spa
+     * @param IExportChanges        $exporter             Fully configured exporter for this folder
+     * @param int                   $changecount          Amount of changes expected
+     * @param ImportChangesStream   $streamimporter       Output stream
+     * @param int                   $status               current status of the folder processing
+     * @param string                $newFolderStat        the new folder stat to be set if everything was exported
+     *
      * @throws StatusException
      * @return int  sync status code
      */
-    private function syncFolder($sc, $spa, $exporter, $changecount, $streamimporter, $status) {
+    private function syncFolder($sc, $spa, $exporter, $changecount, $streamimporter, $status, $newFolderStat) {
         $actiondata = $sc->GetParameter($spa, "actiondata");
 
         // send the WBXML start tags (if not happened already)
@@ -983,6 +1007,7 @@ class Sync extends RequestProcessor {
             // send <MoreAvailable/> if there are more changes than fit in the folder windowsize
             if($changecount > $windowSize) {
                 self::$encoder->startTag(SYNC_MOREAVAILABLE, false, true);
+                $spa->DelFolderStat();
             }
         }
 
@@ -1048,8 +1073,10 @@ class Sync extends RequestProcessor {
                 $spa->SetFolderSyncRemaining($changecount);
             }
             // changecount is initialized with 'false', so 0 means no changes!
-            if ($changecount === 0 || ($changecount !== false && $changecount <= $windowSize))
+            if ($changecount === 0 || ($changecount !== false && $changecount <= $windowSize)) {
                 self::$deviceManager->SetFolderSyncStatus($spa->GetFolderId(), DeviceManager::FLD_SYNC_COMPLETED);
+                $spa->SetFolderStat($newFolderStat);
+            }
             else
                 self::$deviceManager->SetFolderSyncStatus($spa->GetFolderId(), DeviceManager::FLD_SYNC_INPROGRESS);
         }

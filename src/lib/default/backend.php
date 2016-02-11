@@ -238,6 +238,34 @@ abstract class Backend implements IBackend {
         return $this->GetUserDetails(Request::GetAuthUser());
     }
 
+    /**
+     * Indicates if the Backend supports folder statistics.
+     *
+     * @access public
+     * @return boolean
+     */
+    public function HasFolderStats() {
+        return false;
+    }
+
+    /**
+     * Returns a status indication of the folder.
+     * If there are changes in the folder, the returned value must change.
+     * The returned values are compared with '===' to determine if a folder needs synchronization or not.
+     *
+     * @param string $store         the store where the folder resides
+     * @param string $folderid      the folder id
+     *
+     * @access public
+     * @return string
+     */
+    public function GetFolderStat($store, $folderid) {
+        // As this is not implemented, the value returned will change every hour.
+        // This will only be called if HasFolderStats() returns true.
+        return "not implemented-".gmdate("Y-m-d-H");
+    }
+
+
     /**----------------------------------------------------------------------------------------------------------
      * Protected methods for BackendStorage
      *
