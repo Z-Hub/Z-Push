@@ -43,14 +43,19 @@
 ************************************************/
 
 /**
- * DSN: formatted PDO connection string
- *    mysql:host=xxx;port=xxx;dbname=xxx
- *    DON'T FORGET TO INSTALL THE PHP-DRIVER PACKAGE!!!
- * USER: username to DB
- * PASSWORD: password to DB
- * OPTIONS: array with options needed
+ * DON'T FORGET TO INSTALL THE PHP-DRIVER PACKAGE!!!
+ * STATE_SQL_ENGINE:    the DB engine
+ * STATE_SQL_SERVER:    the DB server URI or IP
+ * STATE_SQL_PORT:      the DB server port
+ * STATE_SQL_DATABASE:  the DB name
+ * STATE_SQL_USER:      username to DB
+ * STATE_SQL_PASSWORD:  STATE_SQL_USER's password to DB
+ * STATE_SQL_OPTIONS:   array with options needed
  */
-define('STATE_SQL_DSN', '');
-define('STATE_SQL_USER', '');
+define('STATE_SQL_ENGINE', 'mysql');
+define('STATE_SQL_SERVER', 'localhost');
+define('STATE_SQL_PORT', '3306');
+define('STATE_SQL_DATABASE', 'zpushstates');
+define('STATE_SQL_USER', 'root');
 define('STATE_SQL_PASSWORD', '');
 define('STATE_SQL_OPTIONS', serialize(array(PDO::ATTR_PERSISTENT => true)));

@@ -45,11 +45,18 @@
 * Consult LICENSE file for details
 ************************************************/
 
+//include the SqlStateMachine's own config file
+require_once("backend/sqlstatemachine/config.php");
+
 class SqlStateMachine implements IStateMachine {
     const SUPPORTED_STATE_VERSION = IStateMachine::STATEVERSION_02;
     const VERSION = "version";
 
-
+    const UNKNOWNDATABASE = 1049;
+    const CREATETABLE_ZPUSH_SETTINGS = "CREATE TABLE IF NOT EXISTS zpush_settings (key_name VARCHAR(50) NOT NULL, key_value VARCHAR(50) NOT NULL, created_at DATETIME NOT NULL, updated_at DATETIME NOT NULL, PRIMARY KEY (key_name));";
+    const CREATETABLE_ZPUSH_USERS = "CREATE TABLE IF NOT EXISTS zpush_users (username VARCHAR(50) NOT NULL, device_id VARCHAR(50) NOT NULL, created_at DATETIME NOT NULL, updated_at DATETIME NOT NULL, PRIMARY KEY (username, device_id));";
+    const CREATETABLE_ZPUSH_STATES = "CREATE TABLE IF NOT EXISTS zpush_states (id_state INTEGER AUTO_INCREMENT, device_id VARCHAR(50) NOT NULL, uuid VARCHAR(50), state_type VARCHAR(50), counter INTEGER, state_data MEDIUMBLOB, created_at DATETIME NOT NULL, updated_at DATETIME NOT NULL, PRIMARY KEY (id_state));";
+    const CREATEINDEX_ZPUSH_STATES = "CREATE UNIQUE INDEX idx_zpush_states_unique ON zpush_states (device_id, uuid, state_type, counter);";
 
     private $dbh;
     private $options;
@@ -57,7 +64,7 @@ class SqlStateMachine implements IStateMachine {
     /**
      * Constructor
      *
-     * Performs some basic checks and initilizes the state directory
+     * Performs some basic checks and initializes the state directory.
      *
      * @access public
      * @throws FatalMisconfigurationException
@@ -65,17 +72,18 @@ class SqlStateMachine implements IStateMachine {
     public function __construct() {
         ZLog::Write(LOGLEVEL_DEBUG, "SqlStateMachine(): init");
 
-        if (!defined('STATE_SQL_DSN') || !defined('STATE_SQL_USER') || !defined('STATE_SQL_PASSWORD')) {
-            throw new FatalMisconfigurationException("No configuration for the state sql database available.");
+        if (!trim(STATE_SQL_SERVER) || !trim(STATE_SQL_PORT) || !trim(STATE_SQL_DATABASE) || !trim(STATE_SQL_USER)) {
+            throw new FatalMisconfigurationException("Missing configuration for the state sql. Check STATE_SQL_* values in the config.php.");
         }
 
         $this->options = array();
-        if (defined('STATE_SQL_OPTIONS')) {
+        if (trim(STATE_SQL_OPTIONS)) {
             $this->options = unserialize(STATE_SQL_OPTIONS);
         }
 
+        // check if the database and necessary tables exist and try to create them if necessary.
         try {
-            $this->dbh = new PDO(STATE_SQL_DSN, STATE_SQL_USER, STATE_SQL_PASSWORD, $this->options);
+            $this->checkDbAndTables();
         }
         catch(PDOException $ex) {
             throw new FatalMisconfigurationException(sprintf("Not possible to connect to the state database: %s", $ex->getMessage()));
@@ -88,7 +96,7 @@ class SqlStateMachine implements IStateMachine {
      * Gets a hash value indicating the latest dataset of the named
      * state with a specified key and counter.
      * If the state is changed between two calls of this method
-     * the returned hash should be different
+     * the returned hash should be different.
      *
      * @param string    $devid              the device id
      * @param string    $type               the state type
@@ -108,8 +116,9 @@ class SqlStateMachine implements IStateMachine {
         $hash = null;
         $sth = null;
         $record = null;
+        $dsn = sprintf("%s:host=%s;port=%s;dbname=%s", STATE_SQL_ENGINE, STATE_SQL_SERVER, STATE_SQL_PORT, STATE_SQL_DATABASE);
         try {
-            $this->dbh = new PDO(STATE_SQL_DSN, STATE_SQL_USER, STATE_SQL_PASSWORD, $this->options);
+            $this->dbh = new PDO($dsn, STATE_SQL_USER, STATE_SQL_PASSWORD, $this->options);
 
             $sth = $this->dbh->prepare($sql);
             $sth->execute($params);
@@ -140,7 +149,7 @@ class SqlStateMachine implements IStateMachine {
     /**
      * Gets a state for a specified key and counter.
      * This method sould call IStateMachine->CleanStates()
-     * to remove older states (same key, previous counters)
+     * to remove older states (same key, previous counters).
      *
      * @param string    $devid              the device id
      * @param string    $type               the state type
@@ -163,8 +172,9 @@ class SqlStateMachine implements IStateMachine {
         $data = null;
         $sth = null;
         $record = null;
+        $dsn = sprintf("%s:host=%s;port=%s;dbname=%s", STATE_SQL_ENGINE, STATE_SQL_SERVER, STATE_SQL_PORT, STATE_SQL_DATABASE);
         try {
-            $this->dbh = new PDO(STATE_SQL_DSN, STATE_SQL_USER, STATE_SQL_PASSWORD, $this->options);
+            $this->dbh = new PDO($dsn, STATE_SQL_USER, STATE_SQL_PASSWORD, $this->options);
 
             $sth = $this->dbh->prepare($sql);
             $sth->execute($params);
@@ -198,7 +208,7 @@ class SqlStateMachine implements IStateMachine {
     }
 
     /**
-     * Writes ta state to for a key and counter
+     * Writes ta state to for a key and counter.
      *
      * @param mixed     $state
      * @param string    $devid              the device id
@@ -219,9 +229,10 @@ class SqlStateMachine implements IStateMachine {
         $sth = null;
         $record = null;
         $bytes = 0;
+        $dsn = sprintf("%s:host=%s;port=%s;dbname=%s", STATE_SQL_ENGINE, STATE_SQL_SERVER, STATE_SQL_PORT, STATE_SQL_DATABASE);
 
         try {
-            $this->dbh = new PDO(STATE_SQL_DSN, STATE_SQL_USER, STATE_SQL_PASSWORD, $this->options);
+            $this->dbh = new PDO($dsn, STATE_SQL_USER, STATE_SQL_PASSWORD, $this->options);
 
             $sth = $this->dbh->prepare($sql);
             $sth->execute($params);
@@ -267,9 +278,9 @@ class SqlStateMachine implements IStateMachine {
     }
 
     /**
-     * Cleans up all older states
-     * If called with a $counter, all states previous state counter can be removed
-     * If called without $counter, all keys (independently from the counter) can be removed
+     * Cleans up all older states.
+     * If called with a $counter, all states previous state counter can be removed.
+     * If called without $counter, all keys (independently from the counter) can be removed.
      *
      * @param string    $devid              the device id
      * @param string    $type               the state type
@@ -294,8 +305,9 @@ class SqlStateMachine implements IStateMachine {
         $params = $this->getParams($devid, $type, $key, $counter);
 
         $sth = null;
+        $dsn = sprintf("%s:host=%s;port=%s;dbname=%s", STATE_SQL_ENGINE, STATE_SQL_SERVER, STATE_SQL_PORT, STATE_SQL_DATABASE);
         try {
-            $this->dbh = new PDO(STATE_SQL_DSN, STATE_SQL_USER, STATE_SQL_PASSWORD, $this->options);
+            $this->dbh = new PDO($dsn, STATE_SQL_USER, STATE_SQL_PASSWORD, $this->options);
 
             $sth = $this->dbh->prepare($sql);
             $sth->execute($params);
@@ -308,7 +320,7 @@ class SqlStateMachine implements IStateMachine {
     }
 
     /**
-     * Links a user to a device
+     * Links a user to a device.
      *
      * @param string    $username
      * @param string    $devid
@@ -322,8 +334,9 @@ class SqlStateMachine implements IStateMachine {
         $sth = null;
         $record = null;
         $changed = false;
+        $dsn = sprintf("%s:host=%s;port=%s;dbname=%s", STATE_SQL_ENGINE, STATE_SQL_SERVER, STATE_SQL_PORT, STATE_SQL_DATABASE);
         try {
-            $this->dbh = new PDO(STATE_SQL_DSN, STATE_SQL_USER, STATE_SQL_PASSWORD, $this->options);
+            $this->dbh = new PDO($dsn, STATE_SQL_USER, STATE_SQL_PASSWORD, $this->options);
 
             $sql = "select username from zpush_users where username = :username and device_id = :devid";
             $params = array(":username" => $username, ":devid" => $devid);
@@ -359,7 +372,7 @@ class SqlStateMachine implements IStateMachine {
     }
 
    /**
-     * Unlinks a device from a user
+     * Unlinks a device from a user.
      *
      * @param string    $username
      * @param string    $devid
@@ -372,8 +385,9 @@ class SqlStateMachine implements IStateMachine {
 
         $sth = null;
         $changed = false;
+        $dsn = sprintf("%s:host=%s;port=%s;dbname=%s", STATE_SQL_ENGINE, STATE_SQL_SERVER, STATE_SQL_PORT, STATE_SQL_DATABASE);
         try {
-            $this->dbh = new PDO(STATE_SQL_DSN, STATE_SQL_USER, STATE_SQL_PASSWORD, $this->options);
+            $this->dbh = new PDO($dsn, STATE_SQL_USER, STATE_SQL_PASSWORD, $this->options);
 
             $sql = "delete from zpush_users where username = :username and device_id = :devid";
             $params = array(":username" => $username, ":devid" => $devid);
@@ -397,7 +411,7 @@ class SqlStateMachine implements IStateMachine {
     }
 
     /**
-     * Get all UserDevice mapping
+     * Get all UserDevice mapping.
      *
      * @access public
      * @return array
@@ -408,8 +422,9 @@ class SqlStateMachine implements IStateMachine {
         $sth = null;
         $record = null;
         $out = array();
+        $dsn = sprintf("%s:host=%s;port=%s;dbname=%s", STATE_SQL_ENGINE, STATE_SQL_SERVER, STATE_SQL_PORT, STATE_SQL_DATABASE);
         try {
-            $this->dbh = new PDO(STATE_SQL_DSN, STATE_SQL_USER, STATE_SQL_PASSWORD, $this->options);
+            $this->dbh = new PDO($dsn, STATE_SQL_USER, STATE_SQL_PASSWORD, $this->options);
 
             $sql = "select device_id, username from zpush_users order by username";
             $sth = $this->dbh->prepare($sql);
@@ -433,7 +448,7 @@ class SqlStateMachine implements IStateMachine {
 
     /**
      * Returns an array with all device ids for a user.
-     * If no user is set, all device ids should be returned
+     * If no user is set, all device ids should be returned.
      *
      * @param string    $username   (opt)
      *
@@ -446,8 +461,9 @@ class SqlStateMachine implements IStateMachine {
         $sth = null;
         $record = null;
         $out = array();
+        $dsn = sprintf("%s:host=%s;port=%s;dbname=%s", STATE_SQL_ENGINE, STATE_SQL_SERVER, STATE_SQL_PORT, STATE_SQL_DATABASE);
         try {
-            $this->dbh = new PDO(STATE_SQL_DSN, STATE_SQL_USER, STATE_SQL_PASSWORD, $this->options);
+            $this->dbh = new PDO($dsn, STATE_SQL_USER, STATE_SQL_PASSWORD, $this->options);
 
             if  ($username === false) {
                 $sql = "select distinct(device_id) from zpush_users order by device_id";
@@ -474,7 +490,7 @@ class SqlStateMachine implements IStateMachine {
     }
 
     /**
-     * Returns the current version of the state files
+     * Returns the current version of the state files.
      *
      * @access public
      * @return int
@@ -485,8 +501,9 @@ class SqlStateMachine implements IStateMachine {
         $sth = null;
         $record = null;
         $version = IStateMachine::STATEVERSION_01;
+        $dsn = sprintf("%s:host=%s;port=%s;dbname=%s", STATE_SQL_ENGINE, STATE_SQL_SERVER, STATE_SQL_PORT, STATE_SQL_DATABASE);
         try {
-            $this->dbh = new PDO(STATE_SQL_DSN, STATE_SQL_USER, STATE_SQL_PASSWORD, $this->options);
+            $this->dbh = new PDO($dsn, STATE_SQL_USER, STATE_SQL_PASSWORD, $this->options);
 
             $sql = "select key_value from zpush_settings where key_name = :key_name";
             $params = array(":key_name" => self::VERSION);
@@ -513,7 +530,7 @@ class SqlStateMachine implements IStateMachine {
     }
 
     /**
-     * Sets the current version of the state files
+     * Sets the current version of the state files.
      *
      * @param int       $version            the new supported version
      *
@@ -526,8 +543,9 @@ class SqlStateMachine implements IStateMachine {
         $sth = null;
         $record = null;
         $status = false;
+        $dsn = sprintf("%s:host=%s;port=%s;dbname=%s", STATE_SQL_ENGINE, STATE_SQL_SERVER, STATE_SQL_PORT, STATE_SQL_DATABASE);
         try {
-            $this->dbh = new PDO(STATE_SQL_DSN, STATE_SQL_USER, STATE_SQL_PASSWORD, $this->options);
+            $this->dbh = new PDO($dsn, STATE_SQL_USER, STATE_SQL_PASSWORD, $this->options);
 
             $sql = "select key_value from zpush_settings where key_name = :key_name";
             $params = array(":key_name" => self::VERSION);
@@ -569,7 +587,7 @@ class SqlStateMachine implements IStateMachine {
     }
 
     /**
-     * Returns all available states for a device id
+     * Returns all available states for a device id.
      *
      * @param string    $devid              the device id
      *
@@ -582,8 +600,9 @@ class SqlStateMachine implements IStateMachine {
         $sth = null;
         $record = null;
         $out = array();
+        $dsn = sprintf("%s:host=%s;port=%s;dbname=%s", STATE_SQL_ENGINE, STATE_SQL_SERVER, STATE_SQL_PORT, STATE_SQL_DATABASE);
         try {
-            $this->dbh = new PDO(STATE_SQL_DSN, STATE_SQL_USER, STATE_SQL_PASSWORD, $this->options);
+            $this->dbh = new PDO($dsn, STATE_SQL_USER, STATE_SQL_PASSWORD, $this->options);
 
             $sql = "select state_type, uuid, counter from zpush_states where device_id = :devid order by id_state";
             $params = array(":devid" => $devid);
@@ -644,8 +663,9 @@ class SqlStateMachine implements IStateMachine {
 
             $sth = null;
             $record = null;
+            $dsn = sprintf("%s:host=%s;port=%s;dbname=%s", STATE_SQL_ENGINE, STATE_SQL_SERVER, STATE_SQL_PORT, STATE_SQL_DATABASE);
             try {
-                $this->dbh = new PDO(STATE_SQL_DSN, STATE_SQL_USER, STATE_SQL_PASSWORD, $this->options);
+                $this->dbh = new PDO($dsn, STATE_SQL_USER, STATE_SQL_PASSWORD, $this->options);
 
                 $sql = "select count(*) as pcount from zpush_preauth_users where username = :user and device_id != 'authorized' and authorized = 1";
                 $params = array(":user" => $user);
@@ -807,7 +827,8 @@ class SqlStateMachine implements IStateMachine {
     public function GetMappedUsername($username, $backend) {
         $result = null;
 
-        $this->dbh = new PDO(STATE_SQL_DSN, STATE_SQL_USER, STATE_SQL_PASSWORD, $this->options);
+        $dsn = sprintf("%s:host=%s;port=%s;dbname=%s", STATE_SQL_ENGINE, STATE_SQL_SERVER, STATE_SQL_PORT, STATE_SQL_DATABASE);
+        $this->dbh = new PDO($dsn, STATE_SQL_USER, STATE_SQL_PASSWORD, $this->options);
 
         $sql = "SELECT `mappedname` FROM `zpush_combined_usermap` WHERE `username` = :user AND `backend` = :backend";
         $params = array("user" => $username, "backend" => $backend);
@@ -833,7 +854,8 @@ class SqlStateMachine implements IStateMachine {
      * @return boolean
      */
     public function MapUsername($username, $backend, $mappedname) {
-        $this->dbh = new PDO(STATE_SQL_DSN, STATE_SQL_USER, STATE_SQL_PASSWORD, $this->options);
+        $dsn = sprintf("%s:host=%s;port=%s;dbname=%s", STATE_SQL_ENGINE, STATE_SQL_SERVER, STATE_SQL_PORT, STATE_SQL_DATABASE);
+        $this->dbh = new PDO($dsn, STATE_SQL_USER, STATE_SQL_PASSWORD, $this->options);
 
         $sql = "
             INSERT INTO `zpush_combined_usermap` (`username`, `backend`, `mappedname`, `created_at`, `updated_at`)
@@ -860,7 +882,8 @@ class SqlStateMachine implements IStateMachine {
      * @return boolean
      */
     public function UnmapUsername($username, $backend) {
-        $this->dbh = new PDO(STATE_SQL_DSN, STATE_SQL_USER, STATE_SQL_PASSWORD, $this->options);
+        $dsn = sprintf("%s:host=%s;port=%s;dbname=%s", STATE_SQL_ENGINE, STATE_SQL_SERVER, STATE_SQL_PORT, STATE_SQL_DATABASE);
+        $this->dbh = new PDO($dsn, STATE_SQL_USER, STATE_SQL_PASSWORD, $this->options);
 
         $sql = "DELETE FROM `zpush_combined_usermap` WHERE `username` = :user AND `backend` = :backend";
         $params = array("user" => $username, "backend" => $backend);
@@ -882,7 +905,7 @@ class SqlStateMachine implements IStateMachine {
      */
 
     /**
-     * Return a string with the datetime NOW
+     * Return a string with the datetime NOW.
      *
      * @return string
      * @access private
@@ -893,7 +916,7 @@ class SqlStateMachine implements IStateMachine {
     }
 
     /**
-     * Return an array with the params for the PDO query
+     * Return an array with the params for the PDO query.
      *
      * @params string $devid
      * @params string $type
@@ -926,4 +949,87 @@ class SqlStateMachine implements IStateMachine {
         }
     }
 
+    /**
+     * Check if the database and necessary tables exist.
+     *
+     * @access private
+     * @return boolean
+     * @throws RuntimeException
+     */
+    private function checkDbAndTables() {
+        ZLog::Write(LOGLEVEL_DEBUG, "SqlStateMachine->checkDbAndTables(): Checking if database and tables are available.");
+        $dsn = sprintf("%s:host=%s;port=%s;dbname=%s", STATE_SQL_ENGINE, STATE_SQL_SERVER, STATE_SQL_PORT, STATE_SQL_DATABASE);
+        try {
+            $this->dbh = new PDO($dsn, STATE_SQL_USER, STATE_SQL_PASSWORD, $this->options);
+            $sqlStmt = sprintf("SHOW TABLES FROM %s LIKE 'zpush%%'", STATE_SQL_DATABASE);
+            $sth = $this->dbh->prepare($sqlStmt);
+            $sth->execute();
+            if ($sth->rowCount() != 3) {
+                $this->createTables();
+            }
+            ZLog::Write(LOGLEVEL_DEBUG, "SqlStateMachine->checkDbAndTables(): Database and tables exist.");
+            return true;
+        }
+        catch (PDOException $ex) {
+            ZLog::Write(LOGLEVEL_INFO, sprintf("SqlStateMachine->checkDbAndTables(): error checking the database (%s): %s", $ex->getCode(), $ex->getMessage()));
+            // try to create the database if it doesn't exist
+            if ($ex->getCode() == self::UNKNOWNDATABASE) {
+                $this->createDB();
+            }
+            else {
+                throw new RuntimeException(sprintf("SqlStateMachine->checkDbAndTables(): PDOException (%s): %s", $ex->getCode(), $ex->getMessage()));
+            }
+        }
+
+        // try to connect to the db again and do the create tables calls
+        $this->createTables();
+        $this->clearConnection($this->dbh);
+    }
+
+    /**
+     * Create the states database.
+     *
+     * @access private
+     * @return boolean
+     * @throws RuntimeException
+     */
+    private function createDB() {
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("SqlStateMachine->createDB(): %s database is not available, trying to create it.", STATE_SQL_DATABASE));
+        $dsn = sprintf("%s:host=%s;port=%s", STATE_SQL_ENGINE, STATE_SQL_SERVER, STATE_SQL_PORT);
+        try {
+            $this->dbh = new PDO($dsn, STATE_SQL_USER, STATE_SQL_PASSWORD, $this->options);
+            $sqlStmt = sprintf("CREATE DATABASE %s", STATE_SQL_DATABASE);
+            $sth = $this->dbh->prepare($sqlStmt);
+            $sth->execute();
+            ZLog::Write(LOGLEVEL_DEBUG, "SqlStateMachine->createDB(): Database created succesfully.");
+            $this->createTables();
+            return true;
+        }
+        catch (PDOException $ex) {
+            throw new RuntimeException(sprintf("SqlStateMachine->createDB(): PDOException (%s): %s", $ex->getCode(), $ex->getMessage()));
+        }
+    }
+
+    /**
+     * Create the tables in the database.
+     *
+     * @access private
+     * @return boolean
+     * @throws RuntimeException
+     */
+    private function createTables() {
+        ZLog::Write(LOGLEVEL_DEBUG, "SqlStateMachine->createTables(): tables are not available, trying to create them.");
+        $dsn = sprintf("%s:host=%s;port=%s;dbname=%s", STATE_SQL_ENGINE, STATE_SQL_SERVER, STATE_SQL_PORT, STATE_SQL_DATABASE);
+        try {
+            $this->dbh = new PDO($dsn, STATE_SQL_USER, STATE_SQL_PASSWORD, $this->options);
+            $sqlStmt = self::CREATETABLE_ZPUSH_SETTINGS . self::CREATETABLE_ZPUSH_USERS . self::CREATETABLE_ZPUSH_STATES . self::CREATEINDEX_ZPUSH_STATES;
+            $sth = $this->dbh->prepare($sqlStmt);
+            $sth->execute();
+            ZLog::Write(LOGLEVEL_DEBUG, "SqlStateMachine->createTables(): tables created succesfully.");
+            return true;
+        }
+        catch (PDOException $ex) {
+            throw new RuntimeException(sprintf("SqlStateMachine->checkDbAndTables(): PDOException (%s): %s", $ex->getCode(), $ex->getMessage()));
+        }
+    }
 }
