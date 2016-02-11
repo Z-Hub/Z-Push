@@ -1300,8 +1300,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
      * @return boolean
      */
     public function HasFolderStats() {
-        // TODO set to true
-        return false;
+        return true;
     }
 
     /**
@@ -1333,18 +1332,28 @@ class BackendZarafa implements IBackend, ISearchProvider {
         if (empty($this->folderStatCache[$user])) {
             // get the store
             $userstore = $this->openMessageStore($user);
-
             $rootfolder = mapi_msgstore_openentry($userstore);
             $hierarchy =  mapi_folder_gethierarchytable($rootfolder, CONVENIENT_DEPTH);
-            $rows = mapi_table_queryallrows($hierarchy, array(PR_SOURCE_KEY, PR_LOCAL_COMMIT_TIME_MAX, PR_DISPLAY_NAME));
-            // TODO this needs to be time()
-            $now = "not set";//time();
+            $rows = mapi_table_queryallrows($hierarchy, array(PR_SOURCE_KEY, PR_LOCAL_COMMIT_TIME_MAX, PR_CONTENT_COUNT, PR_CONTENT_UNREAD, PR_DELETED_MSG_COUNT, PR_DISPLAY_NAME));
+
+            if (count($rows) == 0) {
+                ZLog::Write(LOGLEVEL_INFO, sprintf("ZarafaBackend->GetFolderStat(): could not access folder statistics for user '%s'. Probably missing 'read' permissions on the root folder! Folders of this store will be synchronized ONCE per hour only!", $user));
+            }
+
             foreach($rows as $folder) {
-                $this->folderStatCache[$user][bin2hex($folder[PR_SOURCE_KEY])] = isset($folder[PR_LOCAL_COMMIT_TIME_MAX])? $folder[PR_LOCAL_COMMIT_TIME_MAX] : $now;
+                $commit_time = isset($folder[PR_LOCAL_COMMIT_TIME_MAX])? $folder[PR_LOCAL_COMMIT_TIME_MAX] : "0000000000";
+                $content_count = isset($folder[PR_CONTENT_COUNT])? $folder[PR_CONTENT_COUNT] : -1;
+                $content_unread = isset($folder[PR_CONTENT_UNREAD])? $folder[PR_CONTENT_UNREAD] : -1;
+                $content_deleted = isset($folder[PR_DELETED_MSG_COUNT])? $folder[PR_DELETED_MSG_COUNT] : -1;
+
+                $this->folderStatCache[$user][bin2hex($folder[PR_SOURCE_KEY])] = $commit_time ."/". $content_count ."/". $content_unread ."/". $content_deleted;
                 $this->nameCache[bin2hex($folder[PR_SOURCE_KEY])] = $folder[PR_DISPLAY_NAME];
             }
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->GetFolderStat() fetched status information of %d folders for store '%s'", count($this->folderStatCache[$user]), $user));
-            $this->folderStatCache[$user]["now"] = $now;
+            // TODO remove logging
+            foreach($this->folderStatCache[$user] as $fid => $stat) {
+                ZLog::Write(LOGLEVEL_INFO, sprintf("FolderStat: %s %s %s\t%s", $user, $fid, $stat, $this->nameCache[$fid]));
+            }
         }
 
         if (isset($this->folderStatCache[$user][$folderid])) {
@@ -1353,7 +1362,8 @@ class BackendZarafa implements IBackend, ISearchProvider {
             return $this->folderStatCache[$user][$folderid];
         }
         else {
-            return $this->folderStatCache[$user]["now"];
+            // a timestamp that changes once per hour is returned in case there is no data found for this folder. It will be synchronized only once per hour.
+            return gmdate("Y-m-d-H");
         }
     }
 

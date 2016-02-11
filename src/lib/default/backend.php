@@ -261,7 +261,7 @@ abstract class Backend implements IBackend {
      */
     public function GetFolderStat($store, $folderid) {
         // as this is not implemented, the value returned will be different each time, resulting in a standard exporter setup.
-        return "not implemented-".time();
+        return "not implemented-".gmdate("Y-m-d-H");
     }
 
 

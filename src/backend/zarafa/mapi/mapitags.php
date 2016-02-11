@@ -1253,4 +1253,5 @@ define('PR_ZC_CONTACT_FOLDER_NAMES'                   ,mapi_prop_tag(PT_MV_TSTRI
 //Properties defined for Z-Push
 define('PR_TODO_ITEM_FLAGS'                           ,mapi_prop_tag(PT_LONG,        0x0E2B));
 define('PR_LOCAL_COMMIT_TIME_MAX'                     ,mapi_prop_tag(PT_SYSTIME,     0x670A));
+define('PR_DELETED_MSG_COUNT'                         ,mapi_prop_tag(PT_LONG,        0x6640));
 
