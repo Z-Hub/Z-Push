@@ -701,8 +701,14 @@ class Sync extends RequestProcessor {
             // TODO we could check against $sc->GetChangedFolderIds() on heartbeat so we do not need to configure all exporter again
             if($status == SYNC_STATUS_SUCCESS && ($sc->GetParameter($spa, "getchanges") || ! $spa->HasSyncKey())) {
 
+                // no need to run the exporter if the globalwindowsize is already full
+                if ($sc->GetGlobalWindowSize() - $this->globallyExportedItems == 0) {
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("Sync(): no exporter setup for '%s' as GlobalWindowSize is full.", $spa->GetFolderId()));
+                    $setupExporter = false;
+                }
+
                 // compare the folder statistics if the backend supports this
-                if (self::$backend->HasFolderStats()) {
+                if ($setupExporter && self::$backend->HasFolderStats() && $spa->HasFolderStat()) {
                     // check if the folder stats changed -> if not, don't setup the exporter, there are no changes!
                     $newFolderStat = self::$backend->GetFolderStat(ZPush::GetAdditionalSyncFolderStore($spa->GetFolderId()), $spa->GetFolderId());
                     if ($newFolderStat === $spa->GetFolderStat()) {
@@ -710,12 +716,6 @@ class Sync extends RequestProcessor {
                         $setupExporter = false;
                         ZLog::Write(LOGLEVEL_DEBUG, "Sync(): Folder stat from the backend indicates that the folder did not change. Exporter will not run.");
                     }
-                }
-
-                // no need to run the exporter if the globalwindowsize is already full
-                if ($sc->GetGlobalWindowSize() - $this->globallyExportedItems == 0) {
-                    ZLog::Write(LOGLEVEL_DEBUG, "Sync(): no exporter setup as GlobalWindowSize is full.");
-                    $setupExporter = false;
                 }
 
                 // Do a full Exporter setup if we can't avoid it
@@ -795,7 +795,8 @@ class Sync extends RequestProcessor {
             }
 
             // Fir AS 14.0+ omit output for folder, if there were no incoming or outgoing changes and no Fetch
-            if (Request::GetProtocolVersion() >= 14.0 && ! $spa->HasNewSyncKey() && $changecount == 0 && empty($actiondata["fetchids"]) && $status == SYNC_STATUS_SUCCESS && $spa->GetFolderStat() === $newFolderStat) {
+            if (Request::GetProtocolVersion() >= 14.0 && ! $spa->HasNewSyncKey() && $changecount == 0 && empty($actiondata["fetchids"]) && $status == SYNC_STATUS_SUCCESS &&
+                    $spa->HasFolderStat() && $spa->GetFolderStat() === $newFolderStat) {
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleSync: No changes found for %s folder id '%s'. Omitting output.", $spa->GetContentClass(), $spa->GetFolderId()));
                 continue;
             }
