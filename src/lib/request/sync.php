@@ -702,7 +702,7 @@ class Sync extends RequestProcessor {
             if($status == SYNC_STATUS_SUCCESS && ($sc->GetParameter($spa, "getchanges") || ! $spa->HasSyncKey())) {
 
                 // no need to run the exporter if the globalwindowsize is already full
-                if ($sc->GetGlobalWindowSize() - $this->globallyExportedItems == 0) {
+                if ($sc->GetGlobalWindowSize() == $this->globallyExportedItems) {
                     ZLog::Write(LOGLEVEL_DEBUG, sprintf("Sync(): no exporter setup for '%s' as GlobalWindowSize is full.", $spa->GetFolderId()));
                     $setupExporter = false;
                 }
