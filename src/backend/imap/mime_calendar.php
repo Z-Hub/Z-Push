@@ -221,7 +221,6 @@ function parse_meeting_calendar($part, &$output, $is_sent_folder) {
         switch ($method) {
             case "cancel":
                 $output->messageclass = "IPM.Schedule.Meeting.Canceled";
-                $output->meetingrequest->disallownewtimeproposal = 1;
                 ZLog::Write(LOGLEVEL_DEBUG, "BackendIMAP->parse_meeting_calendar(): Event canceled, removing calendar object");
                 delete_calendar_dav($uid);
                 break;
