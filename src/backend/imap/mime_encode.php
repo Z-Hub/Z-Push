@@ -256,7 +256,6 @@ function build_mime_message($message) {
     }
 
     $finalEmail = new Mail_mimePart(isset($message->body) ? $message->body : "", $mimeHeaders);
-    unset($mimeHeaders['headers']);
     unset($mimeHeaders);
 
     if (isset($message->parts)) {
