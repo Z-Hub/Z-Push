@@ -90,7 +90,7 @@ function getDefaultFullNameValue($username, $domain) {
     if (defined('IMAP_DEFAULTFROM')) {
         switch (IMAP_DEFAULTFROM) {
             case 'ldap':
-                $v = getIdentityFromSql($username, $domain, IMAP_FROM_LDAP_FULLNAME, false);
+                $v = getIdentityFromLdap($username, $domain, IMAP_FROM_LDAP_FULLNAME, false);
                 break;
             case 'sql':
                 $v = getIdentityFromSql($username, $domain, IMAP_FROM_SQL_FULLNAME, false);
