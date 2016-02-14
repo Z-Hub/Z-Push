@@ -146,7 +146,6 @@ function update_calendar_attendee($uid, $mailto, $status) {
  *
  * @param Mail_mimeDecode $message
  * @return boolean
- * @access private
  */
 function has_calendar_object($message) {
     if (is_calendar($message)) {
@@ -172,7 +171,6 @@ function has_calendar_object($message) {
  *
  * @param Mail_mimeDecode $message
  * @return boolean
- * @access private
  */
 function is_calendar($message) {
     return isset($message->ctype_primary) && isset($message->ctype_secondary) && $message->ctype_primary == "text" && $message->ctype_secondary == "calendar";
@@ -183,7 +181,6 @@ function is_calendar($message) {
  * Converts a text/calendar part into SyncMeetingRequest
  * This is called on received messages, it's not called for events generated from the mobile
  *
- * @access private
  * @param $part             MIME part
  * @param $output           SyncMail object
  * @param $is_sent_folder   boolean
@@ -365,7 +362,6 @@ function parse_meeting_calendar($part, &$output, $is_sent_folder) {
 /**
  * Modify a text/calendar part to transform it in a reply
  *
- * @access private
  * @param $part             MIME part
  * @param $response         Response numeric value
  * @param $condition_value  string

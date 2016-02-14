@@ -48,7 +48,6 @@
  * @param Mail_mimePart $email reference to the object
  * @param array $parts array of parts
  *
- * @access private
  * @return void
  */
 function add_extra_sub_parts(&$email, $parts) {
@@ -85,7 +84,6 @@ function add_extra_sub_parts(&$email, $parts) {
  * @param Mail_mimePart $email reference to the object
  * @param object $part message part
  *
- * @access private
  * @return void
  */
 function add_sub_part(&$email, $part) {
@@ -155,7 +153,6 @@ function add_sub_part(&$email, $part) {
  * @param Mail_mimePart $email reference to the object
  * @param object $part message part
  *
- * @access private
  * @return void
  */
 function change_charset_and_add_subparts(&$email, $part) {
@@ -184,7 +181,6 @@ function change_charset_and_add_subparts(&$email, $part) {
  *
  * @param array $message array returned from Mail_mimeDecode->decode
  *
- * @access public
  * @return string MIME message
  */
 function build_mime_message($message) {
@@ -300,7 +296,6 @@ function build_mime_message($message) {
  *
  * @param Mail_mimeDecode $message
  * @return boolean
- * @access public
  */
 function is_smime($message) {
     $res = false;
@@ -322,7 +317,6 @@ function is_smime($message) {
  *
  * @param Mail_mimeDecode $message
  * @return boolean
- * @access public
  */
 function is_encrypted($message) {
     $res = false;
@@ -341,7 +335,6 @@ function is_encrypted($message) {
  *
  * @param Mail_mimeDecode $message
  * @return boolean
- * @access public
  */
 function is_multipart($message) {
     return isset($message->ctype_primary) && $message->ctype_primary == "multipart";

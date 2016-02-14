@@ -45,7 +45,6 @@
 /**
  * Returns the default value for "From"
  *
- * @access private
  * @return string
  */
 function getDefaultFromValue($username, $domain) {
@@ -80,7 +79,6 @@ function getDefaultFromValue($username, $domain) {
 /**
  * Return the default value for "FullName"
  *
- * @access private
  * @param string     $username          Username
  * @return string
  */
@@ -107,7 +105,6 @@ function getDefaultFullNameValue($username, $domain) {
 /**
  * Generate the "From"/"FullName" value stored in a LDAP server
  *
- * @access private
  * @params string   $username    username value
  * @params string   $domain      domain value
  * @params string   $identity    pattern to fill with ldap values
@@ -170,7 +167,6 @@ function getIdentityFromLdap($username, $domain, $identity, $encode = true) {
 /**
  * Generate the "From" value stored in a SQL Database
  *
- * @access private
  * @params string   $username    username value
  * @params string   $domain      domain value
  * @return string
@@ -214,7 +210,6 @@ function getIdentityFromSql($username, $domain, $identity, $encode = true) {
 /**
  * Generate the "From" value from the local posix passwd database
  *
- * @access private
  * @params string   $username    username value
  * @params string   $domain      domain value
  * @return string
@@ -262,7 +257,6 @@ function getIdentityFromPasswd($username, $domain, $identity, $encode = true) {
 /**
  * Encode the From value as Base64
  *
- * @access private
  * @param string    $from   From value
  * @return string
  */
