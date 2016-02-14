@@ -96,9 +96,9 @@ function add_sub_part(&$email, $part) {
     if (isset($part) && isset($email)) {
         if (isset($part->ctype_primary)) {
             $params['content_type'] = $part->ctype_primary;
-        }
-        if (isset($part->ctype_secondary)) {
-            $params['content_type'] .= '/' . $part->ctype_secondary;
+            if (isset($part->ctype_secondary)) {
+                $params['content_type'] .= '/' . $part->ctype_secondary;
+            }
         }
         if (isset($part->ctype_parameters)) {
             foreach ($part->ctype_parameters as $k => $v) {
