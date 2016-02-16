@@ -144,7 +144,7 @@ class PHPWrapper {
         if ($flags == SYNC_NEW_MESSAGE) $message->flags = SYNC_NEWMESSAGE;
         else $message->flags = $flags;
 
-        $this->importer->ImportMessageChange(bin2hex($sourcekey), $message);
+        $this->importer->ImportMessageChange(bin2hex($this->folderid).":".bin2hex($sourcekey), $message);
 
         // Tell MAPI it doesn't need to do anything itself, as we've done all the work already.
         return SYNC_E_IGNORE;
@@ -168,7 +168,7 @@ class PHPWrapper {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("PHPWrapper->ImportMessageDeletion(): Received %d remove requests from ICS", $amount));
         }
         foreach($sourcekeys as $sourcekey) {
-            $this->importer->ImportMessageDeletion(bin2hex($sourcekey));
+            $this->importer->ImportMessageDeletion(bin2hex($this->folderid).":".bin2hex($sourcekey));
         }
     }
 
@@ -182,7 +182,7 @@ class PHPWrapper {
      */
     public function ImportPerUserReadStateChange($readstates) {
         foreach($readstates as $readstate) {
-            $this->importer->ImportMessageReadFlag(bin2hex($readstate["sourcekey"]), $readstate["flags"] & MSGFLAG_READ);
+            $this->importer->ImportMessageReadFlag(bin2hex($this->folderid).":".bin2hex($readstate["sourcekey"]), $readstate["flags"] & MSGFLAG_READ);
         }
     }
 

@@ -59,6 +59,7 @@
 
 class ImportChangesICS implements IImportChanges {
     private $folderid;
+    private $folderidHex;
     private $store;
     private $session;
     private $flags;
@@ -86,6 +87,7 @@ class ImportChangesICS implements IImportChanges {
         $this->session = $session;
         $this->store = $store;
         $this->folderid = $folderid;
+        $this->folderidHex = bin2hex($folderid);
         $this->conflictsLoaded = false;
         $this->cutoffdate = false;
         $this->contentClass = false;
@@ -344,8 +346,10 @@ class ImportChangesICS implements IImportChanges {
      */
     public function ImportMessageChange($id, $message) {
         $parentsourcekey = $this->folderid;
-        if($id)
-            $sourcekey = hex2bin($id);
+        if($id) {
+            list(,$sk) = explode(":", $id);
+            $sourcekey = hex2bin($sk);
+        }
 
         $flags = 0;
         $props = array();
@@ -386,7 +390,8 @@ class ImportChangesICS implements IImportChanges {
                 throw new StatusException(sprintf("ImportChangesICS->ImportMessageChange('%s','%s'): Error, mapi_message_savechanges() failed: 0x%X", $id, get_class($message), mapi_last_hresult()), SYNC_STATUS_SYNCCANNOTBECOMPLETED);
 
             $sourcekeyprops = mapi_getprops($mapimessage, array (PR_SOURCE_KEY));
-            return bin2hex($sourcekeyprops[PR_SOURCE_KEY]);
+
+            return bin2hex($this->folderid) .":". bin2hex($sourcekeyprops[PR_SOURCE_KEY]);
         }
         else
             throw new StatusException(sprintf("ImportChangesICS->ImportMessageChange('%s','%s'): Error updating object: 0x%X", $id, get_class($message), mapi_last_hresult()), SYNC_STATUS_OBJECTNOTFOUND);
@@ -402,6 +407,8 @@ class ImportChangesICS implements IImportChanges {
      * @throws StatusException
      */
     public function ImportMessageDeletion($id) {
+        list(,$sk) = explode(":", $id);
+        $id = hex2bin($sk);
         // check if the message is in the current syncinterval
         if (!$this->isMessageInSyncInterval($id))
             throw new StatusException(sprintf("ImportChangesICS->ImportMessageDeletion('%s'): Message is outside the sync interval and so far not deleted.", $id), SYNC_STATUS_OBJECTNOTFOUND);
@@ -435,27 +442,42 @@ class ImportChangesICS implements IImportChanges {
      * @throws StatusException
      */
     public function ImportMessageReadFlag($id, $flags) {
+        list($fsk,$sk) = explode(":", $id);
+        $id = $sk;
+
         // check if the message is in the current syncinterval
         if (!$this->isMessageInSyncInterval($id))
             throw new StatusException(sprintf("ImportChangesICS->ImportMessageReadFlag('%s','%d'): Message is outside the sync interval. Flags not updated.", $id, $flags), SYNC_STATUS_OBJECTNOTFOUND);
 
-        // check for conflicts
-        /*
-         * Checking for conflicts is correct at this point, but is a very expensive operation.
-         * If the message was deleted, only an error will be shown.
-         *
-        $this->lazyLoadConflicts();
-        if($this->memChanges->IsDeleted($id)) {
-            ZLog::Write(LOGLEVEL_INFO, sprintf("ImportChangesICS->ImportMessageReadFlag('%s'): Conflict detected. Data is already deleted. Request will be ignored.", $id));
-            return true;
+        // read flag change for our current folder
+        if ($this->folderidHex == $fsk) {
+            // check for conflicts
+            /*
+             * Checking for conflicts is correct at this point, but is a very expensive operation.
+             * If the message was deleted, only an error will be shown.
+             *
+            $this->lazyLoadConflicts();
+            if($this->memChanges->IsDeleted($id)) {
+                ZLog::Write(LOGLEVEL_INFO, sprintf("ImportChangesICS->ImportMessageReadFlag('%s'): Conflict detected. Data is already deleted. Request will be ignored.", $id));
+                return true;
+            }
+             */
+
+            $readstate = array ( "sourcekey" => hex2bin($id), "flags" => $flags);
+
+            if(!mapi_importcontentschanges_importperuserreadstatechange($this->importer, array($readstate) ))
+                throw new StatusException(sprintf("ImportChangesICS->ImportMessageReadFlag('%s','%d'): Error setting read state: 0x%X", $id, $flags, mapi_last_hresult()), SYNC_STATUS_OBJECTNOTFOUND);
         }
-         */
-
-        $readstate = array ( "sourcekey" => hex2bin($id), "flags" => $flags);
-
-        if(!mapi_importcontentschanges_importperuserreadstatechange($this->importer, array($readstate) ))
-            throw new StatusException(sprintf("ImportChangesICS->ImportMessageReadFlag('%s','%d'): Error setting read state: 0x%X", $id, $flags, mapi_last_hresult()), SYNC_STATUS_OBJECTNOTFOUND);
-
+        // yeah OL sucks - ZP-779
+        else {
+            $entryid = mapi_msgstore_entryidfromsourcekey($this->store, hex2bin($fsk), hex2bin($sk));
+            $realMessage = mapi_msgstore_openentry($this->store, $entryid);
+            $flag = 0;
+            if ($flags == 0)
+                $flag |= CLEAR_READ_FLAG;
+            $p = mapi_message_setreadflag($realMessage, $flag);
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ImportChangesICS->ImportMessageReadFlag('%s','%d'): .------------------ setting readflag on message: 0x%X", $id, $flags, mapi_last_hresult()));
+        }
         return true;
     }
 
@@ -477,6 +499,8 @@ class ImportChangesICS implements IImportChanges {
      * @throws StatusException
      */
     public function ImportMessageMove($id, $newfolder) {
+        list($fsk,$sk) = explode(":", $id);
+        $id = $sk;
         if (strtolower($newfolder) == strtolower(bin2hex($this->folderid)) )
             throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Error, source and destination are equal", $id, $newfolder), SYNC_MOVEITEMSSTATUS_SAMESOURCEANDDEST);
 
@@ -541,7 +565,7 @@ class ImportChangesICS implements IImportChanges {
 
         $sourcekeyprops = mapi_getprops($newmessage, array (PR_SOURCE_KEY));
         if (isset($sourcekeyprops[PR_SOURCE_KEY]) && $sourcekeyprops[PR_SOURCE_KEY])
-            return  bin2hex($sourcekeyprops[PR_SOURCE_KEY]);
+            return $newfolder .":". bin2hex($sourcekeyprops[PR_SOURCE_KEY]);
 
         return false;
     }
