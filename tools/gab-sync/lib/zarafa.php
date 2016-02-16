@@ -253,7 +253,7 @@ class Zarafa extends SyncWorker {
                                                     ));
         foreach ($gabentries as $entry) {
             $a = new GABEntry();
-            $a->type = GABEnty::Contact;
+            $a->type = GABEntry::CONTACT;
             $a->memberOf = array();
             $memberOf = mapi_zarafa_getgrouplistofuser($this->store, $entry[PR_ENTRYID]);
             if (is_array($memberOf)) {
@@ -262,23 +262,26 @@ class Zarafa extends SyncWorker {
 
             // is this a group?
             if (array_key_exists($entry[PR_ACCOUNT], $groups)) {
-                $a->type = GABEnty::GROUP;
+                $a->type = GABEntry::GROUP;
                 $users = mapi_zarafa_getuserlistofgroup($this->store, $groups[$entry[PR_ACCOUNT]]['groupid']);
                 if (isset($users[$entry[PR_ACCOUNT]]['emailaddress'])) {
                     $a->smtpAddress = $users[$entry[PR_ACCOUNT]]['emailaddress'];
                 }
-                $a->members = array_keys($users);
-                // remove the group from itself
-                $key = array_search($entry[PR_ACCOUNT], $a->members);
-                if ($key !== false) {
-                    unset($a->members[$key]);
+                $a->members = array();
+                if (is_array($users)) {
+                    $a->members = array_keys($users);
+                    // remove the group from itself
+                    $key = array_search($entry[PR_ACCOUNT], $a->members);
+                    if ($key !== false) {
+                        unset($a->members[$key]);
+                    }
                 }
             }
-            else if (isset($entry[PR_DISPLAY_TYPE]) && $entry[PR_DISPLAY_TYPE_EX] == DT_ROOM) {
-                $a->type = GABEnty::ROOM;
+            else if (isset($entry[PR_DISPLAY_TYPE_EX]) && $entry[PR_DISPLAY_TYPE_EX] == DT_ROOM) {
+                $a->type = GABEntry::ROOM;
             }
-            else if (isset($entry[PR_DISPLAY_TYPE]) && $entry[PR_DISPLAY_TYPE_EX] ==  DT_EQUIPMENT) {
-                $a->type = GABEnty::EQUIPMENT;
+            else if (isset($entry[PR_DISPLAY_TYPE_EX]) && $entry[PR_DISPLAY_TYPE_EX] ==  DT_EQUIPMENT) {
+                $a->type = GABEntry::EQUIPMENT;
             }
 
             if (isset($entry[PR_ACCOUNT]))                              $a->account                         = $entry[PR_ACCOUNT];
