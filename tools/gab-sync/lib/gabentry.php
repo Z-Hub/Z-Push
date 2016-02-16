@@ -11,6 +11,15 @@
 
 
 class GABEntry {
+    const CONTACT = "contact";
+    const GROUP = "group";
+    const ROOM = "room";
+    const EQUIPMENT = "equipment";
+
+    public $type;                           // contact, group, room or equipment
+    public $memberOf;                       // groups the item is a member of
+    public $members;                        // if this is a group, a list of its members
+
     // GABEntry variable                    MAPI Property                               Default LDAP parameter
     public $account;                        // PR_ACCOUNT                               username
     public $displayName;                    // PR_DISPLAY_NAME

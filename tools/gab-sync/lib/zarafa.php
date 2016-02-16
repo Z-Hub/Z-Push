@@ -195,6 +195,9 @@ class Zarafa extends SyncWorker {
      * @return array of GABEntry
      */
     protected function GetGAB($uniqueId = false) {
+        // get all the groups
+        $groups = mapi_zarafa_getgrouplist($this->store);
+
         $data = array();
 
         $addrbook = mapi_openaddressbook($this->session);
@@ -245,10 +248,38 @@ class Zarafa extends SyncWorker {
                                                             PR_BUSINESS_ADDRESS_POST_OFFICE_BOX,
                                                             PR_INITIALS,
                                                             PR_LANGUAGE,
-                                                            PR_EMS_AB_THUMBNAIL_PHOTO
+                                                            PR_EMS_AB_THUMBNAIL_PHOTO,
+                                                            PR_DISPLAY_TYPE_EX
                                                     ));
         foreach ($gabentries as $entry) {
             $a = new GABEntry();
+            $a->type = GABEnty::Contact;
+            $a->memberOf = array();
+            $memberOf = mapi_zarafa_getgrouplistofuser($this->store, $entry[PR_ENTRYID]);
+            if (is_array($memberOf)) {
+                $a->memberOf = array_keys($memberOf);
+            }
+
+            // is this a group?
+            if (array_key_exists($entry[PR_ACCOUNT], $groups)) {
+                $a->type = GABEnty::GROUP;
+                $users = mapi_zarafa_getuserlistofgroup($this->store, $groups[$entry[PR_ACCOUNT]]['groupid']);
+                if (isset($users[$entry[PR_ACCOUNT]]['emailaddress'])) {
+                    $a->smtpAddress = $users[$entry[PR_ACCOUNT]]['emailaddress'];
+                }
+                $a->members = array_keys($users);
+                // remove the group from itself
+                $key = array_search($entry[PR_ACCOUNT], $a->members);
+                if ($key !== false) {
+                    unset($a->members[$key]);
+                }
+            }
+            else if (isset($entry[PR_DISPLAY_TYPE]) && $entry[PR_DISPLAY_TYPE_EX] == DT_ROOM) {
+                $a->type = GABEnty::ROOM;
+            }
+            else if (isset($entry[PR_DISPLAY_TYPE]) && $entry[PR_DISPLAY_TYPE_EX] ==  DT_EQUIPMENT) {
+                $a->type = GABEnty::EQUIPMENT;
+            }
 
             if (isset($entry[PR_ACCOUNT]))                              $a->account                         = $entry[PR_ACCOUNT];
             if (isset($entry[PR_DISPLAY_NAME]))                         $a->displayName                     = $entry[PR_DISPLAY_NAME];
@@ -452,8 +483,8 @@ class Zarafa extends SyncWorker {
             // the default store root
             if ($this->mainUser == HIDDEN_FOLDERSTORE) {
                 $parentprops = mapi_getprops($this->store, array(PR_IPM_SUBTREE_ENTRYID));
-                if (isset($parentprops[PR_IPM_PUBLIC_FOLDERS_ENTRYID]))
-                    $parentfentryid = $parentprops[PR_IPM_PUBLIC_FOLDERS_ENTRYID];
+                if (isset($parentprops[PR_IPM_SUBTREE_ENTRYID]))
+                    $parentfentryid = $parentprops[PR_IPM_SUBTREE_ENTRYID];
             }
             // get the main public folder
             else {
