@@ -44,8 +44,11 @@ class Zarafa extends SyncWorker {
         $this->mapiprops = array(
                 "chunktype"     => "PT_STRING8:PSETID_Appointment:0x6822",      // custom property
                 "chunkCRC"      => "PT_STRING8:PSETID_Appointment:0x8208",      // location
+                "createtime"    => "PT_SYSTIME:PSETID_Appointment:0x820d",      // startime
+                "updatetime"    => "PT_SYSTIME:PSETID_Appointment:0x820e",      // endtime
                 "reminderset"   => "PT_BOOLEAN:PSETID_Common:0x8503",
                 "isrecurring"   => "PT_BOOLEAN:PSETID_Appointment:0x8223",
+                "busystatus"    => "PT_LONG:PSETID_Appointment:0x8205",
         );
         $this->mapiprops = getPropIdsFromStrings($this->store, $this->mapiprops);
     }
@@ -363,7 +366,15 @@ class Zarafa extends SyncWorker {
         if (empty($chunkdata)) {
             $folder = $this->getFolder($folderid);
             $message = mapi_folder_createmessage($folder);
-            mapi_setprops($message, array(PR_MESSAGE_CLASS => "IPM.Appointment", $this->mapiprops['chunktype'] => $this->chunkType, PR_SUBJECT => $chunkName));
+            mapi_setprops($message, array(
+                    PR_MESSAGE_CLASS => "IPM.Appointment",
+                    $this->mapiprops['chunktype'] => $this->chunkType,
+                    PR_SUBJECT => $chunkName,
+                    $this->mapiprops['createtime'] => time(),
+                    $this->mapiprops['reminderset'] => 0,
+                    $this->mapiprops['isrecurring'] => 0,
+                    $this->mapiprops['busystatus'] => 0,
+            ));
             $log .= "creating - ";
         }
         // message there, open and compare
@@ -380,7 +391,11 @@ class Zarafa extends SyncWorker {
 
         // update chunk if necessary
         if ($message) {
-            mapi_setprops($message, array($this->mapiprops['chunkCRC'] => $chunkCRC, PR_BODY => $chunkData));
+            mapi_setprops($message, array(
+                    $this->mapiprops['chunkCRC'] => $chunkCRC,
+                    PR_BODY => $chunkData,
+                    $this->mapiprops['updatetime'] => time(),
+            ));
             mapi_savechanges($message);
             $log .= "saved";
         }
