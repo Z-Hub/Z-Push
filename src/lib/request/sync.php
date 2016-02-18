@@ -710,10 +710,10 @@ class Sync extends RequestProcessor {
                 }
 
                 // compare the folder statistics if the backend supports this
-                if ($setupExporter && self::$backend->HasFolderStats() && $spa->HasFolderStat()) {
+                if ($setupExporter && self::$backend->HasFolderStats()) {
                     // check if the folder stats changed -> if not, don't setup the exporter, there are no changes!
                     $newFolderStat = self::$backend->GetFolderStat(ZPush::GetAdditionalSyncFolderStore($spa->GetFolderId()), $spa->GetFolderId());
-                    if ($newFolderStat === $spa->GetFolderStat()) {
+                    if ($spa->HasFolderStat() && $newFolderStat === $spa->GetFolderStat()) {
                         $changecount = 0;
                         $setupExporter = false;
                         ZLog::Write(LOGLEVEL_DEBUG, "Sync(): Folder stat from the backend indicates that the folder did not change. Exporter will not run.");
