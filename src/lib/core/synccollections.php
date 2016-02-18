@@ -124,7 +124,7 @@ class SyncCollections implements Iterator {
      *
      * @access public
      * @throws StatusException                  with SyncCollections::ERROR_WRONG_HIERARCHY if permission check fails
-     * @throws StateNotFoundException           if the sync state can not be found ($loadState = true)
+     * @throws StateInvalidException            if the sync state can not be found or relation between states is invalid ($loadState = true)
      * @return boolean
      */
     public function LoadAllCollections($overwriteLoaded = false, $loadState = false, $checkPermissions = false) {
@@ -160,7 +160,7 @@ class SyncCollections implements Iterator {
      *
      * @access public
      * @throws StatusException                  with SyncCollections::ERROR_WRONG_HIERARCHY if permission check fails
-     * @throws StateNotFoundException           if the sync state can not be found ($loadState = true)
+     * @throws StateInvalidException            if the sync state can not be found or relation between states is invalid ($loadState = true)
      * @return boolean
      */
     public function LoadCollection($folderid, $loadState = false, $checkPermissions = false) {
@@ -193,8 +193,18 @@ class SyncCollections implements Iterator {
         $addStatus = $this->AddCollection($spa);
 
         // load the latest known syncstate if requested
-        if ($addStatus && $loadState === true)
-            $this->addparms[$folderid]["state"] = $this->stateManager->GetSyncState($spa->GetLatestSyncKey());
+        if ($addStatus && $loadState === true) {
+            try {
+                $this->addparms[$folderid]["state"] = $this->stateManager->GetSyncState($spa->GetLatestSyncKey());
+            }
+            catch (StateNotFoundException $snfe) {
+                // if we can't find the state, first we should try a sync of that folder, so
+                // we generate a fake change, so a sync on this folder is triggered
+                $this->changes[$folderid] = 1;
+
+                return false;
+            }
+        }
 
         return $addStatus;
     }
