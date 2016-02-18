@@ -203,6 +203,9 @@ class SyncCollections implements Iterator {
                 // we generate a fake change, so a sync on this folder is triggered
                 $this->changes[$folderid] = 1;
 
+                // make sure this folder is fully synched on next Sync request
+                $this->invalidateFolderStat($spa);
+
                 // rethrow the exception
                 throw $snfe;
             }
@@ -650,11 +653,8 @@ class SyncCollections implements Iterator {
                 ZLog::Write(LOGLEVEL_WARN, "SyncCollections->CountChange(): exporter can not be re-configured due to state error, emulating change in folder to force Sync.");
                 $this->changes[$folderid] = 1;
                 // make sure this folder is fully synched on next Sync request
-                if($spa->HasFolderStat()) {
-                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->CountChange(): removing folder stat '%s' for folderid '%s'", $spa->GetFolderStat(), $spa->GetFolderId()));
-                    $spa->DelFolderStat();
-                    $this->SaveCollection($spa);
-                }
+                $this->invalidateFolderStat($spa);
+
                 return true;
             }
             throw new StatusException("SyncCollections->CountChange(): exporter can not be re-configured.", self::ERROR_WRONG_HIERARCHY, null, LOGLEVEL_WARN);
@@ -686,14 +686,13 @@ class SyncCollections implements Iterator {
      * @return boolean
      */
     public function PingableFolders() {
-        $pingable = false;
-
         foreach ($this->collections as $folderid => $spa) {
-            if ($spa->GetPingableFlag() == true)
-                $pingable = true;
+            if ($spa->GetPingableFlag() == true) {
+                return true;
+            }
         }
 
-        return $pingable;
+        return false;
     }
 
     /**
@@ -772,5 +771,23 @@ class SyncCollections implements Iterator {
      private function loadStateManager() {
          if (!isset($this->stateManager))
             $this->stateManager = ZPush::GetDeviceManager()->GetStateManager();
+     }
+
+     /**
+      * Remove folder statistics from a SyncParameter object.
+      *
+      * @param SyncParameters $spa
+      *
+      * @access public
+      * @return
+      */
+     private function invalidateFolderStat($spa) {
+         if($spa->HasFolderStat()) {
+             ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->invalidateFolderStat(): removing folder stat '%s' for folderid '%s'", $spa->GetFolderStat(), $spa->GetFolderId()));
+             $spa->DelFolderStat();
+             $this->SaveCollection($spa);
+             return true;
+         }
+         return false;
      }
 }
