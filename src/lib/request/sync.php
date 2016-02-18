@@ -566,7 +566,7 @@ class Sync extends RequestProcessor {
             try {
                 $sc->LoadAllCollections(false, true, true);
             }
-            catch (StateInvalidException $snfex) {
+            catch (StateInvalidException $siex) {
                 $status = SYNC_STATUS_INVALIDSYNCKEY;
                 self::$topCollector->AnnounceInformation("StateInvalidException", true);
             }
