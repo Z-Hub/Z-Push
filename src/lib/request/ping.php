@@ -67,7 +67,7 @@ class Ping extends RequestProcessor {
         try {
             $sc->LoadAllCollections(true, true, true);
         }
-        catch (StateInvalidException $snfex) {
+        catch (StateInvalidException $siex) {
             // if no params are present, indicate to send params, else do hierarchy sync
             if (!$params_present) {
                 $pingstatus = SYNC_PINGSTATUS_FAILINGPARAMS;
