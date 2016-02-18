@@ -566,9 +566,9 @@ class Sync extends RequestProcessor {
             try {
                 $sc->LoadAllCollections(false, true, true);
             }
-            catch (StateNotFoundException $snfex) {
+            catch (StateInvalidException $siex) {
                 $status = SYNC_STATUS_INVALIDSYNCKEY;
-                self::$topCollector->AnnounceInformation("StateNotFoundException", true);
+                self::$topCollector->AnnounceInformation("StateInvalidException", true);
             }
             catch (StatusException $stex) {
                $status = SYNC_STATUS_FOLDERHIERARCHYCHANGED;
