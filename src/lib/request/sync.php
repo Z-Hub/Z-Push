@@ -151,8 +151,10 @@ class Sync extends RequestProcessor {
                             throw new StateInvalidException("Saved state are not of type SyncParameters");
 
                         // new/resync requested
-                        if ($synckey == "0")
+                        if ($synckey == "0") {
                             $spa->RemoveSyncKey();
+                            $spa->DelFolderStat();
+                        }
                         else if ($synckey !== false)
                             $spa->SetSyncKey($synckey);
                     }
