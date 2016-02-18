@@ -74,8 +74,10 @@ class Ping extends RequestProcessor {
                 self::$topCollector->AnnounceInformation("StateNotFoundException: require PingParameters", true);
             }
             else {
-                $pingstatus = SYNC_PINGSTATUS_FOLDERHIERSYNCREQUIRED;
-                self::$topCollector->AnnounceInformation("StateNotFoundException: require HierarchySync", true);
+                // we do not have a ping status for this, but SyncCollections should have generated fake changes for the folders which are broken
+                $fakechanges = $sc->GetChangedFolderIds();
+                $foundchanges = true;
+                self::$topCollector->AnnounceInformation("StateNotFoundException: force sync", true);
             }
         }
         catch (StateInvalidException $snfex) {
