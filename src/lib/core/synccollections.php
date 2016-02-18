@@ -301,6 +301,16 @@ class SyncCollections implements Iterator {
     }
 
     /**
+     * Indicates the amount of collections loaded.
+     *
+     * @access public
+     * @return int
+     */
+    public function GetCollectionCount() {
+        return count($this->collections);
+    }
+
+    /**
      * Add a non-permanent key/value pair for a SyncParameters object
      *
      * @param SyncParameters    $spa    target SyncParameters

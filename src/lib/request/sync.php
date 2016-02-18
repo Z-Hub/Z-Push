@@ -836,9 +836,8 @@ class Sync extends RequestProcessor {
             self::$encoder->endTag();
 
         // final top announcement for a multi-folder sync
-        $c = iterator_count($sc);
-        if ($c > 1) {
-            self::$topCollector->AnnounceInformation($this->getMultiFolderInfoLine($c), true);
+        if ($sc->GetCollectionCount() > 1) {
+            self::$topCollector->AnnounceInformation($this->getMultiFolderInfoLine($sc->GetCollectionCount()), true);
         }
 
         return true;
@@ -1437,7 +1436,7 @@ class Sync extends RequestProcessor {
         if (isset($this->multiFolderInfo["outgoing"]) && isset($this->multiFolderInfo["queued"]) && $this->multiFolderInfo["outgoing"] > 0) {
             $s .= sprintf(": Streamed %d out of %d", $this->multiFolderInfo["outgoing"], $this->multiFolderInfo["queued"]);
         }
-        else if (!isset($this->multiFolderInfo["outgoing"])) {
+        else if (!isset($this->multiFolderInfo["outgoing"]) && !isset($this->multiFolderInfo["queued"])) {
             $s .= ": no changes";
         }
         else {
@@ -1448,8 +1447,8 @@ class Sync extends RequestProcessor {
                 $s .= "/".$this->multiFolderInfo["queued"] ." queued";
             }
         }
-        if (isset($this->multiFolderInfo["exceptions"])) {
-            $exceptions = array_count_values($this->multiFolderInfo["exceptions"]);
+        if (isset($this->multiFolderInfo["exception"])) {
+            $exceptions = array_count_values($this->multiFolderInfo["exception"]);
             foreach ($exceptions as $name => $count) {
                 $s .= sprintf("-%s(%d)", $name, $count);
             }
