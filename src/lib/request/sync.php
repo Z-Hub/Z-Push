@@ -46,6 +46,8 @@ class Sync extends RequestProcessor {
     const ZPUSHIGNORESMS = "ZPISMS";
     private $importer;
     private $globallyExportedItems;
+    private $singleFolder;
+    private $multiFolderInfo;
     private $startTagsSent = false;
     private $startFolderTagSent = false;
 
@@ -64,6 +66,8 @@ class Sync extends RequestProcessor {
         $status = SYNC_STATUS_SUCCESS;
         $wbxmlproblem = false;
         $emptysync = false;
+        $this->singleFolder = true;
+        $this->multiFolderInfo = array();
         $this->globallyExportedItems = 0;
 
 
@@ -106,6 +110,11 @@ class Sync extends RequestProcessor {
 
                     // read class, synckey and folderid without SyncParameters Object for now
                     $class = $synckey = $folderid = false;
+
+                    // if there are already collections in SyncCollections, this is min. the second folder
+                    if ($sc->HasCollections()) {
+                        $this->singleFolder = false;
+                    }
 
                     //for AS versions < 2.5
                     if(self::$decoder->getElementStartTag(SYNC_FOLDERTYPE)) {
@@ -159,8 +168,9 @@ class Sync extends RequestProcessor {
                     catch (StateInvalidException $stie) {
                         $spa = new SyncParameters();
                         $status = SYNC_STATUS_INVALIDSYNCKEY;
-                        self::$topCollector->AnnounceInformation("State invalid - Resync folder", true);
+                        self::$topCollector->AnnounceInformation("State invalid - Resync folder", $this->singleFolder);
                         self::$deviceManager->ForceFolderResync($folderid);
+                        $this->saveMultiFolderInfo("exception", "StateInvalidException");
                     }
 
                     // update folderid.. this might be a new object
@@ -186,7 +196,7 @@ class Sync extends RequestProcessor {
                     $sc->AddParameter($spa, "requested", true);
 
                     if ($spa->HasContentClass())
-                        self::$topCollector->AnnounceInformation(sprintf("%s request", $spa->GetContentClass()), true);
+                        self::$topCollector->AnnounceInformation(sprintf("%s request", $spa->GetContentClass()), $this->singleFolder);
                     else
                         ZLog::Write(LOGLEVEL_WARN, "Not possible to determine class of request. Request did not contain class and apparently there is an issue with the HierarchyCache.");
 
@@ -473,8 +483,10 @@ class Sync extends RequestProcessor {
 
                         if ($status == SYNC_STATUS_SUCCESS && $this->importer !== false) {
                             ZLog::Write(LOGLEVEL_INFO, sprintf("Processed '%d' incoming changes", $nchanges));
-                            if (!$actiondata["fetchids"])
-                                self::$topCollector->AnnounceInformation(sprintf("%d incoming", $nchanges), true);
+                            if (!$actiondata["fetchids"]) {
+                                self::$topCollector->AnnounceInformation(sprintf("%d incoming", $nchanges), $this->singleFolder);
+                                $this->saveMultiFolderInfo("incoming", $nchanges);
+                            }
 
                             try {
                                 // Save the updated state, which is used for the exporter later
@@ -566,11 +578,13 @@ class Sync extends RequestProcessor {
             }
             catch (StateNotFoundException $snfex) {
                 $status = SYNC_STATUS_INVALIDSYNCKEY;
-                self::$topCollector->AnnounceInformation("StateNotFoundException", true);
+                self::$topCollector->AnnounceInformation("StateNotFoundException", $this->singleFolder);
+                $this->saveMultiFolderInfo("exeption", "StateNotFoundException");
             }
             catch (StatusException $stex) {
                $status = SYNC_STATUS_FOLDERHIERARCHYCHANGED;
-               self::$topCollector->AnnounceInformation(sprintf("StatusException code: %d", $status), true);
+               self::$topCollector->AnnounceInformation(sprintf("StatusException code: %d", $status), $this->singleFolder);
+               $this->saveMultiFolderInfo("exeption", "StatusException");
             }
 
             // update a few values
@@ -625,7 +639,8 @@ class Sync extends RequestProcessor {
                     }
                     else {
                         $status = SYNC_STATUS_FOLDERHIERARCHYCHANGED;
-                        self::$topCollector->AnnounceInformation(sprintf("StatusException code: %d", $status), true);
+                        self::$topCollector->AnnounceInformation(sprintf("StatusException code: %d", $status), $this->singleFolder);
+                        $this->saveMultiFolderInfo("exeption", "StatusException");
                     }
                 }
 
@@ -758,7 +773,8 @@ class Sync extends RequestProcessor {
                         }
 
                         if (! $spa->HasSyncKey()) {
-                            self::$topCollector->AnnounceInformation(sprintf("Exporter registered. %d objects queued.", $changecount), true);
+                            self::$topCollector->AnnounceInformation(sprintf("Exporter registered. %d objects queued.", $changecount), $this->singleFolder);
+                            $this->saveMultiFolderInfo("queued", $changecount);
                             // update folder status as initialized
                             $spa->SetFolderSyncTotal($changecount);
                             $spa->SetFolderSyncRemaining($changecount);
@@ -767,7 +783,8 @@ class Sync extends RequestProcessor {
                             }
                         }
                         else if ($status != SYNC_STATUS_SUCCESS) {
-                            self::$topCollector->AnnounceInformation(sprintf("StatusException code: %d", $status), true);
+                            self::$topCollector->AnnounceInformation(sprintf("StatusException code: %d", $status), $this->singleFolder);
+                            $this->saveMultiFolderInfo("exception", "StatusException");
                         }
                     }
                 }
@@ -815,6 +832,12 @@ class Sync extends RequestProcessor {
         //SYNC_SYNCHRONIZE - only if the starttag was sent
         if ($this->startTagsSent)
             self::$encoder->endTag();
+
+        // final top announcement for a multi-folder sync
+        $c = iterator_count($sc);
+        if ($c > 1) {
+            self::$topCollector->AnnounceInformation($this->getMultiFolderInfoLine($c), true);
+        }
 
         return true;
     }
@@ -950,8 +973,10 @@ class Sync extends RequestProcessor {
                 }
             }
 
-            if (!empty($actiondata["fetchids"]))
-                self::$topCollector->AnnounceInformation(sprintf("Fetching %d objects ", count($actiondata["fetchids"])), true);
+            if (!empty($actiondata["fetchids"])) {
+                self::$topCollector->AnnounceInformation(sprintf("Fetching %d objects ", count($actiondata["fetchids"])), $this->singleFolder);
+                $this->saveMultiFolderInfo("fetching", count($actiondata["fetchids"]));
+            }
 
             foreach($actiondata["fetchids"] as $id) {
                 $data = false;
@@ -1066,7 +1091,10 @@ class Sync extends RequestProcessor {
             }
 
             self::$encoder->endTag();
-            self::$topCollector->AnnounceInformation(sprintf("Outgoing %d objects%s", $n, ($n >= $windowSize)?" of ".$changecount:""), true);
+            self::$topCollector->AnnounceInformation(sprintf("Outgoing %d objects%s", $n, ($n >= $windowSize)?" of ".$changecount:""), $this->singleFolder);
+            $this->saveMultiFolderInfo("outgoing", $n);
+            $this->saveMultiFolderInfo("queued", $changecount);
+
             $this->globallyExportedItems += $n;
 
             // update folder status, if there is something set
@@ -1149,11 +1177,14 @@ class Sync extends RequestProcessor {
             }
             catch (StateNotFoundException $snfex) {
                 $status = SYNC_STATUS_INVALIDSYNCKEY;
-                self::$topCollector->AnnounceInformation("StateNotFoundException", true);
+                self::$topCollector->AnnounceInformation("StateNotFoundException", $this->singleFolder);
+                $this->saveMultiFolderInfo("exception", "StateNotFoundException");
             }
             catch (StatusException $stex) {
                $status = $stex->getCode();
-               self::$topCollector->AnnounceInformation(sprintf("StatusException code: %d", $status), true);
+               self::$topCollector->AnnounceInformation(sprintf("StatusException code: %d", $status), $this->singleFolder);
+               $this->saveMultiFolderInfo("exception", "StateNotFoundException");
+
             }
         }
 
@@ -1365,5 +1396,62 @@ class Sync extends RequestProcessor {
             }
             ZLog::Write(LOGLEVEL_DEBUG, "Sync->importMessage(): message imported");
         }
+    }
+
+    /**
+     * Keeps some interesting information about the sync process of several folders.
+     *
+     * @access private
+     * @return
+     */
+    private function saveMultiFolderInfo($key, $value) {
+        if ($key == "incoming" || $key == "outgoing" || $key == "queued" || $key == "fetching") {
+            if (!isset($this->multiFolderInfo[$key])) {
+                $this->multiFolderInfo[$key] = 0;
+            }
+            $this->multiFolderInfo[$key] += $value;
+        }
+        if ($key == "exception") {
+            if (!isset($this->multiFolderInfo[$key])) {
+                $this->multiFolderInfo[$key] = array();
+            }
+            $this->multiFolderInfo[$key][] = $value;
+        }
+    }
+
+    /**
+     * Returns a single string with information about the multi folder synchronization.
+     *
+     * @param int $amountOfFolders
+     *
+     * @access private
+     * @return string
+     */
+    private function getMultiFolderInfoLine($amountOfFolders) {
+        $s = $amountOfFolders . " folders";
+        if (isset($this->multiFolderInfo["incoming"])) {
+            $s .= ": ". $this->multiFolderInfo["incoming"] ." saved";
+        }
+        if (isset($this->multiFolderInfo["outgoing"]) && isset($this->multiFolderInfo["queued"]) && $this->multiFolderInfo["outgoing"] > 0) {
+            $s .= sprintf(": Streamed %d out of %d", $this->multiFolderInfo["outgoing"], $this->multiFolderInfo["queued"]);
+        }
+        else if (!isset($this->multiFolderInfo["outgoing"])) {
+            $s .= ": no changes";
+        }
+        else {
+            if (isset($this->multiFolderInfo["outgoing"])) {
+                $s .= "/".$this->multiFolderInfo["outgoing"] ." streamed";
+            }
+            if (isset($this->multiFolderInfo["queued"])) {
+                $s .= "/".$this->multiFolderInfo["queued"] ." queued";
+            }
+        }
+        if (isset($this->multiFolderInfo["exceptions"])) {
+            $exceptions = array_count_values($this->multiFolderInfo["exceptions"]);
+            foreach ($exceptions as $name => $count) {
+                $s .= sprintf("-%s(%d)", $name, $count);
+            }
+        }
+        return $s;
     }
 }
