@@ -1224,10 +1224,10 @@ class TimezoneUtil {
      *
      * @param string    $name       internal timezone name
      *
-     * @access public
+     * @access private
      * @return string
      */
-    static public function getMSTZnameFromTZName($name) {
+    static private function getMSTZnameFromTZName($name) {
         foreach (self::$mstzones as $mskey => $msdefs) {
             if ($name == $msdefs[0])
                 return $msdefs[1];
@@ -1349,6 +1349,6 @@ class TimezoneUtil {
         if (preg_match('/\/[.[:word:]]+\/\w+\/(\w+)\/([\w\/]+)/', $timezone, $matches)) {
             return $matches[1] . "/" . $matches[2];
         }
-        return TimezoneUtil::getMSTZnameFromTZName(trim($timezone, '"'));
+        return self::getMSTZnameFromTZName(trim($timezone, '"'));
     }
 }
