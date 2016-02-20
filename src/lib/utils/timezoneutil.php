@@ -1233,6 +1233,26 @@ class TimezoneUtil {
                 return $msdefs[1];
         }
 
+        // Not found? Then retrieve the correct TZName first and try again.
+        // That's ugly and needs a proper fix. But for now this method can convert
+        // - Europe/Berlin
+        // - W Europe Standard Time
+        // to "(GMT+01:00) Amsterdam, Berlin, Bern, Rome, Stockholm, Vienna" 
+        // which is more correct than the hardcoded default of (GMT+00:00...)
+        $tzName = '';
+        foreach (self::$phptimezones as $tzn => $phptzs) {
+            if (in_array($name, $phptzs)) {
+                $tzName = $tzn;
+                break;
+            }
+        }
+        if ($tzName != '') {
+            foreach (self::$mstzones as $mskey => $msdefs) {
+                if ($tzName == $msdefs[0])
+                    return $msdefs[1];
+            }
+        }
+
         ZLog::Write(LOGLEVEL_WARN, sprintf("TimezoneUtil::getMSTZnameFromTZName() no MS name found for '%s'. Returning '(GMT) Greenwich Mean Time: Dublin, Edinburgh, Lisbon, London'", $name));
         return self::$mstzones["085"][1];
     }
