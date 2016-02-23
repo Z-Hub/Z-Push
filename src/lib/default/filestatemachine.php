@@ -382,7 +382,6 @@ class FileStateMachine implements IStateMachine {
         $settings[self::VERSION] = $version;
         ZLog::Write(LOGLEVEL_INFO, sprintf("FileStateMachine->SetStateVersion() saving supported state version, value '%d'", $version));
         $status = Utils::SafePutContents($this->settingsfilename, serialize($settings));
-        Utils::FixFileOwner($this->settingsfilename);
         return $status;
     }
 

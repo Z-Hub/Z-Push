@@ -955,7 +955,8 @@ class Utils {
 
     /**
      * Safely write data to disk, using an unique tmp file (concurrent write),
-     * and using rename for atomicity
+     * and using rename for atomicity. It also calls FixFileOwner to prevent
+     * ownership/rights problems when running as root
      *
      * If you use SafePutContents, you can safely use file_get_contents
      * (you will always read a fully written file)
@@ -967,9 +968,11 @@ class Utils {
     public static function SafePutContents($filename, $data) {
         //put the 'tmp' as a prefix (and not suffix) so all glob call will not see temp files
         $tmp = dirname($filename).DIRECTORY_SEPARATOR.'tmp-'.getmypid().'-'.basename($filename);
-        if (($res = file_put_contents($tmp, $data)) !== false)
+        if (($res = file_put_contents($tmp, $data)) !== false) {
+            self::FixFileOwner($tmp);
             if (rename($tmp, $filename) !== true)
                 $res = false;
+        }
 
         return $res;
     }
