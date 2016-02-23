@@ -43,13 +43,7 @@
 * Consult LICENSE file for details
 ************************************************/
 
-
-if (version_compare(phpversion(), '5.4.0') < 0) {
-    ob_start(null, 1048576);
-}
-else {
-    ob_start(null, 1048576, PHP_OUTPUT_HANDLER_STDFLAGS);
-}
+ob_start(null, 1048576);
 
 // ignore user abortions because this can lead to weird errors - see ZP-239
 ignore_user_abort(true);
