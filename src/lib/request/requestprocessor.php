@@ -129,17 +129,12 @@ abstract class RequestProcessor {
 
         // if there is an error decoding wbxml, consume remaining data and include it in the WBXMLException
         if (!$handler->Handle(Request::GetCommandCode())) {
-            $wbxmlLog = "no decoder";
-            if (self::$decoder) {
-                self::$decoder->readRemainingData();
-                $wbxmlLog = self::$decoder->getWBXMLLog();
-            }
-            throw new WBXMLException("Debug data: " . $wbxmlLog);
+            throw new WBXMLException("Debug data: " . Request::GetInputAsBase64());
         }
 
         // also log WBXML in happy case
-        if (self::$decoder && @constant('WBXML_DEBUG') === true) {
-            ZLog::Write(LOGLEVEL_WBXML, "WBXML-IN : ". self::$decoder->getWBXMLLog(), false);
+        if (@constant('WBXML_DEBUG') === true) {
+            ZLog::Write(LOGLEVEL_WBXML, "WBXML-IN : ". Request::GetInputAsBase64(), false);
         }
     }
 

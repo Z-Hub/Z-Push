@@ -630,4 +630,19 @@ class Request {
 
         return ($re) ? preg_replace($re, $replacevalue, $input) : '';
     }
+
+    /**
+     * Returns base64 encoded "php://input"
+     * With POST request (our case), you can open and read
+     * multiple times "php://input"
+     *
+     * @access public
+     * @return string - base64 encoded wbxml
+     */
+    public static function GetInputAsBase64() {
+        $input = fopen('php://input', 'r');
+        $wbxml = base64_encode(stream_get_contents($input));
+        fclose($input);
+        return $wbxml;
+    }
 }
