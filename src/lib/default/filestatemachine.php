@@ -182,6 +182,7 @@ class FileStateMachine implements IStateMachine {
             $file = $this->getFullFilePath($devid, $type, $key, $counter);
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("FileStateMachine->CleanStates(): Deleting 'bs' file: '%s'", $file));
             unlink($file);
+            return;
         }
 
         $matching_files = glob($this->getFullFilePath($devid, $type, $key). "*", GLOB_NOSORT);
