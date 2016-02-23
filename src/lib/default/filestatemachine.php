@@ -180,9 +180,11 @@ class FileStateMachine implements IStateMachine {
         // TODO remove this block and implement it as described in ZP-835
         if ($key === false && $type === IStateMachine::BACKENDSTORAGE) {
             $file = $this->getFullFilePath($devid, $type, $key, $counter);
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("FileStateMachine->CleanStates(): Deleting 'bs' file: '%s'", $file));
-            unlink($file);
-            return;
+            if (file_exists($file)) {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("FileStateMachine->CleanStates(): Deleting 'bs' file: '%s'", $file));
+                unlink($file);
+                return;
+            }
         }
 
         $matching_files = glob($this->getFullFilePath($devid, $type, $key). "*", GLOB_NOSORT);
