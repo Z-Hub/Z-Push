@@ -7,7 +7,7 @@
  *              Z-Push implements the FileStateMachine which
  *              saves states to disk.
  *              Backends provide their own IStateMachine
-                implementation of this interface and return
+ *              implementation of this interface and return
  *              an IStateMachine instance with IBackend->GetStateMachine().
  *              Old sync states are not deleted until a new sync state
  *              is requested.
@@ -60,7 +60,6 @@ interface IStateMachine {
     const FAILSAVE = "fs";
     const HIERARCHY = "hc";
     const BACKENDSTORAGE = "bs";
-    const HIGHEST_COUNTER = 99999999999;
 
     const STATEVERSION_01 = "1";    // Z-Push 2.0.x - default value if unset
     const STATEVERSION_02 = "2";    // Z-Push 2.1.0 Milestone 1
