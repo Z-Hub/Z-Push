@@ -176,9 +176,15 @@ class FileStateMachine implements IStateMachine {
      * @throws StateInvalidException
      */
     public function CleanStates($devid, $type, $key, $counter = false) {
-        // Don't remove permanent backend storage files, unless we explicitily want that
-        if ($key === false && $type === IStateMachine::BACKENDSTORAGE && $counter != IStateMachine::HIGHEST_COUNTER) {
-            return;
+        // Remove permanent backend storage files
+        // TODO remove this block and implement it as described in ZP-835
+        if ($key === false && $type === IStateMachine::BACKENDSTORAGE) {
+            $file = $this->getFullFilePath($devid, $type, $key, $counter);
+            if (file_exists($file)) {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("FileStateMachine->CleanStates(): Deleting 'bs' file: '%s'", $file));
+                unlink($file);
+                return;
+            }
         }
 
         $matching_files = glob($this->getFullFilePath($devid, $type, $key). "*", GLOB_NOSORT);
