@@ -248,6 +248,9 @@ class FolderChange extends RequestProcessor {
             $spa->SetSyncKey($newsynckey);
             $spa->SetFolderId(false);
             self::$deviceManager->GetStateManager()->SetSynchedFolderState($spa);
+
+            // invalidate all pingable flags
+            SyncCollections::InvalidatePingableFlags();
         }
 
         return true;

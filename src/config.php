@@ -6,7 +6,7 @@
 *
 * Created   :   01.10.2007
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -78,6 +78,12 @@
 
 /**********************************************************************************
  *  Logging settings
+ *
+ *  The LOGBACKEND specifies where the logs are sent to.
+ *  Either to file ("filelog") or to a "syslog" server or a custom log class in core/log/logclass.
+ *  filelog and syslog have several options that can be set below.
+ *  For more information about the syslog configuration, see https://wiki.z-hub.io/x/HIAT
+
  *  Possible LOGLEVEL and LOGUSERLEVEL values are:
  *  LOGLEVEL_OFF            - no logging
  *  LOGLEVEL_FATAL          - log only critical errors
@@ -92,13 +98,12 @@
  *  The verbosity increases from top to bottom. More verbose levels include less verbose
  *  ones, e.g. setting to LOGLEVEL_DEBUG will also output LOGLEVEL_FATAL, LOGLEVEL_ERROR,
  *  LOGLEVEL_WARN and LOGLEVEL_INFO level entries.
+ *
+ *  LOGAUTHFAIL is logged to the LOGBACKEND.
  */
-    define('LOGFILEDIR', '/var/log/z-push/');
-    define('LOGFILE', LOGFILEDIR . 'z-push.log');
-    define('LOGERRORFILE', LOGFILEDIR . 'z-push-error.log');
+    define('LOGBACKEND', 'filelog');
     define('LOGLEVEL', LOGLEVEL_WBXML);
     define('LOGAUTHFAIL', false);
-
 
     // To save e.g. WBXML data only for selected users, add the usernames to the array
     // The data will be saved into a dedicated file per user in the LOGFILEDIR
@@ -107,15 +112,20 @@
     define('LOGUSERLEVEL', LOGLEVEL_DEVICEID);
     $specialLogUsers = array();
 
-    // If you want to disable log to file, and log to syslog instead
-    define('LOG_SYSLOG_ENABLED', false);
+    // Filelog settings
+    define('LOGFILEDIR', '/var/log/z-push/');
+    define('LOGFILE', LOGFILEDIR . 'z-push.log');
+    define('LOGERRORFILE', LOGFILEDIR . 'z-push-error.log');
+
+    // Syslog settings
     // false will log to local syslog, otherwise put the remote syslog IP here
     define('LOG_SYSLOG_HOST', false);
     // Syslog port
     define('LOG_SYSLOG_PORT', 514);
     // Program showed in the syslog. Useful if you have more than one instance login to the same syslog
-    define('LOG_SYSLOG_PROGRAM', '[z-push]');
-
+    define('LOG_SYSLOG_PROGRAM', 'z-push');
+    // Syslog facility - use LOG_USER when running on Windows
+    define('LOG_SYSLOG_FACILITY', LOG_LOCAL0);
 
     // Location of the trusted CA, e.g. '/etc/ssl/certs/EmailCA.pem'
     // Uncomment and modify the following line if the validation of the certificates fails.
@@ -154,11 +164,6 @@
     // It means the highest time span before a change is pushed to a mobile. Set it to
     // a higher value if you have a high load on the server.
     define('PING_INTERVAL', 30);
-
-    // Interval in seconds to force a re-check of potentially missed notifications when
-    // using a changes sink. Default are 300 seconds (every 5 min).
-    // This can also be disabled by setting it to false
-    define('SINK_FORCERECHECK', 300);
 
     // Set the fileas (save as) order for contacts in the webaccess/webapp/outlook.
     // It will only affect new/modified contacts on the mobile which then are synced to the server.

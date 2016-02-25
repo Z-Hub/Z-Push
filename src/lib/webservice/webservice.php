@@ -67,22 +67,19 @@ class Webservice {
         // the webservice command is handled by its class
         if ($commandCode == ZPush::COMMAND_WEBSERVICE_DEVICE) {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("Webservice::HandleWebservice('%s'): executing WebserviceDevice service", $commandCode));
-
-            include_once('webservicedevice.php');
             $this->server->setClass("WebserviceDevice");
         }
 
         // the webservice command is handled by its class
         if ($commandCode == ZPush::COMMAND_WEBSERVICE_USERS) {
             if (!defined("ALLOW_WEBSERVICE_USERS_ACCESS") || ALLOW_WEBSERVICE_USERS_ACCESS !== true)
-                throw new HTTPReturnCodeException(sprintf("Access to the WebserviceUsers service is disabled in configuration. Enable setting ALLOW_WEBSERVICE_USERS_ACCESS.", Request::GetAuthUser()), 403);
+                throw new HTTPReturnCodeException("Access to the WebserviceUsers service is disabled in configuration. Enable setting ALLOW_WEBSERVICE_USERS_ACCESS", 403);
 
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("Webservice::HandleWebservice('%s'): executing WebserviceUsers service", $commandCode));
 
             if(ZPush::GetBackend()->Setup("SYSTEM", true) == false)
                 throw new AuthenticationRequiredException(sprintf("User '%s' has no admin privileges", Request::GetAuthUser()));
 
-            include_once('webserviceusers.php');
             $this->server->setClass("WebserviceUsers");
         }
 

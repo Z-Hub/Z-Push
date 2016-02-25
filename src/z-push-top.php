@@ -44,18 +44,10 @@
 * Consult LICENSE file for details
 ************************************************/
 
-include('lib/exceptions/exceptions.php');
-include('lib/core/zpushdefs.php');
-include('lib/core/zpush.php');
-include('lib/core/zlog.php');
-include('lib/core/interprocessdata.php');
-include('lib/core/topcollector.php');
-include('lib/utils/utils.php');
-include('lib/request/request.php');
-include('lib/request/requestprocessor.php');
+require_once 'vendor/autoload.php';
+
 if (!defined('ZPUSH_CONFIG')) define('ZPUSH_CONFIG', 'config.php');
 include_once(ZPUSH_CONFIG);
-include('version.php');
 
 /************************************************
  * MAIN
@@ -327,7 +319,7 @@ class ZPushTop {
 
         $this->scrPrintAt($lc,0, sprintf("Open connections: %d\t\t\t\tUsers:\t %d\tZ-Push:   %s ",count($this->activeConn),count($this->activeUsers), $this->getVersion())); $lc++;
         $this->scrPrintAt($lc,0, sprintf("Push connections: %d\t\t\t\tDevices: %d\tPHP-MAPI: %s", $this->pushConn, count($this->activeDevices),phpversion("mapi"))); $lc++;
-        $this->scrPrintAt($lc,0, sprintf("                                                Hosts:\t %d", $this->pushConn, count($this->activeHosts))); $lc++;
+        $this->scrPrintAt($lc,0, sprintf("                                                Hosts:\t %d", count($this->activeHosts))); $lc++;
         $lc++;
 
         $this->scrPrintAt($lc,0, "\033[4m". $this->getLine(array('pid'=>'PID', 'ip'=>'IP', 'user'=>'USER', 'command'=>'COMMAND', 'time'=>'TIME', 'devagent'=>'AGENT', 'devid'=>'DEVID', 'addinfo'=>'Additional Information')). str_repeat(" ",20)."\033[0m"); $lc++;
@@ -503,7 +495,7 @@ class ZPushTop {
                 }
                 else if ($cmds[0] == "option" || $cmds[0] == "o") {
                     if (!isset($cmds[1]) || $cmds[1] == "") {
-                        $this->status = sprintf("Option value needs to be specified. See 'help' or 'h' for instructions", $cmds[1]);
+                        $this->status = "Option value needs to be specified. See 'help' or 'h' for instructions";
                         $this->statusexpire = $this->currenttime+5;
                     }
                     else if ($cmds[1] == "p" || $cmds[1] == "push" || $cmds[1] == "ping")
