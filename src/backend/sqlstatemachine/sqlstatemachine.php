@@ -55,7 +55,7 @@ class SqlStateMachine implements IStateMachine {
     const UNKNOWNDATABASE = 1049;
     const CREATETABLE_ZPUSH_SETTINGS = "CREATE TABLE IF NOT EXISTS zpush_settings (key_name VARCHAR(50) NOT NULL, key_value VARCHAR(50) NOT NULL, created_at DATETIME NOT NULL, updated_at DATETIME NOT NULL, PRIMARY KEY (key_name));";
     const CREATETABLE_ZPUSH_USERS = "CREATE TABLE IF NOT EXISTS zpush_users (username VARCHAR(50) NOT NULL, device_id VARCHAR(50) NOT NULL, created_at DATETIME NOT NULL, updated_at DATETIME NOT NULL, PRIMARY KEY (username, device_id));";
-    const CREATETABLE_ZPUSH_STATES = "CREATE TABLE IF NOT EXISTS zpush_states (id_state INTEGER AUTO_INCREMENT, device_id VARCHAR(50) NOT NULL, uuid VARCHAR(50), state_type VARCHAR(50), counter INTEGER, state_data MEDIUMBLOB, created_at DATETIME NOT NULL, updated_at DATETIME NOT NULL, PRIMARY KEY (id_state));";
+    const CREATETABLE_ZPUSH_STATES = "CREATE TABLE IF NOT EXISTS zpush_states (id_state INTEGER AUTO_INCREMENT, device_id VARCHAR(50) NOT NULL, uuid VARCHAR(50) NULL, state_type VARCHAR(50), counter INTEGER, state_data MEDIUMBLOB, created_at DATETIME NOT NULL, updated_at DATETIME NOT NULL, PRIMARY KEY (id_state));";
     const CREATEINDEX_ZPUSH_STATES = "CREATE UNIQUE INDEX idx_zpush_states_unique ON zpush_states (device_id, uuid, state_type, counter);";
 
     private $dbh;
@@ -107,10 +107,10 @@ class SqlStateMachine implements IStateMachine {
      * @return string
      * @throws StateNotFoundException, StateInvalidException
      */
-    public function GetStateHash($devid, $type, $key = false, $counter = false) {
+    public function GetStateHash($devid, $type, $key = null, $counter = false) {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("SqlStateMachine->GetStateHash(): '%s', '%s', '%s', '%s'", $devid, $type, $key, $counter));
 
-        $sql = "select updated_at from zpush_states where device_id = :devid and state_type = :type and uuid = :key and counter = :counter";
+        $sql = "select updated_at from zpush_states where device_id = :devid and state_type = :type and uuid ". (($key == null) ? " is " : " = ") . ":key and counter = :counter";
         $params = $this->getParams($devid, $type, $key, $counter);
 
         $hash = null;
@@ -161,12 +161,12 @@ class SqlStateMachine implements IStateMachine {
      * @return mixed
      * @throws StateNotFoundException, StateInvalidException
      */
-    public function GetState($devid, $type, $key = false, $counter = false, $cleanstates = true) {
+    public function GetState($devid, $type, $key = null, $counter = false, $cleanstates = true) {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("SqlStateMachine->GetState(): '%s', '%s', '%s', '%s', '%s'", $devid, $type, $key, $counter, $cleanstates));
         if ($counter && $cleanstates)
             $this->CleanStates($devid, $type, $key, $counter);
 
-        $sql = "select state_data from zpush_states where device_id = :devid and state_type = :type and uuid = :key and counter = :counter";
+        $sql = "select state_data from zpush_states where device_id = :devid and state_type = :type and uuid ". (($key == null) ? " is " : " = ") . ":key and counter = :counter";
         $params = $this->getParams($devid, $type, $key, $counter);
 
         $data = null;
@@ -220,10 +220,10 @@ class SqlStateMachine implements IStateMachine {
      * @return boolean
      * @throws StateInvalidException
      */
-    public function SetState($state, $devid, $type, $key = false, $counter = false) {
+    public function SetState($state, $devid, $type, $key = null, $counter = false) {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("SqlStateMachine->SetState(): '%s', '%s', '%s', '%s'", $devid, $type, $key, $counter));
 
-        $sql = "select device_id from zpush_states where device_id = :devid and state_type = :type and uuid = :key and counter = :counter";
+        $sql = "select device_id from zpush_states where device_id = :devid and state_type = :type and uuid ". (($key == null) ? " is " : " = ") . ":key and counter = :counter";
         $params = $this->getParams($devid, $type, $key, $counter);
 
         $sth = null;
@@ -255,7 +255,7 @@ class SqlStateMachine implements IStateMachine {
             $sth->bindParam(":devid", $devid, PDO::PARAM_STR);
             $sth->bindParam(":type", $type, PDO::PARAM_STR);
             $sth->bindParam(":key", $key, PDO::PARAM_STR);
-            $sth->bindValue(":counter", ($counter === false ? -1 : $counter), PDO::PARAM_INT);
+            $sth->bindValue(":counter", ($counter === false ? 0 : $counter), PDO::PARAM_INT);
             $sth->bindValue(":data", serialize($state), PDO::PARAM_LOB);
             $sth->bindValue(":updated_at", $this->getNow(), PDO::PARAM_STR);
 
@@ -328,7 +328,7 @@ class SqlStateMachine implements IStateMachine {
      * @access public
      * @return boolean     indicating if the user was added or not (existed already)
      */
-    public function LinkUserDevice($username, $devid) {
+    public function LinkUserDevice($username, $devid, $createdAt = null, $updatedAt = null) {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("SqlStateMachine->LinkUserDevice(): '%s', '%s'", $username, $devid));
 
         $sth = null;
@@ -351,7 +351,8 @@ class SqlStateMachine implements IStateMachine {
             else {
                 $sth = null;
                 $sql = "insert into zpush_users (username, device_id, created_at, updated_at) values (:username, :devid, :created_at, :updated_at)";
-                $params[":created_at"] = $params[":updated_at"] = $this->getNow();
+                $params[":created_at"] = ($createdAt != null) ? $createdAt : $this->getNow();
+                $params[":updated_at"] = ($updatedAt != null) ? $updatedAt : $this->getNow();
                 $sth = $this->dbh->prepare($sql);
                 if ($sth->execute($params)) {
                     ZLog::Write(LOGLEVEL_DEBUG, sprintf("SqlStateMachine->LinkUserDevice(): Linked user-device: '%s' '%s'", $username, $devid));
@@ -926,7 +927,7 @@ class SqlStateMachine implements IStateMachine {
      * @access private
      */
     private function getParams($devid, $type, $key, $counter) {
-        return array(":devid" => $devid, ":type" => $type, ":key" => $key, ":counter" => ($counter === false ? -1 : $counter) );
+        return array(":devid" => $devid, ":type" => $type, ":key" => $key, ":counter" => ($counter === false ? 0 : $counter) );
     }
 
     /**
@@ -1031,5 +1032,54 @@ class SqlStateMachine implements IStateMachine {
         catch (PDOException $ex) {
             throw new RuntimeException(sprintf("SqlStateMachine->checkDbAndTables(): PDOException (%s): %s", $ex->getCode(), $ex->getMessage()));
         }
+    }
+
+    /**
+     * Checks if state tables have data.
+     *
+     * @access public
+     * @return boolean
+     * @throws RuntimeException
+     */
+    public function checkTablesHaveData() {
+        $dsn = sprintf("%s:host=%s;port=%s;dbname=%s", STATE_SQL_ENGINE, STATE_SQL_SERVER, STATE_SQL_PORT, STATE_SQL_DATABASE);
+        try {
+            $this->dbh = new PDO($dsn, STATE_SQL_USER, STATE_SQL_PASSWORD, $this->options);
+            $sqlStmt = "SELECT key_name FROM zpush_settings LIMIT 1;";
+            $sth = $this->dbh->prepare($sqlStmt);
+            $sth->execute();
+            if ($sth->rowCount() > 0) {
+                print("There is data in zpush_settings table." . PHP_EOL);
+            }
+            else {
+                print("There is no data in zpush_settings table." . PHP_EOL);
+                return false;
+            }
+
+            $sqlStmt = "SELECT id_state FROM zpush_states LIMIT 1;";
+            $sth = $this->dbh->prepare($sqlStmt);
+            $sth->execute();
+            if ($sth->rowCount() > 0) {
+                print("There is data in zpush_states table." . PHP_EOL);
+            }
+            else {
+                print("There is no data in zpush_states table." . PHP_EOL);
+                return false;
+            }
+
+            $sqlStmt = "SELECT username FROM zpush_users LIMIT 1;";
+            $sth = $this->dbh->prepare($sqlStmt);
+            $sth->execute();
+            if ($sth->rowCount() > 0) {
+                print("There is data in zpush_users table." . PHP_EOL);
+                return true;
+            }
+            print("There is no data in zpush_users table." . PHP_EOL);
+            return false;
+        }
+        catch (PDOException $ex) {
+            throw new RuntimeException(sprintf("SqlStateMachine->checkDbAndTables(): PDOException (%s): %s", $ex->getCode(), $ex->getMessage()));
+        }
+        return false;
     }
 }
