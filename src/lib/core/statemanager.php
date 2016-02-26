@@ -201,12 +201,13 @@ class StateManager {
      * Gets the state for a specified synckey (uuid + counter)
      *
      * @param string    $synckey
+     * @param boolean   $forceHierarchyLoading, default: false
      *
      * @access public
      * @return string
      * @throws StateInvalidException, StateNotFoundException
      */
-    public function GetSyncState($synckey) {
+    public function GetSyncState($synckey, $forceHierarchyLoading = false) {
         // No sync state for sync key '0'
         if($synckey == "0") {
             $this->oldStateCounter = 0;
@@ -217,8 +218,8 @@ class StateManager {
         list($this->uuid, $this->oldStateCounter) = self::ParseStateKey($synckey);
 
         // make sure the hierarchy cache is in place
-        if ($this->hierarchyOperation)
-            $this->loadHierarchyCache();
+        if ($this->hierarchyOperation || $forceHierarchyLoading)
+            $this->loadHierarchyCache($forceHierarchyLoading);
 
         // the state machine will discard any sync states before this one, as they are no longer required
         return $this->statemachine->GetState($this->device->GetDeviceId(), IStateMachine::DEFTYPE, $this->uuid, $this->oldStateCounter, $this->deleteOldStates);
@@ -473,12 +474,14 @@ class StateManager {
      * Loads the HierarchyCacheState and initializes the HierarchyChache
      * if this is an hierarchy operation
      *
+     * @param boolean $forceLoading, default: false
+     *
      * @access private
      * @return boolean
      * @throws StateNotFoundException
      */
-    private function loadHierarchyCache() {
-        if (!$this->hierarchyOperation)
+    private function loadHierarchyCache($forceLoading = false) {
+        if (!$this->hierarchyOperation && $forceLoading == false)
             return false;
 
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("StateManager->loadHierarchyCache(): '%s-%s-%s-%d'", $this->device->GetDeviceId(), $this->uuid, IStateMachine::HIERARCHY, $this->oldStateCounter));

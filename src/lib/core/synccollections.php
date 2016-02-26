@@ -205,7 +205,8 @@ class SyncCollections implements Iterator {
         // load the latest known syncstate if requested
         if ($addStatus && $loadState === true) {
             try {
-                $this->addparms[$folderid]["state"] = $this->stateManager->GetSyncState($spa->GetLatestSyncKey());
+                // make sure the hierarchy cache is loaded when we are loading hierarchy states
+                $this->addparms[$folderid]["state"] = $this->stateManager->GetSyncState($spa->GetLatestSyncKey(), ($folderid === false));
             }
             catch (StateNotFoundException $snfe) {
                 // if we can't find the state, first we should try a sync of that folder, so
@@ -725,9 +726,10 @@ class SyncCollections implements Iterator {
 
                      $exporter->Config($this->addparms[$folderid]["state"]);
                      $ret = $exporter->InitializeExporter($changesMem);
+                     while(is_array($exporter->Synchronize()));
 
                      if ($ret !== false)
-                         $changecount = $exporter->GetChangeCount();
+                         $changecount = $changesMem->GetChangeCount();
 
                      $this->hierarchyExporterChecked = true;
                  }
