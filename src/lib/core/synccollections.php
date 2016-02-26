@@ -503,7 +503,7 @@ class SyncCollections implements Iterator {
         if (!empty($classes)) {
             // initialize all possible folders
             foreach ($this->collections as $folderid => $spa) {
-                if ($onlyPingable && $spa->GetPingableFlag() !== true)
+                if (($onlyPingable && $spa->GetPingableFlag() !== true) || ! $folderid)
                     continue;
 
                 // get the user store if this is a additional folder

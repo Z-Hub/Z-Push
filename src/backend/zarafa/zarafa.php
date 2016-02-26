@@ -902,6 +902,9 @@ class BackendZarafa implements IBackend, ISearchProvider {
      * @return array
      */
     public function ChangesSink($timeout = 30) {
+        // clear the folder stats cache
+        unset($this->folderStatCache);
+
         $notifications = array();
         $hierarchyNotifications = array();
         $sinkresult = @mapi_sink_timedwait($this->changesSink, $timeout * 1000);
