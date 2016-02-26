@@ -164,8 +164,11 @@ class Sync extends RequestProcessor {
                             $spa->RemoveSyncKey();
                             $spa->DelFolderStat();
                         }
-                        else if ($synckey !== false)
+                        else if ($synckey !== false && $synckey !== $spa->GetSyncKey()) {
+                            ZLog::Write(LOGLEVEL_DEBUG, "HandleSync(): Synckey does not match latest saved for this folder, removing folderstat to force Exporter setup");
+                            $spa->DelFolderStat();
                             $spa->SetSyncKey($synckey);
+                        }
                     }
                     catch (StateInvalidException $stie) {
                         $spa = new SyncParameters();
