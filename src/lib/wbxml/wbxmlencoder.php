@@ -306,7 +306,6 @@ class WBXMLEncoder extends WBXMLDefs {
     private function _contentStream($stream, $asBase64) {
         // write full stream, including the finalizing terminator to the output stream (stuff outTermStr() would do)
         $this->outByte(self::WBXML_STR_I);
-        fseek($stream, 0, SEEK_SET);
         if ($asBase64) {
             $out_filter = stream_filter_append($this->_out, 'convert.base64-encode');
         }
