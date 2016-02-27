@@ -84,9 +84,8 @@ class ImportChangesStream implements IImportChanges {
      */
     public function ImportMessageChange($id, $message) {
         // ignore other SyncObjects
-        if(!($message instanceof $this->classAsString) && !($this->classAsString == "SyncNote" && Request::GetDeviceType() == "WindowsOutlook")) {
+        if(!($message instanceof $this->classAsString))
             return false;
-        }
 
         // prevent sending the same object twice in one request
         if (in_array($id, $this->seenObjects)) {
@@ -242,12 +241,6 @@ class ImportChangesStream implements IImportChanges {
             $this->encoder->startTag(SYNC_FOLDERHIERARCHY_ADD);
         else
             $this->encoder->startTag(SYNC_FOLDERHIERARCHY_UPDATE);
-
-        // TODO this is part of synchronizing additional Contact folder to OL
-        if ($folder->type == SYNC_FOLDER_TYPE_USER_CONTACT && Request::GetDeviceType() == "WindowsOutlook") {
-            $folder->type = SYNC_FOLDER_TYPE_USER_APPOINTMENT;
-        }
-
 
         $folder->Encode($this->encoder);
         $this->encoder->endTag();

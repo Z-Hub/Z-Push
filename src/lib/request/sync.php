@@ -449,27 +449,8 @@ class Sync extends RequestProcessor {
 
                             // Get the SyncMessage if sent
                             if(($el = self::$decoder->getElementStartTag(SYNC_DATA)) && ($el[EN_FLAGS] & EN_FLAGS_CONTENT)) {
-                                ZLog::Write(LOGLEVEL_DEBUG, "--------------ContentClass:". $spa->GetContentClass(). "  foldertype:".$foldertype);
-                                $message = ZPush::getSyncObjectFromFolderClass(($foldertype)?$foldertype:$spa->GetContentClass());
-
-                                // Acacia sends notes as Tasks
-                                if ($spa->GetContentClass() == "Notes" && Request::GetDeviceType() == "WindowsOutlook") {
-                                    $message = new SyncTask();
-                                }
+                                $message = ZPush::getSyncObjectFromFolderClass($spa->GetContentClass());
                                 $message->Decode(self::$decoder);
-
-                                // Acacia: transform the SyncTask into a SyncNote
-                                if ($spa->GetContentClass() == "Notes" && Request::GetDeviceType() == "WindowsOutlook") {
-                                    $note = new SyncNote();
-                                    if (isset($message->asbody))
-                                        $note->asbody = $message->asbody;
-                                    if (isset($message->categories))
-                                        $note->categories = $message->categories;
-                                    $note->subject = $message->subject;
-                                    // TODO color of the note
-
-                                    $message = $note;
-                                }
 
                                 // set Ghosted fields
                                 $message->emptySupported(self::$deviceManager->GetSupportedFields($spa->GetFolderId()));
