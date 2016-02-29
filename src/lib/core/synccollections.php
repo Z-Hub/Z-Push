@@ -722,8 +722,6 @@ class SyncCollections implements Iterator {
                  $changesMem->Config(ZPush::GetAdditionalSyncFolders());
                  $exporter = ZPush::GetBackend()->GetExporter();
                  if ($exporter !== false && isset($this->addparms[$folderid]["state"])) {
-                     $importer = false;
-
                      $exporter->Config($this->addparms[$folderid]["state"]);
                      $ret = $exporter->InitializeExporter($changesMem);
                      while(is_array($exporter->Synchronize()));
