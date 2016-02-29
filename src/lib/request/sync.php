@@ -605,6 +605,14 @@ class Sync extends RequestProcessor {
             if (!$sc->HasCollections())
                 $status = SYNC_STATUS_SYNCREQUESTINCOMPLETE;
         }
+        else {
+            // load the hierarchy data - there are no permissions to verify so we just set it to false
+            if (!$sc->LoadCollection(false, true, false)) {
+                $status = SYNC_STATUS_FOLDERHIERARCHYCHANGED;
+                self::$topCollector->AnnounceInformation(sprintf("StatusException code: %d", $status), $this->singleFolder);
+                $this->saveMultiFolderInfo("exeption", "StatusException");
+            }
+        }
 
         // HEARTBEAT & Empty sync
         if ($status == SYNC_STATUS_SUCCESS && (isset($hbinterval) || $emptysync == true)) {
