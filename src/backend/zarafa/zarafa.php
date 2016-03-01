@@ -10,7 +10,7 @@
 *
 * Created   :   01.10.2011
 *
-* Copyright 2007 - 2015 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -114,6 +114,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
         $this->changesSink = false;
         $this->changesSinkFolders = array();
         $this->changesSinkStores = array();
+        $this->changesSinkHierarchyHash = false;
         $this->wastebasket = false;
         $this->session = false;
         $this->folderStatCache = array();
@@ -858,7 +859,8 @@ class BackendZarafa implements IBackend, ISearchProvider {
             return false;
         }
 
-        ZLog::Write(LOGLEVEL_DEBUG, "ZarafaBackend->HasChangesSink(): created");
+        $this->changesSinkHierarchyHash = $this->getHierarchyHash();
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->HasChangesSink(): created - HierarchyHash: %s", $this->changesSinkHierarchyHash));
 
         // advise the main store and also to check if the connection supports it
         return $this->adviseStoreToSink($this->defaultstore);
@@ -900,9 +902,26 @@ class BackendZarafa implements IBackend, ISearchProvider {
      * @return array
      */
     public function ChangesSink($timeout = 30) {
+        // clear the folder stats cache
+        unset($this->folderStatCache);
+
         $notifications = array();
+        $hierarchyNotifications = array();
         $sinkresult = @mapi_sink_timedwait($this->changesSink, $timeout * 1000);
+        // reverse array so that the changes on folders are before changes on messages and
+        // it's possible to filter such notifications
+        $sinkresult = array_reverse($sinkresult, true);
         foreach ($sinkresult as $sinknotif) {
+            // add a notification on a folder
+            if ($sinknotif['objtype'] == MAPI_FOLDER) {
+                $hierarchyNotifications[$sinknotif['entryid']] = IBackend::HIERARCHYNOTIFICATION;
+            }
+            // change on a message, remove hierarchy notification
+            if (isset($sinknotif['parentid']) && $sinknotif['objtype'] == MAPI_MESSAGE && isset($notifications[$sinknotif['parentid']])) {
+                unset($hierarchyNotifications[$sinknotif['parentid']]);
+            }
+
+            // TODO check if adding $sinknotif['objtype'] = MAPI_MESSAGE wouldn't break anything
             // check if something in the monitored folders changed
             if (isset($sinknotif['parentid']) && array_key_exists($sinknotif['parentid'], $this->changesSinkFolders)) {
                 $notifications[] = $this->changesSinkFolders[$sinknotif['parentid']];
@@ -910,6 +929,15 @@ class BackendZarafa implements IBackend, ISearchProvider {
             // deletes and moves
             if (isset($sinknotif['oldparentid']) && array_key_exists($sinknotif['oldparentid'], $this->changesSinkFolders)) {
                 $notifications[] = $this->changesSinkFolders[$sinknotif['oldparentid']];
+            }
+        }
+
+        // validate hierarchy notifications by comparing the hierarchy hashes (too many false positives otherwise)
+        if (!empty($hierarchyNotifications)) {
+            $hash = $this->getHierarchyHash();
+            if ($hash !== $this->changesSinkHierarchyHash) {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendZarafa->ChangesSink() Hierarchy notification, pending validation. HierarchyHash: %s", $hash));
+                $notifications[] = IBackend::HIERARCHYNOTIFICATION;
             }
         }
         return $notifications;
@@ -1370,6 +1398,20 @@ class BackendZarafa implements IBackend, ISearchProvider {
     /**----------------------------------------------------------------------------------------------------------
      * Private methods
      */
+
+    /**
+     * Returns a hash representing changes in the hierarchy of the main user.
+     * It changes if a folder is added, renamed or deleted.
+     *
+     * @access private
+     * @return string
+     */
+    private function getHierarchyHash() {
+        $rootfolder = mapi_msgstore_openentry($this->defaultstore);
+        $hierarchy =  mapi_folder_gethierarchytable($rootfolder, CONVENIENT_DEPTH);
+        return md5(serialize(mapi_table_queryallrows($hierarchy, array(PR_DISPLAY_NAME, PR_PARENT_ENTRYID))));
+    }
+
 
     /**
      * Advises a store to the changes sink

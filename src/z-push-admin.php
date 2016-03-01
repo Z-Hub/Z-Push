@@ -714,6 +714,12 @@ class ZPushAdminCLI {
             printf("Processed: %d - Deleted: %d\n",  $stat[0], $stat[1]);
         else
             echo ZLog::GetLastMessage(LOGLEVEL_ERROR) . "\n";
+
+        echo "\tChecking for hierarchy folder data state: ";
+        if (($stat = ZPushAdmin::FixStatesHierarchyFolderData()) !== false)
+            printf("Devices: %d - Processed: %d - Fixed: %d - Device+User without hierarchy: %d\n",  $stat[0], $stat[1], $stat[2], $stat[3]);
+        else
+            echo ZLog::GetLastMessage(LOGLEVEL_ERROR) . "\n";
     }
 
     /**
