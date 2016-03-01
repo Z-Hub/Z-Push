@@ -119,17 +119,18 @@ class SyncCollections implements Iterator {
      * Loads all collections known for the current device
      *
      * @param boolean $overwriteLoaded          (opt) overwrites Collection with saved state if set to true
-     * @param boolean $loadState                (opt) indicates if the collection sync state should be loaded, default true
+     * @param boolean $loadState                (opt) indicates if the collection sync state should be loaded, default false
      * @param boolean $checkPermissions         (opt) if set to true each folder will pass
      *                                          through a backend->Setup() to check permissions.
      *                                          If this fails a StatusException will be thrown.
+     * @param boolean $loadHierarchy            (opt) if the hierarchy sync states should be loaded, default false
      *
      * @access public
      * @throws StatusException                  with SyncCollections::ERROR_WRONG_HIERARCHY if permission check fails
      * @throws StateInvalidException            if the sync state can not be found or relation between states is invalid ($loadState = true)
      * @return boolean
      */
-    public function LoadAllCollections($overwriteLoaded = false, $loadState = false, $checkPermissions = false) {
+    public function LoadAllCollections($overwriteLoaded = false, $loadState = false, $checkPermissions = false, $loadHierarchy = false) {
         $this->loadStateManager();
 
         // this operation should not remove old state counters
@@ -146,7 +147,7 @@ class SyncCollections implements Iterator {
         }
 
         // load the hierarchy data - there are no permissions to verify so we just set it to false
-        if (! $this->LoadCollection(false, $loadState, false))
+        if ($loadHierarchy && !$this->LoadCollection(false, $loadState, false))
             throw new StatusException("Invalid states found while loading hierarchy data. Forcing hierarchy sync");
 
         if ($invalidStates)

@@ -106,8 +106,8 @@ class ZPushAdmin {
                 $sc = new SyncCollections();
                 $sc->SetStateManager($stateManager);
 
-                // load all collections of device without loading states or checking permissions
-                $sc->LoadAllCollections(true, false, false);
+                // load all collections of device without loading states, checking permissions or loading the hierarchy
+                $sc->LoadAllCollections(true, false, false, false);
 
                 if ($sc->GetLastSyncTime())
                     $device->SetLastSyncTime($sc->GetLastSyncTime());
