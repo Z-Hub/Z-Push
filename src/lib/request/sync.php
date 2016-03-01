@@ -164,9 +164,11 @@ class Sync extends RequestProcessor {
                             $spa->RemoveSyncKey();
                             $spa->DelFolderStat();
                         }
-                        else if ($synckey !== false && $synckey !== $spa->GetSyncKey()) {
-                            ZLog::Write(LOGLEVEL_DEBUG, "HandleSync(): Synckey does not match latest saved for this folder, removing folderstat to force Exporter setup");
-                            $spa->DelFolderStat();
+                        else if ($synckey !== false) {
+                            if ($synckey !== $spa->GetSyncKey()) {
+                                ZLog::Write(LOGLEVEL_DEBUG, "HandleSync(): Synckey does not match latest saved for this folder, removing folderstat to force Exporter setup");
+                                $spa->DelFolderStat();
+                            }
                             $spa->SetSyncKey($synckey);
                         }
                     }
@@ -579,7 +581,7 @@ class Sync extends RequestProcessor {
 
             // Load all collections - do not overwrite existing (received!), load states and check permissions
             try {
-                $sc->LoadAllCollections(false, true, true);
+                $sc->LoadAllCollections(false, true, true, true);
             }
             catch (StateInvalidException $siex) {
                 $status = SYNC_STATUS_INVALIDSYNCKEY;
@@ -604,6 +606,14 @@ class Sync extends RequestProcessor {
             }
             if (!$sc->HasCollections())
                 $status = SYNC_STATUS_SYNCREQUESTINCOMPLETE;
+        }
+        else if (isset($hbinterval)) {
+            // load the hierarchy data - there are no permissions to verify so we just set it to false
+            if (!$sc->LoadCollection(false, true, false)) {
+                $status = SYNC_STATUS_FOLDERHIERARCHYCHANGED;
+                self::$topCollector->AnnounceInformation(sprintf("StatusException code: %d", $status), $this->singleFolder);
+                $this->saveMultiFolderInfo("exeption", "StatusException");
+            }
         }
 
         // HEARTBEAT & Empty sync
@@ -1026,7 +1036,7 @@ class Sync extends RequestProcessor {
         }
 
         if($sc->GetParameter($spa, "getchanges") && $spa->HasFolderId() && $spa->HasContentClass() && $spa->HasSyncKey()) {
-            $windowSize = self::$deviceManager->GetWindowSize($spa->GetFolderId(), $spa->GetContentClass(), $spa->GetUuid(), $spa->GetUuidCounter(), $changecount);
+            $windowSize = self::$deviceManager->GetWindowSize($spa->GetFolderId(), $spa->GetUuid(), $spa->GetUuidCounter(), $changecount);
 
             // limit windowSize to the max available limit of the global window size left
             $globallyAvailable = $sc->GetGlobalWindowSize() - $this->globallyExportedItems;

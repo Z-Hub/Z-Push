@@ -10,7 +10,7 @@
 *
 * Created   :   11.04.2011
 *
-* Copyright 2007 - 2015 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -67,6 +67,7 @@ class DeviceManager {
 
     private $loopdetection;
     private $hierarchySyncRequired;
+    private $additionalFoldersHash;
 
     /**
      * Constructor
@@ -97,6 +98,8 @@ class DeviceManager {
 
         $this->stateManager = new StateManager();
         $this->stateManager->SetDevice($this->device);
+
+        $this->additionalFoldersHash = $this->getAdditionalFoldersHash();
     }
 
     /**
@@ -510,7 +513,7 @@ class DeviceManager {
      * @access public
      * @return int
      */
-    public function GetWindowSize($folderid, $type, $uuid, $statecounter, $queuedmessages) {
+    public function GetWindowSize($folderid, $uuid, $statecounter, $queuedmessages) {
         if (isset($this->windowSize[$folderid]))
             $items = $this->windowSize[$folderid];
         else
@@ -519,7 +522,7 @@ class DeviceManager {
         $this->setLatestFolder($folderid);
 
         // detect if this is a loop condition
-        if ($this->loopdetection->Detect($folderid, $type, $uuid, $statecounter, $items, $queuedmessages))
+        if ($this->loopdetection->Detect($folderid, $uuid, $statecounter, $items, $queuedmessages))
             $items = ($items == 0) ? 0: 1+($this->loopdetection->IgnoreNextMessage(false)?1:0) ;
 
         if ($items >= 0 && $items <= 2)
@@ -608,18 +611,29 @@ class DeviceManager {
     }
 
     /**
-     * Indicates if the hierarchy should be resynchronized
-     * e.g. during PING
+     * Indicates if the hierarchy should be resynchronized based on the general folder state and
+     * if additional folders changed.
      *
      * @access public
      * @return boolean
      */
     public function IsHierarchySyncRequired() {
+        $this->loadDeviceData();
+
+        // if the hash of the additional folders changed, we have to sync the hierarchy
+        if ($this->additionalFoldersHash != $this->getAdditionalFoldersHash()) {
+            $this->hierarchySyncRequired = true;
+        }
+
         // check if a hierarchy sync might be necessary
         if ($this->device->GetFolderUUID(false) === false)
             $this->hierarchySyncRequired = true;
 
         return $this->hierarchySyncRequired;
+    }
+
+    private function getAdditionalFoldersHash() {
+        return md5(serialize($this->device->GetAdditionalFolders()));
     }
 
     /**
