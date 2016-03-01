@@ -65,7 +65,7 @@ class Ping extends RequestProcessor {
 
         // Load all collections - do load states and check permissions
         try {
-            $sc->LoadAllCollections(true, true, true);
+            $sc->LoadAllCollections(true, true, true, true);
         }
         catch (StateInvalidException $siex) {
             // if no params are present, indicate to send params, else do hierarchy sync
