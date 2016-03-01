@@ -513,7 +513,7 @@ class DeviceManager {
      * @access public
      * @return int
      */
-    public function GetWindowSize($folderid, $type, $uuid, $statecounter, $queuedmessages) {
+    public function GetWindowSize($folderid, $uuid, $statecounter, $queuedmessages) {
         if (isset($this->windowSize[$folderid]))
             $items = $this->windowSize[$folderid];
         else
@@ -522,7 +522,7 @@ class DeviceManager {
         $this->setLatestFolder($folderid);
 
         // detect if this is a loop condition
-        if ($this->loopdetection->Detect($folderid, $type, $uuid, $statecounter, $items, $queuedmessages))
+        if ($this->loopdetection->Detect($folderid, $uuid, $statecounter, $items, $queuedmessages))
             $items = ($items == 0) ? 0: 1+($this->loopdetection->IgnoreNextMessage(false)?1:0) ;
 
         if ($items >= 0 && $items <= 2)
