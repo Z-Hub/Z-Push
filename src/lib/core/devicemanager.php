@@ -230,7 +230,9 @@ class DeviceManager {
         }
 
         $p = ( ($this->device->GetWipeStatus() != SYNC_PROVISION_RWSTATUS_NA && $policykey != $this->device->GetPolicyKey()) ||
-              Request::WasPolicyKeySent() && $this->device->GetPolicyKey() == ASDevice::UNDEFINED );
+              (Request::WasPolicyKeySent() && $this->device->GetPolicyKey() == ASDevice::UNDEFINED) ||
+                 $this->device->getPolicies() != md5(serialize($this->getProvisioningPolicies())));
+
         if (!$noDebug || $p)
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("DeviceManager->ProvisioningRequired('%s') saved device key '%s': %s", $policykey, $this->device->GetPolicyKey(), Utils::PrintAsString($p)));
         return $p;
@@ -267,23 +269,11 @@ class DeviceManager {
      */
     public function GetProvisioningObject() {
         $p = new SyncProvisioning();
-        $policyName = ZPush::GetBackend()->GetUserPolicyName();
-        if ($policyName === false) {
-            // get the policy name from device data
-            $policyName = $this->device->GetPolicies();
-        }
-        // TODO load systemwide Policies
-        $policies = parse_ini_file(PROVISIONING_POLICYFILE, true);
-        if ($policyName !== false && isset($policies[$policyName])) {
-            $policies = $policies[$policyName];
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("DeviceManager->GetProvisioningObject(): load %s policy.", $policyName));
-        }
-        else {
-            $policies = $policies['default'];
-            ZLog::Write(LOGLEVEL_DEBUG, "DeviceManager->GetProvisioningObject(): load default policy.");
-        }
 
+        $policies = $this->getProvisioningPolicies();
         $p->Load($policies);
+        // save policies' hash
+        $this->device->setPolicies(md5(serialize($policies)));
         unset($policies);
         return $p;
     }
@@ -940,5 +930,30 @@ class DeviceManager {
      */
     private function getLatestFolder() {
         return $this->latestFolder;
+    }
+
+    /**
+     * Loads Provisioning policies from the policies file.
+     *
+     * @access private
+     * @return array
+     */
+    private function getProvisioningPolicies() {
+        $policyName = ZPush::GetBackend()->GetUserPolicyName();
+        if ($policyName === false) {
+            // get the policy name from device data
+            $policyName = $this->device->GetPolicies();
+        }
+        // TODO load systemwide Policies
+        $policies = parse_ini_file(PROVISIONING_POLICYFILE, true);
+        if ($policyName !== false && isset($policies[$policyName])) {
+            $policies = $policies[$policyName];
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("DeviceManager->GetProvisioningObject(): load %s policy.", $policyName));
+        }
+        else {
+            $policies = $policies['default'];
+            ZLog::Write(LOGLEVEL_DEBUG, "DeviceManager->GetProvisioningObject(): load default policy.");
+        }
+        return $policies;
     }
 }
