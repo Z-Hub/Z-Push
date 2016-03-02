@@ -7,7 +7,7 @@
 *
 * Created   :   11.04.2011
 *
-* Copyright 2007 - 2015 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -61,7 +61,7 @@ class ASDevice extends StateObject {
                                     'wipeactionon' => false,
                                     'lastupdatetime' => 0,
                                     'conversationmode' => false,
-                                    'policies' => array(),
+                                    'policies' => false,
                                     'policykey' => self::UNDEFINED,
                                     'forcesave' => false,
                                     'asversion' => false,

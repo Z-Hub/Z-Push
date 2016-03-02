@@ -6,7 +6,7 @@
 *
 * Created   :   12.04.2011
 *
-* Copyright 2007 - 2015 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -285,6 +285,13 @@ class ZPush {
             date_default_timezone_set('Europe/Amsterdam');
         }
 
+        // check if Provisioning is enabled and the default policies are available
+        if (PROVISIONING) {
+            $policies = parse_ini_file(PROVISIONING_POLICYFILE, true);
+            if (!isset($policies['default'])) {
+                throw new FatalMisconfigurationException(sprintf("Your policies' configuration file doesn't contain the required [default] section. Please check the %s file.", constant('PROVISIONING_POLICYFILE')));
+            }
+        }
         return true;
     }
 

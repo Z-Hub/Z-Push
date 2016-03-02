@@ -10,7 +10,7 @@
 *
 * Created   :   11.04.2011
 *
-* Copyright 2007 - 2015 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -267,8 +267,24 @@ class DeviceManager {
      */
     public function GetProvisioningObject() {
         $p = new SyncProvisioning();
+        $policyName = ZPush::GetBackend()->GetUserPolicyName();
+        if ($policyName === false) {
+            // get the policy name from device data
+            $policyName = $this->device->GetPolicies();
+        }
         // TODO load systemwide Policies
-        $p->Load($this->device->GetPolicies());
+        $policies = parse_ini_file(PROVISIONING_POLICYFILE, true);
+        if ($policyName !== false && isset($policies[$policyName])) {
+            $policies = $policies[$policyName];
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("DeviceManager->GetProvisioningObject(): load %s policy.", $policyName));
+        }
+        else {
+            $policies = $policies['default'];
+            ZLog::Write(LOGLEVEL_DEBUG, "DeviceManager->GetProvisioningObject(): load default policy.");
+        }
+
+        $p->Load($policies);
+        unset($policies);
         return $p;
     }
 

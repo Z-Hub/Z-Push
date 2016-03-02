@@ -10,7 +10,7 @@
 *
 * Created   :   05.09.2011
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -236,18 +236,18 @@ class SyncProvisioning extends SyncObject {
     }
 
     public function Load($policies = array()) {
-        if (empty($policies)) {
-            $this->LoadDefaultPolicies();
-        }
-        else foreach ($policies as $p=>$v) {
-            if (!isset($this->mapping[$p])) {
-                ZLog::Write(LOGLEVEL_INFO, sprintf("Policy '%s' not supported by the device, ignoring", substr($p, strpos($p,':')+1)));
-                continue;
+        // always load default policies because there might be some policy missing in the policies.ini
+        $this->LoadDefaultPolicies();
+        if (!empty($policies)) {
+            $objectsVars = get_object_vars($this);
+            foreach ($policies as $p=>$v) {
+                if (!in_array($p, $objectsVars)) {
+                    ZLog::Write(LOGLEVEL_INFO, sprintf("Policy '%s' not supported by the device, ignoring", $p));
+                    continue;
+                }
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("Policy '%s' enforced with: %s (%s)", $p, (is_array($v)) ? Utils::PrintAsString(implode(',', $v)) : Utils::PrintAsString($v), gettype($v)));
+                $this->$p = (is_array($v) && empty($v)) ? array() : $v;
             }
-            ZLog::Write(LOGLEVEL_INFO, sprintf("Policy '%s' enforced with: %s", substr($p, strpos($p,':')+1), Utils::PrintAsString($v)));
-
-            $var = $this->mapping[$p][self::STREAMER_VAR];
-            $this->$var = $v;
         }
     }
 

@@ -10,7 +10,7 @@
 *
 * Created   :   01.10.2011
 *
-* Copyright 2007 - 2015 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -1005,6 +1005,16 @@ class BackendZarafa implements IBackend, ISearchProvider {
         $r = new SyncResolveRecipients();
         $r->status = SYNC_RESOLVERECIPSSTATUS_PROTOCOLERROR;
         return $r;
+    }
+
+    /**
+     * Returns the policy name for the user.
+     *
+     * @access public
+     * @return string|boolean
+     */
+    public function GetUserPolicyName() {
+        return false;
     }
 
 
