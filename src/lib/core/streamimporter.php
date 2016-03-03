@@ -258,12 +258,6 @@ class ImportChangesStream implements IImportChanges {
         else
             $this->encoder->startTag(SYNC_FOLDERHIERARCHY_UPDATE);
 
-        // TODO this is part of synchronizing additional Contact folder to OL
-        if ($folder->type == SYNC_FOLDER_TYPE_USER_CONTACT && Request::GetDeviceType() == "WindowsOutlook") {
-            $folder->type = SYNC_FOLDER_TYPE_USER_APPOINTMENT;
-        }
-
-
         $folder->Encode($this->encoder);
         $this->encoder->endTag();
 
