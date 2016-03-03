@@ -273,7 +273,7 @@ class DeviceManager {
         $policies = $this->getProvisioningPolicies();
         $p->Load($policies);
         // save policies' hash
-        $this->device->setPolicies(md5(serialize($policies)));
+        $this->device->SetPolicies(md5(serialize($policies)));
         unset($policies);
         return $p;
     }

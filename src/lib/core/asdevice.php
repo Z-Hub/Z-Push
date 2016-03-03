@@ -444,15 +444,6 @@ class ASDevice extends StateObject {
         return $foundMessage;
     }
 
-    /**
-     * Saves the policies' hash in the device data.
-     * @param string    $policies       Policies' hash
-     */
-    public function setPolicies($policies) {
-        $this->policies = $policies;
-    }
-
-
     /**----------------------------------------------------------------------------------------------------------
      * HierarchyCache and ContentData operations
      */
