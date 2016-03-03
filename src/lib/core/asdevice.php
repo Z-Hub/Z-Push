@@ -446,7 +446,7 @@ class ASDevice extends StateObject {
 
     /**
      * Saves the policies' hash in the device data.
-     * @param unknown $policies
+     * @param string    $policies       Policies' hash
      */
     public function setPolicies($policies) {
         $this->policies = $policies;

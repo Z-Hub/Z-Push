@@ -1014,6 +1014,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
      * @return string|boolean
      */
     public function GetUserPolicyName() {
+        // TODO: get the user's policy from the users' directory
         return false;
     }
 
