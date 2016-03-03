@@ -469,7 +469,7 @@ class SyncCollections implements Iterator {
     public function CheckForChanges($lifetime = 600, $interval = 30, $onlyPingable = false) {
         $classes = array();
         foreach ($this->collections as $folderid => $spa){
-            if ($onlyPingable && $spa->GetPingableFlag() !== true)
+            if ($onlyPingable && $spa->GetPingableFlag() !== true || ! $folderid)
                 continue;
 
             if (!isset($classes[$spa->GetContentClass()]))
@@ -717,6 +717,8 @@ class SyncCollections implements Iterator {
          $changecount = false;
          if ($exportChanges || $this->hierarchyExporterChecked === false) {
              try {
+                 // reset backend to the main store
+                 ZPush::GetBackend()->Setup(false);
                  $changesMem = ZPush::GetDeviceManager()->GetHierarchyChangesWrapper();
 
                  // the hierarchyCache should now fully be initialized - check for changes in the additional folders
