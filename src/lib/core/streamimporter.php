@@ -89,7 +89,7 @@ class ImportChangesStream implements IImportChanges {
         }
 
         // Acacia ZO-42: to sync Notes to Outlook we sync them as Tasks
-        if ( ZPush::GetDeviceManager()->IsOutlookClient() && $this->classAsString == "SyncNote") {
+        if ($this->classAsString == "SyncNote" && ZPush::GetDeviceManager()->IsOutlookClient()) {
             $task = new SyncTask();
             $task->flags = $message->flags;
             if (isset($message->asbody))
