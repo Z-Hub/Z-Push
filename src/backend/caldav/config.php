@@ -1,12 +1,14 @@
 <?php
 /***********************************************
-* File      :   exceptions.php
+* File      :   config.php
 * Project   :   Z-Push
-* Descr     :   Includes all Z-Push exceptions
+* Descr     :   CalDAV backend configuration file
 *
-* Created   :   06.02.2012
+* Created   :   27.11.2012
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2012 - 2014 Jean-Louis Dupond
+*
+* Jean-Louis Dupond released this code as AGPLv3 here: https://github.com/dupondje/PHP-Push-2/issues/93
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -41,24 +43,32 @@
 * Consult LICENSE file for details
 ************************************************/
 
-// main exception
-include_once('zpushexception.php');
+// ************************
+//  BackendCalDAV settings
+// ************************
 
-// Fatal exceptions
-include_once('fatalexception.php');
-include_once('fatalmisconfigurationexception.php');
-include_once('fatalnotimplementedexception.php');
-include_once('wbxmlexception.php');
-include_once('nopostrequestexception.php');
-include_once('httpreturncodeexception.php');
-include_once('authenticationrequiredexception.php');
-include_once('provisioningrequiredexception.php');
+// Server protocol: http or https
+define('CALDAV_PROTOCOL', 'https');
 
-// Non fatal exceptions
-include_once('notimplementedexception.php');
-include_once('syncobjectbrokenexception.php');
-include_once('statusexception.php');
-include_once('statenotfoundexception.php');
-include_once('stateinvalidexception.php');
-include_once('nohierarchycacheavailableexception.php');
-include_once('statenotyetavailableexception.php');
+// Server name
+define('CALDAV_SERVER', 'caldavserver.domain.com');
+
+// Server port
+define('CALDAV_PORT', '443');
+
+// Path
+define('CALDAV_PATH', '/caldav.php/%u/');
+
+// Default CalDAV folder (calendar folder/principal). This will be marked as the default calendar in the mobile
+define('CALDAV_PERSONAL', 'PRINCIPAL');
+
+// If the CalDAV server supports the sync-collection operation
+// DAViCal, SOGo and SabreDav support it
+// SabreDav version must be at least 1.9.0, otherwise set this to false
+// Setting this to false will work with most servers, but it will be slower
+define('CALDAV_SUPPORTS_SYNC', false);
+
+
+// Maximum period to sync.
+// Some servers don't support more than 10 years so you will need to change this
+define('CALDAV_MAX_SYNC_PERIOD', 2147483647);

@@ -10,7 +10,7 @@
 *
 * Created   :   01.10.2011
 *
-* Copyright 2007 - 2015 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -89,6 +89,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
     private $changesSinkStores;
     private $wastebasket;
     private $addressbook;
+    private $folderStatCache;
 
     // ZCP config parameter for PR_EC_ENABLED_FEATURES / PR_EC_DISABLED_FEATURES
     const ZPUSH_ENABLED = 'mobile';
@@ -113,8 +114,10 @@ class BackendZarafa implements IBackend, ISearchProvider {
         $this->changesSink = false;
         $this->changesSinkFolders = array();
         $this->changesSinkStores = array();
+        $this->changesSinkHierarchyHash = false;
         $this->wastebasket = false;
         $this->session = false;
+        $this->folderStatCache = array();
 
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendZarafa using PHP-MAPI version: %s", phpversion("mapi")));
     }
@@ -856,7 +859,8 @@ class BackendZarafa implements IBackend, ISearchProvider {
             return false;
         }
 
-        ZLog::Write(LOGLEVEL_DEBUG, "ZarafaBackend->HasChangesSink(): created");
+        $this->changesSinkHierarchyHash = $this->getHierarchyHash();
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->HasChangesSink(): created - HierarchyHash: %s", $this->changesSinkHierarchyHash));
 
         // advise the main store and also to check if the connection supports it
         return $this->adviseStoreToSink($this->defaultstore);
@@ -898,9 +902,26 @@ class BackendZarafa implements IBackend, ISearchProvider {
      * @return array
      */
     public function ChangesSink($timeout = 30) {
+        // clear the folder stats cache
+        unset($this->folderStatCache);
+
         $notifications = array();
+        $hierarchyNotifications = array();
         $sinkresult = @mapi_sink_timedwait($this->changesSink, $timeout * 1000);
+        // reverse array so that the changes on folders are before changes on messages and
+        // it's possible to filter such notifications
+        $sinkresult = array_reverse($sinkresult, true);
         foreach ($sinkresult as $sinknotif) {
+            // add a notification on a folder
+            if ($sinknotif['objtype'] == MAPI_FOLDER) {
+                $hierarchyNotifications[$sinknotif['entryid']] = IBackend::HIERARCHYNOTIFICATION;
+            }
+            // change on a message, remove hierarchy notification
+            if (isset($sinknotif['parentid']) && $sinknotif['objtype'] == MAPI_MESSAGE && isset($notifications[$sinknotif['parentid']])) {
+                unset($hierarchyNotifications[$sinknotif['parentid']]);
+            }
+
+            // TODO check if adding $sinknotif['objtype'] = MAPI_MESSAGE wouldn't break anything
             // check if something in the monitored folders changed
             if (isset($sinknotif['parentid']) && array_key_exists($sinknotif['parentid'], $this->changesSinkFolders)) {
                 $notifications[] = $this->changesSinkFolders[$sinknotif['parentid']];
@@ -908,6 +929,15 @@ class BackendZarafa implements IBackend, ISearchProvider {
             // deletes and moves
             if (isset($sinknotif['oldparentid']) && array_key_exists($sinknotif['oldparentid'], $this->changesSinkFolders)) {
                 $notifications[] = $this->changesSinkFolders[$sinknotif['oldparentid']];
+            }
+        }
+
+        // validate hierarchy notifications by comparing the hierarchy hashes (too many false positives otherwise)
+        if (!empty($hierarchyNotifications)) {
+            $hash = $this->getHierarchyHash();
+            if ($hash !== $this->changesSinkHierarchyHash) {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendZarafa->ChangesSink() Hierarchy notification, pending validation. HierarchyHash: %s", $hash));
+                $notifications[] = IBackend::HIERARCHYNOTIFICATION;
             }
         }
         return $notifications;
@@ -1291,9 +1321,97 @@ class BackendZarafa implements IBackend, ISearchProvider {
         return $this->storeName;
     }
 
+    /**
+     * Indicates if the Backend supports folder statistics.
+     *
+     * @access public
+     * @return boolean
+     */
+    public function HasFolderStats() {
+        return true;
+    }
+
+    /**
+     * Returns a status indication of the folder.
+     * If there are changes in the folder, the returned value must change.
+     * The returned values are compared with '===' to determine if a folder needs synchronization or not.
+     *
+     * @param string $store         the store where the folder resides
+     * @param string $folderid      the folder id
+     *
+     * @access public
+     * @return string
+     */
+    public function GetFolderStat($store, $folderid) {
+        list($user, $domain) = Utils::SplitDomainUser($store);
+        if ($user === false) {
+            $user = $this->mainUser;
+        }
+
+        if (!isset($this->folderStatCache[$user])) {
+            $this->folderStatCache[$user] = array();
+        }
+
+        // TODO remove nameCache
+        if (!isset($this->nameCache))
+            $this->nameCache = array();
+
+        // if there is nothing in the cache for a store, load the data for all folders of it
+        if (empty($this->folderStatCache[$user])) {
+            // get the store
+            $userstore = $this->openMessageStore($user);
+            $rootfolder = mapi_msgstore_openentry($userstore);
+            $hierarchy =  mapi_folder_gethierarchytable($rootfolder, CONVENIENT_DEPTH);
+            $rows = mapi_table_queryallrows($hierarchy, array(PR_SOURCE_KEY, PR_LOCAL_COMMIT_TIME_MAX, PR_CONTENT_COUNT, PR_CONTENT_UNREAD, PR_DELETED_MSG_COUNT, PR_DISPLAY_NAME));
+
+            if (count($rows) == 0) {
+                ZLog::Write(LOGLEVEL_INFO, sprintf("ZarafaBackend->GetFolderStat(): could not access folder statistics for user '%s'. Probably missing 'read' permissions on the root folder! Folders of this store will be synchronized ONCE per hour only!", $user));
+            }
+
+            foreach($rows as $folder) {
+                $commit_time = isset($folder[PR_LOCAL_COMMIT_TIME_MAX])? $folder[PR_LOCAL_COMMIT_TIME_MAX] : "0000000000";
+                $content_count = isset($folder[PR_CONTENT_COUNT])? $folder[PR_CONTENT_COUNT] : -1;
+                $content_unread = isset($folder[PR_CONTENT_UNREAD])? $folder[PR_CONTENT_UNREAD] : -1;
+                $content_deleted = isset($folder[PR_DELETED_MSG_COUNT])? $folder[PR_DELETED_MSG_COUNT] : -1;
+
+                $this->folderStatCache[$user][bin2hex($folder[PR_SOURCE_KEY])] = $commit_time ."/". $content_count ."/". $content_unread ."/". $content_deleted;
+                $this->nameCache[bin2hex($folder[PR_SOURCE_KEY])] = $folder[PR_DISPLAY_NAME];
+            }
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->GetFolderStat() fetched status information of %d folders for store '%s'", count($this->folderStatCache[$user]), $user));
+            // TODO remove logging
+            foreach($this->folderStatCache[$user] as $fid => $stat) {
+                ZLog::Write(LOGLEVEL_INFO, sprintf("FolderStat: %s %s %s\t%s", $user, $fid, $stat, $this->nameCache[$fid]));
+            }
+        }
+
+        if (isset($this->folderStatCache[$user][$folderid])) {
+            // TODO remove nameCache output
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->GetFolderStat() found stat for '%s': %s", $this->nameCache[$folderid], $this->folderStatCache[$user][$folderid]));
+            return $this->folderStatCache[$user][$folderid];
+        }
+        else {
+            // a timestamp that changes once per hour is returned in case there is no data found for this folder. It will be synchronized only once per hour.
+            return gmdate("Y-m-d-H");
+        }
+    }
+
     /**----------------------------------------------------------------------------------------------------------
      * Private methods
      */
+
+    /**
+     * Returns a hash representing changes in the hierarchy of the main user.
+     * It changes if a folder is added, renamed or deleted.
+     *
+     * @access private
+     * @return string
+     */
+    private function getHierarchyHash() {
+        $rootfolder = mapi_msgstore_openentry($this->defaultstore);
+        $hierarchy =  mapi_folder_gethierarchytable($rootfolder, CONVENIENT_DEPTH);
+        return md5(serialize(mapi_table_queryallrows($hierarchy, array(PR_DISPLAY_NAME, PR_PARENT_ENTRYID))));
+    }
+
 
     /**
      * Advises a store to the changes sink

@@ -220,24 +220,60 @@ class ZPush {
         else
             define('REAL_BASE_PATH', BASE_PATH);
 
-        if (!defined('LOGFILEDIR'))
-            throw new FatalMisconfigurationException("The LOGFILEDIR is not configured. Check if the config.php file is in place.");
+        if (!defined('LOGBACKEND')) {
+            define('LOGBACKEND', 'filelog');
+        }
 
-        if (substr(LOGFILEDIR, -1,1) != "/")
-            throw new FatalMisconfigurationException("The LOGFILEDIR should terminate with a '/'");
+        if (strtolower(LOGBACKEND) == 'syslog') {
+            define('LOGBACKEND_CLASS', 'Syslog');
+            if (!defined('LOG_SYSLOG_FACILITY')) {
+                define('LOG_SYSLOG_FACILITY', LOG_LOCAL0);
+            }
 
-        if (!file_exists(LOGFILEDIR))
-            throw new FatalMisconfigurationException("The configured LOGFILEDIR does not exist or can not be accessed.");
+            if (!defined('LOG_SYSLOG_HOST')) {
+                define('LOG_SYSLOG_HOST', false);
+            }
 
-        if ((!file_exists(LOGFILE) && !touch(LOGFILE)) || !is_writable(LOGFILE))
-            throw new FatalMisconfigurationException("The configured LOGFILE can not be modified.");
+            if (!defined('LOG_SYSLOG_PORT')) {
+                define('LOG_SYSLOG_PORT', 514);
+            }
 
-        if ((!file_exists(LOGERRORFILE) && !touch(LOGERRORFILE)) || !is_writable(LOGERRORFILE))
-            throw new FatalMisconfigurationException("The configured LOGERRORFILE can not be modified.");
+            if (!defined('LOG_SYSLOG_PROGRAM')) {
+                define('LOG_SYSLOG_PROGRAM', 'z-push');
+            }
 
-        // check ownership on the (eventually) just created files
-        Utils::FixFileOwner(LOGFILE);
-        Utils::FixFileOwner(LOGERRORFILE);
+            if (!is_numeric(LOG_SYSLOG_PORT)) {
+                throw new FatalMisconfigurationException("The LOG_SYSLOG_PORT must a be a number.");
+            }
+
+            if (LOG_SYSLOG_HOST && LOG_SYSLOG_PORT <= 0) {
+                throw new FatalMisconfigurationException("LOG_SYSLOG_HOST is defined but the LOG_SYSLOG_PORT does not seem to be valid.");
+            }
+        }
+        elseif (strtolower(LOGBACKEND) == 'filelog') {
+            define('LOGBACKEND_CLASS', 'FileLog');
+            if (!defined('LOGFILEDIR'))
+                throw new FatalMisconfigurationException("The LOGFILEDIR is not configured. Check if the config.php file is in place.");
+
+            if (substr(LOGFILEDIR, -1,1) != "/")
+                throw new FatalMisconfigurationException("The LOGFILEDIR should terminate with a '/'");
+
+            if (!file_exists(LOGFILEDIR))
+                throw new FatalMisconfigurationException("The configured LOGFILEDIR does not exist or can not be accessed.");
+
+            if ((!file_exists(LOGFILE) && !touch(LOGFILE)) || !is_writable(LOGFILE))
+                throw new FatalMisconfigurationException("The configured LOGFILE can not be modified.");
+
+            if ((!file_exists(LOGERRORFILE) && !touch(LOGERRORFILE)) || !is_writable(LOGERRORFILE))
+                throw new FatalMisconfigurationException("The configured LOGERRORFILE can not be modified.");
+
+            // check ownership on the (eventually) just created files
+            Utils::FixFileOwner(LOGFILE);
+            Utils::FixFileOwner(LOGERRORFILE);
+        }
+        else {
+            define('LOGBACKEND_CLASS', LOGBACKEND);
+        }
 
         // set time zone
         // code contributed by Robert Scheck (rsc)
@@ -264,12 +300,6 @@ class ZPush {
 
         if (!is_array($specialLogUsers))
             throw new FatalMisconfigurationException("The WBXML log users is not an array.");
-
-        if (!defined('SINK_FORCERECHECK')) {
-            define('SINK_FORCERECHECK', 300);
-        }
-        else if (SINK_FORCERECHECK !== false && (!is_int(SINK_FORCERECHECK) || SINK_FORCERECHECK < 1))
-            throw new FatalMisconfigurationException("The SINK_FORCERECHECK value must be 'false' or a number higher than 0.");
 
         if (!defined('SYNC_CONTACTS_MAXPICTURESIZE')) {
             define('SYNC_CONTACTS_MAXPICTURESIZE', 49152);
@@ -369,7 +399,6 @@ class ZPush {
                     ZPush::$stateMachine = new SqlStateMachine();
                 }
                 else {
-                    include_once('lib/default/filestatemachine.php');
                     ZPush::$stateMachine = new FileStateMachine();
                 }
             }

@@ -7,7 +7,7 @@
  *              Z-Push implements the FileStateMachine which
  *              saves states to disk.
  *              Backends provide their own IStateMachine
-                implementation of this interface and return
+ *              implementation of this interface and return
  *              an IStateMachine instance with IBackend->GetStateMachine().
  *              Old sync states are not deleted until a new sync state
  *              is requested.
