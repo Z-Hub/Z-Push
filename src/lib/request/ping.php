@@ -102,6 +102,11 @@ class Ping extends RequestProcessor {
                 // cache requested (pingable) folderids
                 $pingable = array();
 
+                // Acacia ZO-42: Outlook does never request Ping for Notes folder, so we add them manually if they are synched
+                if (self::$deviceManager->IsOutlookClient()) {
+                    $pingable = self::$deviceManager->GetSynchronizedFolderIds(array(SYNC_FOLDER_TYPE_NOTE, SYNC_FOLDER_TYPE_USER_NOTE));
+                }
+
                 while(self::$decoder->getElementStartTag(SYNC_PING_FOLDER)) {
                     WBXMLDecoder::ResetInWhile("pingFolder");
                     while(WBXMLDecoder::InWhile("pingFolder")) {

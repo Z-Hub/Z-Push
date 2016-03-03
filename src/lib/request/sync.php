@@ -446,26 +446,26 @@ class Sync extends RequestProcessor {
 
                             // Get the SyncMessage if sent
                             if(($el = self::$decoder->getElementStartTag(SYNC_DATA)) && ($el[EN_FLAGS] & EN_FLAGS_CONTENT)) {
-                                ZLog::Write(LOGLEVEL_DEBUG, "--------------ContentClass:". $spa->GetContentClass(). "  foldertype:".$foldertype);
-                                $message = ZPush::getSyncObjectFromFolderClass(($foldertype)?$foldertype:$spa->GetContentClass());
+                                $message = ZPush::getSyncObjectFromFolderClass($spa->GetContentClass());
 
-                                // Acacia sends notes as Tasks
-                                if ($spa->GetContentClass() == "Notes" && Request::GetDeviceType() == "WindowsOutlook") {
+                                // Acacia ZO-42: OL sends Notes as Tasks
+                                if ($spa->GetContentClass() == "Notes" && self::$deviceManager->IsOutlookClient()) {
+                                    ZLog::Write(LOGLEVEL_DEBUG, "HandleSync(): Outlook sends Notes as Tasks, read as Tasks and convert it into a SyncNote object.");
                                     $message = new SyncTask();
-                                }
-                                $message->Decode(self::$decoder);
+                                    $message->Decode(self::$decoder);
 
-                                // Acacia: transform the SyncTask into a SyncNote
-                                if ($spa->GetContentClass() == "Notes" && Request::GetDeviceType() == "WindowsOutlook") {
                                     $note = new SyncNote();
                                     if (isset($message->asbody))
                                         $note->asbody = $message->asbody;
                                     if (isset($message->categories))
                                         $note->categories = $message->categories;
-                                    $note->subject = $message->subject;
+                                    if (isset($message->subject))
+                                        $note->subject = $message->subject;
                                     // TODO color of the note
-
                                     $message = $note;
+                                }
+                                else {
+                                    $message->Decode(self::$decoder);
                                 }
 
                                 // set Ghosted fields

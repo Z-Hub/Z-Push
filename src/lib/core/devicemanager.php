@@ -444,6 +444,27 @@ class DeviceManager {
     }
 
     /**
+     * Returns a list of all synchronized folders. If type is false, all types are returned.
+     * If only certain folders are required, set the AS type here.
+     *
+     * @param array $type      A list of AS foldertypes, if empty, returns all
+     *
+     * @access public
+     * @return array
+     */
+    public function GetSynchronizedFolderIds($types = array()) {
+        $synched = array();
+        foreach($this->device->GetAllFolderIds() as $folderid) {
+            if ($this->device->GetFolderUUID($folderid)) {
+                if (empty($types) || in_array($this->device->GetFolderType($folderid), $types)) {
+                    $synched[] = $folderid;
+                }
+            }
+        }
+        return $synched;
+    }
+
+    /**
      * Checks if the message should be streamed to a mobile
      * Should always be called before a message is sent to the mobile
      * Returns true if there is something wrong and the content could break the
