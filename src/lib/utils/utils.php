@@ -308,13 +308,32 @@ class Utils {
     /**
      * Converts SYNC_FILTERTYPE into a timestamp
      *
-     * @param int       Filtertype
+     * @param int $filtertype      Filtertype
      *
      * @access public
      * @return long
      */
-    static public function GetCutOffDate($restrict) {
-        switch($restrict) {
+    static public function GetCutOffDate($filtertype) {
+        $back = Utils::GetFiltertypeInterval($filtertype);
+
+        if ($back === false) {
+            return 0; // unlimited
+        }
+
+        return time() - $back;
+    }
+
+    /**
+     * Returns the interval indicated by the filtertype.
+     *
+     * @param int $filtertype
+     *
+     * @access public
+     * @return long|boolean     returns false on invalid filtertype
+     */
+    static public function GetFiltertypeInterval($filtertype) {
+        $back = false;
+        switch($filtertype) {
             case SYNC_FILTERTYPE_1DAY:
                 $back = 60 * 60 * 24;
                 break;
@@ -337,10 +356,9 @@ class Utils {
                 $back = 60 * 60 * 24 * 31 * 6;
                 break;
             default:
-                return 0; // unlimited
+                $back = false;
         }
-
-        return time() - $back;
+        return $back;
     }
 
     /**

@@ -72,6 +72,7 @@ class SyncParameters extends StateObject {
                                     'foldersynctotal' => false,
                                     'foldersyncremaining' => false,
                                     'folderstat' => false,
+                                    'folderstattimeout' => false,
                                 );
 
     /**
@@ -273,6 +274,25 @@ class SyncParameters extends StateObject {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncParameters->UseCPO('%s')", $options));
         $this->currentCPO = $options;
         $this->checkCPO($this->currentCPO);
+    }
+
+    /**
+     * Indicates if a exporter run is required. This is the case if the given folderstat is different form the saved one
+     * or when the expiration time expired.
+     *
+     * @param string $currentFolderStat
+     * @param boolean $doLog
+     *
+     * @access public
+     * @return boolean
+     */
+    public function IsExporterRunRequired($currentFolderStat, $doLog = false) {
+        $run = ! ($this->HasFolderStat() && $currentFolderStat === $this->GetFolderStat() && time() < $this->GetFolderStatTimeout());
+        if ($doLog) {
+            $expDate = ($this->HasFolderStatTimeout()) ? date('Y-m-d H:i:s', $this->GetFolderStatTimeout()) : "not set";
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncParameters->IsExporterRunRequired(): %s - current: %s - saved: %s - expiring: %s", Utils::PrintAsString($run), $currentFolderStat, Utils::PrintAsString($this->GetFolderStat()), $expDate));
+        }
+        return $run;
     }
 
     /**
