@@ -741,7 +741,7 @@ class Sync extends RequestProcessor {
                 if ($setupExporter && self::$backend->HasFolderStats()) {
                     // check if the folder stats changed -> if not, don't setup the exporter, there are no changes!
                     $newFolderStat = self::$backend->GetFolderStat(ZPush::GetAdditionalSyncFolderStore($spa->GetFolderId()), $spa->GetFolderId());
-                    if ($spa->HasFolderStat() && $newFolderStat === $spa->GetFolderStat()) {
+                    if (! $spa->IsExporterRunRequired($newFolderStat, true)) {
                         $changecount = 0;
                         $setupExporter = false;
                         ZLog::Write(LOGLEVEL_DEBUG, "Sync(): Folder stat from the backend indicates that the folder did not change. Exporter will not run.");
@@ -828,7 +828,7 @@ class Sync extends RequestProcessor {
 
             // Fir AS 14.0+ omit output for folder, if there were no incoming or outgoing changes and no Fetch
             if (Request::GetProtocolVersion() >= 14.0 && ! $spa->HasNewSyncKey() && $changecount == 0 && empty($actiondata["fetchids"]) && $status == SYNC_STATUS_SUCCESS &&
-                    $spa->HasFolderStat() && $spa->GetFolderStat() === $newFolderStat) {
+                    ! $spa->IsExporterRunRequired($newFolderStat)) {
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleSync: No changes found for %s folder id '%s'. Omitting output.", $spa->GetContentClass(), $spa->GetFolderId()));
                 continue;
             }
@@ -1118,7 +1118,7 @@ class Sync extends RequestProcessor {
             // changecount is initialized with 'false', so 0 means no changes!
             if ($changecount === 0 || ($changecount !== false && $changecount <= $windowSize)) {
                 self::$deviceManager->SetFolderSyncStatus($spa->GetFolderId(), DeviceManager::FLD_SYNC_COMPLETED);
-                $spa->SetFolderStat($newFolderStat);
+                $this->setFolderStat($spa, $newFolderStat);
             }
             else
                 self::$deviceManager->SetFolderSyncStatus($spa->GetFolderId(), DeviceManager::FLD_SYNC_INPROGRESS);
@@ -1467,5 +1467,24 @@ class Sync extends RequestProcessor {
             }
         }
         return $s;
+    }
+
+    /**
+     * Sets the new folderstat and calculates & sets an expiration date for the folder stat.
+     *
+     * @param SyncParameters $spa
+     * @param string $newFolderStat
+     *
+     * @access private
+     * @return
+     */
+    private function setFolderStat($spa, $newFolderStat) {
+        $spa->SetFolderStat($newFolderStat);
+        $maxTimeout = 60 * 60 * 24 * 31; // one month
+
+        $interval = Utils::GetFiltertypeInterval($spa->GetFilterType());
+        $timeout = time() + (($interval && $interval < $maxTimeout) ? $interval : $maxTimeout);
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("Sync()->setFolderStat() on %s: %s expiring %s", $spa->getFolderId(), $newFolderStat, date('Y-m-d H:i:s', $timeout)));
+        $spa->SetFolderStatTimeout($timeout);
     }
 }
