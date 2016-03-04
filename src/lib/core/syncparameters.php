@@ -277,7 +277,7 @@ class SyncParameters extends StateObject {
     }
 
     /**
-     * Indicates if a exporter run is required. This is the case if the given folderstat is different form the saved one
+     * Indicates if a exporter run is required. This is the case if the given folderstat is different from the saved one
      * or when the expiration time expired.
      *
      * @param string $currentFolderStat
