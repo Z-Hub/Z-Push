@@ -108,7 +108,7 @@ class LoopDetection extends InterProcessData {
      */
     public static function GetProcessIdentifier() {
         if (!isset(self::$processident))
-            self::$processident = sprintf('%04x%04', mt_rand(0, 0xffff), mt_rand(0, 0xffff));
+            self::$processident = sprintf('%04x%04x', mt_rand(0, 0xffff), mt_rand(0, 0xffff));
 
         return self::$processident;
     }

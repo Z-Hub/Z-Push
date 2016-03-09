@@ -210,7 +210,7 @@ class Sync extends RequestProcessor {
                     if(self::$decoder->getElementStartTag(SYNC_DELETESASMOVES)) {
                         $spa->SetDeletesAsMoves(true);
                         if (($dam = self::$decoder->getElementContent()) !== false) {
-                            $spa->SetDeletesAsMoves((boolean)$dam);
+                            $spa->SetDeletesAsMoves((bool)$dam);
                             if(!self::$decoder->getElementEndTag()) {
                                 return false;
                             }
@@ -248,7 +248,7 @@ class Sync extends RequestProcessor {
                     if(self::$decoder->getElementStartTag(SYNC_CONVERSATIONMODE)) {
                         $spa->SetConversationMode(true);
                         if(($conversationmode = self::$decoder->getElementContent()) !== false) {
-                            $spa->SetConversationMode((boolean)$conversationmode);
+                            $spa->SetConversationMode((bool)$conversationmode);
                             if(!self::$decoder->getElementEndTag())
                             return false;
                         }
@@ -558,9 +558,9 @@ class Sync extends RequestProcessor {
             try {
                 $sc->LoadAllCollections(false, true, true);
             }
-            catch (StateNotFoundException $snfex) {
+            catch (StateInvalidException $siex) {
                 $status = SYNC_STATUS_INVALIDSYNCKEY;
-                self::$topCollector->AnnounceInformation("StateNotFoundException", true);
+                self::$topCollector->AnnounceInformation("StateInvalidException", true);
             }
             catch (StatusException $stex) {
                $status = SYNC_STATUS_FOLDERHIERARCHYCHANGED;
@@ -873,7 +873,7 @@ class Sync extends RequestProcessor {
 
                                     // check if the message is broken
                                     if (ZPush::GetDeviceManager(false) && ZPush::GetDeviceManager()->DoNotStreamMessage($id, $data)) {
-                                        ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleSync(): message not to be streamed as requested by DeviceManager.", $id));
+                                        ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleSync(): message not to be streamed as requested by DeviceManager, id = %s", $id));
                                         $fetchstatus = SYNC_STATUS_CLIENTSERVERCONVERSATIONERROR;
                                     }
                                 }
@@ -1139,7 +1139,7 @@ class Sync extends RequestProcessor {
     private function importMessage($spa, &$actiondata, $todo, $message, $clientid, $serverid, $foldertype, $messageCount) {
         // the importer needs to be available!
         if ($this->importer == false)
-            throw StatusException(sprintf("Sync->importMessage(): importer not available", SYNC_STATUS_SERVERERROR));
+            throw StatusException("Sync->importMessage(): importer not available", SYNC_STATUS_SERVERERROR);
 
         // mark this state as used, e.g. for HeartBeat
         self::$deviceManager->SetHeartbeatStateIntegrity($spa->GetFolderId(), $spa->GetUuid(), $spa->GetUuidCounter());

@@ -337,14 +337,10 @@ class Utils {
                 $back = 60 * 60 * 24 * 31 * 6;
                 break;
             default:
-                break;
+                return 0; // unlimited
         }
 
-        if(isset($back)) {
-            $date = time() - $back;
-            return $date;
-        } else
-            return 0; // unlimited
+        return time() - $back;
     }
 
     /**
@@ -441,18 +437,18 @@ class Utils {
         $len = strlen($string) - 1;
         while ($len > 0) {
             //look for '&-' sequence and replace it with '&'
-            if ($len > 0 && $string{($len-1)} == '&' && $string{$len} == '-') {
+            if ($len > 0 && $string[$len-1] == '&' && $string[$len] == '-') {
                 $string = substr_replace($string, '&', $len - 1, 2);
                 $len--; //decrease $len as this char has alreasy been processed
             }
             //search for '&' which weren't found in if clause above and
             //replace them with '+' as they mark an utf7-encoded char
-            if ($len > 0 && $string{($len-1)} == '&') {
+            if ($len > 0 && $string[($len-1)] == '&') {
                 $string = substr_replace($string, '+', $len - 1, 1);
                 $len--; //decrease $len as this char has alreasy been processed
             }
             //finally "escape" all remaining '+' chars
-            if ($len > 0 && $string{($len-1)} == '+') {
+            if ($len > 0 && $string[$len-1] == '+') {
                 $string = substr_replace($string, '+-', $len - 1, 1);
             }
             $len--;
@@ -479,18 +475,18 @@ class Utils {
         $len = strlen($string) - 1;
         while ($len > 0) {
             //look for '&-' sequence and replace it with '&'
-            if ($len > 0 && $string{($len-1)} == '+' && $string{$len} == '-') {
+            if ($len > 0 && $string[$len-1] == '+' && $string[$len] == '-') {
                 $string = substr_replace($string, '+', $len - 1, 2);
                 $len--; //decrease $len as this char has alreasy been processed
             }
             //search for '&' which weren't found in if clause above and
             //replace them with '+' as they mark an utf7-encoded char
-            if ($len > 0 && $string{($len-1)} == '+') {
+            if ($len > 0 && $string[$len-1] == '+') {
                 $string = substr_replace($string, '&', $len - 1, 1);
                 $len--; //decrease $len as this char has alreasy been processed
             }
             //finally "escape" all remaining '+' chars
-            if ($len > 0 && $string{($len-1)} == '&') {
+            if ($len > 0 && $string[$len-1] == '&') {
                 $string = substr_replace($string, '&-', $len - 1, 1);
             }
             $len--;
@@ -932,6 +928,24 @@ class Utils {
             return $email;
         }
         return substr($email, 0, $pos);
+    }
+
+    /**
+     * Format bytes to a more human readable value.
+     * @param int $bytes
+     * @param int $precision
+     *
+     * @access public
+     * @return void|string
+     */
+    public static function FormatBytes($bytes, $precision = 2) {
+        if ($bytes <= 0) return '0 B';
+
+        $units = array('B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB');
+        $base = log ($bytes, 1024);
+        $fBase = floor($base);
+        $pow = pow(1024, $base - $fBase);
+        return sprintf ("%.{$precision}f %s", $pow, $units[$fBase]);
     }
 }
 

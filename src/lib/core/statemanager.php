@@ -300,7 +300,7 @@ class StateManager {
             return $this->statemachine->GetState($this->device->GetDeviceId(), IStateMachine::BACKENDSTORAGE, $this->uuid, $this->oldStateCounter, $this->deleteOldStates);
         }
         else {
-            return $this->statemachine->GetState($this->device->GetDeviceId(), IStateMachine::BACKENDSTORAGE, false, $this->device->GetFirstSyncTime());
+            return $this->statemachine->GetState($this->device->GetDeviceId(), IStateMachine::BACKENDSTORAGE, false, $this->device->GetFirstSyncTime(), false);
         }
     }
 
@@ -316,8 +316,8 @@ class StateManager {
      */
     public function SetBackendStorage($data, $type = self::BACKENDSTORAGE_PERMANENT) {
         if ($type == self::BACKENDSTORAGE_STATE) {
-        if (!$this->uuid)
-            throw new StateNotYetAvailableException();
+            if (!$this->uuid)
+                throw new StateNotYetAvailableException();
 
             // TODO serialization should be done in the StateMachine
             return $this->statemachine->SetState($data, $this->device->GetDeviceId(), IStateMachine::BACKENDSTORAGE, $this->uuid, $this->newStateCounter);

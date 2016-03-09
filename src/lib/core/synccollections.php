@@ -73,6 +73,27 @@ class SyncCollections implements Iterator {
 
 
     /**
+     * Invalidates all pingable flags for all folders.
+     *
+     * @access public
+     * @return boolean
+     */
+    static public function InvalidatePingableFlags() {
+        ZLog::Write(LOGLEVEL_DEBUG, "SyncCollections::InvalidatePingableFlags(): Invalidating now");
+        try {
+            $sc = new SyncCollections();
+            $sc->LoadAllCollections();
+            foreach ($sc as $folderid => $spa) {
+                $spa->DelPingableFlag();
+                $sc->SaveCollection($spa);
+            }
+            return true;
+        }
+        catch (ZPushException $e) {}
+        return false;
+    }
+
+    /**
      * Constructor
      */
     public function SyncCollections() {
@@ -103,7 +124,7 @@ class SyncCollections implements Iterator {
      *
      * @access public
      * @throws StatusException                  with SyncCollections::ERROR_WRONG_HIERARCHY if permission check fails
-     * @throws StateNotFoundException           if the sync state can not be found ($loadState = true)
+     * @throws StateInvalidException            if the sync state can not be found or relation between states is invalid ($loadState = true)
      * @return boolean
      */
     public function LoadAllCollections($overwriteLoaded = false, $loadState = false, $checkPermissions = false) {
@@ -139,7 +160,7 @@ class SyncCollections implements Iterator {
      *
      * @access public
      * @throws StatusException                  with SyncCollections::ERROR_WRONG_HIERARCHY if permission check fails
-     * @throws StateNotFoundException           if the sync state can not be found ($loadState = true)
+     * @throws StateInvalidException            if the sync state can not be found or relation between states is invalid ($loadState = true)
      * @return boolean
      */
     public function LoadCollection($folderid, $loadState = false, $checkPermissions = false) {
@@ -172,8 +193,18 @@ class SyncCollections implements Iterator {
         $addStatus = $this->AddCollection($spa);
 
         // load the latest known syncstate if requested
-        if ($addStatus && $loadState === true)
-            $this->addparms[$folderid]["state"] = $this->stateManager->GetSyncState($spa->GetLatestSyncKey());
+        if ($addStatus && $loadState === true) {
+            try {
+                $this->addparms[$folderid]["state"] = $this->stateManager->GetSyncState($spa->GetLatestSyncKey());
+            }
+            catch (StateNotFoundException $snfe) {
+                // if we can't find the state, first we should try a sync of that folder, so
+                // we generate a fake change, so a sync on this folder is triggered
+                $this->changes[$folderid] = 1;
+
+                return false;
+            }
+        }
 
         return $addStatus;
     }
@@ -330,11 +361,11 @@ class SyncCollections implements Iterator {
     }
 
     /**
-     * Returns the global window size of items to be exported in total over all 
+     * Returns the global window size of items to be exported in total over all
      * requested collections.
      *
      * @access public
-     * @return int/boolean          returns requested windows size, 512 (max) or the 
+     * @return int/boolean          returns requested windows size, 512 (max) or the
      *                              value of config SYNC_MAX_ITEMS if it is lower
      */
     public function GetGlobalWindowSize() {
@@ -608,6 +639,11 @@ class SyncCollections implements Iterator {
             }
         }
         catch (StatusException $ste) {
+            if ($ste->getCode() == SYNC_STATUS_FOLDERHIERARCHYCHANGED) {
+                ZLog::Write(LOGLEVEL_WARN, "SyncCollections->CountChange(): exporter can not be re-configured due to state error, emulating change in folder to force Sync.");
+                $this->changes[$folderid] = 1;
+                return true;
+            }
             throw new StatusException("SyncCollections->CountChange(): exporter can not be re-configured.", self::ERROR_WRONG_HIERARCHY, null, LOGLEVEL_WARN);
         }
 

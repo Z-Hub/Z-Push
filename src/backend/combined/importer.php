@@ -169,7 +169,7 @@ class ImportChangesCombined implements IImportChanges {
     public function ImportFolderChange($folder) {
         $id = $folder->serverid;
         $parent = $folder->parentid;
-        ZLog::Write(LOGLEVEL_DEBUG, "ImportChangesCombined->ImportFolderChange() ".print_r($folder, 1));
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ImportChangesCombined->ImportFolderChange() id: '%s', parent: '%s'", $id, $parent));
         if($parent == '0') {
             if($id) {
                 $backendid = $this->backend->GetBackendId($id);

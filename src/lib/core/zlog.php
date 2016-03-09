@@ -176,13 +176,16 @@ class ZLog {
     static public function WriteEnd() {
         if (LOGLEVEL_DEBUG <= LOGLEVEL || (LOGLEVEL_DEBUG <= LOGUSERLEVEL && self::$userLog)) {
             if (version_compare(phpversion(), '5.4.0') < 0) {
-                $time_used = number_format(time() - $_SERVER["REQUEST_TIME"], 4);
+                $time_used = number_format(time() - $_SERVER["REQUEST_TIME"], 2, ',', '.');
             }
             else {
-                $time_used = number_format(microtime(true) - $_SERVER["REQUEST_TIME_FLOAT"], 4);
+                $time_used = number_format(microtime(true) - $_SERVER["REQUEST_TIME_FLOAT"], 2, ',', '.');
             }
+            $peakUsage = memory_get_peak_usage(false);
+            $truePeakUsage = memory_get_peak_usage(true);
 
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("Memory usage information: %s/%s - Execution time: %s - HTTP responde code: %s", memory_get_peak_usage(false), memory_get_peak_usage(true), $time_used, http_response_code()));
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("Memory usage information: %s/%s (%s B/%s B) - Execution time: %ss - HTTP responde code: %s",
+                    Utils::FormatBytes($peakUsage), Utils::FormatBytes($truePeakUsage), $peakUsage, $truePeakUsage, $time_used, http_response_code()));
             ZLog::Write(LOGLEVEL_DEBUG, "-------- End");
         }
     }

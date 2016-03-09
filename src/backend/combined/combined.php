@@ -444,7 +444,7 @@ class BackendCombined extends Backend implements ISearchProvider {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCombined->ChangesSinkInitialize('%s') is supported, initializing", $folderid));
             return $backend->ChangesSinkInitialize($this->GetBackendFolder($folderid));
         }
-            
+
         // if the backend doesn't support ChangesSink, we also return true so we don't get an error
         return true;
      }
@@ -533,20 +533,8 @@ class BackendCombined extends Backend implements ISearchProvider {
         $pos = strpos($folderid, $this->config['delimiter']);
         if($pos === false)
             return false;
-        return substr($folderid,0,$pos);
+        return substr($folderid, 0, $pos);
     }
-
-    /**
-     * Returns the BackendCombined as it implements the ISearchProvider interface
-     * This could be overwritten by the global configuration
-     *
-     * @access public
-     * @return object       Implementation of ISearchProvider
-     */
-    public function GetSearchProvider() {
-        return $this;
-    }
-
 
     /**
      * Indicates which AS version is supported by the backend.
@@ -564,6 +552,17 @@ class BackendCombined extends Backend implements ISearchProvider {
             }
         }
         return $version;
+    }
+
+    /**
+     * Returns the BackendCombined as it implements the ISearchProvider interface
+     * This could be overwritten by the global configuration
+     *
+     * @access public
+     * @return object       Implementation of ISearchProvider
+     */
+    public function GetSearchProvider() {
+        return $this;
     }
 
 
@@ -688,6 +687,5 @@ class BackendCombined extends Backend implements ISearchProvider {
 
         return false;
     }
-
 }
 ?>

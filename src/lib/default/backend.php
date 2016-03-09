@@ -304,7 +304,7 @@ abstract class Backend implements IBackend {
         }
         if (isset($this->stateStorage)) {
             try {
-                $this->storage_state = ZPush::GetDeviceManager()->GetStateManager()->SetBackendStorage($this->stateStorage, StateManager::BACKENDSTORAGE_STATE);
+                ZPush::GetDeviceManager()->GetStateManager()->SetBackendStorage($this->stateStorage, StateManager::BACKENDSTORAGE_STATE);
             }
             catch (StateNotYetAvailableException $snyae) { }
             catch(StateNotFoundException $snfe) { }

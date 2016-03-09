@@ -851,7 +851,7 @@ class MAPIProvider {
         if (isset($folderprops[PR_SOURCE_KEY]) && !isset($folderprops[PR_ENTRYID]) && !isset($folderprops[PR_CONTAINER_CLASS])) {
             $entryid = mapi_msgstore_entryidfromsourcekey($this->store, $folderprops[PR_SOURCE_KEY]);
             $mapifolder = mapi_msgstore_openentry($this->store, $entryid);
-            $folderprops = mapi_getprops($mapifolder, array(PR_DISPLAY_NAME, PR_PARENT_ENTRYID, PR_ENTRYID, PR_SOURCE_KEY, PR_PARENT_SOURCE_KEY, PR_CONTAINER_CLASS, PR_ATTR_HIDDEN));
+            $folderprops = mapi_getprops($mapifolder, array(PR_DISPLAY_NAME, PR_PARENT_ENTRYID, PR_ENTRYID, PR_SOURCE_KEY, PR_PARENT_SOURCE_KEY, PR_CONTAINER_CLASS, PR_ATTR_HIDDEN, PR_EXTENDED_FOLDER_FLAGS));
             ZLog::Write(LOGLEVEL_DEBUG, "MAPIProvider->GetFolder(): received insuffient of data from ICS. Fetching required data.");
         }
 
@@ -875,6 +875,16 @@ class MAPIProvider {
         if (isset($folderprops[PR_CONTAINER_CLASS]) && $folderprops[PR_CONTAINER_CLASS] == "IPF.Note.OutlookHomepage") {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("MAPIProvider->GetFolder(): folder '%s' should not be synchronized", $folderprops[PR_DISPLAY_NAME]));
             return false;
+        }
+
+        // ignore suggested contacts folder
+        if (isset($folderprops[PR_CONTAINER_CLASS]) && $folderprops[PR_CONTAINER_CLASS] == "IPF.Contact" && isset($folderprops[PR_EXTENDED_FOLDER_FLAGS])) {
+            // the PR_EXTENDED_FOLDER_FLAGS is a binary value which consists of subproperties. 070403000000 indicates a suggested contacts folder
+            $extendedFlags = bin2hex($folderprops[PR_EXTENDED_FOLDER_FLAGS]);
+            if (substr_count($extendedFlags, "070403000000") > 0) {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("MAPIProvider->GetFolder(): folder '%s' should not be synchronized", $folderprops[PR_DISPLAY_NAME]));
+                return false;
+            }
         }
 
         $folder->serverid = bin2hex($folderprops[PR_SOURCE_KEY]);
@@ -1053,6 +1063,11 @@ class MAPIProvider {
      * @param SyncMail          $message
      */
     private function setEmail($mapimessage, $message) {
+        // update categories
+        if (!isset($message->categories)) $message->categories = array();
+        $emailmap = MAPIMapping::GetEmailMapping();
+        $this->setPropsInMAPI($mapimessage, $message, array("categories" => $emailmap["categories"]));
+
         $flagmapping = MAPIMapping::GetMailFlagsMapping();
         $flagprops = MAPIMapping::GetMailFlagsProperties();
         $flagprops = array_merge($this->getPropIdsFromStrings($flagmapping), $this->getPropIdsFromStrings($flagprops));
@@ -1171,7 +1186,7 @@ class MAPIProvider {
         $props[$appointmentprops["responsestatus"]] = (isset($appointment->responsestatus)) ? $appointment->responsestatus : olResponseNone;
 
         //sensitivity is not enough to mark an appointment as private, so we use another mapi tag
-        $private = (isset($appointment->sensitivity) && $appointment->sensitivity == 0) ? false : true;
+        $private = (isset($appointment->sensitivity) && $appointment->sensitivity >= SENSITIVITY_PRIVATE) ? true : false;
 
         // Set commonstart/commonend to start/end and remindertime to start, duration, private and cleanGlobalObjectId
         $props[$appointmentprops["commonstart"]] = $appointment->starttime;
@@ -1583,6 +1598,8 @@ class MAPIProvider {
             $recur["complete"] = (isset($task->complete) && $task->complete) ? 1 : 0;
             $recurrence->setRecurrence($recur);
         }
+
+        $props[$taskprops["private"]] = (isset($task->sensitivity) && $task->sensitivity >= SENSITIVITY_PRIVATE) ? true : false;
 
         //open addresss book for user resolve to set the owner
         $addrbook = $this->getAddressbook();
