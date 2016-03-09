@@ -94,6 +94,9 @@ class SyncProvisioning extends SyncObject {
     public $unapprovedinromapplist;
     public $approvedapplist;
 
+    private static $instace;
+    private $policyHash;
+
     function SyncProvisioning() {
         $mapping = array (
                     SYNC_PROVISION_DEVPWENABLED                         => array (  self::STREAMER_VAR      => "devpwenabled",
@@ -237,18 +240,22 @@ class SyncProvisioning extends SyncObject {
 
     public function Load($policies = array()) {
         // always load default policies because there might be some policy missing in the policies.ini
-        $this->LoadDefaultPolicies();
-        if (!empty($policies)) {
-            $objectsVars = get_object_vars($this);
-            foreach ($policies as $p=>$v) {
-                if (!in_array($p, $objectsVars)) {
-                    ZLog::Write(LOGLEVEL_INFO, sprintf("Policy '%s' not supported by the device, ignoring", $p));
-                    continue;
-                }
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("Policy '%s' enforced with: %s (%s)", $p, (is_array($v)) ? Utils::PrintAsString(implode(',', $v)) : Utils::PrintAsString($v), gettype($v)));
-                $this->$p = (is_array($v) && empty($v)) ? array() : $v;
+        $defaultPolicies = Utils::GetDefaultPolices();
+        // Join the policies. Loaded policies have precedence over default policies.
+        $finalPolicies = $policies + $defaultPolicies;
+
+        $objectsVars = get_object_vars($this);
+        foreach ($finalPolicies as $p=>$v) {
+            if (!array_key_exists($p, $objectsVars)) {
+                ZLog::Write(LOGLEVEL_INFO, sprintf("Policy '%s' not supported by the device, ignoring", $p));
+                unset($finalPolicies[$p]);
+                continue;
             }
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("Policy '%s' enforced with: %s (%s)", $p, (is_array($v)) ? Utils::PrintAsString(implode(',', $v)) : Utils::PrintAsString($v), gettype($v)));
+            $this->$p = (is_array($v) && empty($v)) ? array() : $v;
         }
+
+        self::GetInstance()->SetPolicyHash(md5(serialize($finalPolicies)));
     }
 
     public function LoadDefaultPolicies() {
@@ -298,5 +305,41 @@ class SyncProvisioning extends SyncObject {
         $this->allowinternetsharing = 1;
         $this->unapprovedinromapplist = array();
         $this->approvedapplist = array();
+    }
+
+    /**
+     * Sets the policy hash.
+     *
+     * @param string    $hash
+     *
+     * @access public
+     * @return void
+     */
+    public function SetPolicyHash($hash) {
+        $this->policyHash = $hash;
+    }
+
+    /**
+     * Returns the policy hash.
+     *
+     * @access public
+     * @return string
+     */
+    public function GetPolicyHash() {
+        return $this->policyHash;
+    }
+
+    /**
+     * Returns the SyncProvisioning instance.
+     *
+     * @access public
+     * @return SyncProvisioning
+     */
+    public static function GetInstance() {
+        if (!self::$instace)
+        {
+            self::$instace = new SyncProvisioning();
+        }
+        return self::$instace;
     }
 }
