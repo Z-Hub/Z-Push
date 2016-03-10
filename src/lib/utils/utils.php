@@ -971,6 +971,7 @@ class Utils {
         $pow = pow(1024, $base - $fBase);
         return sprintf ("%.{$precision}f %s", $pow, $units[$fBase]);
     }
+}
 
 
 
