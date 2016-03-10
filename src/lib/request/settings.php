@@ -64,7 +64,8 @@ class Settings extends RequestProcessor {
         // - DeviceInformation
         // - UserInformation
         // Each of them should only be once per request. Each property must be processed in order.
-        while (1) {
+        WBXMLDecoder::ResetInWhile("settingsMain");
+        while(WBXMLDecoder::InWhile("settingsMain")) {
             $propertyName = "";
             if (self::$decoder->getElementStartTag(SYNC_SETTINGS_OOF)) {
                 $propertyName = SYNC_SETTINGS_OOF;

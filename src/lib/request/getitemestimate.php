@@ -67,7 +67,8 @@ class GetItemEstimate extends RequestProcessor {
             $spastatus = false;
 
             // read the folder properties
-            while (1) {
+            WBXMLDecoder::ResetInWhile("getItemEstimateFolders");
+            while(WBXMLDecoder::InWhile("getItemEstimateFolders")) {
                 if(self::$decoder->getElementStartTag(SYNC_SYNCKEY)) {
                     try {
                         $spa->SetSyncKey(self::$decoder->getElementContent());

@@ -59,7 +59,8 @@ class ItemOperations extends RequestProcessor {
 
         $itemoperations = array();
         //ItemOperations can either be Fetch, EmptyFolderContents or Move
-        while (1) {
+        WBXMLDecoder::ResetInWhile("itemOperationsActions");
+        while(WBXMLDecoder::InWhile("itemOperationsActions")) {
             //TODO check if multiple item operations are possible in one request
             $el = self::$decoder->getElement();
 
@@ -182,7 +183,8 @@ class ItemOperations extends RequestProcessor {
 
                             if(self::$decoder->getElementStartTag(SYNC_ITEMOPERATIONS_SCHEMA)) {
                                 // read schema tags
-                                while (1) {
+                                WBXMLDecoder::ResetInWhile("itemOperationsSchema");
+                                while(WBXMLDecoder::InWhile("itemOperationsSchema")) {
                                     // TODO save elements
                                     $el = self::$decoder->getElement();
                                     $e = self::$decoder->peek();
