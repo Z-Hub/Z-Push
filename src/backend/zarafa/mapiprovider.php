@@ -887,11 +887,14 @@ class MAPIProvider {
             }
         }
 
-        $folder->serverid = bin2hex($folderprops[PR_SOURCE_KEY]);
-        if($folderprops[PR_PARENT_ENTRYID] == $storeprops[PR_IPM_SUBTREE_ENTRYID])
+        $folder->BackendId = bin2hex($folderprops[PR_SOURCE_KEY]);
+        $folder->serverid = ZPush::GetDeviceManager()->GetFolderIdForBackendId($folder->BackendId, true);
+        if($folderprops[PR_PARENT_ENTRYID] == $storeprops[PR_IPM_SUBTREE_ENTRYID]) {
             $folder->parentid = "0";
-        else
-            $folder->parentid = bin2hex($folderprops[PR_PARENT_SOURCE_KEY]);
+        }
+        else {
+            $folder->parentid = ZPush::GetDeviceManager()->GetFolderIdForBackendId(bin2hex($folderprops[PR_PARENT_SOURCE_KEY]));
+        }
         $folder->displayname = w2u($folderprops[PR_DISPLAY_NAME]);
         $folder->type = $this->GetFolderType($folderprops[PR_ENTRYID], isset($folderprops[PR_CONTAINER_CLASS])?$folderprops[PR_CONTAINER_CLASS]:false);
 

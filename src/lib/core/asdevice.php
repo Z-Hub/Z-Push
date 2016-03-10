@@ -49,6 +49,7 @@ class ASDevice extends StateObject {
     const FOLDERTYPE = 2;
     const FOLDERSUPPORTEDFIELDS = 3;
     const FOLDERSYNCSTATUS = 4;
+    const FOLDERBACKENDID = 5;
 
     // expected values for not set member variables
     protected $unsetdata = array(
@@ -75,6 +76,7 @@ class ASDevice extends StateObject {
     protected $newdevice;
     protected $hierarchyCache;
     protected $ignoredMessageIds;
+    protected $backend2folderidCache;
 
     /**
      * AS Device constructor
@@ -95,6 +97,7 @@ class ASDevice extends StateObject {
         $this->firstsynctime = time();
         $this->newdevice = true;
         $this->ignoredMessageIds = array();
+        $this->backend2folderidCache = false;
     }
 
     /**
@@ -154,6 +157,7 @@ class ASDevice extends StateObject {
         // device was updated
         $this->lastupdatetime = time();
         unset($this->ignoredMessageIds);
+        unset($this->backend2folderidCache);
 
         if (!isset(self::$loadedData) || !isset(self::$loadedData->devices) || !is_array(self::$loadedData->devices)) {
             self::$loadedData = new StateObject();
@@ -194,6 +198,7 @@ class ASDevice extends StateObject {
         unset($this->forceSave);
         unset($this->newdevice);
         unset($this->ignoredMessageIds);
+        unset($this->backend2folderidCache);
 
         if (isset($this->ignoredmessages) && is_array($this->ignoredmessages)) {
             $imessages = $this->ignoredmessages;
@@ -547,6 +552,7 @@ class ASDevice extends StateObject {
                 $this->contentData = array();
                 $this->ignoredMessageIds = array();
                 $this->ignoredMessages = array();
+                $this->backend2folderidCache = false;
             }
         }
         else {
@@ -604,6 +610,95 @@ class ASDevice extends StateObject {
             return true;
         }
         return false;
+    }
+
+    /**
+     * Returns the backend folder id from the AS folderid known to the mobile.
+     *
+     * @param int           $folderid
+     *
+     * @access public
+     * @return int/boolean  returns false if the type is not set
+     */
+    public function GetFolderBackendId($folderid) {
+        if (isset($this->contentData) && isset($this->contentData[$folderid]) &&
+                isset($this->contentData[$folderid][self::FOLDERBACKENDID]) ) {
+
+            return $this->contentData[$folderid][self::FOLDERBACKENDID];
+        }
+        return false;
+    }
+
+    /**
+     * Sets the backend folder id of an AS folderid.
+     *
+     * @param string        $folderid           the AS folder id
+     * @param string        $backendfolderid    the backend folder id
+     *
+     * @access public
+     * @return boolean      true if the type was set or updated
+     */
+    public function SetFolderBackendId($folderid, $backendfolderid) {
+        if($folderid === $backendfolderid || $folderid === false || $backendfolderid === false) {
+            return false;
+        }
+
+        $contentData = $this->contentData;
+        if (!isset($contentData[$folderid]) || !is_array($contentData[$folderid]))
+            $contentData[$folderid] = array();
+        if (!isset($contentData[$folderid][self::FOLDERBACKENDID]) || $contentData[$folderid][self::FOLDERBACKENDID] != $backendfolderid ) {
+            $contentData[$folderid][self::FOLDERBACKENDID] = $backendfolderid;
+            $this->contentData = $contentData;
+
+            // update the reverse cache as well
+            if (is_array($this->backend2folderidCache)) {
+                $this->backend2folderidCache[$backendfolderid] = $folderid;
+            }
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Gets the AS folderid for a backendFolderId.
+     * If there is no known AS folderId a new one is being created.
+     *
+     * @param string    $backendid
+     * @param boolean   $generateNewIdIfNew     Generates a new AS folderid for the case the backend folder is is not known yet.
+     *
+     * @access public
+     * @return int
+     */
+    public function GetFolderIdForBackendId($backendid, $generateNewIdIfNew) {
+        // build the backend-to-folderId backwards cache once
+        if ($this->backend2folderidCache === false) {
+            $this->backend2folderidCache = array();
+            foreach ($this->contentData as $folderid => $data) {
+                if (isset($data[self::FOLDERBACKENDID])) {
+                    $this->backend2folderidCache[$data[self::FOLDERBACKENDID]] = $folderid;
+                }
+            }
+
+            // if we couldn't find any backend-folderids but there is data in contentdata, then this is an old profile.
+            // do not generate new folderids in this case
+            if (empty($this->backend2folderidCache) && !empty($this->contentData)) {
+                ZLog::Write(LOGLEVEL_DEBUG, "ASDevice->GetFolderIdForBackendId(): this is a profile without backend-folderid mapping. Returning folderids as is.");
+                $this->backend2folderidCache = true;
+            }
+        }
+        if (is_array($this->backend2folderidCache) && isset($this->backend2folderidCache[$backendid])) {
+            return $this->backend2folderidCache[$backendid];
+        }
+
+        // nothing found? Then it's a new one, get and add it
+        if (is_array($this->backend2folderidCache) && $generateNewIdIfNew) {
+            $keys = array_keys($this->contentData);
+            $next = (empty($keys) ? 0 : max($keys)) + 1;
+            $this->SetFolderBackendId($next, $backendid);
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ASDevice->GetFolderIdForBackendId(): generated new folderid '%s' for backend-folderid '%s'", $next, $backendid));
+            return $next;
+        }
+        return $backendid;
     }
 
     /**

@@ -53,6 +53,7 @@ class SyncFolder extends SyncObject {
     public $type;
     public $Store;
     public $NoBackendFolder;
+    public $BackendId;
 
     function SyncFolder() {
         $mapping = array (
@@ -75,8 +76,27 @@ class SyncFolder extends SyncObject {
 
                     SYNC_FOLDERHIERARCHY_IGNORE_NOBCKENDFLD             => array (  self::STREAMER_VAR      => "NoBackendFolder",
                                                                                     self::STREAMER_TYPE     => self::STREAMER_TYPE_IGNORE),
-                );
+
+                    SYNC_FOLDERHIERARCHY_IGNORE_BACKENDID               => array (  self::STREAMER_VAR      => "BackendId",
+                                                                                    self::STREAMER_TYPE     => self::STREAMER_TYPE_IGNORE),
+        );
 
         parent::SyncObject($mapping);
+    }
+
+    /**
+     * Returns a SyncFolder object with the serverid and optional parentid set.
+     *
+     * @param string $serverid
+     * @param string $parentid
+     *
+     * @access public
+     * @return SyncFolder object
+     */
+    public static function GetObject($serverid, $parentid = false) {
+        $folder = new SyncFolder();
+        $folder->serverid = $serverid;
+        $folder->parentid = $parentid;
+        return $folder;
     }
 }

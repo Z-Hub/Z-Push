@@ -520,8 +520,10 @@ class StateManager {
         foreach ($hc->GetDeletedFolders() as $delfolder)
             self::UnLinkState($this->device, $delfolder->serverid);
 
-        foreach ($hc->ExportFolders() as $folder)
+        foreach ($hc->ExportFolders() as $folder) {
             $this->device->SetFolderType($folder->serverid, $folder->type);
+            $this->device->SetFolderBackendId($folder->serverid, $folder->BackendId);
+        }
 
         return $this->statemachine->SetState($this->device->GetHierarchyCacheData(), $this->device->GetDeviceId(), IStateMachine::HIERARCHY, $this->uuid, $this->newStateCounter);
     }

@@ -197,8 +197,8 @@ class SyncCollections implements Iterator {
         }
 
         // if this is an additional folder the backend has to be setup correctly
-        if ($checkPermissions === true && ! ZPush::GetBackend()->Setup(ZPush::GetAdditionalSyncFolderStore($spa->GetFolderId())))
-            throw new StatusException(sprintf("SyncCollections->LoadCollection(): could not Setup() the backend for folder id '%s'", $spa->GetFolderId()), self::ERROR_WRONG_HIERARCHY);
+        if ($checkPermissions === true && ! ZPush::GetBackend()->Setup(ZPush::GetAdditionalSyncFolderStore($spa->GetBackendFolderId())))
+            throw new StatusException(sprintf("SyncCollections->LoadCollection(): could not Setup() the backend for folder id %s/%s", $spa->GetFolderId(), $spa->GetBackendFolderId()), self::ERROR_WRONG_HIERARCHY);
 
         // add collection to object
         $addStatus = $this->AddCollection($spa);
@@ -507,18 +507,20 @@ class SyncCollections implements Iterator {
                 if (($onlyPingable && $spa->GetPingableFlag() !== true) || ! $folderid)
                     continue;
 
+                $backendFolderId = $spa->GetBackendFolderId();
+
                 // get the user store if this is a additional folder
-                $store = ZPush::GetAdditionalSyncFolderStore($folderid);
+                $store = ZPush::GetAdditionalSyncFolderStore($backendFolderId);
 
                 // initialize sink if no immediate changes were found so far
                 if ($changesSink && empty($this->changes)) {
                     ZPush::GetBackend()->Setup($store);
-                    if (! ZPush::GetBackend()->ChangesSinkInitialize($folderid))
-                        throw new StatusException(sprintf("Error initializing ChangesSink for folder id '%s'", $folderid), self::ERROR_WRONG_HIERARCHY);
+                    if (! ZPush::GetBackend()->ChangesSinkInitialize($backendFolderId))
+                        throw new StatusException(sprintf("Error initializing ChangesSink for folder id %s/%s", $folderid, $backendFolderId), self::ERROR_WRONG_HIERARCHY);
                 }
 
                 // check if the folder stat changed since the last sync, if so generate a change for it (only on first run)
-                if ($this->waitingTime == 0 && ZPush::GetBackend()->HasFolderStats() && $spa->IsExporterRunRequired(ZPush::GetBackend()->GetFolderStat($store, $spa->GetFolderId()), true)) {
+                if ($this->waitingTime == 0 && ZPush::GetBackend()->HasFolderStats() && $spa->IsExporterRunRequired(ZPush::GetBackend()->GetFolderStat($store, $backendFolderId), true)) {
                     $this->changes[$spa->GetFolderId()] = 1;
                 }
             }
@@ -577,7 +579,10 @@ class SyncCollections implements Iterator {
                 $notifications = ZPush::GetBackend()->ChangesSink($nextInterval);
 
                 $validNotifications = false;
-                foreach ($notifications as $folderid) {
+                foreach ($notifications as $backendFolderId) {
+                    // the backend will notify on the backend folderid
+                    $folderid = ZPush::GetDeviceManager()->GetFolderIdForBackendId($backendFolderId);
+
                     // Check hierarchy notifications
                     if ($folderid === IBackend::HIERARCHYNOTIFICATION) {
                         // check received hierarchy notifications by exporting
@@ -650,6 +655,11 @@ class SyncCollections implements Iterator {
      private function CountChange($folderid) {
         $spa = $this->GetCollection($folderid);
 
+        if (!$spa) {
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->CountChange(): Could not get SyncParameters object from cache for folderid '%s' to verify notification. Ignoring.", $folderid));
+            return false;
+        }
+
         // prevent ZP-623 by checking if the states have been used before, if so force a sync on this folder
         if (ZPush::GetDeviceManager()->CheckHearbeatStateIntegrity($spa->GetFolderId(), $spa->GetUuid(), $spa->GetUuidCounter())) {
             ZLog::Write(LOGLEVEL_DEBUG, "SyncCollections->CountChange(): Cannot verify changes for state as it was already used. Forcing sync of folder.");
@@ -657,12 +667,13 @@ class SyncCollections implements Iterator {
             return true;
         }
 
+        $backendFolderId = ZPush::GetDeviceManager()->GetBackendIdForFolderId($folderid);
         // switch user store if this is a additional folder (additional true -> do not debug)
-        ZPush::GetBackend()->Setup(ZPush::GetAdditionalSyncFolderStore($folderid, true));
+        ZPush::GetBackend()->Setup(ZPush::GetAdditionalSyncFolderStore($backendFolderId, true));
         $changecount = false;
 
         try {
-            $exporter = ZPush::GetBackend()->GetExporter($folderid);
+            $exporter = ZPush::GetBackend()->GetExporter($backendFolderId);
             if ($exporter !== false && isset($this->addparms[$folderid]["state"])) {
                 $importer = false;
 

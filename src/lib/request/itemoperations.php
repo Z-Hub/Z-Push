@@ -232,6 +232,11 @@ class ItemOperations extends RequestProcessor {
                 }
             } // end while operation
 
+            // rewrite folderid into backendfolderid to be used on backend operations below
+            if (isset($operation['folderid'])) {
+                $operation['backendfolderid'] = self::$deviceManager->GetBackendIdForFolderId($operation['folderid']);
+            }
+
             $itemoperations[] = $operation;
             //break if it reached the endtag
             $e = self::$decoder->peek();
@@ -281,7 +286,7 @@ class ItemOperations extends RequestProcessor {
                     try {
                         if (isset($operation['folderid']) && isset($operation['serverid'])) {
                             self::$topCollector->AnnounceInformation("Fetching data from backend with item and folder id");
-                            $data = self::$backend->Fetch($operation['folderid'], $operation['serverid'], $operation["cpo"]);
+                            $data = self::$backend->Fetch($operation['backendfolderid'], $operation['serverid'], $operation["cpo"]);
                         }
                         else if (isset($operation['longid'])) {
                             self::$topCollector->AnnounceInformation("Fetching data from backend with long id");
@@ -347,7 +352,7 @@ class ItemOperations extends RequestProcessor {
                     self::$topCollector->AnnounceInformation("Emptying folder");
 
                     // send request to backend
-                    self::$backend->EmptyFolder($operation['folderid'], $operation['deletesubfolders']);
+                    self::$backend->EmptyFolder($operation['backendfolderid'], $operation['deletesubfolders']);
                 }
                 catch (StatusException $stex) {
                    $status = $stex->getCode();

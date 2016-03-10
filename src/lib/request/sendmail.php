@@ -98,6 +98,11 @@ class SendMail extends RequestProcessor {
             if (!isset($sm->source->itemid)) $sm->source->itemid = Request::GetGETItemId();
             if (!isset($sm->source->folderid)) $sm->source->folderid = Request::GetGETCollectionId();
 
+            // Rewrite the AS folderid into a backend folderid
+            if (isset($sm->source->folderid)) {
+                $sm->source->folderid = self::$deviceManager->GetBackendIdForFolderId($sm->source->folderid);
+            }
+
             // replyflag and forward flags are actually only for the correct icon.
             // Even if they are a part of SyncSendMail object, they won't be streamed.
             if ($smartreply || $reply)

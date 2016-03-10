@@ -119,6 +119,9 @@ class FolderSync extends RequestProcessor {
                 if(!$folder->Decode(self::$decoder))
                     break;
 
+                // add the backendId to the SyncFolder object
+                $folder->BackendId = self::$deviceManager->GetBackendIdForFolderId($folder->serverid);
+
                 try {
                     if ($status == SYNC_FSSTATUS_SUCCESS && !$importer) {
                         // Configure the backends importer with last state

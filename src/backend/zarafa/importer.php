@@ -561,7 +561,7 @@ class ImportChangesICS implements IImportChanges {
      * @throws StatusException
      */
     public function ImportFolderChange($folder) {
-        $id = isset($folder->serverid)?$folder->serverid:false;
+        $id = isset($folder->BackendId)?$folder->BackendId : false;
         $parent = $folder->parentid;
         $displayname = u2wi($folder->displayname);
         $type = $folder->type;
@@ -597,8 +597,9 @@ class ImportChangesICS implements IImportChanges {
             $props =  mapi_getprops($newfolder, array(PR_SOURCE_KEY));
             if (isset($props[PR_SOURCE_KEY])) {
                 $sourcekey = bin2hex($props[PR_SOURCE_KEY]);
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("Created folder '%s' with id: '%s'", $displayname, $sourcekey));
-                return $sourcekey;
+                $folderid = ZPush::GetDeviceManager()->GetFolderIdForBackendId($sourcekey, true);
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("ImportChangesICS->ImportFolderChange(): Created folder '%s' with id: '%s' backendid: '%s'", $displayname, $folderid, $sourcekey));
+                return $folderid;
             }
             else
                 throw new StatusException(sprintf("ImportChangesICS->ImportFolderChange('%s','%s','%s'): Error, folder created but PR_SOURCE_KEY not available: 0x%X", Utils::PrintAsString($folder->serverid), $folder->parentid, $displayname, mapi_last_hresult()), SYNC_FSSTATUS_SERVERERROR);
@@ -673,14 +674,15 @@ class ImportChangesICS implements IImportChanges {
     /**
      * Imports a folder deletion
      *
-     * @param string        $id
-     * @param string        $parent id is ignored in ICS
+     * @param SyncFolder    $folder         at least "serverid" needs to be set
      *
      * @access public
      * @return int          SYNC_FOLDERHIERARCHY_STATUS
      * @throws StatusException
      */
-    public function ImportFolderDeletion($id, $parent = false) {
+    public function ImportFolderDeletion($folder) {
+        $id = $folder->BackendId;
+        $parent = isset($folder->parentid) ? $folder->parentid : false;
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("ImportChangesICS->ImportFolderDeletion('%s','%s'): importing folder deletetion", $id, $parent));
 
         $folderentryid = mapi_msgstore_entryidfromsourcekey($this->store, hex2bin($id));

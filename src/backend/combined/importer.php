@@ -205,13 +205,14 @@ class ImportChangesCombined implements IImportChanges {
     /**
      * Imports a folder deletion
      *
-     * @param string        $id
-     * @param string        $parent id
+     * @param SyncFolder    $folder         at least "serverid" needs to be set
      *
      * @access public
      * @return boolean/int  success/SYNC_FOLDERHIERARCHY_STATUS
      */
-    public function ImportFolderDeletion($id, $parent = false) {
+    public function ImportFolderDeletion($folder) {
+        $id = $folder->serverid;
+        $parent = isset($folder->parentid) ? $folder->parentid : false;
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("ImportChangesCombined->ImportFolderDeletion('%s', '%s'), $id, $parent"));
         $backendid = $this->backend->GetBackendId($id);
         if(!empty($this->backend->config['backends'][$backendid]['subfolder']) && $id == $backendid.$this->backend->config['delimiter'].'0') {
@@ -226,7 +227,9 @@ class ImportChangesCombined implements IImportChanges {
             $parent = $this->backend->GetBackendFolder($parent);
 
         $this->icc = $backend->GetImporter();
-        $res = $this->icc->ImportFolderDeletion($id, $parent);
+        $folder->serverid = $id;
+        $folder->parentid = $parent;
+        $res = $this->icc->ImportFolderDeletion($folder);
         ZLog::Write(LOGLEVEL_DEBUG, 'ImportChangesCombined->ImportFolderDeletion() success');
         return $res;
     }
@@ -338,14 +341,15 @@ class ImportHierarchyChangesCombinedWrap {
     /**
      * Imports a folder deletion
      *
-     * @param string        $id
+     * @param SyncFolder    $folder         at least "serverid" needs to be set
      *
      * @access public
      *
      * @return boolean/int  success/SYNC_FOLDERHIERARCHY_STATUS
      */
-    public function ImportFolderDeletion($id) {
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ImportHierarchyChangesCombinedWrap->ImportFolderDeletion('%s')", $id));
-        return $this->ihc->ImportFolderDeletion($this->backendid.$this->backend->config['delimiter'].$id);
+    public function ImportFolderDeletion($folder) {
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ImportHierarchyChangesCombinedWrap->ImportFolderDeletion('%s')", $folder->serverid));
+        $folder->serverid = $this->backendid . $this->backend->config['delimiter'] . $folder->serverid;
+        return $this->ihc->ImportFolderDeletion($folder);
     }
 }

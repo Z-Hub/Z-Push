@@ -78,19 +78,23 @@ class FolderChange extends RequestProcessor {
 
         // ServerID
         $serverid = false;
+        $backendid = false;
         if(self::$decoder->getElementStartTag(SYNC_FOLDERHIERARCHY_SERVERENTRYID)) {
             $serverid = self::$decoder->getElementContent();
+            $backendid = self::$deviceManager->GetBackendIdForFolderId($serverid);
             if(!self::$decoder->getElementEndTag())
                 return false;
         }
 
         // Parent
         $parentid = false;
+        $parentBackendId = false;
 
         // when creating or updating more information is necessary
         if (!$delete) {
             if(self::$decoder->getElementStartTag(SYNC_FOLDERHIERARCHY_PARENTID)) {
                 $parentid = self::$decoder->getElementContent();
+                $parentBackendId = self::$deviceManager->GetBackendIdForFolderId($parentid);
                 if(!self::$decoder->getElementEndTag())
                     return false;
             }
@@ -140,8 +144,8 @@ class FolderChange extends RequestProcessor {
 
             // switch user store if this this happens inside an additional folder
             // if this is an additional folder the backend has to be setup correctly
-            if (!self::$backend->Setup(ZPush::GetAdditionalSyncFolderStore((($parentid != false)?$parentid:$serverid))))
-                throw new StatusException(sprintf("HandleFolderChange() could not Setup() the backend for folder id '%s'", (($parentid != false)?$parentid:$serverid)), SYNC_FSSTATUS_SERVERERROR);
+            if (!self::$backend->Setup(ZPush::GetAdditionalSyncFolderStore((($parentBackendId != false)?$parentBackendId:$backendid))))
+                throw new StatusException(sprintf("HandleFolderChange() could not Setup() the backend for folder id '%s'", (($parentBackendId != false)?$parentBackendId:$backendid)), SYNC_FSSTATUS_SERVERERROR);
         }
         catch (StateNotFoundException $snfex) {
             $status = SYNC_FSSTATUS_SYNCKEYERROR;
@@ -163,20 +167,27 @@ class FolderChange extends RequestProcessor {
                 // the messages from the PIM will be forwarded to the real importer
                 $changesMem->SetDestinationImporter($importer);
 
+                // Create SyncFolder object
+                $folder = new SyncFolder();
+                $folder->serverid = $serverid;
+                $folder->parentid = $parentBackendId;
+                if (isset($displayname)) {
+                    $folder->displayname = $displayname;
+                }
+                if (isset($type)) {
+                    $folder->type = $type;
+                }
+                // add the backendId to the SyncFolder object
+                $folder->BackendId = $backendid;
+
                 // process incoming change
                 if (!$delete) {
-                    // Send change
-                    $folder = new SyncFolder();
-                    $folder->serverid = $serverid;
-                    $folder->parentid = $parentid;
-                    $folder->displayname = $displayname;
-                    $folder->type = $type;
-
+                    // when creating, $folder->serverid is false, and the returned id is already mapped by the backend
                     $serverid = $changesMem->ImportFolderChange($folder);
                 }
                 else {
                     // delete folder
-                    $changesMem->ImportFolderDeletion($serverid, 0);
+                    $changesMem->ImportFolderDeletion($folder);
                 }
             }
             catch (StatusException $stex) {

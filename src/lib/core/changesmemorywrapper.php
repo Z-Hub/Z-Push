@@ -83,7 +83,7 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
                         // delete the folder only if it was an additional folder before, else ignore it
                         $synchedfolder = $this->GetFolder($addFolder->serverid);
                         if (isset($synchedfolder->NoBackendFolder) && $synchedfolder->NoBackendFolder == true)
-                            $this->ImportFolderDeletion($addFolder->serverid, $addFolder->parentid);
+                            $this->ImportFolderDeletion($addFolder);
                         continue;
                     }
                 }
@@ -99,7 +99,7 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
                     // look if this folder is still in the list of additional folders and was not already deleted (e.g. missing permissions)
                     if (!array_key_exists($sid, $state) && !array_key_exists($sid, $alreadyDeleted)) {
                         ZLog::Write(LOGLEVEL_INFO, sprintf("ChangesMemoryWrapper->Config(AdditionalFolders) : previously synchronized folder '%s' is not to be synched anymore. Sending delete to mobile.", $folder->displayname));
-                        $this->ImportFolderDeletion($folder->serverid, $folder->parentid);
+                        $this->ImportFolderDeletion($folder);
                     }
                 }
             }
@@ -242,17 +242,18 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
     /**
      * Imports a folder deletion
      *
-     * @param string        $id
-     * @param string        $parent     (opt) the parent id of the folders
+     * @param SyncFolder    $folder         at least "serverid" needs to be set
      *
      * @access public
      * @return boolean
      */
-    public function ImportFolderDeletion($id, $parent = false) {
+    public function ImportFolderDeletion($folder) {
+        $id = $folder->serverid;
+
         // if the forwarder is set, then this folder should be processed by another importer
         // instead of being loaded in mem.
         if (isset($this->destinationImporter)) {
-            $ret = $this->destinationImporter->ImportFolderDeletion($id, $parent);
+            $ret = $this->destinationImporter->ImportFolderDeletion($folder);
 
             // if the operation was sucessfull, update the HierarchyCache
             if ($ret)
@@ -265,7 +266,7 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
             if ($this->GetFolder($id)) {
 
                 // load this change into memory
-                $this->changes[] = array(self::DELETION, $id, $parent);
+                $this->changes[] = array(self::DELETION, $folder);
 
                 // HierarchyCache: delete the folder so changes are not sent twice (if exported twice)
                 $this->DelFolder($id);
@@ -322,7 +323,7 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
             }
             // deletion
             else {
-                $this->exportImporter->ImportFolderDeletion($change[1], $change[2]);
+                $this->exportImporter->ImportFolderDeletion($change[1]);
             }
             $this->step++;
 
