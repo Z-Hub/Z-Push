@@ -63,7 +63,7 @@ class SyncProvisioning extends SyncObject {
     public $devpwhistory;
 
     //AS 12.1 and 14.0 props
-    public $allostoragecard;
+    public $allowstoragecard;
     public $allowcam;
     public $reqdevenc;
     public $allowunsignedapps;
@@ -140,7 +140,7 @@ class SyncProvisioning extends SyncObject {
 
         if(Request::GetProtocolVersion() >= 12.1) {
             $mapping += array (
-                    SYNC_PROVISION_ALLOWSTORAGECARD                     => array (  self::STREAMER_VAR      => "allostoragecard",
+                    SYNC_PROVISION_ALLOWSTORAGECARD                     => array (  self::STREAMER_VAR      => "allowstoragecard",
                                                                                     self::STREAMER_CHECKS   => array(   self::STREAMER_CHECK_ONEVALUEOF => array(0,1) )),
 
                     SYNC_PROVISION_ALLOWCAM                             => array (  self::STREAMER_VAR      => "allowcam",
@@ -275,7 +275,7 @@ class SyncProvisioning extends SyncObject {
         $this->devpwhistory = 0;
 
         //AS 12.1 and 14.0 props
-        $this->allostoragecard = 1;
+        $this->allowstoragecard = 1;
         $this->allowcam = 1;
         $this->reqdevenc = 0;
         $this->allowunsignedapps = 1;

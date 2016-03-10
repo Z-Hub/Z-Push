@@ -996,7 +996,7 @@ class Utils {
                 'devpwhistory' => 0,
 
                 //AS 12.1 and above properties
-                'allostoragecard' => 1,
+                'allowstoragecard' => 1,
                 'allowcam' => 1,
                 'reqdevenc' => 0,
                 'allowunsignedapps' => 1,
