@@ -972,64 +972,6 @@ class Utils {
         return sprintf ("%.{$precision}f %s", $pow, $units[$fBase]);
     }
 
-    /**
-     * Returns the default policies.
-     *
-     * @access public
-     * @return array
-     */
-    public static function GetDefaultPolices() {
-        return array(
-                //AS 12.0 and above properties
-                'devpwenabled' => 0,
-                'alphanumpwreq' => 0,
-                'devencenabled' => 0,
-                'pwrecoveryenabled' => 0,
-                'docbrowseenabled' => null,
-                'attenabled' => 1,
-                'mindevpwlenngth' => 4,
-                'maxinacttimedevlock' => 900,
-                'maxdevpwfailedattempts' => 8,
-                'maxattsize' => '',
-                'allowsimpledevpw' => 1,
-                'devpwexpiration' => 0,
-                'devpwhistory' => 0,
-
-                //AS 12.1 and above properties
-                'allowstoragecard' => 1,
-                'allowcam' => 1,
-                'reqdevenc' => 0,
-                'allowunsignedapps' => 1,
-                'allowunsigninstallpacks' => 1,
-                'mindevcomplexchars' => 3,
-                'allowwifi' => 1,
-                'allowtextmessaging' => 1,
-                'allowpopimapemail' => 1,
-                'allowbluetooth' => 2,
-                'allowirda' => 1,
-                'reqmansyncroam' => 0,
-                'allowdesktopsync' => 1,
-                'maxcalagefilter' => 0,
-                'allowhtmlemail' => 1,
-                'maxemailagefilter' => 0,
-                'maxemailbodytruncsize' => -1,
-                'maxemailhtmlbodytruncsize' => -1,
-                'reqsignedsmimemessages' => 0,
-                'reqencsmimemessages' => 0,
-                'reqsignedsmimealgorithm' => 0,
-                'reqencsmimealgorithm' => 0,
-                'allowsmimeencalgneg' => 2,
-                'allowsmimesoftcerts' => 1,
-                'allowbrowser' => 1,
-                'allowconsumeremail' => 1,
-                'allowremotedesk' => 1,
-                'allowinternetsharing' => 1,
-                'unapprovedinromapplist' => array(),
-                'approvedapplist' => array(),
-        );
-    }
-}
-
 
 
 // TODO Win1252/UTF8 functions are deprecated and will be removed sometime

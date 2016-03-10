@@ -230,19 +230,15 @@ class DeviceManager {
         }
 
 
-        $policyHash = SyncProvisioning::GetInstance()->GetPolicyHash();
-        if (empty($policyHash)) {
-            $policies = $this->getProvisioningPolicies();
-            SyncProvisioning::GetInstance()->Load($policies);
-            $policyHash = SyncProvisioning::GetInstance()->GetPolicyHash();
-        }
+        $policyHash = SyncProvisioning::GetObjectWithPolicies($this->getProvisioningPolicies())->GetPolicyHash();
 
         $p = ( ($this->device->GetWipeStatus() != SYNC_PROVISION_RWSTATUS_NA && $policykey != $this->device->GetPolicyKey()) ||
               (Request::WasPolicyKeySent() && $this->device->GetPolicyKey() == ASDevice::UNDEFINED) ||
                  $this->device->getPolicyhash() != $policyHash);
 
         if (!$noDebug || $p)
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("DeviceManager->ProvisioningRequired('%s') saved device key '%s': %s", $policykey, $this->device->GetPolicyKey(), Utils::PrintAsString($p)));
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("DeviceManager->ProvisioningRequired('%s') saved device key '%s', policyHash '%s', saved device policy hash '%s' : %s",
+                    $policykey, $this->device->GetPolicyKey(), $policyHash, $this->device->getPolicyhash(), Utils::PrintAsString($p)));
         return $p;
     }
 
@@ -276,11 +272,8 @@ class DeviceManager {
      * @return SyncProvisioning
      */
     public function GetProvisioningObject() {
-        $p = SyncProvisioning::GetInstance();
+        $p = SyncProvisioning::GetObjectWithPolicies($this->getProvisioningPolicies());
 
-        $policies = $this->getProvisioningPolicies();
-        $p->Load($policies);
-        unset($policies);
         // save policies' hash and name
         $this->device->SetPolicyname($this->getPolicyName());
         $this->device->SetPolicyhash($p->GetPolicyHash());

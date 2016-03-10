@@ -94,9 +94,6 @@ class SyncProvisioning extends SyncObject {
     public $unapprovedinromapplist;
     public $approvedapplist;
 
-    private static $instace;
-    private $policyHash;
-
     function SyncProvisioning() {
         $mapping = array (
                     SYNC_PROVISION_DEVPWENABLED                         => array (  self::STREAMER_VAR      => "devpwenabled",
@@ -239,23 +236,17 @@ class SyncProvisioning extends SyncObject {
     }
 
     public function Load($policies = array()) {
-        // always load default policies because there might be some policy missing in the policies.ini
-        $defaultPolicies = Utils::GetDefaultPolices();
-        // Join the policies. Loaded policies have precedence over default policies.
-        $finalPolicies = $policies + $defaultPolicies;
+        $this->LoadDefaultPolicies();
 
-        $objectsVars = get_object_vars($this);
-        foreach ($finalPolicies as $p=>$v) {
-            if (!array_key_exists($p, $objectsVars)) {
+        $streamerVars = $this->GetStreamerVars();
+        foreach ($policies as $p=>$v) {
+            if (!in_array($p, $streamerVars)) {
                 ZLog::Write(LOGLEVEL_INFO, sprintf("Policy '%s' not supported by the device, ignoring", $p));
-                unset($finalPolicies[$p]);
                 continue;
             }
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("Policy '%s' enforced with: %s (%s)", $p, (is_array($v)) ? Utils::PrintAsString(implode(',', $v)) : Utils::PrintAsString($v), gettype($v)));
+            ZLog::Write(LOGLEVEL_WBXML, sprintf("Policy '%s' enforced with: %s (%s)", $p, (is_array($v)) ? Utils::PrintAsString(implode(',', $v)) : Utils::PrintAsString($v), gettype($v)));
             $this->$p = (is_array($v) && empty($v)) ? array() : $v;
         }
-
-        self::GetInstance()->SetPolicyHash(md5(serialize($finalPolicies)));
     }
 
     public function LoadDefaultPolicies() {
@@ -308,25 +299,13 @@ class SyncProvisioning extends SyncObject {
     }
 
     /**
-     * Sets the policy hash.
-     *
-     * @param string    $hash
-     *
-     * @access public
-     * @return void
-     */
-    public function SetPolicyHash($hash) {
-        $this->policyHash = $hash;
-    }
-
-    /**
      * Returns the policy hash.
      *
      * @access public
      * @return string
      */
     public function GetPolicyHash() {
-        return $this->policyHash;
+        return md5(serialize($this));
     }
 
     /**
@@ -335,11 +314,9 @@ class SyncProvisioning extends SyncObject {
      * @access public
      * @return SyncProvisioning
      */
-    public static function GetInstance() {
-        if (!self::$instace)
-        {
-            self::$instace = new SyncProvisioning();
-        }
-        return self::$instace;
+    public static function GetObjectWithPolicies($policies = array()) {
+        $p = new SyncProvisioning();
+        $p->Load($policies);
+        return $p;
     }
 }
