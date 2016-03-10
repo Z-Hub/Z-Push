@@ -851,7 +851,7 @@ class DeviceManager {
      * If there is no known AS folderId a new one is being created.
      *
      * @param string    $backendid
-     * @param boolean   $generateNewIdIfNew     Generates a new AS folderid for the case the backend folder is is not known yet, default: false.
+     * @param boolean   $generateNewIdIfNew     Generates a new AS folderid for the case the backend folder is not known yet, default: false.
      *
      * @access public
      * @return int/boolean  returns false if there is folderid known for this backendid and $generateNewIdIfNew is not set or false.

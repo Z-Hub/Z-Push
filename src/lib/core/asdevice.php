@@ -527,10 +527,12 @@ class ASDevice extends StateObject {
      * @return string
      */
     public function GetFolderUUID($folderid = false) {
-        if ($folderid === false)
+        if ($folderid === false) {
             return (isset($this->hierarchyUuid) && $this->hierarchyUuid !== self::UNDEFINED) ? $this->hierarchyUuid : false;
-        else if (isset($this->contentData) && isset($this->contentData[$folderid]) && isset($this->contentData[$folderid][self::FOLDERUUID]))
+        }
+        else if (isset($this->contentData[$folderid][self::FOLDERUUID])) {
             return $this->contentData[$folderid][self::FOLDERUUID];
+        }
         return false;
     }
 
@@ -583,10 +585,9 @@ class ASDevice extends StateObject {
      * @return int/boolean  returns false if the type is not set
      */
     public function GetFolderType($folderid) {
-        if (isset($this->contentData) && isset($this->contentData[$folderid]) &&
-            isset($this->contentData[$folderid][self::FOLDERTYPE]) )
-
+        if (isset($this->contentData[$folderid][self::FOLDERTYPE])) {
             return $this->contentData[$folderid][self::FOLDERTYPE];
+        }
         return false;
     }
 
@@ -621,9 +622,7 @@ class ASDevice extends StateObject {
      * @return int/boolean  returns false if the type is not set
      */
     public function GetFolderBackendId($folderid) {
-        if (isset($this->contentData) && isset($this->contentData[$folderid]) &&
-                isset($this->contentData[$folderid][self::FOLDERBACKENDID]) ) {
-
+        if (isset($this->contentData[$folderid][self::FOLDERBACKENDID])) {
             return $this->contentData[$folderid][self::FOLDERBACKENDID];
         }
         return false;
@@ -664,7 +663,7 @@ class ASDevice extends StateObject {
      * If there is no known AS folderId a new one is being created.
      *
      * @param string    $backendid
-     * @param boolean   $generateNewIdIfNew     Generates a new AS folderid for the case the backend folder is is not known yet.
+     * @param boolean   $generateNewIdIfNew     Generates a new AS folderid for the case the backend folder is not known yet.
      *
      * @access public
      * @return int
