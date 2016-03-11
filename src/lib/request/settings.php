@@ -59,7 +59,7 @@ class Settings extends RequestProcessor {
         if(self::$deviceManager->IsOutlookClient()) {
             self::$specialHeaders = array();
             // TODO these values need to be configurable, ZO-41
-            self::$specialHeaders[] = "X-Push-Capabilities: gab,receiveflags,sendflags,oof,recover";
+            self::$specialHeaders[] = "X-Push-Capabilities: gab,receiveflags,sendflags,oof,recover,notes"; // TODO add "ooftime" when time support is available
             self::$specialHeaders[] = "X-Push-GAB-Name: Z-Push-OL-GAB-Acacia";
         }
 
