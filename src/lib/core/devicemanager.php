@@ -216,11 +216,12 @@ class DeviceManager {
      *
      * @param string        $policykey
      * @param boolean       $noDebug        (opt) by default, debug message is shown
+     * @param boolean       $checkPolicies  (opt) by default check if the provisioning policies changed
      *
      * @access public
      * @return boolean
      */
-    public function ProvisioningRequired($policykey, $noDebug = false) {
+    public function ProvisioningRequired($policykey, $noDebug = false, $checkPolicies = true) {
         $this->loadDeviceData();
 
         // check if a remote wipe is required
@@ -229,16 +230,21 @@ class DeviceManager {
             return true;
         }
 
-
-        $policyHash = SyncProvisioning::GetObjectWithPolicies($this->getProvisioningPolicies())->GetPolicyHash();
-
         $p = ( ($this->device->GetWipeStatus() != SYNC_PROVISION_RWSTATUS_NA && $policykey != $this->device->GetPolicyKey()) ||
-              (Request::WasPolicyKeySent() && $this->device->GetPolicyKey() == ASDevice::UNDEFINED) ||
-                 $this->device->getPolicyhash() != $policyHash);
+              (Request::WasPolicyKeySent() && $this->device->GetPolicyKey() == ASDevice::UNDEFINED) );
 
         if (!$noDebug || $p)
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("DeviceManager->ProvisioningRequired('%s') saved device key '%s', policyHash '%s', saved device policy hash '%s' : %s",
-                    $policykey, $this->device->GetPolicyKey(), $policyHash, $this->device->getPolicyhash(), Utils::PrintAsString($p)));
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("DeviceManager->ProvisioningRequired('%s') saved device key '%s' : %s",
+                    $policykey, $this->device->GetPolicyKey(), Utils::PrintAsString($p)));
+
+        if ($checkPolicies) {
+            $policyHash = SyncProvisioning::GetObjectWithPolicies($this->getProvisioningPolicies())->GetPolicyHash();
+            if ($this->device->getPolicyhash() != $policyHash) {
+                $p = true;
+                ZLog::Write(LOGLEVEL_INFO, sprintf("DeviceManager->ProvisioningRequired(): saved policy hash '%s' changed '%s'. Provisioning required.", $this->device->getPolicyhash(), $policyHash));
+            }
+        }
+
         return $p;
     }
 
@@ -946,35 +952,29 @@ class DeviceManager {
         $policyName = $this->getPolicyName();
         $policies = parse_ini_file(PROVISIONING_POLICYFILE, true);
 
-        if ($policyName !== false) {
-            if (isset($policies[$policyName])) {
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("DeviceManager->GetProvisioningObject(): load %s policy.", $policyName));
-                return $policies[$policyName];
-            }
-            else {
-                ZLog::Write(LOGLEVEL_WARN, sprintf("The '%s' policy is configured, but it is not available in the policies' file. Please check %s file. Loading default policy.", $policyName, PROVISIONING_POLICYFILE));
-                return $policies[ASDevice::DEFAULTPOLICYNAME];
-            }
+        if (!isset($policies[$policyName]) && $policyName != ASDevice::DEFAULTPOLICYNAME) {
+            ZLog::Write(LOGLEVEL_WARN, sprintf("The '%s' policy is configured, but it is not available in the policies' file. Please check %s file. Loading default policy.", $policyName, PROVISIONING_POLICYFILE));
+            return $policies[ASDevice::DEFAULTPOLICYNAME];
         }
-        ZLog::Write(LOGLEVEL_DEBUG, "DeviceManager->GetProvisioningObject(): load default policy.");
-        return $policies[ASDevice::DEFAULTPOLICYNAME];
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("DeviceManager->getProvisioningPolicies(): loaded '%s' policy.", $policyName));
+        return $policies[$policyName];
     }
 
     /**
      * Gets the policy name set in the backend or in device data.
      *
      * @access private
-     * @return string|boolean
+     * @return string
      */
 
     private function getPolicyName() {
         $policyName = ZPush::GetBackend()->GetUserPolicyName();
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("The backend returned '%s' policy.", Utils::PrintAsString($policyName)));
         if ($policyName === false && $this->device->HasPolicyname()) {
             // get the policy name from device data
             $policyName = $this->device->GetPolicyname();
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("The device data returned '%s' policy %s.", Utils::PrintAsString($policyName), gettype($policyName)));
         }
-        return (!empty($policyName) ? $policyName : ASDevice::DEFAULTPOLICYNAME);
+        $policyName = ((!empty($policyName) && $policyName !== false) ? $policyName : ASDevice::DEFAULTPOLICYNAME);
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("DeviceManager->getPolicyName(): determined policy name: '%s'", $policyName));
+        return $policyName;
     }
 }

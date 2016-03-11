@@ -235,6 +235,14 @@ class SyncProvisioning extends SyncObject {
         parent::SyncObject($mapping);
     }
 
+    /**
+     * Loads provisioning policies into a SyncProvisioning object.
+     *
+     * @param array     $policies - array with policies' names and values
+     *
+     * @access public
+     * @return void
+     */
     public function Load($policies = array()) {
         $this->LoadDefaultPolicies();
 
@@ -249,6 +257,12 @@ class SyncProvisioning extends SyncObject {
         }
     }
 
+    /**
+     * Loads default policies' values into a SyncProvisioning object.
+     *
+     * @access public
+     * @return void
+     */
     public function LoadDefaultPolicies() {
         //AS 12.0, 12.1 and 14.0 props
         $this->devpwenabled = 0;
