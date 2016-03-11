@@ -760,7 +760,7 @@ class Sync extends RequestProcessor {
                 if ($setupExporter && self::$backend->HasFolderStats()) {
                     // check if the folder stats changed -> if not, don't setup the exporter, there are no changes!
                     $newFolderStat = self::$backend->GetFolderStat(ZPush::GetAdditionalSyncFolderStore($spa->GetFolderId()), $spa->GetFolderId());
-                    if (! $spa->IsExporterRunRequired($newFolderStat, true)) {
+                    if ($newFolderStat !== false && ! $spa->IsExporterRunRequired($newFolderStat, true)) {
                         $changecount = 0;
                         $setupExporter = false;
                         ZLog::Write(LOGLEVEL_DEBUG, "Sync(): Folder stat from the backend indicates that the folder did not change. Exporter will not run.");
@@ -847,7 +847,7 @@ class Sync extends RequestProcessor {
 
             // Fir AS 14.0+ omit output for folder, if there were no incoming or outgoing changes and no Fetch
             if (Request::GetProtocolVersion() >= 14.0 && ! $spa->HasNewSyncKey() && $changecount == 0 && empty($actiondata["fetchids"]) && $status == SYNC_STATUS_SUCCESS &&
-                    ! $spa->IsExporterRunRequired($newFolderStat)) {
+                    ($newFolderStat === false || ! $spa->IsExporterRunRequired($newFolderStat))) {
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleSync: No changes found for %s folder id '%s'. Omitting output.", $spa->GetContentClass(), $spa->GetFolderId()));
                 continue;
             }
