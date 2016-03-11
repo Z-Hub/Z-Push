@@ -121,7 +121,7 @@ interface IImportChanges extends IChanges {
      * @param object        $folder         SyncFolder
      *
      * @access public
-     * @return boolean/string               status/id of the folder
+     * @return boolean/SyncObject           status/object with the ath least the serverid of the folder set
      * @throws StatusException
      */
     public function ImportFolderChange($folder);

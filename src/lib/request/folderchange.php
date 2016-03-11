@@ -183,7 +183,7 @@ class FolderChange extends RequestProcessor {
                 // process incoming change
                 if (!$delete) {
                     // when creating, $folder->serverid is false, and the returned id is already mapped by the backend
-                    $serverid = $changesMem->ImportFolderChange($folder);
+                    $folder = $changesMem->ImportFolderChange($folder);
                 }
                 else {
                     // delete folder
@@ -210,7 +210,7 @@ class FolderChange extends RequestProcessor {
                     self::$encoder->endTag();
 
                     self::$encoder->startTag(SYNC_FOLDERHIERARCHY_SERVERENTRYID);
-                    self::$encoder->content($serverid);
+                    self::$encoder->content($folder->serverid);
                     self::$encoder->endTag();
                 }
             }

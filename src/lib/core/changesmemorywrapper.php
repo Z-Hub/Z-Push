@@ -190,7 +190,7 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
      * @param SyncFolder    $folder     folder to be changed
      *
      * @access public
-     * @return boolean
+     * @return boolean/SyncObject           status/object with the ath least the serverid of the folder set
      */
     public function ImportFolderChange($folder) {
         // if the destinationImporter is set, then this folder should be processed by another importer
@@ -204,17 +204,29 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("ChangesMemoryWrapper->ImportFolderChange(): Set foldertype for folder '%s' from cache as it was not sent: '%s'", $folder->displayname, $folder->type));
             }
 
-            $ret = $this->destinationImporter->ImportFolderChange($folder);
+            $retFolder = $this->destinationImporter->ImportFolderChange($folder);
 
             // if the operation was sucessfull, update the HierarchyCache
-            if ($ret) {
-                // for folder creation, the serverid is not set and has to be updated before
-                if (!isset($folder->serverid) || $folder->serverid == "")
-                    $folder->serverid = $ret;
+            if ($retFolder) {
+                // if we get a folder back, we need to update some data in the cache
+                if (isset($retFolder->serverid) && $retFolder->serverid) {
+                    // for folder creation, the serverid & backendid are not set and have to be updated
+                    if (!isset($folder->serverid) || $folder->serverid == "") {
+                        $folder->serverid = $retFolder->serverid;
+                        if (isset($retFolder->BackendId) && $retFolder->BackendId) {
+                            $folder->BackendId = $retFolder->BackendId;
+                        }
+                    }
+
+                    // if the parentid changed (folder was moved) this needs to be updated as well
+                    if ($retFolder->parentid != $folder->parentid) {
+                        $folder->parentid = $retFolder->parentid;
+                    }
+                }
 
                 $this->AddFolder($folder);
             }
-            return $ret;
+            return $retFolder;
         }
         // load into memory
         else {

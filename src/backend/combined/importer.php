@@ -164,7 +164,7 @@ class ImportChangesCombined implements IImportChanges {
      * @param object        $folder         SyncFolder
      *
      * @access public
-     * @return boolean/string               status/id of the folder
+     * @return boolean/SyncObject           status/object with the ath least the serverid of the folder set
      */
     public function ImportFolderChange($folder) {
         $id = $folder->serverid;
@@ -197,9 +197,11 @@ class ImportChangesCombined implements IImportChanges {
         }
 
         $this->icc = $this->backend->getBackend($backendid)->GetImporter();
-        $res = $this->icc->ImportFolderChange($folder);
+        $resFolder = $this->icc->ImportFolderChange($folder);
         ZLog::Write(LOGLEVEL_DEBUG, 'ImportChangesCombined->ImportFolderChange() success');
-        return $backendid.$this->backend->config['delimiter'].$res;
+        $folder->serverid = $backendid . $this->backend->config['delimiter'] . $resFolder->serverid;
+        // TODO Check if move folder is supported ($parent is different). This is tricky, because you could tell e.g. a CardDAV folder to be moved to the trash of the IMAP backend on the mobile.
+        return $folder;
     }
 
     /**

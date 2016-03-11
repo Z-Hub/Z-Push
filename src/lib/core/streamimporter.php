@@ -211,7 +211,7 @@ class ImportChangesStream implements IImportChanges {
      * @param object        $folder     SyncFolder
      *
      * @access public
-     * @return string       id of the folder
+     * @return boolean/SyncObject           status/object with the ath least the serverid of the folder set
      */
     public function ImportFolderChange($folder) {
         // checks if the next message may cause a loop or is broken

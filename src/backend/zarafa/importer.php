@@ -557,12 +557,13 @@ class ImportChangesICS implements IImportChanges {
      * @param object        $folder     SyncFolder
      *
      * @access public
-     * @return string       id of the folder
+     * @return boolean|SyncFolder       false on error or a SyncFolder object with serverid and BackendId set (if available)
      * @throws StatusException
      */
     public function ImportFolderChange($folder) {
         $id = isset($folder->BackendId)?$folder->BackendId : false;
         $parent = $folder->parentid;
+        $parent_org = $folder->parentid;
         $displayname = u2wi($folder->displayname);
         $type = $folder->type;
 
@@ -596,14 +597,13 @@ class ImportChangesICS implements IImportChanges {
 
             $props =  mapi_getprops($newfolder, array(PR_SOURCE_KEY));
             if (isset($props[PR_SOURCE_KEY])) {
-                $sourcekey = bin2hex($props[PR_SOURCE_KEY]);
-                $folderid = ZPush::GetDeviceManager()->GetFolderIdForBackendId($sourcekey, true);
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("ImportChangesICS->ImportFolderChange(): Created folder '%s' with id: '%s' backendid: '%s'", $displayname, $folderid, $sourcekey));
-                return $folderid;
+                $folder->BackendId = bin2hex($props[PR_SOURCE_KEY]);
+                $folder->serverid = ZPush::GetDeviceManager()->GetFolderIdForBackendId($folder->BackendId, true);
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("ImportChangesICS->ImportFolderChange(): Created folder '%s' with id: '%s' backendid: '%s'", $displayname, $folder->serverid, $folder->BackendId));
+                return $folder;
             }
             else
                 throw new StatusException(sprintf("ImportChangesICS->ImportFolderChange('%s','%s','%s'): Error, folder created but PR_SOURCE_KEY not available: 0x%X", Utils::PrintAsString($folder->serverid), $folder->parentid, $displayname, mapi_last_hresult()), SYNC_FSSTATUS_SERVERERROR);
-            return false;
         }
 
         // open folder for update
@@ -656,8 +656,13 @@ class ImportChangesICS implements IImportChanges {
             if(! mapi_folder_copyfolder($sourceparentfolder, $entryid, $destfolder, $displayname, FOLDER_MOVE))
                 throw new StatusException(sprintf("ImportChangesICS->ImportFolderChange('%s','%s','%s'): Error, unable to move folder: 0x%X", Utils::PrintAsString($folder->serverid), $folder->parentid, $displayname, mapi_last_hresult()), SYNC_FSSTATUS_FOLDEREXISTS);
 
-            $folderProps = mapi_getprops($mfolder, array(PR_SOURCE_KEY));
-            return $folderProps[PR_SOURCE_KEY];
+            // the parent changed, but we got a backendID as parent and have to return an AS folderid - the parent-backendId must be mapped at this point already
+            if ($folder->parentid != 0) {
+                $folder->parentid = ZPush::GetDeviceManager()->GetFolderIdForBackendId($parent);
+            }
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ImportChangesICS->ImportFolderChange(): Moved folder '%s' with id: %s/%s from: %s to: %s/%s", $displayname, $folder->serverid, $folder->BackendId, bin2hex($props[PR_PARENT_SOURCE_KEY]), $folder->parentid, $parent_org));
+
+            return $folder;
         }
 
         // update the display name
@@ -668,7 +673,7 @@ class ImportChangesICS implements IImportChanges {
             throw new StatusException(sprintf("ImportChangesICS->ImportFolderChange('%s','%s','%s'): Error, mapi_savechanges() failed: 0x%X", Utils::PrintAsString($folder->serverid), $folder->parentid, $displayname, mapi_last_hresult()), SYNC_FSSTATUS_SERVERERROR);
 
         ZLog::Write(LOGLEVEL_DEBUG, "Imported changes for folder: $id");
-        return $id;
+        return true;
     }
 
     /**

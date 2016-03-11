@@ -209,7 +209,7 @@ class ImportChangesDiff extends DiffState implements IImportChanges {
      * @param object        $folder     SyncFolder
      *
      * @access public
-     * @return string       id of the folder
+     * @return boolean/SyncObject           status/object with the ath least the serverid of the folder set
      * @throws StatusException
      */
     public function ImportFolderChange($folder) {
@@ -236,7 +236,8 @@ class ImportChangesDiff extends DiffState implements IImportChanges {
         if($stat)
             $this->updateState("change", $stat);
 
-        return $stat["id"];
+        $folder->serverid = $stat["id"];
+        return $folder;
     }
 
     /**
