@@ -518,7 +518,8 @@ class SyncCollections implements Iterator {
                 }
 
                 // check if the folder stat changed since the last sync, if so generate a change for it (only on first run)
-                if ($this->waitingTime == 0 && ZPush::GetBackend()->HasFolderStats() && $spa->IsExporterRunRequired(ZPush::GetBackend()->GetFolderStat($store, $spa->GetFolderId()), true)) {
+                $currentFolderStat = ZPush::GetBackend()->GetFolderStat($store, $spa->GetFolderId());
+                if ($this->waitingTime == 0 && ZPush::GetBackend()->HasFolderStats() && $currentFolderStat !== false && $spa->IsExporterRunRequired($currentFolderStat, true)) {
                     $this->changes[$spa->GetFolderId()] = 1;
                 }
             }
