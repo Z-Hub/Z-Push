@@ -936,8 +936,9 @@ class BackendZarafa implements IBackend, ISearchProvider {
         if (!empty($hierarchyNotifications)) {
             $hash = $this->getHierarchyHash();
             if ($hash !== $this->changesSinkHierarchyHash) {
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendZarafa->ChangesSink() Hierarchy notification, pending validation. HierarchyHash: %s", $hash));
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendZarafa->ChangesSink() Hierarchy notification, pending validation. New hierarchyHash: %s", $hash));
                 $notifications[] = IBackend::HIERARCHYNOTIFICATION;
+                $this->changesSinkHierarchyHash = $hash;
             }
         }
         return $notifications;

@@ -175,7 +175,7 @@ class SyncCollections implements Iterator {
 
         try {
             // Get SyncParameters for the folder from the state
-            $spa = $this->stateManager->GetSynchedFolderState($folderid);
+            $spa = $this->stateManager->GetSynchedFolderState($folderid, !$loadState);
 
             // TODO remove resync of folders for < Z-Push 2 beta4 users
             // this forces a resync of all states previous to Z-Push 2 beta4
@@ -581,6 +581,8 @@ class SyncCollections implements Iterator {
                 foreach ($notifications as $folderid) {
                     // Check hierarchy notifications
                     if ($folderid === IBackend::HIERARCHYNOTIFICATION) {
+                        // wait two seconds before validating this notification, because it could potentially be made by the mobile and we need some time to update the states.
+                        sleep(2);
                         // check received hierarchy notifications by exporting
                         if ($this->countHierarchyChange(true))
                             throw new StatusException("SyncCollections->CheckForChanges(): HierarchySync required.", self::HIERARCHY_CHANGED);
@@ -718,6 +720,10 @@ class SyncCollections implements Iterator {
          $changecount = false;
          if ($exportChanges || $this->hierarchyExporterChecked === false) {
              try {
+                 // if this is a validation (not first run), make sure to load the hierarchy data again
+                 if ($this->hierarchyExporterChecked === true && !$this->LoadCollection(false, true, false))
+                     throw new StatusException("Invalid states found while re-loading hierarchy data.");
+
                  // reset backend to the main store
                  ZPush::GetBackend()->Setup(false);
                  $changesMem = ZPush::GetDeviceManager()->GetHierarchyChangesWrapper();
