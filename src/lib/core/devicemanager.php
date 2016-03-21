@@ -234,8 +234,7 @@ class DeviceManager {
               (Request::WasPolicyKeySent() && $this->device->GetPolicyKey() == ASDevice::UNDEFINED) );
 
         if (!$noDebug || $p)
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("DeviceManager->ProvisioningRequired('%s') saved device key '%s' : %s",
-                    $policykey, $this->device->GetPolicyKey(), Utils::PrintAsString($p)));
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("DeviceManager->ProvisioningRequired('%s') saved device key '%s': %s", $policykey, $this->device->GetPolicyKey(), Utils::PrintAsString($p)));
 
         if ($checkPolicies) {
             $policyHash = SyncProvisioning::GetObjectWithPolicies($this->getProvisioningPolicies())->GetPolicyHash();
