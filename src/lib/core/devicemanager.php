@@ -949,7 +949,7 @@ class DeviceManager {
      */
     private function getProvisioningPolicies() {
         $policyName = $this->getPolicyName();
-        $policies = parse_ini_file(PROVISIONING_POLICYFILE, true);
+        $policies = ZPush::GetPolicies();
 
         if (!isset($policies[$policyName]) && $policyName != ASDevice::DEFAULTPOLICYNAME) {
             ZLog::Write(LOGLEVEL_WARN, sprintf("The '%s' policy is configured, but it is not available in the policies' file. Please check %s file. Loading default policy.", $policyName, PROVISIONING_POLICYFILE));

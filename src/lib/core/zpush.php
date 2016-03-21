@@ -191,6 +191,7 @@ class ZPush {
     static private $topCollector;
     static private $backend;
     static private $addSyncFolders;
+    static private $policies;
 
 
     /**
@@ -287,8 +288,8 @@ class ZPush {
 
         // check if Provisioning is enabled and the default policies are available
         if (PROVISIONING) {
-            $policies = parse_ini_file(PROVISIONING_POLICYFILE, true);
-            if (!isset($policies['default'])) {
+            ZPush::$policies = parse_ini_file(PROVISIONING_POLICYFILE, true);
+            if (!isset(ZPush::$policies['default'])) {
                 throw new FatalMisconfigurationException(sprintf("Your policies' configuration file doesn't contain the required [default] section. Please check the %s file.", constant('PROVISIONING_POLICYFILE')));
             }
         }
@@ -877,4 +878,13 @@ END;
         return $defcapa;
     }
 
+    /**
+     * Returns the available provisioning policies.
+     *
+     * @return array
+     */
+    static public function GetPolicies() {
+        // TODO another policy providers might be available, e.g. for sqlstatemachine
+        return ZPush::$policies;
+    }
 }
