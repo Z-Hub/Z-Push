@@ -1552,7 +1552,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
      * @return void
      */
     private function settingsOOFGEt(&$oof) {
-        $oofprops = mapi_getprops($this->defaultstore, array(PR_EC_OUTOFOFFICE, PR_EC_OUTOFOFFICE_MSG, PR_EC_OUTOFOFFICE_SUBJECT));
+        $oofprops = mapi_getprops($this->defaultstore, array(PR_EC_OUTOFOFFICE, PR_EC_OUTOFOFFICE_MSG, PR_EC_OUTOFOFFICE_SUBJECT, PR_EC_OUTOFOFFICE_FROM, PR_EC_OUTOFOFFICE_UNTIL));
         $oof->oofstate = SYNC_SETTINGSOOF_DISABLED;
         $oof->Status = SYNC_SETTINGSSTATUS_SUCCESS;
         if ($oofprops != false) {
@@ -1565,6 +1565,21 @@ class BackendZarafa implements IBackend, ISearchProvider {
             $oofmessage->bodytype = $oof->bodytype;
             unset($oofmessage->appliesToExternal, $oofmessage->appliesToExternalUnknown);
             $oof->oofmessage[] = $oofmessage;
+
+            // check whether time based out of office is set
+            if ($oof->oofstate == SYNC_SETTINGSOOF_GLOBAL) {
+                if (isset($oofprops[PR_EC_OUTOFOFFICE_FROM]) && isset($oofprops[PR_EC_OUTOFOFFICE_UNTIL]) && ($oofprops[PR_EC_OUTOFOFFICE_FROM] < $oofprops[PR_EC_OUTOFOFFICE_UNTIL]) ) {
+                    $oof->oofstate = SYNC_SETTINGSOOF_TIMEBASED;
+                    $oof->starttime = $oofprops[PR_EC_OUTOFOFFICE_FROM];
+                    $oof->endtime = $oofprops[PR_EC_OUTOFOFFICE_UNTIL];
+                }
+                elseif (isset($oofprops[PR_EC_OUTOFOFFICE_FROM]) || isset($oofprops[PR_EC_OUTOFOFFICE_UNTIL]) || ($oofprops[PR_EC_OUTOFOFFICE_FROM] > $oofprops[PR_EC_OUTOFOFFICE_UNTIL])) {
+                    ZLog::Write(LOGLEVEL_WARN, sprintf("Zarafa->settingsOOFGEt(): Time based out of office set but either start time ('%s') or end time ('%s') is missing or end time is before startime.",
+                            (isset($oofprops[PR_EC_OUTOFOFFICE_FROM]) ? date("Y-m-d H:i:s", $oofprops[PR_EC_OUTOFOFFICE_FROM]) : 'empty'),
+                            (isset($oofprops[PR_EC_OUTOFOFFICE_UNTIL]) ? date("Y-m-d H:i:s", $oofprops[PR_EC_OUTOFOFFICE_UNTIL]) : 'empty')));
+                    $oof->Status = SYNC_SETTINGSSTATUS_PROTOCOLLERROR;
+                }
+            }
         }
         else {
             ZLog::Write(LOGLEVEL_WARN, "Unable to get out of office information");
@@ -1593,9 +1608,19 @@ class BackendZarafa implements IBackend, ISearchProvider {
                     $props[PR_EC_OUTOFOFFICE_SUBJECT] = "Out of office";
                 }
             }
+            if ($oof->oofstate == SYNC_SETTINGSOOF_TIMEBASED) {
+                if(isset($oof->starttime) && isset($oof->endtime)) {
+                    $props[PR_EC_OUTOFOFFICE_FROM] = $oof->starttime;
+                    $props[PR_EC_OUTOFOFFICE_UNTIL] = $oof->endtime;
+                }
+                elseif (isset($oof->starttime) || isset($oof->endtime)) {
+                    $oof->Status = SYNC_SETTINGSSTATUS_PROTOCOLLERROR;
+                }
+            }
         }
         elseif($oof->oofstate == SYNC_SETTINGSOOF_DISABLED) {
             $props[PR_EC_OUTOFOFFICE] = false;
+            $deleteProps = array(PR_EC_OUTOFOFFICE_FROM, PR_EC_OUTOFOFFICE_UNTIL);
         }
 
         if (!empty($props)) {
@@ -1605,6 +1630,10 @@ class BackendZarafa implements IBackend, ISearchProvider {
                 ZLog::Write(LOGLEVEL_ERROR, sprintf("Setting oof information failed (%X)", $result));
                 return false;
             }
+        }
+
+        if (!empty($deleteProps)) {
+            @mapi_deleteprops($this->defaultstore, $deleteProps);
         }
 
         return true;
