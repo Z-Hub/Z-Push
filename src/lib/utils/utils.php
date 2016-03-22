@@ -904,11 +904,16 @@ class Utils {
         if(posix_getuid() == 0 && file_exists($file)) {
             $dir = dirname($file);
             $perm_dir = stat($dir);
-            $perm_log = stat($file);
+            $perm_file = stat($file);
 
-            if($perm_dir[4] !== $perm_log[4] || $perm_dir[5] !== $perm_log[5]) {
-                chown($file, $perm_dir[4]);
-                chgrp($file, $perm_dir[5]);
+            if ($perm_file['uid'] == 0 && $perm_dir['uid'] == 0) {
+                unlink($file);
+                throw new FatalException("FixFileOwner: $dir must be owned by the nginx/apache/php user instead of root");
+            }
+
+            if($perm_dir['uid'] !== $perm_file['uid'] || $perm_dir['gid'] !== $perm_file['gid']) {
+                chown($file, $perm_dir['uid']);
+                chgrp($file, $perm_dir['gid']);
             }
         }
         return true;
