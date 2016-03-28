@@ -1617,6 +1617,9 @@ class BackendZarafa implements IBackend, ISearchProvider {
                     $oof->Status = SYNC_SETTINGSSTATUS_PROTOCOLLERROR;
                 }
             }
+            else {
+                $deleteProps = array(PR_EC_OUTOFOFFICE_FROM, PR_EC_OUTOFOFFICE_UNTIL);
+            }
         }
         elseif($oof->oofstate == SYNC_SETTINGSOOF_DISABLED) {
             $props[PR_EC_OUTOFOFFICE] = false;
