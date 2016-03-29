@@ -91,6 +91,13 @@ class ImportChangesStream implements IImportChanges {
         // Acacia ZO-42: to sync Notes to Outlook we sync them as Appointments
         if ($this->classAsString == "SyncNote" && ZPush::GetDeviceManager()->IsOutlookClient()) {
             $appointment = new SyncAppointment();
+            $appointment->busystatus = 0;
+            $appointment->sensitivity = 0;
+            $appointment->alldayevent = 0;
+            $appointment->reminder = 0;
+            $appointment->meetingstatus = 0;
+            $appointment->responserequested = 0;
+
             $appointment->flags = $message->flags;
             if (isset($message->asbody))
                 $appointment->asbody = $message->asbody;
@@ -98,8 +105,13 @@ class ImportChangesStream implements IImportChanges {
                 $appointment->categories = $message->categories;
             if (isset($message->subject))
                 $appointment->subject = $message->subject;
-            // TODO color of the note
+            if (isset($message->lastmodified))
+                $appointment->dtstamp = $message->lastmodified;
+            if (isset($message->Color))
+                $appointment->location = $message->Color;
 
+            $appointment->starttime = time();
+            $appointment->endtime = $appointment->starttime + 1;
             $message = $appointment;
         }
 

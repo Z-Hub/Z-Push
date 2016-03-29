@@ -52,6 +52,7 @@ class SyncNote extends SyncObject {
     public $lastmodified;
     public $messageclass;
     public $subject;
+    public $Color;
 
     function SyncNote() {
         $mapping = array(
@@ -67,6 +68,8 @@ class SyncNote extends SyncObject {
                     SYNC_NOTES_MESSAGECLASS                             => array (  self::STREAMER_VAR      => "messageclass"),
 
                     SYNC_NOTES_SUBJECT                                  => array (  self::STREAMER_VAR      => "subject"),
+
+                    SYNC_NOTES_IGNORE_COLOR                             => array (  self::STREAMER_VAR      => "Color"),
                 );
 
         parent::SyncObject($mapping);

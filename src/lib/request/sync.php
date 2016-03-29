@@ -466,15 +466,23 @@ class Sync extends RequestProcessor {
                                         $note->categories = $message->categories;
                                     if (isset($message->subject))
                                         $note->subject = $message->subject;
-                                    // TODO color of the note
+                                    if (isset($message->location))
+                                        $note->Color = $message->location;
+
                                     $message = $note;
+
+                                    // on type change, OL sends messages without a body. Ignore these updates.
+                                    if (!isset($message->asbody)) {
+                                        $message = false;
+                                    }
                                 }
                                 else {
                                     $message->Decode(self::$decoder);
+
+                                    // set Ghosted fields
+                                    $message->emptySupported(self::$deviceManager->GetSupportedFields($spa->GetFolderId()));
                                 }
 
-                                // set Ghosted fields
-                                $message->emptySupported(self::$deviceManager->GetSupportedFields($spa->GetFolderId()));
                                 if(!self::$decoder->getElementEndTag()) // end applicationdata
                                     return false;
                             }

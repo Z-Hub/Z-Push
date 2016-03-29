@@ -464,6 +464,7 @@ class MAPIMapping {
             "lastmodified"          => PR_LAST_MODIFICATION_TIME,
             "messageclass"          => PR_MESSAGE_CLASS,
             "subject"               => PR_SUBJECT,
+            "Color"                 => "PT_LONG:PSETID_Note:0x8B00",
         );
     }
 
