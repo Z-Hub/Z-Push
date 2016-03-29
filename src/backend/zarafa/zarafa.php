@@ -74,6 +74,7 @@ include_once('backend/zarafa/mapistreamwrapper.php');
 include_once('backend/zarafa/importer.php');
 include_once('backend/zarafa/exporter.php');
 
+setlocale(LC_CTYPE, "en_US.UTF-8");
 
 class BackendZarafa implements IBackend, ISearchProvider {
     private $mainUser;
