@@ -283,8 +283,8 @@ class Ping extends RequestProcessor {
      */
     private function isClassValid($class, $spa) {
         if ($class == $spa->GetContentClass() ||
-                // Acacia ZO-42: Notes are synched as Appointments
-                (self::$deviceManager->IsOutlookClient() && $class == "Calendar" && $spa->GetContentClass() == "Notes")
+                // Acacia ZO-42: Notes are synched as Tasks
+                (self::$deviceManager->IsOutlookClient() && $class == "Tasks" && $spa->GetContentClass() == "Notes")
             ) {
             return true;
         }

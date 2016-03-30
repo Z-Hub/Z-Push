@@ -88,31 +88,27 @@ class ImportChangesStream implements IImportChanges {
             return false;
         }
 
-        // Acacia ZO-42: to sync Notes to Outlook we sync them as Appointments
+        // Acacia ZO-42: to sync Notes to Outlook we sync them as Tasks
         if ($this->classAsString == "SyncNote" && ZPush::GetDeviceManager()->IsOutlookClient()) {
-            $appointment = new SyncAppointment();
-            $appointment->busystatus = 0;
-            $appointment->sensitivity = 0;
-            $appointment->alldayevent = 0;
-            $appointment->reminder = 0;
-            $appointment->meetingstatus = 0;
-            $appointment->responserequested = 0;
+            // update category from SyncNote->Color
+            $message->SetCategoryFromColor();
 
-            $appointment->flags = $message->flags;
+            $task = new SyncTask();
+            $task->complete = 0;
+            $task->sensitivity = 0;
+            $task->reminder = 0;
+
+            $task->flags = $message->flags;
             if (isset($message->asbody))
-                $appointment->asbody = $message->asbody;
+                $task->asbody = $message->asbody;
             if (isset($message->categories))
-                $appointment->categories = $message->categories;
+                $task->categories = $message->categories;
             if (isset($message->subject))
-                $appointment->subject = $message->subject;
+                $task->subject = $message->subject;
             if (isset($message->lastmodified))
-                $appointment->dtstamp = $message->lastmodified;
-            if (isset($message->Color))
-                $appointment->location = $message->Color;
+                $task->startdate = $message->lastmodified;
 
-            $appointment->starttime = time();
-            $appointment->endtime = $appointment->starttime + 1;
-            $message = $appointment;
+            $message = $task;
         }
 
         // prevent sending the same object twice in one request

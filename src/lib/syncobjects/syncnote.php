@@ -47,6 +47,21 @@
 
 
 class SyncNote extends SyncObject {
+    // Outlook transports note colors as categories
+    static private $colors = array(
+            0 => "Blue Category",
+            1 => "Green Category",
+            2 => "Red Category",
+            3 => "Yellow Category",
+            4 => "White Category",
+        );
+    
+    // Purple and orange are not supported in PidLidNoteColor
+    static private $unsupportedColors = array(
+            "Purple Category",
+            "Orange Category",
+        );
+
     public $asbody;
     public $categories;
     public $lastmodified;
@@ -73,5 +88,53 @@ class SyncNote extends SyncObject {
                 );
 
         parent::SyncObject($mapping);
+    }
+
+    /**
+     * Sets the color index from a known category.
+     *
+     * @access public
+     * @return void
+     */
+    public function SetColorFromCategory() {
+        if (is_array($this->categories)) {
+            $result = array_intersect($this->categories, array_values(self::$colors));
+            if (empty($result)) {
+                $result = array_intersect($this->categories, array_values(self::$unsupportedColors));
+                if (!empty($result)) {
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncNote->SetColorFromCategory(): unsupported color '%s', setting to color white", $result[0]));
+                    $result = array("White Category");
+                }
+            }
+            if (!empty($result)) {
+                $this->Color = array_search($result[0], $this->categories);
+            }
+        }
+    }
+
+    /**
+     * Sets the category for a Color if color categories are not yet set.
+     *
+     * @access public
+     * @return boolean
+     */
+    public function SetCategoryFromColor() {
+        // is a color other than white set
+        if (isset($this->Color) && $this->Color != 3 && $this->Color > -1 && $this->Color < 5) {
+
+
+            // check existing categories - do not rewrite category if the category is already a supported or unsupported color
+            if (isset($this->categories) && !empty($this->categories) &&
+                    (!empty(array_intersect($this->categories, array_values(self::$unsupportedColors))) ||
+                     !empty(array_intersect($this->categories, array_values(self::$colors))) )) {
+
+                    return false;
+            }
+            if(!isset($this->category)) {
+                $this->category = array();
+            }
+            $this->category[] = self::$colors[$this->Color];
+            return true;
+        }
     }
 }

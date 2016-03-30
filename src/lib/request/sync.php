@@ -453,10 +453,10 @@ class Sync extends RequestProcessor {
                             if(($el = self::$decoder->getElementStartTag(SYNC_DATA)) && ($el[EN_FLAGS] & EN_FLAGS_CONTENT)) {
                                 $message = ZPush::getSyncObjectFromFolderClass($spa->GetContentClass());
 
-                                // Acacia ZO-42: OL sends Notes as Appointments
+                                // Acacia ZO-42: OL sends Notes as Tasks
                                 if ($spa->GetContentClass() == "Notes" && self::$deviceManager->IsOutlookClient()) {
-                                    ZLog::Write(LOGLEVEL_DEBUG, "HandleSync(): Outlook sends Notes as Appointments, read as SyncAppointment and convert it into a SyncNote object.");
-                                    $message = new SyncAppointment();
+                                    ZLog::Write(LOGLEVEL_DEBUG, "HandleSync(): Outlook sends Notes as Tasks, read as SyncTask and convert it into a SyncNote object.");
+                                    $message = new SyncTask();
                                     $message->Decode(self::$decoder);
 
                                     $note = new SyncNote();
@@ -466,8 +466,9 @@ class Sync extends RequestProcessor {
                                         $note->categories = $message->categories;
                                     if (isset($message->subject))
                                         $note->subject = $message->subject;
-                                    if (isset($message->location))
-                                        $note->Color = $message->location;
+
+                                    // set SyncNote->Color from a color category
+                                    $note->SetColorFromCategory();
 
                                     $message = $note;
 
