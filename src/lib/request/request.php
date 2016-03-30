@@ -665,7 +665,7 @@ class Request {
      * @return boolean
      */
     static public function HasOLPluginStats() {
-        return isset(self::$olPluginVersion) &&  isset(self::$olPluginBuild) && isset(self::$olPluginBuildDate);
+        return isset(self::$olPluginVersion) && isset(self::$olPluginBuild) && isset(self::$olPluginBuildDate);
     }
 
     /**
