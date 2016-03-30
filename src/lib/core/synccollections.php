@@ -551,9 +551,9 @@ class SyncCollections implements Iterator {
 
             // Check if provisioning is necessary
             // if a PolicyKey was sent use it. If not, compare with the ReferencePolicyKey
-            if (PROVISIONING === true && $policyKey !== false && ZPush::GetDeviceManager()->ProvisioningRequired($policyKey, true))
+            if (PROVISIONING === true && $policyKey !== false && ZPush::GetDeviceManager()->ProvisioningRequired($policyKey, true, false))
                 // the hierarchysync forces provisioning
-                throw new StatusException("SyncCollections->CheckForChanges(): PolicyKey changed. Provisioning required.", self::ERROR_WRONG_HIERARCHY);
+                throw new StatusException("SyncCollections->CheckForChanges(): Policies or PolicyKey changed. Provisioning required.", self::ERROR_WRONG_HIERARCHY);
 
             // Check if a hierarchy sync is necessary
             if ($this->countHierarchyChange())
