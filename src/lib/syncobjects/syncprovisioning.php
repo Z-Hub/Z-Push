@@ -94,6 +94,9 @@ class SyncProvisioning extends SyncObject {
     public $unapprovedinromapplist;
     public $approvedapplist;
 
+    // policy name used with the policies; not part of ActiveSync
+    public $PolicyName;
+
     function SyncProvisioning() {
         $mapping = array (
                     SYNC_PROVISION_DEVPWENABLED                         => array (  self::STREAMER_VAR      => "devpwenabled",
@@ -133,6 +136,10 @@ class SyncProvisioning extends SyncObject {
 
                     SYNC_PROVISION_DEVPWHISTORY                         => array (  self::STREAMER_VAR      => "devpwhistory",
                                                                                     self::STREAMER_CHECKS   => array(   self::STREAMER_CHECK_CMPHIGHER  => -1 )),
+
+
+                    SYNC_PROVISION_POLICYNAME                           => array (  self::STREAMER_VAR      => "PolicyName",
+                                                                                    self::STREAMER_TYPE     => self::STREAMER_TYPE_IGNORE),
                 );
 
         if(Request::GetProtocolVersion() >= 12.1) {

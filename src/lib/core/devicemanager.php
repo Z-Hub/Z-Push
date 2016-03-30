@@ -237,8 +237,8 @@ class DeviceManager {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("DeviceManager->ProvisioningRequired('%s') saved device key '%s': %s", $policykey, $this->device->GetPolicyKey(), Utils::PrintAsString($p)));
 
         if ($checkPolicies) {
-            $policyHash = SyncProvisioning::GetObjectWithPolicies($this->getProvisioningPolicies())->GetPolicyHash();
-            if ($this->device->getPolicyhash() != $policyHash) {
+            $policyHash = $this->GetProvisioningObject()->GetPolicyHash();
+            if ($this->device->hasPolicyhash() && $this->device->getPolicyhash() != $policyHash) {
                 $p = true;
                 ZLog::Write(LOGLEVEL_INFO, sprintf("DeviceManager->ProvisioningRequired(): saved policy hash '%s' changed '%s'. Provisioning required.", $this->device->getPolicyhash(), $policyHash));
             }
@@ -277,13 +277,9 @@ class DeviceManager {
      * @return SyncProvisioning
      */
     public function GetProvisioningObject() {
-        $p = SyncProvisioning::GetObjectWithPolicies($this->getProvisioningPolicies());
-
-        // save policies' hash and name
-        $this->device->SetPolicyname($this->getPolicyName());
-        $this->device->SetPolicyhash($p->GetPolicyHash());
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("Set policy: %s with hash: %s", $this->device->GetPolicyname(), $this->device->GetPolicyhash()));
-
+        $policyName = $this->getPolicyName();
+        $p = SyncProvisioning::GetObjectWithPolicies($this->getProvisioningPolicies($policyName));
+        $p->PolicyName = $policyName;
         return $p;
     }
 
@@ -314,6 +310,21 @@ class DeviceManager {
         }
         $this->device->SetWipeStatus($status);
         return true;
+    }
+
+    /**
+     * Saves the policy hash and name in device's state.
+     *
+     * @param SyncProvisioning  $provisioning
+     *
+     * @access public
+     * @return void
+     */
+    public function SavePolicyHashAndName($provisioning) {
+        // save policies' hash and name
+        $this->device->SetPolicyname($provisioning->PolicyName);
+        $this->device->SetPolicyhash($provisioning->GetPolicyHash());
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("DeviceManager->SavePolicyHashAndName(): Set policy: %s with hash: %s", $this->device->GetPolicyname(), $this->device->GetPolicyhash()));
     }
 
 
@@ -944,11 +955,12 @@ class DeviceManager {
     /**
      * Loads Provisioning policies from the policies file.
      *
+     * @param string    $policyName     The name of the policy
+     *
      * @access private
      * @return array
      */
-    private function getProvisioningPolicies() {
-        $policyName = $this->getPolicyName();
+    private function getProvisioningPolicies($policyName) {
         $policies = ZPush::GetPolicies();
 
         if (!isset($policies[$policyName]) && $policyName != ASDevice::DEFAULTPOLICYNAME) {
@@ -968,10 +980,6 @@ class DeviceManager {
 
     private function getPolicyName() {
         $policyName = ZPush::GetBackend()->GetUserPolicyName();
-        if ($policyName === false && $this->device->HasPolicyname()) {
-            // get the policy name from device data
-            $policyName = $this->device->GetPolicyname();
-        }
         $policyName = ((!empty($policyName) && $policyName !== false) ? $policyName : ASDevice::DEFAULTPOLICYNAME);
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("DeviceManager->getPolicyName(): determined policy name: '%s'", $policyName));
         return $policyName;
