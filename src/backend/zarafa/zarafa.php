@@ -74,6 +74,8 @@ include_once('backend/zarafa/mapistreamwrapper.php');
 include_once('backend/zarafa/importer.php');
 include_once('backend/zarafa/exporter.php');
 
+//setlocale to UTF-8 in order to support properties containing Unicode characters
+setlocale(LC_CTYPE, "en_US.UTF-8");
 
 class BackendZarafa implements IBackend, ISearchProvider {
     private $mainUser;
@@ -1561,10 +1563,10 @@ class BackendZarafa implements IBackend, ISearchProvider {
     private function settingsOOF(&$oof) {
         //if oof state is set it must be set of oof and get otherwise
         if (isset($oof->oofstate)) {
-            $this->settingsOOFSEt($oof);
+            $this->settingsOofSet($oof);
         }
         else {
-            $this->settingsOOFGEt($oof);
+            $this->settingsOofGet($oof);
         }
     }
 
@@ -1576,7 +1578,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
      * @access private
      * @return void
      */
-    private function settingsOOFGEt(&$oof) {
+    private function settingsOofGet(&$oof) {
         $oofprops = mapi_getprops($this->defaultstore, array(PR_EC_OUTOFOFFICE, PR_EC_OUTOFOFFICE_MSG, PR_EC_OUTOFOFFICE_SUBJECT, PR_EC_OUTOFOFFICE_FROM, PR_EC_OUTOFOFFICE_UNTIL));
         $oof->oofstate = SYNC_SETTINGSOOF_DISABLED;
         $oof->Status = SYNC_SETTINGSSTATUS_SUCCESS;
@@ -1592,18 +1594,23 @@ class BackendZarafa implements IBackend, ISearchProvider {
             $oof->oofmessage[] = $oofmessage;
 
             // check whether time based out of office is set
-            if ($oof->oofstate == SYNC_SETTINGSOOF_GLOBAL) {
-                if (isset($oofprops[PR_EC_OUTOFOFFICE_FROM]) && isset($oofprops[PR_EC_OUTOFOFFICE_UNTIL]) && ($oofprops[PR_EC_OUTOFOFFICE_FROM] < $oofprops[PR_EC_OUTOFOFFICE_UNTIL]) ) {
+            if ($oof->oofstate == SYNC_SETTINGSOOF_GLOBAL && isset($oofprops[PR_EC_OUTOFOFFICE_FROM]) && isset($oofprops[PR_EC_OUTOFOFFICE_UNTIL])) {
+                if ($oofprops[PR_EC_OUTOFOFFICE_FROM] < $oofprops[PR_EC_OUTOFOFFICE_UNTIL]) {
                     $oof->oofstate = SYNC_SETTINGSOOF_TIMEBASED;
                     $oof->starttime = $oofprops[PR_EC_OUTOFOFFICE_FROM];
                     $oof->endtime = $oofprops[PR_EC_OUTOFOFFICE_UNTIL];
                 }
-                elseif (isset($oofprops[PR_EC_OUTOFOFFICE_FROM]) || isset($oofprops[PR_EC_OUTOFOFFICE_UNTIL]) || ($oofprops[PR_EC_OUTOFOFFICE_FROM] > $oofprops[PR_EC_OUTOFOFFICE_UNTIL])) {
-                    ZLog::Write(LOGLEVEL_WARN, sprintf("Zarafa->settingsOOFGEt(): Time based out of office set but either start time ('%s') or end time ('%s') is missing or end time is before startime.",
-                            (isset($oofprops[PR_EC_OUTOFOFFICE_FROM]) ? date("Y-m-d H:i:s", $oofprops[PR_EC_OUTOFOFFICE_FROM]) : 'empty'),
-                            (isset($oofprops[PR_EC_OUTOFOFFICE_UNTIL]) ? date("Y-m-d H:i:s", $oofprops[PR_EC_OUTOFOFFICE_UNTIL]) : 'empty')));
+                else {
+                    ZLog::Write(LOGLEVEL_WARN, sprintf("Zarafa->settingsOofGet(): Time based out of office set but end time ('%s') is before startime ('%s').",
+                        date("Y-m-d H:i:s", $oofprops[PR_EC_OUTOFOFFICE_FROM]), date("Y-m-d H:i:s", $oofprops[PR_EC_OUTOFOFFICE_UNTIL])));
                     $oof->Status = SYNC_SETTINGSSTATUS_PROTOCOLLERROR;
                 }
+            }
+            elseif ($oof->oofstate == SYNC_SETTINGSOOF_GLOBAL && (isset($oofprops[PR_EC_OUTOFOFFICE_FROM]) || isset($oofprops[PR_EC_OUTOFOFFICE_UNTIL]))) {
+                ZLog::Write(LOGLEVEL_WARN, sprintf("Zarafa->settingsOofGet(): Time based out of office set but either start time ('%s') or end time ('%s') is missing.",
+                    (isset($oofprops[PR_EC_OUTOFOFFICE_FROM]) ? date("Y-m-d H:i:s", $oofprops[PR_EC_OUTOFOFFICE_FROM]) : 'empty'),
+                    (isset($oofprops[PR_EC_OUTOFOFFICE_UNTIL]) ? date("Y-m-d H:i:s", $oofprops[PR_EC_OUTOFOFFICE_UNTIL]) : 'empty')));
+                $oof->Status = SYNC_SETTINGSSTATUS_PROTOCOLLERROR;
             }
         }
         else {
@@ -1622,7 +1629,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
      * @access private
      * @return void
      */
-    private function settingsOOFSEt(&$oof) {
+    private function settingsOofSet(&$oof) {
         $oof->Status = SYNC_SETTINGSSTATUS_SUCCESS;
         $props = array();
         if ($oof->oofstate == SYNC_SETTINGSOOF_GLOBAL || $oof->oofstate == SYNC_SETTINGSOOF_TIMEBASED) {
