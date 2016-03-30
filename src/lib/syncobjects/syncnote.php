@@ -55,7 +55,7 @@ class SyncNote extends SyncObject {
             3 => "Yellow Category",
             4 => "White Category",
         );
-    
+
     // Purple and orange are not supported in PidLidNoteColor
     static private $unsupportedColors = array(
             "Purple Category",
@@ -97,7 +97,10 @@ class SyncNote extends SyncObject {
      * @return void
      */
     public function SetColorFromCategory() {
-        if (is_array($this->categories)) {
+        // default to yellow
+        $result = array("Yellow Category");
+
+        if (!empty($this->categories)) {
             $result = array_intersect($this->categories, array_values(self::$colors));
             if (empty($result)) {
                 $result = array_intersect($this->categories, array_values(self::$unsupportedColors));
@@ -106,9 +109,9 @@ class SyncNote extends SyncObject {
                     $result = array("White Category");
                 }
             }
-            if (!empty($result)) {
-                $this->Color = array_search($result[0], $this->categories);
-            }
+        }
+        if (!empty($result)) {
+            $this->Color = array_search($result[0], self::$colors);
         }
     }
 
@@ -121,19 +124,17 @@ class SyncNote extends SyncObject {
     public function SetCategoryFromColor() {
         // is a color other than white set
         if (isset($this->Color) && $this->Color != 3 && $this->Color > -1 && $this->Color < 5) {
-
-
             // check existing categories - do not rewrite category if the category is already a supported or unsupported color
-            if (isset($this->categories) && !empty($this->categories) &&
+            if (!empty($this->categories) &&
                     (!empty(array_intersect($this->categories, array_values(self::$unsupportedColors))) ||
                      !empty(array_intersect($this->categories, array_values(self::$colors))) )) {
 
                     return false;
             }
-            if(!isset($this->category)) {
-                $this->category = array();
+            if(!isset($this->categories)) {
+                $this->categories = array();
             }
-            $this->category[] = self::$colors[$this->Color];
+            $this->categories[] = self::$colors[$this->Color];
             return true;
         }
     }

@@ -465,6 +465,7 @@ class MAPIMapping {
             "messageclass"          => PR_MESSAGE_CLASS,
             "subject"               => PR_SUBJECT,
             "Color"                 => "PT_LONG:PSETID_Note:0x8B00",
+            "Iconindex"             => PR_ICON_INDEX,
         );
     }
 
