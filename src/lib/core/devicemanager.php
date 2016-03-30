@@ -100,6 +100,10 @@ class DeviceManager {
         $this->stateManager->SetDevice($this->device);
 
         $this->additionalFoldersHash = $this->getAdditionalFoldersHash();
+
+        if ($this->IsOutlookClient()) {
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("Acacia OL Plugin: %s / %s / %s", $this->device->GetOLPluginVersion(), $this->device->GetOLPluginBuild(), strftime("%Y-%m-%d %H:%M", $this->device->GetOLPluginBuildDate())));
+        }
     }
 
     /**
@@ -148,6 +152,13 @@ class DeviceManager {
         // update the user agent and AS version on the device
         $this->device->SetUserAgent(Request::GetUserAgent());
         $this->device->SetASVersion(Request::GetProtocolVersion());
+
+        // update data from the OL plugin (if available)
+        if (Request::HasOLPluginStats()) {
+            $this->device->SetOLPluginVersion(Request::GetOLPluginVersion());
+            $this->device->SetOLPluginBuild(Request::GetOLPluginBuild());
+            $this->device->SetOLPluginBuildDate(Request::GetOLPluginBuildDate());
+        }
 
         // data to be saved
         $data = $this->device->GetData();
@@ -659,7 +670,7 @@ class DeviceManager {
      * @return boolean
      */
     public function IsOutlookClient() {
-        if (Request::GetDeviceType() == "WindowsOutlook") {
+        if (Request::GetDeviceType() == "WindowsOutlook" && $this->device->GetOLPluginVersion() !== false) {
             return true;
         }
         return false;
