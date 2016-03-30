@@ -10,7 +10,7 @@
 *
 * Created   :   05.09.2011
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -63,7 +63,7 @@ class SyncProvisioning extends SyncObject {
     public $devpwhistory;
 
     //AS 12.1 and 14.0 props
-    public $allostoragecard;
+    public $allowstoragecard;
     public $allowcam;
     public $reqdevenc;
     public $allowunsignedapps;
@@ -93,6 +93,9 @@ class SyncProvisioning extends SyncObject {
     public $allowinternetsharing;
     public $unapprovedinromapplist;
     public $approvedapplist;
+
+    // policy name used with the policies; not part of ActiveSync
+    public $PolicyName;
 
     function SyncProvisioning() {
         $mapping = array (
@@ -133,11 +136,15 @@ class SyncProvisioning extends SyncObject {
 
                     SYNC_PROVISION_DEVPWHISTORY                         => array (  self::STREAMER_VAR      => "devpwhistory",
                                                                                     self::STREAMER_CHECKS   => array(   self::STREAMER_CHECK_CMPHIGHER  => -1 )),
+
+
+                    SYNC_PROVISION_POLICYNAME                           => array (  self::STREAMER_VAR      => "PolicyName",
+                                                                                    self::STREAMER_TYPE     => self::STREAMER_TYPE_IGNORE),
                 );
 
         if(Request::GetProtocolVersion() >= 12.1) {
             $mapping += array (
-                    SYNC_PROVISION_ALLOWSTORAGECARD                     => array (  self::STREAMER_VAR      => "allostoragecard",
+                    SYNC_PROVISION_ALLOWSTORAGECARD                     => array (  self::STREAMER_VAR      => "allowstoragecard",
                                                                                     self::STREAMER_CHECKS   => array(   self::STREAMER_CHECK_ONEVALUEOF => array(0,1) )),
 
                     SYNC_PROVISION_ALLOWCAM                             => array (  self::STREAMER_VAR      => "allowcam",
@@ -235,22 +242,34 @@ class SyncProvisioning extends SyncObject {
         parent::SyncObject($mapping);
     }
 
+    /**
+     * Loads provisioning policies into a SyncProvisioning object.
+     *
+     * @param array     $policies - array with policies' names and values
+     *
+     * @access public
+     * @return void
+     */
     public function Load($policies = array()) {
-        if (empty($policies)) {
-            $this->LoadDefaultPolicies();
-        }
-        else foreach ($policies as $p=>$v) {
-            if (!isset($this->mapping[$p])) {
-                ZLog::Write(LOGLEVEL_INFO, sprintf("Policy '%s' not supported by the device, ignoring", substr($p, strpos($p,':')+1)));
+        $this->LoadDefaultPolicies();
+
+        $streamerVars = $this->GetStreamerVars();
+        foreach ($policies as $p=>$v) {
+            if (!in_array($p, $streamerVars)) {
+                ZLog::Write(LOGLEVEL_INFO, sprintf("Policy '%s' not supported by the device, ignoring", $p));
                 continue;
             }
-            ZLog::Write(LOGLEVEL_INFO, sprintf("Policy '%s' enforced with: %s", substr($p, strpos($p,':')+1), Utils::PrintAsString($v)));
-
-            $var = $this->mapping[$p][self::STREAMER_VAR];
-            $this->$var = $v;
+            ZLog::Write(LOGLEVEL_WBXML, sprintf("Policy '%s' enforced with: %s (%s)", $p, (is_array($v)) ? Utils::PrintAsString(implode(',', $v)) : Utils::PrintAsString($v), gettype($v)));
+            $this->$p = (is_array($v) && empty($v)) ? array() : $v;
         }
     }
 
+    /**
+     * Loads default policies' values into a SyncProvisioning object.
+     *
+     * @access public
+     * @return void
+     */
     public function LoadDefaultPolicies() {
         //AS 12.0, 12.1 and 14.0 props
         $this->devpwenabled = 0;
@@ -268,7 +287,7 @@ class SyncProvisioning extends SyncObject {
         $this->devpwhistory = 0;
 
         //AS 12.1 and 14.0 props
-        $this->allostoragecard = 1;
+        $this->allowstoragecard = 1;
         $this->allowcam = 1;
         $this->reqdevenc = 0;
         $this->allowunsignedapps = 1;
@@ -298,5 +317,27 @@ class SyncProvisioning extends SyncObject {
         $this->allowinternetsharing = 1;
         $this->unapprovedinromapplist = array();
         $this->approvedapplist = array();
+    }
+
+    /**
+     * Returns the policy hash.
+     *
+     * @access public
+     * @return string
+     */
+    public function GetPolicyHash() {
+        return md5(serialize($this));
+    }
+
+    /**
+     * Returns the SyncProvisioning instance.
+     *
+     * @access public
+     * @return SyncProvisioning
+     */
+    public static function GetObjectWithPolicies($policies = array()) {
+        $p = new SyncProvisioning();
+        $p->Load($policies);
+        return $p;
     }
 }
