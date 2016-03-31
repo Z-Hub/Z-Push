@@ -97,9 +97,6 @@ class SyncNote extends SyncObject {
      * @return void
      */
     public function SetColorFromCategory() {
-        // default to yellow
-        $result = array("Yellow Category");
-
         if (!empty($this->categories)) {
             $result = array_intersect($this->categories, array_values(self::$colors));
             if (empty($result)) {
@@ -109,9 +106,13 @@ class SyncNote extends SyncObject {
                     $result = array("White Category");
                 }
             }
+            if (!empty($result)) {
+                $this->Color = array_search($result[0], self::$colors);
+            }
         }
-        if (!empty($result)) {
-            $this->Color = array_search($result[0], self::$colors);
+        // unset or empty category means we have to reset the color to yellow
+        else {
+            $this->Color = 3;
         }
     }
 
