@@ -245,23 +245,21 @@ class Request {
         // charset was sent by the client and convert it to UTF-8. See https://jira.z-hub.io/browse/ZP-864.
         if (isset($_SERVER['PHP_AUTH_USER'])) {
             $encoding = mb_detect_encoding(self::$authUser, "UTF-8, ISO-8859-1");
-            if ($encoding) {
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("Request->ProcessHeaders(): mb_detect_encoding detected '%s' charset. Authorization header will be converted to UTF-8 from it.", $encoding));
-                self::$authUser = mb_convert_encoding(self::$authUser, "UTF-8", $encoding);
-                self::$authPassword = mb_convert_encoding(self::$authPassword, "UTF-8", $encoding);
-            }
-            else {
+            if (!$encoding) {
                 $encoding = mb_detect_encoding(self::$authUser, Utils::GetAvailableCharacterEncodings());
                 if ($encoding) {
                     ZLog::Write(LOGLEVEL_WARN,
-                            sprintf("Request->ProcessHeaders(): mb_detect_encoding detected '%s' charset. Authorization header will be converted to UTF-8 from it. This charset is not in the default detect list. Please report it to Z-Push developers.",
+                            sprintf("Request->ProcessHeaders(): mb_detect_encoding detected '%s' charset. This charset is not in the default detect list. Please report it to Z-Push developers.",
                                     $encoding));
-                    self::$authUser = mb_convert_encoding(self::$authUser, "UTF-8", $encoding);
-                    self::$authPassword = mb_convert_encoding(self::$authPassword, "UTF-8", $encoding);
                 }
                 else {
                     ZLog::Write(LOGLEVEL_ERROR, "Request->ProcessHeaders(): mb_detect_encoding failed to detect the Authorization header charset. It's possible that user won't be able to login.");
                 }
+            }
+            if ($encoding) {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("Request->ProcessHeaders(): mb_detect_encoding detected '%s' charset. Authorization header will be converted to UTF-8 from it.", $encoding));
+                self::$authUser = mb_convert_encoding(self::$authUser, "UTF-8", $encoding);
+                self::$authPassword = mb_convert_encoding(self::$authPassword, "UTF-8", $encoding);
             }
         }
     }
