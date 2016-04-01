@@ -123,7 +123,7 @@ class SyncNote extends SyncObject {
      * @return boolean
      */
     public function SetCategoryFromColor() {
-        // is a color other than white set
+        // is a color other than yellow set
         if (isset($this->Color) && $this->Color != 3 && $this->Color > -1 && $this->Color < 5) {
             // check existing categories - do not rewrite category if the category is already a supported or unsupported color
             if (!empty($this->categories) &&
