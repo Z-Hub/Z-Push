@@ -63,7 +63,7 @@ class ASDevice extends StateObject {
                                     'lastupdatetime' => 0,
                                     'conversationmode' => false,
                                     'policyhash' => false,
-                                    'policyname' > self::DEFAULTPOLICYNAME,
+                                    'policyname' => self::DEFAULTPOLICYNAME,
                                     'policykey' => self::UNDEFINED,
                                     'forcesave' => false,
                                     'asversion' => false,

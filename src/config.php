@@ -144,7 +144,7 @@
     define('LOOSE_PROVISIONING', false);
 
     // The file containing the policies' settings.
-    define('PROVISIONING_POLICYFILE', '/etc/z-push/policies.ini');
+    define('PROVISIONING_POLICYFILE', BASE_PATH . 'policies.ini');
 
     // Default conflict preference
     // Some devices allow to set if the server or PIM (mobile)
