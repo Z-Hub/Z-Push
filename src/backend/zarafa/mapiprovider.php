@@ -1632,6 +1632,11 @@ class MAPIProvider {
         // Setting it to an empty array will unset the property in Zarafa as well
         if (!isset($note->categories)) $note->categories = array();
 
+        // update icon index to correspond to the color
+        if (isset($note->Color) && $note->Color > -1 && $note->Color < 5) {
+            $note->Iconindex = 768 + $note->Color;
+        }
+
         $this->setPropsInMAPI($mapimessage, $note, MAPIMapping::GetNoteMapping());
 
         $noteprops = MAPIMapping::GetNoteProperties();
@@ -1641,7 +1646,9 @@ class MAPIProvider {
         $props = array();
         $props[$noteprops["messageclass"]] = "IPM.StickyNote";
         // set body otherwise the note will be "broken" when editing it in outlook
-        $this->setASbody($note->asbody, $props, $noteprops);
+        if (isset($note->asbody)) {
+            $this->setASbody($note->asbody, $props, $noteprops);
+        }
 
         $props[$noteprops["internetcpid"]] = INTERNET_CPID_UTF8;
         mapi_setprops($mapimessage, $props);
