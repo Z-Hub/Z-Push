@@ -7,7 +7,7 @@
 *
 * Created   :   01.10.2007
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -256,7 +256,7 @@ class Request {
                     ZLog::Write(LOGLEVEL_ERROR, "Request->ProcessHeaders(): mb_detect_encoding failed to detect the Authorization header charset. It's possible that user won't be able to login.");
                 }
             }
-            if ($encoding && stripos($encoding, "utf-8") === false) {
+            if ($encoding && strtolower($encoding) != "utf-8") {
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("Request->ProcessHeaders(): mb_detect_encoding detected '%s' charset. Authorization header will be converted to UTF-8 from it.", $encoding));
                 self::$authUser = mb_convert_encoding(self::$authUser, "UTF-8", $encoding);
                 self::$authPassword = mb_convert_encoding(self::$authPassword, "UTF-8", $encoding);
