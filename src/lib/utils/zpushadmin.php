@@ -864,24 +864,38 @@ class ZPushAdmin {
                         continue;
                     }
                     $seen++;
+                    $needsFixing = false;
+                    $spa = false;
 
                     // try getting the FOLDERDATA for that state
                     try {
-                        $data = ZPush::GetStateMachine()->GetState($device->GetDeviceId(), IStateMachine::FOLDERDATA, $hierarchyUuid);
+                        $spa = ZPush::GetStateMachine()->GetState($device->GetDeviceId(), IStateMachine::FOLDERDATA, $hierarchyUuid);
                     }
                     catch(StateNotFoundException $snfe) {
-                        // No FD found, search all states, and find the highest counter for the hierarchy UUID
-                        $allStates = ZPush::GetStateMachine()->GetAllStatesForDevice($devid);
-                        $maxCounter = 1;
-                        foreach ($allStates as $state) {
-                            if ($state["uuid"] == $hierarchyUuid && $state['counter'] > $maxCounter && ($state['type'] == "" || $state['type'] == false)) {
-                                $maxCounter = $state['counter'];
-                            }
+                        $needsFixing = true;
+                    }
+                    // Search all states, and find the highest counter for the hierarchy UUID
+                    $allStates = ZPush::GetStateMachine()->GetAllStatesForDevice($devid);
+                    $maxCounter = 1;
+                    foreach ($allStates as $state) {
+                        if ($state["uuid"] == $hierarchyUuid && $state['counter'] > $maxCounter && ($state['type'] == "" || $state['type'] == false)) {
+                            $maxCounter = $state['counter'];
                         }
+                    }
+                    $hierarchySyncKey = StateManager::BuildStateKey($hierarchyUuid, $maxCounter);
 
-                        // generate FOLDERDATA
+                    if ($spa) {
+                        if ($spa->GetSyncKey() !== $hierarchySyncKey) {
+                            $needsFixing = true;
+                        }
+                    }
+                    else {
                         $spa = new SyncParameters();
-                        $spa->SetSyncKey(StateManager::BuildStateKey($hierarchyUuid, $maxCounter));
+                    }
+
+                    if ($needsFixing) {
+                        // generate FOLDERDATA
+                        $spa->SetSyncKey($hierarchySyncKey);
                         $spa->SetFolderId(false);
                         ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::FixStatesHierarchyFolderData(): write data for %s", $spa->GetSyncKey()));
                         ZPush::GetStateMachine()->SetState($spa, $device->GetDeviceId(), IStateMachine::FOLDERDATA, $hierarchyUuid);
