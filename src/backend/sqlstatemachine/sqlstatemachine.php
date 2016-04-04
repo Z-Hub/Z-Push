@@ -247,7 +247,7 @@ class SqlStateMachine implements IStateMachine {
             }
             else {
                 // Existing record, we update it
-                $sql = "update zpush_states set state_data = :data, updated_at = :updated_at where device_id = :devid and state_type = :type and uuid = :key and counter = :counter";
+                $sql = "update zpush_states set state_data = :data, updated_at = :updated_at where device_id = :devid and state_type = :type and uuid " . (($key == null) ? " is " : " = ") .":key and counter = :counter";
 
                 $sth = $this->dbh->prepare($sql);
             }
