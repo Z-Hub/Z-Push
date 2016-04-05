@@ -154,6 +154,9 @@ class StateMigratorFileToDB {
     public function DoMigration() {
         print("StateMigratorFileToDB->DoMigration(): Starting migration routine." . PHP_EOL);
         try {
+            // Fix hierarchy folder data before starting the migration
+            ZPushAdmin::FixStatesHierarchyFolderData();
+
             $this->fsm = new FileStateMachine();
 
             if (!($this->fsm  instanceof FileStateMachine)) {
@@ -170,7 +173,7 @@ class StateMigratorFileToDB {
                 foreach ($allStates as $stateInfo) {
                     $state = $this->fsm->GetState($lowerDevid, $stateInfo['type'], $stateInfo['uuid'], (int) $stateInfo['counter'], false);
                     $this->dbsm->SetState($state, $lowerDevid, $stateInfo['type'], (empty($stateInfo['uuid']) ? NULL : $stateInfo['uuid']), (int) $stateInfo['counter']);
-                    printf("%s\t\tsetting state:%s-%s-%d", PHP_EOL, $stateInfo['uuid'], (empty($stateInfo['uuid']) ? NULL : $stateInfo['uuid']), (int) $stateInfo['counter']);
+                    printf("%s\t\tsetting state:%s-%s-%d", PHP_EOL, $stateInfo['uuid'], (empty($stateInfo['type']) ? NULL : $stateInfo['type']), (int) $stateInfo['counter']);
                 }
 
                 // link devices to users
