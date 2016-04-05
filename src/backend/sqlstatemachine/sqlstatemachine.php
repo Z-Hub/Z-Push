@@ -105,7 +105,6 @@ class SqlStateMachine implements IStateMachine {
         if (!isset($this->dbh) || $this->dbh == null) {
             try {
                 $this->dbh = new PDO($this->dsn, STATE_SQL_USER, STATE_SQL_PASSWORD, $this->options);
-                ZLog::Write(LOGLEVEL_DEBUG, "SqlStateMachine->getDbh(): create new PDO instance");
             }
             catch(PDOException $ex) {
                 throw new FatalMisconfigurationException(sprintf("SqlStateMachine()->getDbh(): not possible to connect to the state database: %s", $ex->getMessage()));
