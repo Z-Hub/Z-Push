@@ -61,6 +61,7 @@ class SqlStateMachine implements IStateMachine {
     private $dbh;
     private $options;
     private $dsn;
+    private $stateHashStatement;
 
     /**
      * Constructor
@@ -131,14 +132,11 @@ class SqlStateMachine implements IStateMachine {
     public function GetStateHash($devid, $type, $key = null, $counter = false) {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("SqlStateMachine->GetStateHash(): '%s', '%s', '%s', '%s'", $devid, $type, ($key == null ? 'null' : $key) , Utils::PrintAsString($counter)));
 
-        $sql = "SELECT updated_at FROM zpush_states WHERE device_id = :devid AND state_type = :type AND uuid ". (($key == null) ? " IS " : " = ") . ":key AND counter = :counter";
-        $params = $this->getParams($devid, $type, $key, $counter);
-
         $hash = null;
-        $sth = null;
         $record = null;
         try {
-            $sth = $this->getDbh()->prepare($sql);
+            $sth = $this->getStateHashStatement($key);
+            $params = $this->getParams($devid, $type, $key, $counter);
             $sth->execute($params);
 
             $record = $sth->fetch(PDO::FETCH_ASSOC);
@@ -899,6 +897,21 @@ class SqlStateMachine implements IStateMachine {
         }
     }
 
+    /**
+     * Prepares PDOStatement which will be used to get the state hash.
+     *
+     * @param string    $key                state uuid
+
+     * @access private
+     * @return PDOStatement
+     */
+    private function getStateHashStatement($key) {
+        if (!isset($this->stateHashStatement) || $this->stateHashStatement == null) {
+            $sql = "SELECT updated_at FROM zpush_states WHERE device_id = :devid AND state_type = :type AND uuid ". (($key == null) ? " IS " : " = ") . ":key AND counter = :counter";
+            $this->stateHashStatement = $this->getDbh()->prepare($sql);
+        }
+        return $this->stateHashStatement;
+    }
     /**
      * Check if the database and necessary tables exist.
      *
