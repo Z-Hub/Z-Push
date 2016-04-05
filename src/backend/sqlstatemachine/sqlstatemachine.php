@@ -73,7 +73,7 @@ class SqlStateMachine implements IStateMachine {
         ZLog::Write(LOGLEVEL_DEBUG, "SqlStateMachine(): init");
 
         if (!trim(STATE_SQL_SERVER) || !trim(STATE_SQL_PORT) || !trim(STATE_SQL_DATABASE) || !trim(STATE_SQL_USER)) {
-            throw new FatalMisconfigurationException("Missing configuration for the state sql. Check STATE_SQL_* values in the config.php.");
+            throw new FatalMisconfigurationException("SqlStateMachine(): missing configuration for the state sql. Check STATE_SQL_* values in the config.php.");
         }
 
         $this->options = array();
@@ -86,7 +86,7 @@ class SqlStateMachine implements IStateMachine {
             $this->checkDbAndTables();
         }
         catch(PDOException $ex) {
-            throw new FatalMisconfigurationException(sprintf("Not possible to connect to the state database: %s", $ex->getMessage()));
+            throw new FatalMisconfigurationException(sprintf("SqlStateMachine(): not possible to connect to the state database: %s", $ex->getMessage()));
         }
 
         $this->clearConnection($this->dbh);
@@ -108,9 +108,9 @@ class SqlStateMachine implements IStateMachine {
      * @throws StateNotFoundException, StateInvalidException
      */
     public function GetStateHash($devid, $type, $key = null, $counter = false) {
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("SqlStateMachine->GetStateHash(): '%s', '%s', '%s', '%s'", $devid, $type, $key, $counter));
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("SqlStateMachine->GetStateHash(): '%s', '%s', '%s', '%s'", $devid, $type, ($key == null ? 'null' : $key) , Utils::PrintAsString($counter)));
 
-        $sql = "select updated_at from zpush_states where device_id = :devid and state_type = :type and uuid ". (($key == null) ? " is " : " = ") . ":key and counter = :counter";
+        $sql = "SELECT updated_at FROM zpush_states WHERE device_id = :devid AND state_type = :type AND uuid ". (($key == null) ? " IS " : " = ") . ":key AND counter = :counter";
         $params = $this->getParams($devid, $type, $key, $counter);
 
         $hash = null;
@@ -126,7 +126,7 @@ class SqlStateMachine implements IStateMachine {
             $record = $sth->fetch(PDO::FETCH_ASSOC);
             if (!$record) {
                 $this->clearConnection($this->dbh, $sth, $record);
-                throw new StateNotFoundException(sprintf("SqlStateMachine->GetStateHash(): Could not locate state"));
+                throw new StateNotFoundException("SqlStateMachine->GetStateHash(): Could not locate state");
             }
             else {
                 // datetime->format("U") returns EPOCH
@@ -148,7 +148,7 @@ class SqlStateMachine implements IStateMachine {
 
     /**
      * Gets a state for a specified key and counter.
-     * This method sould call IStateMachine->CleanStates()
+     * This method should call IStateMachine->CleanStates()
      * to remove older states (same key, previous counters).
      *
      * @param string    $devid              the device id
@@ -162,11 +162,11 @@ class SqlStateMachine implements IStateMachine {
      * @throws StateNotFoundException, StateInvalidException
      */
     public function GetState($devid, $type, $key = null, $counter = false, $cleanstates = true) {
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("SqlStateMachine->GetState(): '%s', '%s', '%s', '%s', '%s'", $devid, $type, $key, $counter, $cleanstates));
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("SqlStateMachine->GetState(): '%s', '%s', '%s', '%s', '%s'", $devid, $type, ($key == null ? 'null' : $key), Utils::PrintAsString($counter), Utils::PrintAsString($cleanstates)));
         if ($counter && $cleanstates)
             $this->CleanStates($devid, $type, $key, $counter);
 
-        $sql = "select state_data from zpush_states where device_id = :devid and state_type = :type and uuid ". (($key == null) ? " is " : " = ") . ":key and counter = :counter";
+        $sql = "SELECT state_data FROM zpush_states WHERE device_id = :devid AND state_type = :type AND uuid ". (($key == null) ? " IS " : " = ") . ":key AND counter = :counter";
         $params = $this->getParams($devid, $type, $key, $counter);
 
         $data = null;
@@ -184,7 +184,7 @@ class SqlStateMachine implements IStateMachine {
                 $this->clearConnection($this->dbh, $sth, $record);
                 // throw an exception on all other states, but not FAILSAVE as it's most of the times not there by default
                 if ($type !== IStateMachine::FAILSAVE) {
-                    throw new StateNotFoundException(sprintf("SqlStateMachine->GetState(): Could not locate state"));
+                    throw new StateNotFoundException("SqlStateMachine->GetState(): Could not locate state");
                 }
             }
             else {
@@ -221,9 +221,9 @@ class SqlStateMachine implements IStateMachine {
      * @throws StateInvalidException
      */
     public function SetState($state, $devid, $type, $key = null, $counter = false) {
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("SqlStateMachine->SetState(): '%s', '%s', '%s', '%s'", $devid, $type, $key, $counter));
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("SqlStateMachine->SetState(): '%s', '%s', '%s', '%s'", $devid, $type, ($key == null ? 'null' : $key), Utils::PrintAsString($counter)));
 
-        $sql = "select device_id from zpush_states where device_id = :devid and state_type = :type and uuid ". (($key == null) ? " is " : " = ") . ":key and counter = :counter";
+        $sql = "SELECT device_id FROM zpush_states WHERE device_id = :devid AND state_type = :type AND uuid ". (($key == null) ? " IS " : " = ") . ":key AND counter = :counter";
         $params = $this->getParams($devid, $type, $key, $counter);
 
         $sth = null;
@@ -240,14 +240,14 @@ class SqlStateMachine implements IStateMachine {
             $record = $sth->fetch(PDO::FETCH_ASSOC);
             if (!$record) {
                 // New record
-                $sql = "insert into zpush_states (device_id, state_type, uuid, counter, state_data, created_at, updated_at) values (:devid, :type, :key, :counter, :data, :created_at, :updated_at)";
+                $sql = "INSERT INTO zpush_states (device_id, state_type, uuid, counter, state_data, created_at, updated_at) VALUES (:devid, :type, :key, :counter, :data, :created_at, :updated_at)";
 
                 $sth = $this->dbh->prepare($sql);
                 $sth->bindValue(":created_at", $this->getNow(), PDO::PARAM_STR);
             }
             else {
                 // Existing record, we update it
-                $sql = "update zpush_states set state_data = :data, updated_at = :updated_at where device_id = :devid and state_type = :type and uuid " . (($key == null) ? " is " : " = ") .":key and counter = :counter";
+                $sql = "UPDATE zpush_states SET state_data = :data, updated_at = :updated_at WHERE device_id = :devid AND state_type = :type AND uuid " . (($key == null) ? " IS " : " = ") .":key AND counter = :counter";
 
                 $sth = $this->dbh->prepare($sql);
             }
@@ -261,7 +261,7 @@ class SqlStateMachine implements IStateMachine {
 
             if (!$sth->execute() ) {
                 $this->clearConnection($this->dbh, $sth);
-                throw new FatalMisconfigurationException(sprintf("SqlStateMachine->SetState(): Could not write state"));
+                throw new FatalMisconfigurationException("SqlStateMachine->SetState(): Could not write state");
             }
             else {
                 $bytes = strlen(serialize($state));
@@ -291,16 +291,16 @@ class SqlStateMachine implements IStateMachine {
      * @return
      * @throws StateInvalidException
      */
-    public function CleanStates($devid, $type, $key, $counter = false) {
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("SqlStateMachine->CleanStates(): '%s', '%s', '%s', '%s'", $devid, $type, $key, $counter));
+    public function CleanStates($devid, $type, $key = null, $counter = false) {
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("SqlStateMachine->CleanStates(): '%s', '%s', '%s', '%s'", $devid, $type, ($key == null ? 'null' : $key), Utils::PrintAsString($counter)));
 
 
         if ($counter === false) {
             // Remove all the states. Counter are -1 or > 0, then deleting >= -1 deletes all
-            $sql = "delete from zpush_states where device_id = :devid and state_type = :type and uuid = :key and counter >= :counter";
+            $sql = "DELETE FROM zpush_states WHERE device_id = :devid AND state_type = :type AND uuid = :key AND counter >= :counter";
         }
         else {
-            $sql = "delete from zpush_states where device_id = :devid and state_type = :type and uuid = :key and counter < :counter";
+            $sql = "DELETE FROM zpush_states WHERE device_id = :devid AND state_type = :type AND uuid = :key AND counter < :counter";
         }
         $params = $this->getParams($devid, $type, $key, $counter);
 
@@ -338,7 +338,7 @@ class SqlStateMachine implements IStateMachine {
         try {
             $this->dbh = new PDO($dsn, STATE_SQL_USER, STATE_SQL_PASSWORD, $this->options);
 
-            $sql = "select username from zpush_users where username = :username and device_id = :devid";
+            $sql = "SELECT username FROM zpush_users WHERE username = :username AND device_id = :devid";
             $params = array(":username" => $username, ":devid" => $devid);
 
             $sth = $this->dbh->prepare($sql);
@@ -350,7 +350,7 @@ class SqlStateMachine implements IStateMachine {
             }
             else {
                 $sth = null;
-                $sql = "insert into zpush_users (username, device_id, created_at, updated_at) values (:username, :devid, :created_at, :updated_at)";
+                $sql = "INSERT INTO zpush_users (username, device_id, created_at, updated_at) VALUES (:username, :devid, :created_at, :updated_at)";
                 $params[":created_at"] = ($createdAt != null) ? $createdAt : $this->getNow();
                 $params[":updated_at"] = ($updatedAt != null) ? $updatedAt : $this->getNow();
                 $sth = $this->dbh->prepare($sql);
@@ -359,7 +359,7 @@ class SqlStateMachine implements IStateMachine {
                     $changed = true;
                 }
                 else {
-                    ZLog::Write(LOGLEVEL_ERROR, sprintf("SqlStateMachine->LinkUserDevice(): Unable to link user-device"));
+                    ZLog::Write(LOGLEVEL_ERROR, "SqlStateMachine->LinkUserDevice(): Unable to link user-device");
                 }
             }
         }
@@ -390,7 +390,7 @@ class SqlStateMachine implements IStateMachine {
         try {
             $this->dbh = new PDO($dsn, STATE_SQL_USER, STATE_SQL_PASSWORD, $this->options);
 
-            $sql = "delete from zpush_users where username = :username and device_id = :devid";
+            $sql = "DELETE FROM zpush_users WHERE username = :username and device_id = :devid";
             $params = array(":username" => $username, ":devid" => $devid);
 
             $sth = $this->dbh->prepare($sql);
@@ -427,7 +427,7 @@ class SqlStateMachine implements IStateMachine {
         try {
             $this->dbh = new PDO($dsn, STATE_SQL_USER, STATE_SQL_PASSWORD, $this->options);
 
-            $sql = "select device_id, username from zpush_users order by username";
+            $sql = "SELECT device_id, username FROM zpush_users ORDER BY username";
             $sth = $this->dbh->prepare($sql);
             $sth->execute();
 
@@ -467,11 +467,11 @@ class SqlStateMachine implements IStateMachine {
             $this->dbh = new PDO($dsn, STATE_SQL_USER, STATE_SQL_PASSWORD, $this->options);
 
             if  ($username === false) {
-                $sql = "select distinct(device_id) from zpush_users order by device_id";
+                $sql = "SELECT DISTINCT(device_id) FROM zpush_users ORDER BY device_id";
                 $params = array();
             }
             else {
-                $sql = "select device_id from zpush_users where username = :username order by device_id";
+                $sql = "SELECT device_id FROM zpush_users WHERE username = :username ORDER BY device_id";
                 $params = array(":username" => $username);
             }
             $sth = $this->dbh->prepare($sql);
@@ -497,7 +497,7 @@ class SqlStateMachine implements IStateMachine {
      * @return int
      */
     public function GetStateVersion() {
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("SqlStateMachine->GetStateVersion()"));
+        ZLog::Write(LOGLEVEL_DEBUG, "SqlStateMachine->GetStateVersion().");
 
         $sth = null;
         $record = null;
@@ -506,7 +506,7 @@ class SqlStateMachine implements IStateMachine {
         try {
             $this->dbh = new PDO($dsn, STATE_SQL_USER, STATE_SQL_PASSWORD, $this->options);
 
-            $sql = "select key_value from zpush_settings where key_name = :key_name";
+            $sql = "SELECT key_value FROM zpush_settings WHERE key_name = :key_name";
             $params = array(":key_name" => self::VERSION);
 
             $sth = $this->dbh->prepare($sql);
@@ -526,7 +526,7 @@ class SqlStateMachine implements IStateMachine {
         }
 
         $this->clearConnection($this->dbh, $sth, $record);
-
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("SqlStateMachine->GetStateVersion(): supporting version '%d'", $version));
         return $version;
     }
 
@@ -548,7 +548,7 @@ class SqlStateMachine implements IStateMachine {
         try {
             $this->dbh = new PDO($dsn, STATE_SQL_USER, STATE_SQL_PASSWORD, $this->options);
 
-            $sql = "select key_value from zpush_settings where key_name = :key_name";
+            $sql = "SELECT key_value FROM zpush_settings WHERE key_name = :key_name";
             $params = array(":key_name" => self::VERSION);
 
             $sth = $this->dbh->prepare($sql);
@@ -557,7 +557,7 @@ class SqlStateMachine implements IStateMachine {
             $record = $sth->fetch(PDO::FETCH_ASSOC);
             if ($record) {
                 $sth = null;
-                $sql = "update zpush_settings set key_value = :value, updated_at = :updated_at where key_name = :key_name";
+                $sql = "UPDATE zpush_settings SET key_value = :value, updated_at = :updated_at WHERE key_name = :key_name";
                 $params[":value"] = $version;
                 $params[":updated_at"] = $this->getNow();
 
@@ -568,7 +568,7 @@ class SqlStateMachine implements IStateMachine {
             }
             else {
                 $sth = null;
-                $sql = "insert into zpush_settings (key_name, key_value, created_at, updated_at) values (:key_name, :value, :created_at, :updated_at)";
+                $sql = "INSERT INTO zpush_settings (key_name, key_value, created_at, updated_at) VALUES (:key_name, :value, :created_at, :updated_at)";
                 $params[":value"] = $version;
                 $params[":updated_at"] = $params[":created_at"] = $this->getNow();
 
@@ -605,7 +605,7 @@ class SqlStateMachine implements IStateMachine {
         try {
             $this->dbh = new PDO($dsn, STATE_SQL_USER, STATE_SQL_PASSWORD, $this->options);
 
-            $sql = "select state_type, uuid, counter from zpush_states where device_id = :devid order by id_state";
+            $sql = "SELECT state_type, uuid, counter FROM zpush_states WHERE device_id = :devid ORDER BY id_state";
             $params = array(":devid" => $devid);
 
             $sth = $this->dbh->prepare($sql);
@@ -659,7 +659,7 @@ class SqlStateMachine implements IStateMachine {
         $deviceBlocked = false;
 
         // Android PROVISIONING initial step
-            // LG-D802 is sending an empty deviceid
+        // LG-D802 is sending an empty deviceid
         if ($devid != "validate" && $devid != "") {
 
             $sth = null;
@@ -668,7 +668,7 @@ class SqlStateMachine implements IStateMachine {
             try {
                 $this->dbh = new PDO($dsn, STATE_SQL_USER, STATE_SQL_PASSWORD, $this->options);
 
-                $sql = "select count(*) as pcount from zpush_preauth_users where username = :user and device_id != 'authorized' and authorized = 1";
+                $sql = "SELECT COUNT(*) AS pcount FROM zpush_preauth_users WHERE username = :user AND device_id != 'authorized' AND authorized = 1";
                 $params = array(":user" => $user);
 
                 // Get number of authorized devices for user
@@ -681,7 +681,7 @@ class SqlStateMachine implements IStateMachine {
                 $record = null;
                 $sth = null;
 
-                $sql = "select authorized from zpush_preauth_users where username = :user and device_id = :devid";
+                $sql = "SELECT authorized FROM zpush_preauth_users WHERE username = :user AND device_id = :devid";
                 $params = array(":user" => $user, ":devid" => "authorized");
                 $paramsNewDevid = array();
                 $paramsNewUser = array();
@@ -779,14 +779,14 @@ class SqlStateMachine implements IStateMachine {
                 if (count($paramsNewUser) > 0) {
                     ZLog::Write(LOGLEVEL_DEBUG, sprintf("SqlStateMachine->GetUserDevicePermission(): Creating new user '%s'", $user));
 
-                    $sql = "insert into zpush_preauth_users (username, device_id, authorized, created_at, updated_at) values (:user, :devid, :auth, :created_at, :updated_at)";
+                    $sql = "INSERT INTO zpush_preauth_users (username, device_id, authorized, created_at, updated_at) VALUES (:user, :devid, :auth, :created_at, :updated_at)";
                     $paramsNewUser[":user"] = $user;
                     $paramsNewUser[":devid"] = "authorized";
                     $paramsNewUser[":created_at"] = $paramsNewUser[":updated_at"] = $this->getNow();
 
                     $sth = $this->dbh->prepare($sql);
                     if (!$sth->execute($paramsNewUser)) {
-                        ZLog::Write(LOGLEVEL_ERROR, sprintf("SqlStateMachine->GetUserDevicePermission(): Error creating new user"));
+                        ZLog::Write(LOGLEVEL_ERROR, sprintf("SqlStateMachine->GetUserDevicePermission(): Error creating new user %s", print_r($sth->errorInfo(), 1)));
                         $status = SYNC_COMMONSTATUS_USERDISABLEDFORSYNC;
                     }
                 }
@@ -794,14 +794,14 @@ class SqlStateMachine implements IStateMachine {
                 if (count($paramsNewDevid) > 0) {
                     ZLog::Write(LOGLEVEL_DEBUG, sprintf("SqlStateMachine->GetUserDevicePermission(): Creating new device '%s' for user '%s'", $devid, $user));
 
-                    $sql = "insert into zpush_preauth_users (username, device_id, authorized, created_at, updated_at) values (:user, :devid, :auth, :created_at, :updated_at)";
+                    $sql = "INSERT INTO zpush_preauth_users (username, device_id, authorized, created_at, updated_at) VALUES (:user, :devid, :auth, :created_at, :updated_at)";
                     $paramsNewDevid[":user"] = $user;
                     $paramsNewDevid[":devid"] = $devid;
                     $paramsNewDevid[":created_at"] = $paramsNewDevid[":updated_at"] = $this->getNow();
 
                     $sth = $this->dbh->prepare($sql);
                     if (!$sth->execute($paramsNewDevid)) {
-                        ZLog::Write(LOGLEVEL_ERROR, sprintf("SqlStateMachine->GetUserDevicePermission(): Error creating user new device"));
+                        ZLog::Write(LOGLEVEL_ERROR, sprintf("SqlStateMachine->GetUserDevicePermission(): Error creating user new device %s", print_r($sth->errorInfo(), 1)));
                         $status = SYNC_COMMONSTATUS_USERDISABLEDFORSYNC;
                     }
                 }
@@ -835,7 +835,7 @@ class SqlStateMachine implements IStateMachine {
         $params = array("user" => $username, "backend" => $backend);
         $sth = $this->dbh->prepare($sql);
         if ($sth->execute($params) === false) {
-            ZLog::Write(LOGLEVEL_ERROR, sprintf("SqlStateMachine->GetMappedUsername(): Failed to execute query"));
+            ZLog::Write(LOGLEVEL_ERROR, "SqlStateMachine->GetMappedUsername(): Failed to execute query %s", print_r($sth->errorInfo(), 1));
         } else if ($record = $sth->fetch(PDO::FETCH_ASSOC)) {
             $result = $record["mappedname"];
         }
@@ -866,7 +866,7 @@ class SqlStateMachine implements IStateMachine {
         $params = array("user" => $username, "backend" => $backend, "mappedname" => $mappedname, "mappedname2" => $mappedname);
         $sth = $this->dbh->prepare($sql);
         if ($sth->execute($params) === false) {
-            ZLog::Write(LOGLEVEL_ERROR, sprintf("SqlStateMachine->MapUsername(): Failed to execute query"));
+            ZLog::Write(LOGLEVEL_ERROR, sprintf("SqlStateMachine->MapUsername(): Failed to execute query %s", print_r($sth->errorInfo(), 1)));
             return false;
         }
 
@@ -890,10 +890,10 @@ class SqlStateMachine implements IStateMachine {
         $params = array("user" => $username, "backend" => $backend);
         $sth = $this->dbh->prepare($sql);
         if ($sth->execute($params) === false) {
-            ZLog::Write(LOGLEVEL_ERROR, sprintf("SqlStateMachine->UnmapUsername(): Failed to execute query"));
+            ZLog::Write(LOGLEVEL_ERROR, sprintf("SqlStateMachine->UnmapUsername(): Failed to execute query %s", print_r($sth->errorInfo(), 1)));
             return false;
         } else if ($sth->rowCount() !== 1) {
-            ZLog::Write(LOGLEVEL_ERROR, sprintf("SqlStateMachine->MapUsername(): Invalid mapping of username and backend"));
+            ZLog::Write(LOGLEVEL_ERROR, sprintf("SqlStateMachine->UnmapUsername(): Invalid mapping of username and backend. Found %s user name->backend mappings", $sth->rowCount()));
             return false;
         }
 
@@ -995,7 +995,7 @@ class SqlStateMachine implements IStateMachine {
      * @throws RuntimeException
      */
     private function createDB() {
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("SqlStateMachine->createDB(): %s database is not available, trying to create it.", STATE_SQL_DATABASE));
+        ZLog::Write(LOGLEVEL_INFO, sprintf("SqlStateMachine->createDB(): %s database is not available, trying to create it.", STATE_SQL_DATABASE));
         $dsn = sprintf("%s:host=%s;port=%s", STATE_SQL_ENGINE, STATE_SQL_SERVER, STATE_SQL_PORT);
         try {
             $this->dbh = new PDO($dsn, STATE_SQL_USER, STATE_SQL_PASSWORD, $this->options);
@@ -1019,7 +1019,7 @@ class SqlStateMachine implements IStateMachine {
      * @throws RuntimeException
      */
     private function createTables() {
-        ZLog::Write(LOGLEVEL_DEBUG, "SqlStateMachine->createTables(): tables are not available, trying to create them.");
+        ZLog::Write(LOGLEVEL_INFO, "SqlStateMachine->createTables(): tables are not available, trying to create them.");
         $dsn = sprintf("%s:host=%s;port=%s;dbname=%s", STATE_SQL_ENGINE, STATE_SQL_SERVER, STATE_SQL_PORT, STATE_SQL_DATABASE);
         try {
             $this->dbh = new PDO($dsn, STATE_SQL_USER, STATE_SQL_PASSWORD, $this->options);
@@ -1030,12 +1030,12 @@ class SqlStateMachine implements IStateMachine {
             return true;
         }
         catch (PDOException $ex) {
-            throw new RuntimeException(sprintf("SqlStateMachine->checkDbAndTables(): PDOException (%s): %s", $ex->getCode(), $ex->getMessage()));
+            throw new RuntimeException(sprintf("SqlStateMachine->createTables(): PDOException (%s): %s", $ex->getCode(), $ex->getMessage()));
         }
     }
 
     /**
-     * Checks if state tables have data.
+     * Checks if state tables have data. This is only used by the migrate-filestates-to-db script.
      *
      * @access public
      * @return boolean
@@ -1078,7 +1078,7 @@ class SqlStateMachine implements IStateMachine {
             return false;
         }
         catch (PDOException $ex) {
-            throw new RuntimeException(sprintf("SqlStateMachine->checkDbAndTables(): PDOException (%s): %s", $ex->getCode(), $ex->getMessage()));
+            throw new RuntimeException(sprintf("SqlStateMachine->checkTablesHaveData(): PDOException (%s): %s", $ex->getCode(), $ex->getMessage()));
         }
         return false;
     }
