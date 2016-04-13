@@ -8,7 +8,7 @@
 *
 * Created   :   11.04.2011
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -53,12 +53,14 @@ class SyncParameters extends StateObject {
     const SMSOPTIONS = "SMS";
 
     private $synckeyChanged = false;
+    private $confirmationChanged = false;
     private $currentCPO = self::DEFAULTOPTIONS;
 
     protected $unsetdata = array(
                                     'uuid' => false,
                                     'uuidcounter' => false,
                                     'uuidnewcounter' => false,
+                                    'counterconfirmed' => false,
                                     'folderid' => false,
                                     'referencelifetime' => 10,
                                     'lastsynctime' => false,
@@ -120,6 +122,12 @@ class SyncParameters extends StateObject {
         // remove newSyncKey
         unset($this->uuidNewCounter);
 
+        // the counter has been requested (and that way confirmed)
+        if ($this->counterconfirmed == false) {
+            $this->counterconfirmed = true;
+            $this->confirmationChanged = true;
+        }
+
         return true;
     }
 
@@ -154,6 +162,8 @@ class SyncParameters extends StateObject {
             throw new FatalException("SyncParameters->SetNewSyncKey(): new SyncKey must have the same UUID as current SyncKey");
 
         $this->uuidNewCounter = $uuidNewCounter;
+        $this->counterconfirmed = false;
+        $this->confirmationChanged = true;
         $this->synckeyChanged = true;
     }
 
@@ -185,12 +195,14 @@ class SyncParameters extends StateObject {
      * When this is called the new key becomes the current key (if a new key is available).
      * The current key is then returned.
      *
+     * @param boolean $confirmedOnly    indicates if only confirmed states should be considered, default: false
+     *
      * @access public
      * @return string
      */
-    public function GetLatestSyncKey() {
-        // New becomes old
-        if ($this->HasUuidNewCounter()) {
+    public function GetLatestSyncKey($confirmedOnly = false) {
+        // New becomes old if available - if $confirmedOnly then the counter needs to be confirmed
+        if ($this->HasUuidNewCounter() && (($confirmedOnly && $this->counterconfirmed) || !$confirmedOnly)) {
             $this->uuidCounter = $this->uuidNewCounter;
             unset($this->uuidNewCounter);
         }
@@ -288,7 +300,7 @@ class SyncParameters extends StateObject {
      */
     public function IsExporterRunRequired($currentFolderStat, $doLog = false) {
         // if the backend returned false as folderstat, we have to run the exporter
-        if ($currentFolderStat === false)  {
+        if ($currentFolderStat === false || $this->confirmationChanged)  {
             $run = true;
         }
         else {

@@ -165,8 +165,8 @@ class Sync extends RequestProcessor {
                             $spa->DelFolderStat();
                         }
                         else if ($synckey !== false) {
-                            if ($synckey !== $spa->GetSyncKey()) {
-                                ZLog::Write(LOGLEVEL_DEBUG, "HandleSync(): Synckey does not match latest saved for this folder, removing folderstat to force Exporter setup");
+                            if ($synckey !== $spa->GetSyncKey() && $synckey !== $spa->GetNewSyncKey()) {
+                                ZLog::Write(LOGLEVEL_DEBUG, "HandleSync(): Synckey does not match latest saved for this folder, removing folderstat to force Exporter setup". $spa->GetSyncKey());
                                 $spa->DelFolderStat();
                             }
                             $spa->SetSyncKey($synckey);
@@ -579,9 +579,9 @@ class Sync extends RequestProcessor {
         if ($status == SYNC_STATUS_SUCCESS && ($emptysync === true || $partial === true) ) {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleSync(): Partial or Empty sync requested. Retrieving data of synchronized folders."));
 
-            // Load all collections - do not overwrite existing (received!), load states and check permissions
+            // Load all collections - do not overwrite existing (received!), load states, check permissions and only load confirmed states!
             try {
-                $sc->LoadAllCollections(false, true, true, true);
+                $sc->LoadAllCollections(false, true, true, true, true);
             }
             catch (StateInvalidException $siex) {
                 $status = SYNC_STATUS_INVALIDSYNCKEY;
