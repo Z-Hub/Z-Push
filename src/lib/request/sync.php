@@ -701,7 +701,7 @@ class Sync extends RequestProcessor {
 
         // global status
         // SYNC_COMMONSTATUS_* start with values from 101
-        if ($status != SYNC_COMMONSTATUS_SUCCESS && $status > 100) {
+        if ($status != SYNC_COMMONSTATUS_SUCCESS && ($status == SYNC_STATUS_FOLDERHIERARCHYCHANGED || $status > 100)) {
             $this->sendStartTags();
             self::$encoder->startTag(SYNC_STATUS);
                 self::$encoder->content($status);

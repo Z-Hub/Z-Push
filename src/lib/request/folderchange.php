@@ -132,14 +132,14 @@ class FolderChange extends RequestProcessor {
             $changesMem = self::$deviceManager->GetHierarchyChangesWrapper();
 
             // the hierarchyCache should now fully be initialized - check for changes in the additional folders
-            $changesMem->Config(ZPush::GetAdditionalSyncFolders());
+            $changesMem->Config(ZPush::GetAdditionalSyncFolders(false));
 
             // there are unprocessed changes in the hierarchy, trigger resync
             if ($changesMem->GetChangeCount() > 0)
                 throw new StatusException("HandleFolderChange() can not proceed as there are unprocessed hierarchy changes", SYNC_FSSTATUS_SERVERERROR);
 
             // any additional folders can not be modified!
-            if ($serverid !== false && ZPush::GetAdditionalSyncFolderStore($serverid))
+            if ($serverid !== false && ZPush::GetAdditionalSyncFolderStore($backendid))
                 throw new StatusException("HandleFolderChange() can not change additional folders which are configured", SYNC_FSSTATUS_SYSTEMFOLDER);
 
             // switch user store if this this happens inside an additional folder

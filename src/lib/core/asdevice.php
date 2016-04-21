@@ -846,7 +846,7 @@ class ASDevice extends StateObject {
 
         // check if a folder with this ID or Name is already known on the device (regular folder)
         foreach($this->GetHierarchyCache()->ExportFolders() as $syncedFolderid => $folder) {
-            if ($syncedFolderid == $folderid) {
+            if ($syncedFolderid === $folderid || $folder->BackendId === $folderid) {
                 ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->AddAdditionalFolder(): folder can not be added because there is already a folder with the same folder id synchronized: '%s'", $folderid));
                 return false;
             }
@@ -867,6 +867,9 @@ class ASDevice extends StateObject {
                             'type'      => $type,
                          );
         $this->additionalfolders = $af;
+
+        // generate an interger folderid for it
+        $id = $this->GetFolderIdForBackendId($folderid, true);
 
         return true;
     }

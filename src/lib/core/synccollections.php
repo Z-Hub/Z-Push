@@ -733,7 +733,7 @@ class SyncCollections implements Iterator {
                  $changesMem = ZPush::GetDeviceManager()->GetHierarchyChangesWrapper();
 
                  // the hierarchyCache should now fully be initialized - check for changes in the additional folders
-                 $changesMem->Config(ZPush::GetAdditionalSyncFolders());
+                 $changesMem->Config(ZPush::GetAdditionalSyncFolders(false));
                  $exporter = ZPush::GetBackend()->GetExporter();
                  if ($exporter !== false && isset($this->addparms[$folderid]["state"])) {
                      $exporter->Config($this->addparms[$folderid]["state"]);

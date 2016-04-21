@@ -425,13 +425,14 @@ class DeviceManager {
      * Returns the additional folders as SyncFolder objects.
      *
      * @access public
-     * @return array of SyncFolder
+     * @return array of SyncFolder with backendids as keys
      */
     public function GetAdditionalUserSyncFolders() {
         $folders = array();
         foreach($this->device->GetAdditionalFolders() as $df) {
             $folder = new SyncFolder();
-            $folder->serverid = $df['folderid'];
+            $folder->BackendId = $df['folderid'];
+            $folder->serverid = $this->GetFolderIdForBackendId($folder->BackendId, true);
             $folder->parentid = 0;                  // only top folders are supported
             $folder->displayname = $df['name'];
             $folder->type = $df['type'];
@@ -439,7 +440,7 @@ class DeviceManager {
             $folder->NoBackendFolder = true;
             $folder->Store = $df['store'];
 
-            $folders[$folder->serverid] = $folder;
+            $folders[$folder->BackendId] = $folder;
         }
         return $folders;
     }
