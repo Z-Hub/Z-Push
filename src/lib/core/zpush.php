@@ -6,7 +6,7 @@
 *
 * Created   :   12.04.2011
 *
-* Copyright 2007 - 2015 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -191,6 +191,7 @@ class ZPush {
     static private $topCollector;
     static private $backend;
     static private $addSyncFolders;
+    static private $policies;
 
 
     /**
@@ -285,6 +286,13 @@ class ZPush {
             date_default_timezone_set('Europe/Amsterdam');
         }
 
+        // check if Provisioning is enabled and the default policies are available
+        if (PROVISIONING) {
+            ZPush::$policies = parse_ini_file(PROVISIONING_POLICYFILE, true);
+            if (!isset(ZPush::$policies['default'])) {
+                throw new FatalMisconfigurationException(sprintf("Your policies' configuration file doesn't contain the required [default] section. Please check the %s file.", constant('PROVISIONING_POLICYFILE')));
+            }
+        }
         return true;
     }
 
@@ -886,4 +894,13 @@ END;
         return $defcapa;
     }
 
+    /**
+     * Returns the available provisioning policies.
+     *
+     * @return array
+     */
+    static public function GetPolicies() {
+        // TODO another policy providers might be available, e.g. for sqlstatemachine
+        return ZPush::$policies;
+    }
 }

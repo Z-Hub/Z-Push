@@ -175,7 +175,7 @@ class SyncCollections implements Iterator {
 
         try {
             // Get SyncParameters for the folder from the state
-            $spa = $this->stateManager->GetSynchedFolderState($folderid);
+            $spa = $this->stateManager->GetSynchedFolderState($folderid, !$loadState);
 
             // TODO remove resync of folders for < Z-Push 2 beta4 users
             // this forces a resync of all states previous to Z-Push 2 beta4
@@ -520,7 +520,8 @@ class SyncCollections implements Iterator {
                 }
 
                 // check if the folder stat changed since the last sync, if so generate a change for it (only on first run)
-                if ($this->waitingTime == 0 && ZPush::GetBackend()->HasFolderStats() && $spa->IsExporterRunRequired(ZPush::GetBackend()->GetFolderStat($store, $backendFolderId), true)) {
+                $currentFolderStat = ZPush::GetBackend()->GetFolderStat($store, $backendFolderId);
+                if ($this->waitingTime == 0 && ZPush::GetBackend()->HasFolderStats() && $currentFolderStat !== false && $spa->IsExporterRunRequired($currentFolderStat, true)) {
                     $this->changes[$spa->GetFolderId()] = 1;
                 }
             }
@@ -552,9 +553,9 @@ class SyncCollections implements Iterator {
 
             // Check if provisioning is necessary
             // if a PolicyKey was sent use it. If not, compare with the ReferencePolicyKey
-            if (PROVISIONING === true && $policyKey !== false && ZPush::GetDeviceManager()->ProvisioningRequired($policyKey, true))
+            if (PROVISIONING === true && $policyKey !== false && ZPush::GetDeviceManager()->ProvisioningRequired($policyKey, true, false))
                 // the hierarchysync forces provisioning
-                throw new StatusException("SyncCollections->CheckForChanges(): PolicyKey changed. Provisioning required.", self::ERROR_WRONG_HIERARCHY);
+                throw new StatusException("SyncCollections->CheckForChanges(): Policies or PolicyKey changed. Provisioning required.", self::ERROR_WRONG_HIERARCHY);
 
             // Check if a hierarchy sync is necessary
             if ($this->countHierarchyChange())
@@ -585,6 +586,8 @@ class SyncCollections implements Iterator {
 
                     // Check hierarchy notifications
                     if ($folderid === IBackend::HIERARCHYNOTIFICATION) {
+                        // wait two seconds before validating this notification, because it could potentially be made by the mobile and we need some time to update the states.
+                        sleep(2);
                         // check received hierarchy notifications by exporting
                         if ($this->countHierarchyChange(true))
                             throw new StatusException("SyncCollections->CheckForChanges(): HierarchySync required.", self::HIERARCHY_CHANGED);
@@ -728,6 +731,10 @@ class SyncCollections implements Iterator {
          $changecount = false;
          if ($exportChanges || $this->hierarchyExporterChecked === false) {
              try {
+                 // if this is a validation (not first run), make sure to load the hierarchy data again
+                 if ($this->hierarchyExporterChecked === true && !$this->LoadCollection(false, true, false))
+                     throw new StatusException("Invalid states found while re-loading hierarchy data.");
+
                  // reset backend to the main store
                  ZPush::GetBackend()->Setup(false);
                  $changesMem = ZPush::GetDeviceManager()->GetHierarchyChangesWrapper();

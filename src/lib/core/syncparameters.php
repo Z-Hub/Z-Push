@@ -288,10 +288,17 @@ class SyncParameters extends StateObject {
      * @return boolean
      */
     public function IsExporterRunRequired($currentFolderStat, $doLog = false) {
-        $run = ! ($this->HasFolderStat() && $currentFolderStat === $this->GetFolderStat() && time() < $this->GetFolderStatTimeout());
+        // if the backend returned false as folderstat, we have to run the exporter
+        if ($currentFolderStat === false)  {
+            $run = true;
+        }
+        else {
+            // check if the folderstat differs from the saved one or expired
+            $run = ! ($this->HasFolderStat() && $currentFolderStat === $this->GetFolderStat() && time() < $this->GetFolderStatTimeout());
+        }
         if ($doLog) {
             $expDate = ($this->HasFolderStatTimeout()) ? date('Y-m-d H:i:s', $this->GetFolderStatTimeout()) : "not set";
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncParameters->IsExporterRunRequired(): %s - current: %s - saved: %s - expiring: %s", Utils::PrintAsString($run), $currentFolderStat, Utils::PrintAsString($this->GetFolderStat()), $expDate));
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncParameters->IsExporterRunRequired(): %s - current: %s - saved: %s - expiring: %s", Utils::PrintAsString($run), Utils::PrintAsString($currentFolderStat), Utils::PrintAsString($this->GetFolderStat()), $expDate));
         }
         return $run;
     }

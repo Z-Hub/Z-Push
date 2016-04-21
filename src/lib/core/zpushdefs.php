@@ -489,7 +489,8 @@ define("SYNC_PROVISION_UNAPPROVEDINROMAPPLIST", "Provision:UnapprovedInROMApplic
 define("SYNC_PROVISION_APPNAME", "Provision:ApplicationName");
 define("SYNC_PROVISION_APPROVEDAPPLIST", "Provision:ApprovedApplicationList");
 define("SYNC_PROVISION_HASH", "Provision:Hash");
-
+// only for internal use - never to be streamed to the mobile
+define("SYNC_PROVISION_POLICYNAME", "Provision:PolicyName");
 
 //Search
 define("SYNC_SEARCH_SEARCH", "Search:Search");

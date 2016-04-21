@@ -12,7 +12,7 @@
 *
 * Created   :   14.02.2011
 *
-* Copyright 2007 - 2015 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -309,6 +309,11 @@ class ImportChangesICS implements IImportChanges {
             // monitor how long it takes to export potential conflicts
             // if this takes "too long" we cancel this operation!
             $potConflicts = $exporter->GetChangeCount();
+            if ($potConflicts > 100) {
+                ZLog::Write(LOGLEVEL_WARN, sprintf("ImportChangesICS->lazyLoadConflicts(): conflict detection abandoned as there are too many (%d) changes to be exported.", $potConflicts));
+                $this->conflictsLoaded = true;
+                return;
+            }
             $started = time();
             $exported = 0;
             try {
