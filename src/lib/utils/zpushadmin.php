@@ -498,6 +498,7 @@ class ZPushAdmin {
                                         'syncfolderid' => $device->GetFolderIdForBackendId($fid, false),
                                         'name' => $so->displayname,
                                         'type' => $so->type,
+                                        'readonly' => $so->ReadOnly,
                                         'source' => 'static'
                                     );
                 }
