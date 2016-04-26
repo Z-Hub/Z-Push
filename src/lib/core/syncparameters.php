@@ -60,6 +60,7 @@ class SyncParameters extends StateObject {
                                     'uuidcounter' => false,
                                     'uuidnewcounter' => false,
                                     'folderid' => false,
+                                    'backendfolderid' => false,
                                     'referencelifetime' => 10,
                                     'lastsynctime' => false,
                                     'referencepolicykey' => true,

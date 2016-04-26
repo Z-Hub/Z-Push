@@ -354,20 +354,22 @@ class ZPush {
                     continue;
                 }
 
-                if (!in_array($af['type'], array(SYNC_FOLDER_TYPE_USER_CONTACT, SYNC_FOLDER_TYPE_USER_APPOINTMENT, SYNC_FOLDER_TYPE_USER_TASK, SYNC_FOLDER_TYPE_USER_MAIL))) {
+                if (!in_array($af['type'], array(SYNC_FOLDER_TYPE_USER_NOTE, SYNC_FOLDER_TYPE_USER_CONTACT, SYNC_FOLDER_TYPE_USER_APPOINTMENT, SYNC_FOLDER_TYPE_USER_TASK, SYNC_FOLDER_TYPE_USER_MAIL))) {
                     ZLog::Write(LOGLEVEL_ERROR, sprintf("ZPush::CheckConfig() : the type of the additional synchronization folder '%s is not permitted.", $af['name']));
                     continue;
                 }
 
                 $folder = new SyncFolder();
-                $folder->serverid = $af['folderid'];
+
+                $folder->BackendId = $af['folderid'];
+                $folder->serverid = ZPush::GetDeviceManager(true)->GetFolderIdForBackendId($folder->BackendId, true);
                 $folder->parentid = 0;                  // only top folders are supported
                 $folder->displayname = $af['name'];
                 $folder->type = $af['type'];
                 // save store as custom property which is not streamed directly to the device
                 $folder->NoBackendFolder = true;
                 $folder->Store = $af['store'];
-                self::$addSyncFolders[$folder->serverid] = $folder;
+                self::$addSyncFolders[$folder->BackendId] = $folder;
             }
 
         }
@@ -559,34 +561,48 @@ class ZPush {
     /**
      * Returns additional folder objects which should be synchronized to the device
      *
+     * @param boolean $backendIdsAsKeys     if true the keys are backendids else folderids, default: true
+     *
      * @access public
      * @return array
      */
-    static public function GetAdditionalSyncFolders() {
+    static public function GetAdditionalSyncFolders($backendIdsAsKeys = true) {
         // get user based folders which should be synchronized
         $userFolder = self::GetDeviceManager()->GetAdditionalUserSyncFolders();
-        return array_merge(self::$addSyncFolders, $userFolder);
+        $addfolders = self::$addSyncFolders + $userFolder;
+        // if requested, we rewrite the backendids to folderids here
+        if ($backendIdsAsKeys === false && !empty($addfolders)) {
+            ZLog::Write(LOGLEVEL_DEBUG, "ZPush::GetAdditionalSyncFolders(): Requested AS folderids as keys for additional folders array, converting");
+            $faddfolders = array();
+            foreach ($addfolders as $backendId => $addFolder) {
+                $fid = self::GetDeviceManager()->GetFolderIdForBackendId($backendId);
+                $faddfolders[$fid] = $addFolder;
+            }
+            $addfolders = $faddfolders;
+        }
+
+        return $addfolders;
     }
 
     /**
      * Returns additional folder objects which should be synchronized to the device
      *
-     * @param string        $folderid
+     * @param string        $backendid
      * @param boolean       $noDebug        (opt) by default, debug message is shown
      *
      * @access public
      * @return string
      */
-    static public function GetAdditionalSyncFolderStore($folderid, $noDebug = false) {
-        if(isset(self::$addSyncFolders[$folderid]->Store)) {
-            $val = self::$addSyncFolders[$folderid]->Store;
+    static public function GetAdditionalSyncFolderStore($backendid, $noDebug = false) {
+        if(isset(self::$addSyncFolders[$backendid]->Store)) {
+            $val = self::$addSyncFolders[$backendid]->Store;
         }
         else {
-            $val = self::GetDeviceManager()->GetAdditionalUserSyncFolderStore($folderid);
+            $val = self::GetDeviceManager()->GetAdditionalUserSyncFolderStore($backendid);
         }
 
         if (!$noDebug)
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPush::GetAdditionalSyncFolderStore('%s'): '%s'", $folderid, Utils::PrintAsString($val)));
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPush::GetAdditionalSyncFolderStore('%s'): '%s'", $backendid, Utils::PrintAsString($val)));
         return $val;
     }
 

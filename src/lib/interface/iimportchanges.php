@@ -121,7 +121,7 @@ interface IImportChanges extends IChanges {
      * @param object        $folder         SyncFolder
      *
      * @access public
-     * @return boolean/string               status/id of the folder
+     * @return boolean/SyncObject           status/object with the ath least the serverid of the folder set
      * @throws StatusException
      */
     public function ImportFolderChange($folder);
@@ -129,13 +129,12 @@ interface IImportChanges extends IChanges {
     /**
      * Imports a folder deletion
      *
-     * @param string        $id
-     * @param string        $parent id
+     * @param SyncFolder    $folder         at least "serverid" needs to be set
      *
      * @access public
      * @return boolean/int  success/SYNC_FOLDERHIERARCHY_STATUS
      * @throws StatusException
      */
-    public function ImportFolderDeletion($id, $parent = false);
+    public function ImportFolderDeletion($folder);
 
 }

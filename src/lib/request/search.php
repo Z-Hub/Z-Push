@@ -291,6 +291,8 @@ class Search extends RequestProcessor {
                     $rows = $searchprovider->GetGALSearchResults($searchquery, $searchrange);
                 }
                 elseif ($searchname == ISearchProvider::SEARCH_MAILBOX) {
+                    $backendFolderId = self::$deviceManager->GetBackendIdForFolderId($cpo->GetSearchFolderid());
+                    $cpo->SetSearchFolderid($backendFolderId);
                     $rows = $searchprovider->GetMailboxSearchResults($cpo);
                 }
             }
@@ -403,6 +405,8 @@ class Search extends RequestProcessor {
                     }
                     elseif ($searchname == ISearchProvider::SEARCH_MAILBOX) {
                         foreach ($rows as $u) {
+                            $folderid = self::$deviceManager->GetFolderIdForBackendId($u['folderid']);
+
                             self::$encoder->startTag(SYNC_SEARCH_RESULT);
                                 self::$encoder->startTag(SYNC_FOLDERTYPE);
                                 self::$encoder->content($u['class']);
@@ -411,7 +415,7 @@ class Search extends RequestProcessor {
                                 self::$encoder->content($u['longid']);
                                 self::$encoder->endTag();
                                 self::$encoder->startTag(SYNC_FOLDERID);
-                                self::$encoder->content($u['folderid']);
+                                self::$encoder->content($folderid);
                                 self::$encoder->endTag();
 
                                 self::$encoder->startTag(SYNC_SEARCH_PROPERTIES);

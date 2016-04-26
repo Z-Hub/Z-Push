@@ -82,7 +82,9 @@ class GetItemEstimate extends RequestProcessor {
                 }
 
                 elseif(self::$decoder->getElementStartTag(SYNC_GETITEMESTIMATE_FOLDERID)) {
-                    $spa->SetFolderId( self::$decoder->getElementContent());
+                    $fid = self::$decoder->getElementContent();
+                    $spa->SetFolderId($fid);
+                    $spa->SetBackendFolderId(self::$deviceManager->GetBackendIdForFolderId($fid));
 
                     if(!self::$decoder->getElementEndTag())
                         return false;
@@ -194,8 +196,8 @@ class GetItemEstimate extends RequestProcessor {
                     $sc->AddParameter($spa, "state", self::$deviceManager->GetStateManager()->GetSyncState($spa->GetSyncKey()));
 
                     // if this is an additional folder the backend has to be setup correctly
-                    if (!self::$backend->Setup(ZPush::GetAdditionalSyncFolderStore($spa->GetFolderId())))
-                        throw new StatusException(sprintf("HandleGetItemEstimate() could not Setup() the backend for folder id '%s'", $spa->GetFolderId()), SYNC_GETITEMESTSTATUS_COLLECTIONINVALID);
+                    if (!self::$backend->Setup(ZPush::GetAdditionalSyncFolderStore($spa->GetBackendFolderId())))
+                        throw new StatusException(sprintf("HandleGetItemEstimate() could not Setup() the backend for folder id %s/%s", $spa->GetFolderId(), $spa->GetBackendFolderId()), SYNC_GETITEMESTSTATUS_COLLECTIONINVALID);
                 }
                 catch (StateNotFoundException $snfex) {
                     // ok, the key is invalid. Question is, if the hierarchycache is still ok

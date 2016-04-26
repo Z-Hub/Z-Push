@@ -57,6 +57,7 @@ class DeviceManager {
 
     private $device;
     private $deviceHash;
+    private $saveDevice;
     private $statemachine;
     private $stateManager;
     private $incomingData = 0;
@@ -78,6 +79,7 @@ class DeviceManager {
         $this->statemachine = ZPush::GetStateMachine();
         $this->deviceHash = false;
         $this->devid = Request::GetDeviceID();
+        $this->saveDevice = true;
         $this->windowSize = array();
         $this->latestFolder = false;
         $this->hierarchySyncRequired = false;
@@ -151,7 +153,7 @@ class DeviceManager {
 
         // data to be saved
         $data = $this->device->GetData();
-        if ($data && Request::IsValidDeviceID()) {
+        if ($data && Request::IsValidDeviceID() && $this->saveDevice) {
             ZLog::Write(LOGLEVEL_DEBUG, "DeviceManager->Save(): Device data changed");
 
             try {
@@ -182,6 +184,19 @@ class DeviceManager {
             $this->loopdetection->ProcessLoopDetectionTerminate();
 
         return true;
+    }
+
+    /**
+     * Sets if the AS Device should automatically be saved when terminating the request.
+     *
+     * @param boolean $doSave
+     *
+     * @access public
+     * @return void
+     */
+    public function DoAutomaticASDeviceSaving($doSave) {
+        ZLog::Write(LOGLEVEL_DEBUG, "DeviceManager->DoAutomaticASDeviceSaving(): save automatically: ". Utils::PrintAsString($doSave));
+        $this->saveDevice = $doSave;
     }
 
     /**
@@ -436,13 +451,14 @@ class DeviceManager {
      * Returns the additional folders as SyncFolder objects.
      *
      * @access public
-     * @return array of SyncFolder
+     * @return array of SyncFolder with backendids as keys
      */
     public function GetAdditionalUserSyncFolders() {
         $folders = array();
         foreach($this->device->GetAdditionalFolders() as $df) {
             $folder = new SyncFolder();
-            $folder->serverid = $df['folderid'];
+            $folder->BackendId = $df['folderid'];
+            $folder->serverid = $this->GetFolderIdForBackendId($folder->BackendId, true);
             $folder->parentid = 0;                  // only top folders are supported
             $folder->displayname = $df['name'];
             $folder->type = $df['type'];
@@ -450,7 +466,7 @@ class DeviceManager {
             $folder->NoBackendFolder = true;
             $folder->Store = $df['store'];
 
-            $folders[$folder->serverid] = $folder;
+            $folders[$folder->BackendId] = $folder;
         }
         return $folders;
     }
@@ -837,6 +853,40 @@ class DeviceManager {
     public function GetUserAgent() {
         return $this->device->GetDeviceUserAgent();
     }
+
+    /**
+     * Returns the backend folder id from the AS folderid known to the mobile.
+     * If the id is not known, it's returned as is.
+     *
+     * @param mixed     $folderid
+     *
+     * @access public
+     * @return int/boolean  returns false if the type is not set
+     */
+    public function GetBackendIdForFolderId($folderid) {
+        $backendId = $this->device->GetFolderBackendId($folderid);
+        if (!$backendId) {
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("DeviceManager->GetBackendIdForFolderId(): no backend-folderid available for '%s', returning as is.", $folderid));
+            return $folderid;
+        }
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("DeviceManager->GetBackendIdForFolderId(): folderid %d => %s", $folderid, $backendId));
+        return $backendId;
+    }
+
+    /**
+     * Gets the AS folderid for a backendFolderId.
+     * If there is no known AS folderId a new one is being created.
+     *
+     * @param string    $backendid
+     * @param boolean   $generateNewIdIfNew     Generates a new AS folderid for the case the backend folder is not known yet, default: false.
+     *
+     * @access public
+     * @return int/boolean  returns false if there is folderid known for this backendid and $generateNewIdIfNew is not set or false.
+     */
+    public function GetFolderIdForBackendId($backendid, $generateNewIdIfNew = false) {
+        return $this->device->GetFolderIdForBackendId($backendid, $generateNewIdIfNew);
+    }
+
 
     /**----------------------------------------------------------------------------------------------------------
      * private DeviceManager methods
