@@ -1263,15 +1263,16 @@ class BackendZarafa implements IBackend, ISearchProvider {
     private function adviseStoreToSink($store) {
         // check if we already advised the store
         if (!in_array($store, $this->changesSinkStores)) {
-            mapi_msgstore_advise($this->store, null, fnevObjectModified | fnevObjectCreated | fnevObjectMoved | fnevObjectDeleted, $this->changesSink);
-            $this->changesSinkStores[] = $store;
+            mapi_msgstore_advise($store, null, fnevObjectModified | fnevObjectCreated | fnevObjectMoved | fnevObjectDeleted, $this->changesSink);
 
             if (mapi_last_hresult()) {
-                ZLog::Write(LOGLEVEL_WARN, sprintf("ZarafaBackend->adviseStoreToSink(): failed to advised store '%s' with code 0x%X. Polling will be performed.", $this->store, mapi_last_hresult()));
+                ZLog::Write(LOGLEVEL_WARN, sprintf("ZarafaBackend->adviseStoreToSink(): failed to advised store '%s' with code 0x%X. Polling will be performed.", $store, mapi_last_hresult()));
                 return false;
             }
-            else
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->adviseStoreToSink(): advised store '%s'", $this->store));
+            else {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->adviseStoreToSink(): advised store '%s'", $store));
+                $this->changesSinkStores[] = $store;
+            }
         }
         return true;
     }
