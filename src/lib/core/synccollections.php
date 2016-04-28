@@ -86,8 +86,7 @@ class SyncCollections implements Iterator {
             $sc = new SyncCollections();
             $sc->LoadAllCollections();
             foreach ($sc as $folderid => $spa) {
-                $spa->DelPingableFlag();
-                $sc->SaveCollection($spa);
+                $sc->invalidateFolderStat($spa);
             }
             return true;
         }
@@ -853,7 +852,7 @@ class SyncCollections implements Iterator {
      * @return boolean
      */
     public function valid() {
-        return (key($this->collections) !== null);
+        return (key($this->collections) !== null && key($this->collections) !== false);
     }
 
     /**
