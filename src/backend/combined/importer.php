@@ -164,12 +164,12 @@ class ImportChangesCombined implements IImportChanges {
      * @param object        $folder         SyncFolder
      *
      * @access public
-     * @return boolean/string               status/id of the folder
+     * @return boolean/SyncObject           status/object with the ath least the serverid of the folder set
      */
     public function ImportFolderChange($folder) {
         $id = $folder->serverid;
         $parent = $folder->parentid;
-        ZLog::Write(LOGLEVEL_DEBUG, "ImportChangesCombined->ImportFolderChange() ".print_r($folder, 1));
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ImportChangesCombined->ImportFolderChange() id: '%s', parent: '%s'", $id, $parent));
         if($parent == '0') {
             if($id) {
                 $backendid = $this->backend->GetBackendId($id);
@@ -197,21 +197,24 @@ class ImportChangesCombined implements IImportChanges {
         }
 
         $this->icc = $this->backend->getBackend($backendid)->GetImporter();
-        $res = $this->icc->ImportFolderChange($folder);
+        $resFolder = $this->icc->ImportFolderChange($folder);
         ZLog::Write(LOGLEVEL_DEBUG, 'ImportChangesCombined->ImportFolderChange() success');
-        return $backendid.$this->backend->config['delimiter'].$res;
+        $folder->serverid = $backendid . $this->backend->config['delimiter'] . $resFolder->serverid;
+        // TODO Check if move folder is supported ($parent is different). This is tricky, because you could tell e.g. a CardDAV folder to be moved to the trash of the IMAP backend on the mobile.
+        return $folder;
     }
 
     /**
      * Imports a folder deletion
      *
-     * @param string        $id
-     * @param string        $parent id
+     * @param SyncFolder    $folder         at least "serverid" needs to be set
      *
      * @access public
      * @return boolean/int  success/SYNC_FOLDERHIERARCHY_STATUS
      */
-    public function ImportFolderDeletion($id, $parent = false) {
+    public function ImportFolderDeletion($folder) {
+        $id = $folder->serverid;
+        $parent = isset($folder->parentid) ? $folder->parentid : false;
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("ImportChangesCombined->ImportFolderDeletion('%s', '%s'), $id, $parent"));
         $backendid = $this->backend->GetBackendId($id);
         if(!empty($this->backend->config['backends'][$backendid]['subfolder']) && $id == $backendid.$this->backend->config['delimiter'].'0') {
@@ -226,7 +229,9 @@ class ImportChangesCombined implements IImportChanges {
             $parent = $this->backend->GetBackendFolder($parent);
 
         $this->icc = $backend->GetImporter();
-        $res = $this->icc->ImportFolderDeletion($id, $parent);
+        $folder->serverid = $id;
+        $folder->parentid = $parent;
+        $res = $this->icc->ImportFolderDeletion($folder);
         ZLog::Write(LOGLEVEL_DEBUG, 'ImportChangesCombined->ImportFolderDeletion() success');
         return $res;
     }
@@ -338,14 +343,15 @@ class ImportHierarchyChangesCombinedWrap {
     /**
      * Imports a folder deletion
      *
-     * @param string        $id
+     * @param SyncFolder    $folder         at least "serverid" needs to be set
      *
      * @access public
      *
      * @return boolean/int  success/SYNC_FOLDERHIERARCHY_STATUS
      */
-    public function ImportFolderDeletion($id) {
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ImportHierarchyChangesCombinedWrap->ImportFolderDeletion('%s')", $id));
-        return $this->ihc->ImportFolderDeletion($this->backendid.$this->backend->config['delimiter'].$id);
+    public function ImportFolderDeletion($folder) {
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ImportHierarchyChangesCombinedWrap->ImportFolderDeletion('%s')", $folder->serverid));
+        $folder->serverid = $this->backendid . $this->backend->config['delimiter'] . $folder->serverid;
+        return $this->ihc->ImportFolderDeletion($folder);
     }
 }

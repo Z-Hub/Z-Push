@@ -10,7 +10,7 @@
 *
 * Created   :   02.01.2012
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -46,6 +46,7 @@
 ************************************************/
 
 interface IBackend {
+    const HIERARCHYNOTIFICATION = 'hierarchynotification';
     /**
      * Returns a IStateMachine implementation used to save states
      *
@@ -307,4 +308,36 @@ interface IBackend {
      * @return Array
      */
     public function GetCurrentUsername();
+
+    /**
+     * Indicates if the Backend supports folder statistics.
+     *
+     * @access public
+     * @return boolean
+     */
+    public function HasFolderStats();
+
+    /**
+     * Returns a status indication of the folder.
+     * If there are changes in the folder, the returned value must change.
+     * The returned values are compared with '===' to determine if a folder needs synchronization or not.
+     *
+     * @param string $store         the store where the folder resides
+     * @param string $folderid      the folder id
+     *
+     * @access public
+     * @return string
+     */
+    public function GetFolderStat($store, $folderid);
+
+    /**
+     * Returns the policy name for the user.
+     * If the backend returns false, the 'default' policy is used.
+     * If the backend returns any other name than 'default' the policygroup with
+     * that name (defined in the policies.ini file) will be applied for this user.
+     *
+     * @access public
+     * @return string|boolean
+     */
+    public function GetUserPolicyName();
 }

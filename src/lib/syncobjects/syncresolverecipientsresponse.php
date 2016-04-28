@@ -1,12 +1,16 @@
 <?php
-/***********************************************
-* File      :   exceptions.php
+/**********************************************************
+* File      :   syncresolverecipientsresponse.php
 * Project   :   Z-Push
-* Descr     :   Includes all Z-Push exceptions
+* Descr     :   WBXML appointment entities that can be
+*               parsed directly (as a stream) from WBXML.
+*               It is automatically decoded
+*               according to $mapping,
+*               and the Sync WBXML mappings
 *
-* Created   :   06.02.2012
+* Created   :   07.09.2015
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2015 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -41,24 +45,25 @@
 * Consult LICENSE file for details
 ************************************************/
 
-// main exception
-include_once('zpushexception.php');
+class SyncResolveRecipientsResponse extends SyncObject {
+    public $to;
+    public $status;
+    public $recipientcount;
+    public $recipient;
 
-// Fatal exceptions
-include_once('fatalexception.php');
-include_once('fatalmisconfigurationexception.php');
-include_once('fatalnotimplementedexception.php');
-include_once('wbxmlexception.php');
-include_once('nopostrequestexception.php');
-include_once('httpreturncodeexception.php');
-include_once('authenticationrequiredexception.php');
-include_once('provisioningrequiredexception.php');
+    public function SyncResolveRecipientsResponse() {
+        $mapping = array (
+            SYNC_RESOLVERECIPIENTS_TO                       => array (  self::STREAMER_VAR      => "to"),
 
-// Non fatal exceptions
-include_once('notimplementedexception.php');
-include_once('syncobjectbrokenexception.php');
-include_once('statusexception.php');
-include_once('statenotfoundexception.php');
-include_once('stateinvalidexception.php');
-include_once('nohierarchycacheavailableexception.php');
-include_once('statenotyetavailableexception.php');
+            SYNC_RESOLVERECIPIENTS_STATUS                   => array (  self::STREAMER_VAR      => "status"),
+
+            SYNC_RESOLVERECIPIENTS_RECIPIENTCOUNT           => array (  self::STREAMER_VAR      => "recipientcount"),
+
+            SYNC_RESOLVERECIPIENTS_RECIPIENT                => array (  self::STREAMER_VAR      => "recipient",
+                                                                        self::STREAMER_TYPE     => "SyncResolveRecipient",
+                                                                        self::STREAMER_ARRAY    => SYNC_RESOLVERECIPIENTS_RECIPIENT),
+        );
+
+        parent::SyncObject($mapping);
+    }
+}

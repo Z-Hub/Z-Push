@@ -6,7 +6,7 @@
 *
 * Created   :   12.04.2011
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -191,6 +191,7 @@ class ZPush {
     static private $topCollector;
     static private $backend;
     static private $addSyncFolders;
+    static private $policies;
 
 
     /**
@@ -220,37 +221,78 @@ class ZPush {
         else
             define('REAL_BASE_PATH', BASE_PATH);
 
-        if (!defined('LOGFILEDIR'))
-            throw new FatalMisconfigurationException("The LOGFILEDIR is not configured. Check if the config.php file is in place.");
-
-        if (substr(LOGFILEDIR, -1,1) != "/")
-            throw new FatalMisconfigurationException("The LOGFILEDIR should terminate with a '/'");
-
-        if (!file_exists(LOGFILEDIR))
-            throw new FatalMisconfigurationException("The configured LOGFILEDIR does not exist or can not be accessed.");
-
-        if ((!file_exists(LOGFILE) && !touch(LOGFILE)) || !is_writable(LOGFILE))
-            throw new FatalMisconfigurationException("The configured LOGFILE can not be modified.");
-
-        if ((!file_exists(LOGERRORFILE) && !touch(LOGERRORFILE)) || !is_writable(LOGERRORFILE))
-            throw new FatalMisconfigurationException("The configured LOGERRORFILE can not be modified.");
-
-        // check ownership on the (eventually) just created files
-        Utils::FixFileOwner(LOGFILE);
-        Utils::FixFileOwner(LOGERRORFILE);
-
-        // set time zone
-        // code contributed by Robert Scheck (rsc) - more information: https://developer.berlios.de/mantis/view.php?id=479
-        if(function_exists("date_default_timezone_set")) {
-            if(defined('TIMEZONE') ? constant('TIMEZONE') : false) {
-                if (! @date_default_timezone_set(TIMEZONE))
-                    throw new FatalMisconfigurationException(sprintf("The configured TIMEZONE '%s' is not valid. Please check supported timezones at http://www.php.net/manual/en/timezones.php", constant('TIMEZONE')));
-            }
-            else if(!ini_get('date.timezone')) {
-                date_default_timezone_set('Europe/Amsterdam');
-            }
+        if (!defined('LOGBACKEND')) {
+            define('LOGBACKEND', 'filelog');
         }
 
+        if (strtolower(LOGBACKEND) == 'syslog') {
+            define('LOGBACKEND_CLASS', 'Syslog');
+            if (!defined('LOG_SYSLOG_FACILITY')) {
+                define('LOG_SYSLOG_FACILITY', LOG_LOCAL0);
+            }
+
+            if (!defined('LOG_SYSLOG_HOST')) {
+                define('LOG_SYSLOG_HOST', false);
+            }
+
+            if (!defined('LOG_SYSLOG_PORT')) {
+                define('LOG_SYSLOG_PORT', 514);
+            }
+
+            if (!defined('LOG_SYSLOG_PROGRAM')) {
+                define('LOG_SYSLOG_PROGRAM', 'z-push');
+            }
+
+            if (!is_numeric(LOG_SYSLOG_PORT)) {
+                throw new FatalMisconfigurationException("The LOG_SYSLOG_PORT must a be a number.");
+            }
+
+            if (LOG_SYSLOG_HOST && LOG_SYSLOG_PORT <= 0) {
+                throw new FatalMisconfigurationException("LOG_SYSLOG_HOST is defined but the LOG_SYSLOG_PORT does not seem to be valid.");
+            }
+        }
+        elseif (strtolower(LOGBACKEND) == 'filelog') {
+            define('LOGBACKEND_CLASS', 'FileLog');
+            if (!defined('LOGFILEDIR'))
+                throw new FatalMisconfigurationException("The LOGFILEDIR is not configured. Check if the config.php file is in place.");
+
+            if (substr(LOGFILEDIR, -1,1) != "/")
+                throw new FatalMisconfigurationException("The LOGFILEDIR should terminate with a '/'");
+
+            if (!file_exists(LOGFILEDIR))
+                throw new FatalMisconfigurationException("The configured LOGFILEDIR does not exist or can not be accessed.");
+
+            if ((!file_exists(LOGFILE) && !touch(LOGFILE)) || !is_writable(LOGFILE))
+                throw new FatalMisconfigurationException("The configured LOGFILE can not be modified.");
+
+            if ((!file_exists(LOGERRORFILE) && !touch(LOGERRORFILE)) || !is_writable(LOGERRORFILE))
+                throw new FatalMisconfigurationException("The configured LOGERRORFILE can not be modified.");
+
+            // check ownership on the (eventually) just created files
+            Utils::FixFileOwner(LOGFILE);
+            Utils::FixFileOwner(LOGERRORFILE);
+        }
+        else {
+            define('LOGBACKEND_CLASS', LOGBACKEND);
+        }
+
+        // set time zone
+        // code contributed by Robert Scheck (rsc)
+        if(defined('TIMEZONE') ? constant('TIMEZONE') : false) {
+            if (! @date_default_timezone_set(TIMEZONE))
+                throw new FatalMisconfigurationException(sprintf("The configured TIMEZONE '%s' is not valid. Please check supported timezones at http://www.php.net/manual/en/timezones.php", constant('TIMEZONE')));
+        }
+        else if(!ini_get('date.timezone')) {
+            date_default_timezone_set('Europe/Amsterdam');
+        }
+
+        // check if Provisioning is enabled and the default policies are available
+        if (PROVISIONING) {
+            ZPush::$policies = parse_ini_file(PROVISIONING_POLICYFILE, true);
+            if (!isset(ZPush::$policies['default'])) {
+                throw new FatalMisconfigurationException(sprintf("Your policies' configuration file doesn't contain the required [default] section. Please check the %s file.", constant('PROVISIONING_POLICYFILE')));
+            }
+        }
         return true;
     }
 
@@ -267,12 +309,6 @@ class ZPush {
         if (!is_array($specialLogUsers))
             throw new FatalMisconfigurationException("The WBXML log users is not an array.");
 
-        if (!defined('SINK_FORCERECHECK')) {
-            define('SINK_FORCERECHECK', 300);
-        }
-        else if (SINK_FORCERECHECK !== false && (!is_int(SINK_FORCERECHECK) || SINK_FORCERECHECK < 1))
-            throw new FatalMisconfigurationException("The SINK_FORCERECHECK value must be 'false' or a number higher than 0.");
-
         if (!defined('SYNC_CONTACTS_MAXPICTURESIZE')) {
             define('SYNC_CONTACTS_MAXPICTURESIZE', 49152);
         }
@@ -281,6 +317,22 @@ class ZPush {
 
         if (!defined('USE_PARTIAL_FOLDERSYNC')) {
             define('USE_PARTIAL_FOLDERSYNC', false);
+        }
+
+        if (!defined('PING_LOWER_BOUND_LIFETIME')) {
+            define('PING_LOWER_BOUND_LIFETIME', false);
+        }
+        elseif(PING_LOWER_BOUND_LIFETIME !== false && (!is_int(PING_LOWER_BOUND_LIFETIME) || PING_LOWER_BOUND_LIFETIME < 1 || PING_LOWER_BOUND_LIFETIME > 3540)){
+            throw new FatalMisconfigurationException("The PING_LOWER_BOUND_LIFETIME value must be 'false' or a number between 1 and 3540 inclusively.");
+        }
+        if (!defined('PING_HIGHER_BOUND_LIFETIME')) {
+            define('PING_HIGHER_BOUND_LIFETIME', false);
+        }
+        elseif(PING_HIGHER_BOUND_LIFETIME !== false && (!is_int(PING_HIGHER_BOUND_LIFETIME) || PING_HIGHER_BOUND_LIFETIME < 1 || PING_HIGHER_BOUND_LIFETIME > 3540)){
+            throw new FatalMisconfigurationException("The PING_HIGHER_BOUND_LIFETIME value must be 'false' or a number between 1 and 3540 inclusively.");
+        }
+        if(PING_HIGHER_BOUND_LIFETIME !== false && PING_LOWER_BOUND_LIFETIME !== false && PING_HIGHER_BOUND_LIFETIME < PING_LOWER_BOUND_LIFETIME){
+            throw new FatalMisconfigurationException("The PING_HIGHER_BOUND_LIFETIME value must be greater or equal to PING_LOWER_BOUND_LIFETIME.");
         }
 
         // the check on additional folders will not throw hard errors, as this is probably changed on live systems
@@ -302,20 +354,22 @@ class ZPush {
                     continue;
                 }
 
-                if (!in_array($af['type'], array(SYNC_FOLDER_TYPE_USER_CONTACT, SYNC_FOLDER_TYPE_USER_APPOINTMENT, SYNC_FOLDER_TYPE_USER_TASK, SYNC_FOLDER_TYPE_USER_MAIL))) {
+                if (!in_array($af['type'], array(SYNC_FOLDER_TYPE_USER_NOTE, SYNC_FOLDER_TYPE_USER_CONTACT, SYNC_FOLDER_TYPE_USER_APPOINTMENT, SYNC_FOLDER_TYPE_USER_TASK, SYNC_FOLDER_TYPE_USER_MAIL))) {
                     ZLog::Write(LOGLEVEL_ERROR, sprintf("ZPush::CheckConfig() : the type of the additional synchronization folder '%s is not permitted.", $af['name']));
                     continue;
                 }
 
                 $folder = new SyncFolder();
-                $folder->serverid = $af['folderid'];
+
+                $folder->BackendId = $af['folderid'];
+                $folder->serverid = ZPush::GetDeviceManager(true)->GetFolderIdForBackendId($folder->BackendId, true);
                 $folder->parentid = 0;                  // only top folders are supported
                 $folder->displayname = $af['name'];
                 $folder->type = $af['type'];
                 // save store as custom property which is not streamed directly to the device
                 $folder->NoBackendFolder = true;
                 $folder->Store = $af['store'];
-                self::$addSyncFolders[$folder->serverid] = $folder;
+                self::$addSyncFolders[$folder->BackendId] = $folder;
             }
 
         }
@@ -350,7 +404,6 @@ class ZPush {
             }
             else {
                 // Initialize the default StateMachine
-                include_once('lib/default/filestatemachine.php');
                 ZPush::$stateMachine = new FileStateMachine();
             }
 
@@ -508,27 +561,48 @@ class ZPush {
     /**
      * Returns additional folder objects which should be synchronized to the device
      *
+     * @param boolean $backendIdsAsKeys     if true the keys are backendids else folderids, default: true
+     *
      * @access public
      * @return array
      */
-    static public function GetAdditionalSyncFolders() {
-        // TODO if there are any user based folders which should be synchronized, they have to be returned here as well!!
-        return self::$addSyncFolders;
+    static public function GetAdditionalSyncFolders($backendIdsAsKeys = true) {
+        // get user based folders which should be synchronized
+        $userFolder = self::GetDeviceManager()->GetAdditionalUserSyncFolders();
+        $addfolders = self::$addSyncFolders + $userFolder;
+        // if requested, we rewrite the backendids to folderids here
+        if ($backendIdsAsKeys === false && !empty($addfolders)) {
+            ZLog::Write(LOGLEVEL_DEBUG, "ZPush::GetAdditionalSyncFolders(): Requested AS folderids as keys for additional folders array, converting");
+            $faddfolders = array();
+            foreach ($addfolders as $backendId => $addFolder) {
+                $fid = self::GetDeviceManager()->GetFolderIdForBackendId($backendId);
+                $faddfolders[$fid] = $addFolder;
+            }
+            $addfolders = $faddfolders;
+        }
+
+        return $addfolders;
     }
 
     /**
      * Returns additional folder objects which should be synchronized to the device
      *
-     * @param string        $folderid
+     * @param string        $backendid
      * @param boolean       $noDebug        (opt) by default, debug message is shown
      *
      * @access public
      * @return string
      */
-    static public function GetAdditionalSyncFolderStore($folderid, $noDebug = false) {
-        $val = (isset(self::$addSyncFolders[$folderid]->Store))? self::$addSyncFolders[$folderid]->Store : false;
+    static public function GetAdditionalSyncFolderStore($backendid, $noDebug = false) {
+        if(isset(self::$addSyncFolders[$backendid]->Store)) {
+            $val = self::$addSyncFolders[$backendid]->Store;
+        }
+        else {
+            $val = self::GetDeviceManager()->GetAdditionalUserSyncFolderStore($backendid);
+        }
+
         if (!$noDebug)
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPush::GetAdditionalSyncFolderStore('%s'): '%s'", $folderid, Utils::PrintAsString($val)));
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPush::GetAdditionalSyncFolderStore('%s'): '%s'", $backendid, Utils::PrintAsString($val)));
         return $val;
     }
 
@@ -620,7 +694,8 @@ class ZPush {
         More information about Z-Push can be found at:<br>
         <a href="http://z-push.org/">Z-Push homepage</a><br>
         <a href="http://z-push.org/download">Z-Push download page</a><br>
-        <a href="http://jira.zarafa.com/browse/ZP">Z-Push Bugtracker and Roadmap</a><br>
+        <a href="https://jira.z-hub.io/browse/ZP">Z-Push Bugtracker</a><br>
+        <a href="https://wiki.z-hub.io/display/ZP">Z-Push Wiki</a> and <a href="https://wiki.z-hub.io/display/ZP/Roadmap">Roadmap</a><br>
         <br>
         All modifications to this sourcecode must be published and returned to the community.<br>
         Please see <a href="http://www.gnu.org/licenses/agpl-3.0.html">AGPLv3 License</a> for details.<br>
@@ -819,4 +894,13 @@ END;
         return $defcapa;
     }
 
+    /**
+     * Returns the available provisioning policies.
+     *
+     * @return array
+     */
+    static public function GetPolicies() {
+        // TODO another policy providers might be available, e.g. for sqlstatemachine
+        return ZPush::$policies;
+    }
 }

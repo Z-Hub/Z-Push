@@ -44,56 +44,10 @@
 * Consult LICENSE file for details
 ************************************************/
 
-include('lib/core/zpushdefs.php');
-include('lib/core/zpush.php');
-include('lib/core/stateobject.php');
-include('lib/core/syncparameters.php');
-include('lib/core/bodypreference.php');
-include('lib/core/contentparameters.php');
-include('lib/core/synccollections.php');
-include('lib/core/zlog.php');
-include('lib/core/statemanager.php');
-include('lib/core/streamer.php');
-include('lib/core/asdevice.php');
-include('lib/core/interprocessdata.php');
-include('lib/core/loopdetection.php');
-include('lib/exceptions/exceptions.php');
-include('lib/utils/utils.php');
-include('lib/utils/zpushadmin.php');
-include('lib/request/request.php');
-include('lib/request/requestprocessor.php');
-include('lib/interface/ibackend.php');
-include('lib/interface/ichanges.php');
-include('lib/interface/iexportchanges.php');
-include('lib/interface/iimportchanges.php');
-include('lib/interface/isearchprovider.php');
-include('lib/interface/istatemachine.php');
-include('lib/syncobjects/syncobject.php');
-include('lib/syncobjects/syncbasebody.php');
-include('lib/syncobjects/syncbaseattachment.php');
-include('lib/syncobjects/syncmailflags.php');
-include('lib/syncobjects/syncrecurrence.php');
-include('lib/syncobjects/syncappointment.php');
-include('lib/syncobjects/syncappointmentexception.php');
-include('lib/syncobjects/syncattachment.php');
-include('lib/syncobjects/syncattendee.php');
-include('lib/syncobjects/syncmeetingrequestrecurrence.php');
-include('lib/syncobjects/syncmeetingrequest.php');
-include('lib/syncobjects/syncmail.php');
-include('lib/syncobjects/syncnote.php');
-include('lib/syncobjects/synccontact.php');
-include('lib/syncobjects/syncfolder.php');
-include('lib/syncobjects/syncprovisioning.php');
-include('lib/syncobjects/synctaskrecurrence.php');
-include('lib/syncobjects/synctask.php');
-include('lib/syncobjects/syncoofmessage.php');
-include('lib/syncobjects/syncoof.php');
-include('lib/syncobjects/syncuserinformation.php');
-include('lib/syncobjects/syncdeviceinformation.php');
-include('lib/syncobjects/syncdevicepassword.php');
-include('lib/syncobjects/syncitemoperationsattachment.php');
-include('config.php');
-include('version.php');
+require_once 'vendor/autoload.php';
+
+if (!defined('ZPUSH_CONFIG')) define('ZPUSH_CONFIG', 'config.php');
+include_once(ZPUSH_CONFIG);
 
 /**
  * //TODO resync of single folders of a users device
@@ -139,12 +93,14 @@ class ZPushAdminCLI {
     const COMMAND_SHOWLASTSYNC = 8;
     const COMMAND_RESYNCFOLDER = 9;
     const COMMAND_FIXSTATES = 10;
+    const COMMAND_RESYNCHIERARCHY = 11;
 
     const TYPE_OPTION_EMAIL = "email";
     const TYPE_OPTION_CALENDAR = "calendar";
     const TYPE_OPTION_CONTACT = "contact";
     const TYPE_OPTION_TASK = "task";
     const TYPE_OPTION_NOTE = "note";
+    const TYPE_OPTION_HIERARCHY = "hierarchy";
 
     static private $command;
     static private $user = false;
@@ -163,24 +119,25 @@ class ZPushAdminCLI {
         return  "Usage:\n\tz-push-admin.php -a ACTION [options]\n\n" .
                 "Parameters:\n\t-a list/wipe/remove/resync/clearloop\n\t[-u] username\n\t[-d] deviceid\n\n" .
                 "Actions:\n" .
-                "\tlist\t\t\t\t Lists all devices and synchronized users\n" .
-                "\tlist -u USER\t\t\t Lists all devices of user USER\n" .
-                "\tlist -d DEVICE\t\t\t Lists all users of device DEVICE\n" .
-                "\tlastsync\t\t\t Lists all devices and synchronized users and the last synchronization time\n" .
-                "\twipe -u USER\t\t\t Remote wipes all devices of user USER\n" .
-                "\twipe -d DEVICE\t\t\t Remote wipes device DEVICE\n" .
-                "\twipe -u USER -d DEVICE\t\t Remote wipes device DEVICE of user USER\n" .
-                "\tremove -u USER\t\t\t Removes all state data of all devices of user USER\n" .
-                "\tremove -d DEVICE\t\t Removes all state data of all users synchronized on device DEVICE\n" .
-                "\tremove -u USER -d DEVICE\t Removes all related state data of device DEVICE of user USER\n" .
-                "\tresync -u USER -d DEVICE\t Resynchronizes all data of device DEVICE of user USER\n" .
-                "\tresync -t TYPE \t\t\t Resynchronizes all folders of type $types for all devices and users.\n" .
-                "\tresync -t TYPE -u USER \t\t Resynchronizes all folders of type $types for the user USER.\n" .
-                "\tresync -t TYPE -u USER -d DEVICE Resynchronizes all folders of type $types for a specified device and user.\n" .
-                "\tresync -t FOLDERID -u USER\t Resynchronize the specified folder id only. The USER should be specified for better performance.\n" .
-                "\tclearloop\t\t\t Clears system wide loop detection data\n" .
-                "\tclearloop -d DEVICE -u USER\t Clears all loop detection data of a device DEVICE and an optional user USER\n" .
-                "\tfixstates\t\t\t Checks the states for integrity and fixes potential issues\n" .
+                "\tlist\t\t\t\t\t Lists all devices and synchronized users\n" .
+                "\tlist -u USER\t\t\t\t Lists all devices of user USER\n" .
+                "\tlist -d DEVICE\t\t\t\t Lists all users of device DEVICE\n" .
+                "\tlastsync\t\t\t\t Lists all devices and synchronized users and the last synchronization time\n" .
+                "\twipe -u USER\t\t\t\t Remote wipes all devices of user USER\n" .
+                "\twipe -d DEVICE\t\t\t\t Remote wipes device DEVICE\n" .
+                "\twipe -u USER -d DEVICE\t\t\t Remote wipes device DEVICE of user USER\n" .
+                "\tremove -u USER\t\t\t\t Removes all state data of all devices of user USER\n" .
+                "\tremove -d DEVICE\t\t\t Removes all state data of all users synchronized on device DEVICE\n" .
+                "\tremove -u USER -d DEVICE\t\t Removes all related state data of device DEVICE of user USER\n" .
+                "\tresync -u USER -d DEVICE\t\t Resynchronizes all data of device DEVICE of user USER\n" .
+                "\tresync -t TYPE \t\t\t\t Resynchronizes all folders of type $types for all devices and users.\n" .
+                "\tresync -t TYPE -u USER \t\t\t Resynchronizes all folders of type $types for the user USER.\n" .
+                "\tresync -t TYPE -u USER -d DEVICE\t Resynchronizes all folders of type $types for a specified device and user.\n" .
+                "\tresync -t FOLDERID -u USER\t\t Resynchronize the specified folder id only. The USER should be specified for better performance.\n" .
+                "\tresync -t hierarchy -u USER -d DEVICE\t Resynchronize the folder hierarchy data for an optional USER and optional DEVICE.\n" .
+                "\tclearloop\t\t\t\t Clears system wide loop detection data\n" .
+                "\tclearloop -d DEVICE -u USER\t\t Clears all loop detection data of a device DEVICE and an optional user USER\n" .
+                "\tfixstates\t\t\t\t Checks the states for integrity and fixes potential issues\n" .
                 "\n";
     }
 
@@ -235,17 +192,19 @@ class ZPushAdminCLI {
         elseif (isset($options['type']) && !empty($options['type']))
             self::$type = strtolower(trim($options['type']));
 
-        // if type is set, it must be one of known types or a 44 byte long folder id
+        // if type is set, it must be one of known types or a 44 or 48 byte long folder id
         if (self::$type !== false) {
             if (self::$type !== self::TYPE_OPTION_EMAIL &&
                 self::$type !== self::TYPE_OPTION_CALENDAR &&
                 self::$type !== self::TYPE_OPTION_CONTACT &&
                 self::$type !== self::TYPE_OPTION_TASK &&
                 self::$type !== self::TYPE_OPTION_NOTE &&
-                strlen(self::$type) !== 44) {
+                self::$type !== self::TYPE_OPTION_HIERARCHY &&
+                strlen(self::$type) !== 44 &&
+                strlen(self::$type) !== 48) {
                     self::$errormessage = "Wrong 'type'. Possible values are: ".
-                        "'".self::TYPE_OPTION_EMAIL."', '".self::TYPE_OPTION_CALENDAR."', '".self::TYPE_OPTION_CONTACT."', '".self::TYPE_OPTION_TASK."', '".self::TYPE_OPTION_NOTE."' ".
-                        "or a 44 byte long folder id (as hex).";
+                        "'".self::TYPE_OPTION_EMAIL."', '".self::TYPE_OPTION_CALENDAR."', '".self::TYPE_OPTION_CONTACT."', '".self::TYPE_OPTION_TASK."', '".self::TYPE_OPTION_NOTE."', ".self::TYPE_OPTION_HIERARCHY."' ".
+                        "or a 44 or 48 byte long folder id (as hex).";
                     return;
                 }
         }
@@ -298,6 +257,9 @@ class ZPushAdminCLI {
                         self::$errormessage = "Not possible to resynchronize device. Device and user must be specified.";
                     else
                         self::$command = self::COMMAND_RESYNCDEVICE;
+                }
+                else if (self::$type === self::TYPE_OPTION_HIERARCHY) {
+                    self::$command = self::COMMAND_RESYNCHIERARCHY;
                 }
                 else {
                     self::$command = self::COMMAND_RESYNCFOLDER;
@@ -407,6 +369,18 @@ class ZPushAdminCLI {
                         }
                     }
                     self::CommandResyncFolder();
+                    break;
+
+                case self::COMMAND_RESYNCHIERARCHY:
+                    if (self::$device == false && self::$user == false) {
+                        echo "Are you sure you want to re-synchronize the hierarchy of all devices and users [y/N]: ";
+                        $confirm  =  strtolower(trim(fgets(STDIN)));
+                        if ( !($confirm === 'y' || $confirm === 'yes')) {
+                            echo "Aborted!\n";
+                            exit(1);
+                        }
+                    }
+                    self::CommandResyncHierarchy();
                     break;
 
             case self::COMMAND_CLEARLOOP:
@@ -588,6 +562,36 @@ class ZPushAdminCLI {
     }
 
     /**
+     * Command "Resync hierarchy"
+     * Resyncs a folder type of a specific device/user or of all users
+     *
+     * @return
+     * @access public
+     */
+    static public function CommandResyncHierarchy() {
+        // if no device is specified, search for all devices of a user. If user is not set, all devices are returned.
+        if (self::$device === false) {
+            $devicelist = ZPushAdmin::ListDevices(self::$user);
+            if (empty($devicelist)) {
+                echo "\tno devices/users found\n";
+                return true;
+            }
+        }
+        else
+            $devicelist = array(self::$device);
+
+        foreach ($devicelist as $deviceId) {
+            $users = ZPushAdmin::ListUsers($deviceId);
+            foreach ($users as $user) {
+                if (self::$user && self::$user != $user)
+                    continue;
+                self::resyncHierarchy($deviceId, $user);
+            }
+        }
+
+    }
+
+    /**
      * Command to clear the loop detection data
      * Mobiles may enter loop detection (one-by-one synchring due to timeouts / erros).
      *
@@ -670,6 +674,20 @@ class ZPushAdminCLI {
     }
 
     /**
+     * Resynchronizes the hierarchy of a device & user
+     *
+     * @param string    $deviceId       the id of the device
+     * @param string    $user           the user
+     *
+     * @return
+     * @access private
+     */
+    static private function resyncHierarchy($deviceId, $user) {
+        $stat = ZPushAdmin::ResyncHierarchy($user, $deviceId);
+        echo sprintf("Removing hierarchy information for resync on device '%s' of user '%s': %s\n",  $deviceId, $user, ($stat)?'Requested':ZLog::GetLastMessage(LOGLEVEL_ERROR));
+    }
+
+    /**
      * Fixes the states for potential issues
      *
      * @return
@@ -694,6 +712,12 @@ class ZPushAdminCLI {
         echo "\tChecking for unreferenced (obsolete) state files: ";
         if (($stat = ZPushAdmin::FixStatesUserToStatesLinking()) !== false)
             printf("Processed: %d - Deleted: %d\n",  $stat[0], $stat[1]);
+        else
+            echo ZLog::GetLastMessage(LOGLEVEL_ERROR) . "\n";
+
+        echo "\tChecking for hierarchy folder data state: ";
+        if (($stat = ZPushAdmin::FixStatesHierarchyFolderData()) !== false)
+            printf("Devices: %d - Processed: %d - Fixed: %d - Device+User without hierarchy: %d\n",  $stat[0], $stat[1], $stat[2], $stat[3]);
         else
             echo ZLog::GetLastMessage(LOGLEVEL_ERROR) . "\n";
     }
@@ -836,6 +860,7 @@ class ZPushAdminCLI {
         echo "WipeRequest on:\t\t". ($device->GetWipeRequestedOn() ? strftime("%Y-%m-%d %H:%M", $device->GetWipeRequestedOn()) : "not set")."\n";
         echo "WipeRequest by:\t\t". ($device->GetWipeRequestedBy() ? $device->GetWipeRequestedBy() : "not set")."\n";
         echo "Wiped on:\t\t". ($device->GetWipeActionOn() ? strftime("%Y-%m-%d %H:%M", $device->GetWipeActionOn()) : "not set")."\n";
+        echo "Policy name:\t\t". ($device->GetPolicyName() ? $device->GetPolicyName() : ASDevice::DEFAULTPOLICYNAME)."\n";
 
         echo "Attention needed:\t";
 

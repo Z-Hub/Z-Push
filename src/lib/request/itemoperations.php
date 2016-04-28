@@ -6,7 +6,7 @@
 *
 * Created   :   16.02.2012
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2015 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -59,7 +59,8 @@ class ItemOperations extends RequestProcessor {
 
         $itemoperations = array();
         //ItemOperations can either be Fetch, EmptyFolderContents or Move
-        while (1) {
+        WBXMLDecoder::ResetInWhile("itemOperationsActions");
+        while(WBXMLDecoder::InWhile("itemOperationsActions")) {
             //TODO check if multiple item operations are possible in one request
             $el = self::$decoder->getElement();
 
@@ -91,7 +92,8 @@ class ItemOperations extends RequestProcessor {
             }
 
             // process operation
-            while(1) {
+            WBXMLDecoder::ResetInWhile("itemOperationsOperation");
+            while(WBXMLDecoder::InWhile("itemOperationsOperation")) {
                 if ($fetch) {
                     if(self::$decoder->getElementStartTag(SYNC_ITEMOPERATIONS_STORE)) {
                         $operation['store'] = self::$decoder->getElementContent();
@@ -134,7 +136,8 @@ class ItemOperations extends RequestProcessor {
 
                         // Save all OPTIONS into a ContentParameters object
                         $operation["cpo"] = new ContentParameters();
-                        while(1) {
+                        WBXMLDecoder::ResetInWhile("itemOperationsOptions");
+                        while(WBXMLDecoder::InWhile("itemOperationsOptions")) {
                             while (self::$decoder->getElementStartTag(SYNC_AIRSYNCBASE_BODYPREFERENCE)) {
                                 if(self::$decoder->getElementStartTag(SYNC_AIRSYNCBASE_TYPE)) {
                                     $bptype = self::$decoder->getElementContent();
@@ -180,7 +183,8 @@ class ItemOperations extends RequestProcessor {
 
                             if(self::$decoder->getElementStartTag(SYNC_ITEMOPERATIONS_SCHEMA)) {
                                 // read schema tags
-                                while (1) {
+                                WBXMLDecoder::ResetInWhile("itemOperationsSchema");
+                                while(WBXMLDecoder::InWhile("itemOperationsSchema")) {
                                     // TODO save elements
                                     $el = self::$decoder->getElement();
                                     $e = self::$decoder->peek();
@@ -211,7 +215,7 @@ class ItemOperations extends RequestProcessor {
                         if(self::$decoder->getElementStartTag(SYNC_ITEMOPERATIONS_DELETESUBFOLDERS)) {
                             $operation['deletesubfolders'] = true;
                             if (($dsf = self::$decoder->getElementContent()) !== false) {
-                                $operation['deletesubfolders'] = (boolean)$dsf;
+                                $operation['deletesubfolders'] = (bool)$dsf;
                                 if(!self::$decoder->getElementEndTag())
                                     return false;
                             }
@@ -229,6 +233,11 @@ class ItemOperations extends RequestProcessor {
                     break;
                 }
             } // end while operation
+
+            // rewrite folderid into backendfolderid to be used on backend operations below
+            if (isset($operation['folderid'])) {
+                $operation['backendfolderid'] = self::$deviceManager->GetBackendIdForFolderId($operation['folderid']);
+            }
 
             $itemoperations[] = $operation;
             //break if it reached the endtag
@@ -279,7 +288,7 @@ class ItemOperations extends RequestProcessor {
                     try {
                         if (isset($operation['folderid']) && isset($operation['serverid'])) {
                             self::$topCollector->AnnounceInformation("Fetching data from backend with item and folder id");
-                            $data = self::$backend->Fetch($operation['folderid'], $operation['serverid'], $operation["cpo"]);
+                            $data = self::$backend->Fetch($operation['backendfolderid'], $operation['serverid'], $operation["cpo"]);
                         }
                         else if (isset($operation['longid'])) {
                             self::$topCollector->AnnounceInformation("Fetching data from backend with long id");
@@ -345,7 +354,7 @@ class ItemOperations extends RequestProcessor {
                     self::$topCollector->AnnounceInformation("Emptying folder");
 
                     // send request to backend
-                    self::$backend->EmptyFolder($operation['folderid'], $operation['deletesubfolders']);
+                    self::$backend->EmptyFolder($operation['backendfolderid'], $operation['deletesubfolders']);
                 }
                 catch (StatusException $stex) {
                    $status = $stex->getCode();

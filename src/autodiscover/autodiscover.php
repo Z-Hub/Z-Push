@@ -41,23 +41,12 @@
 * Consult LICENSE file for details
 ************************************************/
 
-include_once('../lib/core/zpushdefs.php');
-include_once('../lib/exceptions/exceptions.php');
-include_once('../lib/utils/compat.php');
-include_once('../lib/utils/utils.php');
-include_once('../lib/core/zpush.php');
-include_once('../lib/core/zlog.php');
-include_once('../lib/interface/ibackend.php');
-include_once('../lib/interface/ichanges.php');
-include_once('../lib/interface/iexportchanges.php');
-include_once('../lib/interface/iimportchanges.php');
-include_once('../lib/interface/isearchprovider.php');
-include_once('../lib/interface/istatemachine.php');
-include_once('../version.php');
-include_once('config.php');
+require_once '../vendor/autoload.php';
+require_once '../config.php';
 
 class ZPushAutodiscover {
-    const ACCEPTABLERESPONSESCHEMA = 'http://schemas.microsoft.com/exchange/autodiscover/mobilesync/responseschema/2006';
+    const ACCEPTABLERESPONSESCHEMAMOBILESYNC = 'http://schemas.microsoft.com/exchange/autodiscover/mobilesync/responseschema/2006';
+    const ACCEPTABLERESPONSESCHEMAOUTLOOK = 'http://schemas.microsoft.com/exchange/autodiscover/outlook/responseschema/2006a';
     const MAXINPUTSIZE = 8192; // Bytes, the autodiscover request shouldn't exceed that value
 
     private static $instance;
@@ -71,6 +60,7 @@ class ZPushAutodiscover {
      */
     public static function DoZPushAutodiscover() {
         ZLog::Write(LOGLEVEL_DEBUG, '-------- Start ZPushAutodiscover');
+        ZLog::Write(LOGLEVEL_INFO, sprintf("Z-Push version='%s'", @constant('ZPUSH_VERSION')));
         // TODO use filterevilinput?
         if (stripos($_SERVER["REQUEST_METHOD"], "GET") !== false) {
             ZLog::Write(LOGLEVEL_WARN, "GET request for autodiscover. Exiting.");
@@ -110,8 +100,11 @@ class ZPushAutodiscover {
             $email = ($this->getAttribFromUserDetails($userDetails, 'emailaddress')) ? $this->getAttribFromUserDetails($userDetails, 'emailaddress') : $incomingXml->Request->EMailAddress;
             $userFullname = ($this->getAttribFromUserDetails($userDetails, 'fullname')) ? $this->getAttribFromUserDetails($userDetails, 'fullname') : $email;
             ZLog::Write(LOGLEVEL_WBXML, sprintf("Resolved user's '%s' fullname to '%s'", $username, $userFullname));
-            $response = $this->createResponse($email, $userFullname);
-            setcookie("membername", $username);
+            // At the moment Z-Push only supports mobile response schema for autodiscover. Send empty response if the client request outlook response schema.
+            if ($incomingXml->Request->AcceptableResponseSchema == ZPushAutodiscover::ACCEPTABLERESPONSESCHEMAMOBILESYNC) {
+                $response = $this->createResponse($email, $userFullname);
+                setcookie("membername", $username);
+            }
         }
 
         catch (AuthenticationRequiredException $ex) {
@@ -174,7 +167,7 @@ class ZPushAutodiscover {
             throw new FatalException('Invalid input XML: no AcceptableResponseSchema.');
         }
 
-        if ($xml->Request->AcceptableResponseSchema != ZPushAutodiscover::ACCEPTABLERESPONSESCHEMA) {
+        if ($xml->Request->AcceptableResponseSchema != ZPushAutodiscover::ACCEPTABLERESPONSESCHEMAMOBILESYNC && $xml->Request->AcceptableResponseSchema != ZPushAutodiscover::ACCEPTABLERESPONSESCHEMAOUTLOOK) {
             throw new FatalException('Invalid input XML: not a mobilesync responseschema.');
         }
 
@@ -263,5 +256,15 @@ class ZPushAutodiscover {
         return false;
     }
 }
+
+    // set time zone
+    // code contributed by Robert Scheck (rsc)
+    if(defined('TIMEZONE') ? constant('TIMEZONE') : false) {
+        if (! @date_default_timezone_set(TIMEZONE))
+            throw new FatalMisconfigurationException(sprintf("The configured TIMEZONE '%s' is not valid. Please check supported timezones at http://www.php.net/manual/en/timezones.php", constant('TIMEZONE')));
+    }
+    else if(!ini_get('date.timezone')) {
+        date_default_timezone_set('Europe/Amsterdam');
+    }
 
 ZPushAutodiscover::DoZPushAutodiscover();

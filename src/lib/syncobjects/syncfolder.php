@@ -10,7 +10,7 @@
 *
 * Created   :   05.09.2011
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2015 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -52,6 +52,8 @@ class SyncFolder extends SyncObject {
     public $displayname;
     public $type;
     public $Store;
+    public $NoBackendFolder;
+    public $BackendId;
 
     function SyncFolder() {
         $mapping = array (
@@ -71,8 +73,30 @@ class SyncFolder extends SyncObject {
 
                     SYNC_FOLDERHIERARCHY_IGNORE_STORE                   => array (  self::STREAMER_VAR      => "Store",
                                                                                     self::STREAMER_TYPE     => self::STREAMER_TYPE_IGNORE),
-                );
+
+                    SYNC_FOLDERHIERARCHY_IGNORE_NOBCKENDFLD             => array (  self::STREAMER_VAR      => "NoBackendFolder",
+                                                                                    self::STREAMER_TYPE     => self::STREAMER_TYPE_IGNORE),
+
+                    SYNC_FOLDERHIERARCHY_IGNORE_BACKENDID               => array (  self::STREAMER_VAR      => "BackendId",
+                                                                                    self::STREAMER_TYPE     => self::STREAMER_TYPE_IGNORE),
+        );
 
         parent::SyncObject($mapping);
+    }
+
+    /**
+     * Returns a SyncFolder object with the serverid and optional parentid set.
+     *
+     * @param string $serverid
+     * @param string $parentid
+     *
+     * @access public
+     * @return SyncFolder object
+     */
+    public static function GetObject($serverid, $parentid = false) {
+        $folder = new SyncFolder();
+        $folder->serverid = $serverid;
+        $folder->parentid = $parentid;
+        return $folder;
     }
 }

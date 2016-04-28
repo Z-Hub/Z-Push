@@ -6,7 +6,7 @@
 *
 * Created   :   14.02.2011
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2015 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -513,6 +513,15 @@ class MAPIProvider {
      * @return SyncEmail
      */
     private function getEmail($mapimessage, $contentparameters) {
+        // This workaround fixes ZP-729 and still works with Outlook.
+        // FIXME: It should be properly fixed when refactoring.
+        $bpReturnType = Utils::GetBodyPreferenceBestMatch($contentparameters->GetBodyPreference());
+        if (($contentparameters->GetMimeSupport() == SYNC_MIMESUPPORT_NEVER) ||
+                ($key = array_search(SYNC_BODYPREFERENCE_MIME, $contentparameters->GetBodyPreference()) === false) ||
+                $bpReturnType != SYNC_BODYPREFERENCE_MIME) {
+            MAPIUtils::ParseSmime($this->session, $this->store, $this->getAddressbook(), $mapimessage);
+        }
+
         $message = new SyncMail();
 
         $this->getPropsFromMAPI($message, $mapimessage, MAPIMapping::GetEmailMapping());
@@ -668,6 +677,7 @@ class MAPIProvider {
         $attachtable = mapi_message_getattachmenttable($mapimessage);
         $rows = mapi_table_queryallrows($attachtable, array(PR_ATTACH_NUM));
         $entryid = bin2hex($messageprops[$emailproperties["entryid"]]);
+        $parentSourcekey = bin2hex($messageprops[$emailproperties["parentsourcekey"]]);
 
         foreach($rows as $row) {
             if(isset($row[PR_ATTACH_NUM])) {
@@ -699,7 +709,7 @@ class MAPIProvider {
 
                 // set AS version specific parameters
                 if (Request::GetProtocolVersion() >= 12.0) {
-                    $attach->filereference = $entryid.":".$row[PR_ATTACH_NUM];
+                    $attach->filereference = sprintf("%s:%s:%s", $entryid, $row[PR_ATTACH_NUM], $parentSourcekey);
                     $attach->method = (isset($attachprops[PR_ATTACH_METHOD])) ? $attachprops[PR_ATTACH_METHOD] : ATTACH_BY_VALUE;
 
                     // if displayname does not have the eml extension for embedde messages, android and WP devices won't open it
@@ -707,7 +717,15 @@ class MAPIProvider {
                         if (strtolower(substr($attach->displayname, -4)) != '.eml')
                             $attach->displayname .= '.eml';
                     }
-                    $attach->estimatedDataSize = $attachprops[PR_ATTACH_SIZE];
+                    // android devices require attachment size in order to display an attachment properly
+                    if (!isset($attachprops[PR_ATTACH_SIZE])) {
+                        $stream = mapi_openpropertytostream($mapiattach, PR_ATTACH_DATA_BIN);
+                        $stat = mapi_stream_stat($stream);
+                        $attach->estimatedDataSize = $stat['cb'];
+                    }
+                    else {
+                        $attach->estimatedDataSize = $attachprops[PR_ATTACH_SIZE];
+                    }
 
                     if (isset($attachprops[PR_ATTACH_CONTENT_ID]) && $attachprops[PR_ATTACH_CONTENT_ID])
                         $attach->contentid = $attachprops[PR_ATTACH_CONTENT_ID];
@@ -724,7 +742,7 @@ class MAPIProvider {
                 }
                 else {
                     $attach->attsize = $attachprops[PR_ATTACH_SIZE];
-                    $attach->attname = $entryid.":".$row[PR_ATTACH_NUM];
+                    $attach->attname = sprintf("%s:%s:%s", $entryid, $row[PR_ATTACH_NUM], $parentSourcekey);
                     if(!isset($message->attachments))
                         $message->attachments = array();
 
@@ -792,15 +810,6 @@ class MAPIProvider {
             $message->lastverbexecuted = Utils::GetLastVerbExecuted($message->lastverbexecuted);
         }
 
-        // OL 2013 doesn't show sender and subject for signed emails because the headers are missing
-        if(isset($message->messageclass) && strpos($message->messageclass, "IPM.Note.SMIME.MultipartSigned") === 0 &&
-                isset($message->asbody->type) && $message->asbody->type == SYNC_BODYPREFERENCE_MIME) {
-            ZLog::Write(LOGLEVEL_DEBUG, "Attach the transport message headers to a signed message");
-            $transportHeaders = array(PR_TRANSPORT_MESSAGE_HEADERS_W);
-            $messageHeaders = $this->getProps($mapimessage, $transportHeaders);
-            $message->asbody->data = $messageHeaders[PR_TRANSPORT_MESSAGE_HEADERS] ."\r\n\r\n" . $message->asbody->data;
-        }
-
         return $message;
     }
 
@@ -838,6 +847,14 @@ class MAPIProvider {
 
         $storeprops = $this->getStoreProps();
 
+        // For ZCP 7.0.x we need to retrieve more properties explicitly, see ZP-780
+        if (isset($folderprops[PR_SOURCE_KEY]) && !isset($folderprops[PR_ENTRYID]) && !isset($folderprops[PR_CONTAINER_CLASS])) {
+            $entryid = mapi_msgstore_entryidfromsourcekey($this->store, $folderprops[PR_SOURCE_KEY]);
+            $mapifolder = mapi_msgstore_openentry($this->store, $entryid);
+            $folderprops = mapi_getprops($mapifolder, array(PR_DISPLAY_NAME, PR_PARENT_ENTRYID, PR_ENTRYID, PR_SOURCE_KEY, PR_PARENT_SOURCE_KEY, PR_CONTAINER_CLASS, PR_ATTR_HIDDEN, PR_EXTENDED_FOLDER_FLAGS));
+            ZLog::Write(LOGLEVEL_DEBUG, "MAPIProvider->GetFolder(): received insuffient of data from ICS. Fetching required data.");
+        }
+
         if(!isset($folderprops[PR_DISPLAY_NAME]) ||
            !isset($folderprops[PR_PARENT_ENTRYID]) ||
            !isset($folderprops[PR_SOURCE_KEY]) ||
@@ -860,11 +877,24 @@ class MAPIProvider {
             return false;
         }
 
-        $folder->serverid = bin2hex($folderprops[PR_SOURCE_KEY]);
-        if($folderprops[PR_PARENT_ENTRYID] == $storeprops[PR_IPM_SUBTREE_ENTRYID])
+        // ignore suggested contacts folder
+        if (isset($folderprops[PR_CONTAINER_CLASS]) && $folderprops[PR_CONTAINER_CLASS] == "IPF.Contact" && isset($folderprops[PR_EXTENDED_FOLDER_FLAGS])) {
+            // the PR_EXTENDED_FOLDER_FLAGS is a binary value which consists of subproperties. 070403000000 indicates a suggested contacts folder
+            $extendedFlags = bin2hex($folderprops[PR_EXTENDED_FOLDER_FLAGS]);
+            if (substr_count($extendedFlags, "070403000000") > 0) {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("MAPIProvider->GetFolder(): folder '%s' should not be synchronized", $folderprops[PR_DISPLAY_NAME]));
+                return false;
+            }
+        }
+
+        $folder->BackendId = bin2hex($folderprops[PR_SOURCE_KEY]);
+        $folder->serverid = ZPush::GetDeviceManager()->GetFolderIdForBackendId($folder->BackendId, true);
+        if($folderprops[PR_PARENT_ENTRYID] == $storeprops[PR_IPM_SUBTREE_ENTRYID]) {
             $folder->parentid = "0";
-        else
-            $folder->parentid = bin2hex($folderprops[PR_PARENT_SOURCE_KEY]);
+        }
+        else {
+            $folder->parentid = ZPush::GetDeviceManager()->GetFolderIdForBackendId(bin2hex($folderprops[PR_PARENT_SOURCE_KEY]));
+        }
         $folder->displayname = w2u($folderprops[PR_DISPLAY_NAME]);
         $folder->type = $this->GetFolderType($folderprops[PR_ENTRYID], isset($folderprops[PR_CONTAINER_CLASS])?$folderprops[PR_CONTAINER_CLASS]:false);
 
@@ -1036,6 +1066,11 @@ class MAPIProvider {
      * @param SyncMail          $message
      */
     private function setEmail($mapimessage, $message) {
+        // update categories
+        if (!isset($message->categories)) $message->categories = array();
+        $emailmap = MAPIMapping::GetEmailMapping();
+        $this->setPropsInMAPI($mapimessage, $message, array("categories" => $emailmap["categories"]));
+
         $flagmapping = MAPIMapping::GetMailFlagsMapping();
         $flagprops = MAPIMapping::GetMailFlagsProperties();
         $flagprops = array_merge($this->getPropIdsFromStrings($flagmapping), $this->getPropIdsFromStrings($flagprops));
@@ -1154,7 +1189,7 @@ class MAPIProvider {
         $props[$appointmentprops["responsestatus"]] = (isset($appointment->responsestatus)) ? $appointment->responsestatus : olResponseNone;
 
         //sensitivity is not enough to mark an appointment as private, so we use another mapi tag
-        $private = (isset($appointment->sensitivity) && $appointment->sensitivity == 0) ? false : true;
+        $private = (isset($appointment->sensitivity) && $appointment->sensitivity >= SENSITIVITY_PRIVATE) ? true : false;
 
         // Set commonstart/commonend to start/end and remindertime to start, duration, private and cleanGlobalObjectId
         $props[$appointmentprops["commonstart"]] = $appointment->starttime;
@@ -1566,6 +1601,8 @@ class MAPIProvider {
             $recur["complete"] = (isset($task->complete) && $task->complete) ? 1 : 0;
             $recurrence->setRecurrence($recur);
         }
+
+        $props[$taskprops["private"]] = (isset($task->sensitivity) && $task->sensitivity >= SENSITIVITY_PRIVATE) ? true : false;
 
         //open addresss book for user resolve to set the owner
         $addrbook = $this->getAddressbook();
@@ -2341,28 +2378,64 @@ class MAPIProvider {
                 if (isset($message->asbody))
                     $message->asbody->type = $bpReturnType;
                 return $stat;
-       }
+        }
 
-        $body = mapi_message_openproperty($mapimessage, $property);
+        $stream = mapi_openproperty($mapimessage, $property, IID_IStream, 0, 0);
+        if ($stream) {
+            $stat = mapi_stream_stat($stream);
+            $streamsize = $stat['cb'];
+        }
+        else {
+            $streamsize = 0;
+        }
+
         //set the properties according to supported AS version
         if (Request::GetProtocolVersion() >= 12.0) {
             $message->asbody = new SyncBaseBody();
             $message->asbody->type = $bpReturnType;
-            if ($bpReturnType == SYNC_BODYPREFERENCE_RTF)
-                $message->asbody->data = base64_encode($body);
-            elseif (isset($message->internetcpid) && $bpReturnType == SYNC_BODYPREFERENCE_HTML)
-                $message->asbody->data = Utils::ConvertCodepageStringToUtf8($message->internetcpid, $body);
-            else
-                $message->asbody->data = w2u($body);
-            $message->asbody->estimatedDataSize = strlen($message->asbody->data);
+            if ($bpReturnType == SYNC_BODYPREFERENCE_RTF) {
+                $body = $this->mapiReadStream($stream, $streamsize);
+                $message->asbody->data = StringStreamWrapper::Open(base64_encode($body));
+            }
+            elseif (isset($message->internetcpid) && $bpReturnType == SYNC_BODYPREFERENCE_HTML) {
+                // if PR_HTML is UTF-8 we can stream it directly, else we have to convert to UTF-8 & wrap it
+                if (Utils::GetCodepageCharset($message->internetcpid) == "utf-8") {
+                    $message->asbody->data = MAPIStreamWrapper::Open($stream);
+                }
+                else {
+                    $body = $this->mapiReadStream($stream, $streamsize);
+                    $message->asbody->data = StringStreamWrapper::Open(Utils::ConvertCodepageStringToUtf8($message->internetcpid, $body));
+                }
+            }
+            else {
+                $message->asbody->data = MAPIStreamWrapper::Open($stream);
+            }
+            $message->asbody->estimatedDataSize = $streamsize;
         }
         else {
+            $body = $this->mapiReadStream($stream, $streamsize);
             $message->body = str_replace("\n","\r\n", w2u(str_replace("\r", "", $body)));
-            $message->bodysize = strlen($message->body);
+            $message->bodysize = $streamsize;
             $message->bodytruncated = 0;
         }
 
         return true;
+    }
+
+    /**
+     * Reads from a mapi stream, if it's set. If not, returns an empty string.
+     *
+     * @param resource $stream
+     * @param int $size
+     *
+     * @access private
+     * @return string
+     */
+    private function mapiReadStream($stream, $size) {
+        if (!$stream || $size == 0) {
+            return "";
+        }
+        return mapi_stream_read($stream, $streamsize);
     }
 
     /**
@@ -2375,49 +2448,33 @@ class MAPIProvider {
      * @return boolean
      */
     private function imtoinet($mapimessage, &$message) {
-        // if it is a signed message get a full attachment generated by ZCP
-        $props = mapi_getprops($mapimessage, array(PR_MESSAGE_CLASS));
-        if (isset($props[PR_MESSAGE_CLASS]) && $props[PR_MESSAGE_CLASS] && strpos(strtolower($props[PR_MESSAGE_CLASS]), 'multipartsigned')) {
-            // find the required attachment
-            $attachtable = mapi_message_getattachmenttable($mapimessage);
-            mapi_table_restrict($attachtable, MAPIUtils::GetSignedAttachmentRestriction());
-            if (mapi_table_getrowcount($attachtable) == 1) {
-                $rows = mapi_table_queryrows($attachtable, array(PR_ATTACH_NUM, PR_ATTACH_SIZE), 0, 1);
-                if (isset($rows[0][PR_ATTACH_NUM])) {
-                    $mapiattach = mapi_message_openattach($mapimessage, $rows[0][PR_ATTACH_NUM]);
-                    $stream = mapi_openpropertytostream($mapiattach, PR_ATTACH_DATA_BIN);
-                    $streamsize = $rows[0][PR_ATTACH_SIZE];
-                }
-            }
-        }
-        elseif (function_exists("mapi_inetmapi_imtoinet")) {
+        if (function_exists("mapi_inetmapi_imtoinet")) {
             $addrbook = $this->getAddressbook();
             $stream = mapi_inetmapi_imtoinet($this->session, $addrbook, $mapimessage, array('use_tnef' => -1));
             $mstreamstat = mapi_stream_stat($stream);
             $streamsize = $mstreamstat["cb"];
-        }
 
-        if (isset($stream) && isset($streamsize)) {
-            if (Request::GetProtocolVersion() >= 12.0) {
-                if (!isset($message->asbody))
-                    $message->asbody = new SyncBaseBody();
-                //TODO data should be wrapped in a MapiStreamWrapper
-                $message->asbody->data = mapi_stream_read($stream, $streamsize);
-                $message->asbody->estimatedDataSize = $streamsize;
-                $message->asbody->truncated = 0;
+            if (isset($stream) && isset($streamsize)) {
+                if (Request::GetProtocolVersion() >= 12.0) {
+                    if (!isset($message->asbody))
+                        $message->asbody = new SyncBaseBody();
+                    $message->asbody->data = MapiStreamWrapper::Open($stream);
+                    $message->asbody->estimatedDataSize = $streamsize;
+                    $message->asbody->truncated = 0;
+                }
+                else {
+                    $message->mimedata = MapiStreamWrapper::Open($stream);
+                    $message->mimesize = $streamsize;
+                    $message->mimetruncated = 0;
+                }
+                unset($message->body, $message->bodytruncated);
+                return true;
             }
             else {
-                $message->mimetruncated = 0;
-                //TODO mimedata should be a wrapped in a MapiStreamWrapper
-                $message->mimedata = mapi_stream_read($stream, $streamsize);
-                $message->mimesize = $streamsize;
+                ZLog::Write(LOGLEVEL_ERROR, sprintf("MAPIProvider->imtoinet(): got no stream or content from mapi_inetmapi_imtoinet()"));
             }
-            unset($message->body, $message->bodytruncated);
-            return true;
         }
-        else {
-            ZLog::Write(LOGLEVEL_ERROR, sprintf("Error opening attachment for imtoinet"));
-        }
+
         return false;
     }
 
@@ -2448,12 +2505,11 @@ class MAPIProvider {
             //only set the truncation size data if device set it in request
             if (    $bpo->GetTruncationSize() != false &&
                     $bpReturnType != SYNC_BODYPREFERENCE_MIME &&
-                    $message->asbody->estimatedDataSize > $bpo->GetTruncationSize() &&
-                    $contentparameters->GetTruncation() != SYNC_TRUNCATION_ALL // do not truncate message if the whole is requested, e.g. on fetch
+                    $message->asbody->estimatedDataSize > $bpo->GetTruncationSize()
                 ) {
-                $message->asbody->data = Utils::Utf8_truncate($message->asbody->data, $bpo->GetTruncationSize());
+                // truncate data stream
+                ftruncate($message->asbody->data, $bpo->GetTruncationSize());
                 $message->asbody->truncated = 1;
-
             }
             // set the preview or windows phones won't show the preview of an email
             if (Request::GetProtocolVersion() >= 14.0 && $bpo->GetPreview()) {
@@ -2610,15 +2666,16 @@ class MAPIProvider {
      * @return void
      */
     private function setASbody($asbody, &$props, $appointmentprops) {
-        if (isset($asbody->type) && isset($asbody->data) && strlen($asbody->data) > 0) {
+        // TODO: fix checking for the length
+        if (isset($asbody->type) && isset($asbody->data) /*&& strlen($asbody->data) > 0*/) {
             switch ($asbody->type) {
                 case SYNC_BODYPREFERENCE_PLAIN:
                 default:
                 //set plain body if the type is not in valid range
-                    $props[$appointmentprops["body"]] = u2w($asbody->data);
+                    $props[$appointmentprops["body"]] = stream_get_contents($asbody->data);
                     break;
                 case SYNC_BODYPREFERENCE_HTML:
-                    $props[$appointmentprops["html"]] = u2w($asbody->data);
+                    $props[$appointmentprops["html"]] = stream_get_contents($asbody->data);
                     break;
                 case SYNC_BODYPREFERENCE_RTF:
                     break;

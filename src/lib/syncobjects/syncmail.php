@@ -86,6 +86,7 @@ class SyncMail extends SyncObject {
     public $lastverbexectime;
     public $receivedasbcc;
     public $sender;
+    public $categories;
 
     function SyncMail() {
         $mapping = array (
@@ -129,7 +130,8 @@ class SyncMail extends SyncObject {
                     SYNC_POOMMAIL_MIMETRUNCATED                         => array (  self::STREAMER_VAR      => "mimetruncated",
                                                                                     self::STREAMER_CHECKS   => array(   self::STREAMER_CHECK_ZEROORONE      => self::STREAMER_CHECK_SETZERO)),
 
-                    SYNC_POOMMAIL_MIMEDATA                              => array (  self::STREAMER_VAR      => "mimedata"), //TODO mimedata should be of a type stream
+                    SYNC_POOMMAIL_MIMEDATA                              => array (  self::STREAMER_VAR      => "mimedata",
+                                                                                    self::STREAMER_TYPE     => self::STREAMER_TYPE_STREAM_ASPLAIN),
 
                     SYNC_POOMMAIL_MIMESIZE                              => array (  self::STREAMER_VAR      => "mimesize",
                                                                                     self::STREAMER_CHECKS   => array(   self::STREAMER_CHECK_CMPHIGHER      => -1)),

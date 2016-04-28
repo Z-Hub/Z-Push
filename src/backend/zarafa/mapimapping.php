@@ -186,6 +186,7 @@ class MAPIMapping {
             "nativebodytype"        => PR_NATIVE_BODY_INFO,
             "lastverbexecuted"      => PR_LAST_VERB_EXECUTED,
             "lastverbexectime"      => PR_LAST_VERB_EXECUTION_TIME,
+            "categories"            => "PT_MV_STRING8:PS_PUBLIC_STRINGS:Keywords",
             );
     }
 
@@ -205,6 +206,7 @@ class MAPIMapping {
             "representingentryid"   => PR_SENT_REPRESENTING_ENTRYID,
             "sourcekey"             => PR_SOURCE_KEY,
             "entryid"               => PR_ENTRYID,
+            "parentsourcekey"       => PR_PARENT_SOURCE_KEY,
             "body"                  => PR_BODY,
             "rtfcompressed"         => PR_RTF_COMPRESSED,
             "html"                  => PR_HTML,
@@ -399,6 +401,7 @@ class MAPIMapping {
             "status"                => "PT_LONG:PSETID_Task:0x8101",
             "icon"                  => PR_ICON_INDEX,
             "owner"                 => "PT_STRING8:PSETID_Task:0x811F",
+            "private"               => "PT_BOOLEAN:PSETID_Common:0x8506",
         );
     }
 
@@ -458,7 +461,7 @@ class MAPIMapping {
     public static function GetNoteMapping() {
         return array(
             "categories"            => "PT_MV_STRING8:PS_PUBLIC_STRINGS:Keywords",
-            "lastmodificationtime"  => PR_LAST_MODIFICATION_TIME,
+            "lastmodified"          => PR_LAST_MODIFICATION_TIME,
             "messageclass"          => PR_MESSAGE_CLASS,
             "subject"               => PR_SUBJECT,
         );

@@ -1,12 +1,12 @@
 <?php
 /***********************************************
-* File      :   paddingfilter.php
+* File      :   replacenullcharfilter.php
 * Project   :   Z-Push
-* Descr     :   Our own filter for stream padding with zero strings.
+* Descr     :   Filters null characters out of a stream.
 *
-* Created   :   18.07.2012
+* Created   :   11.09.2015
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2015 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -41,20 +41,10 @@
 * Consult LICENSE file for details
 ************************************************/
 
-/* Define our filter class
- *
- * Usage: stream_filter_append($stream, 'padding.X');
- * where X is a number a stream will be padded to be
- * multiple of (e.g. padding.3 will pad the stream
- * to be multiple of 3 which is useful in base64
- * encoding).
- *
- * */
-class padding_filter extends php_user_filter {
-    private $padding = 4; // default padding
+class ReplaceNullcharFilter extends php_user_filter {
 
     /**
-     * This method is called whenever data is read from or written to the attached stream
+     * This method is called whenever data is read from or written to the attached stream.
      *
      * @see php_user_filter::filter()
      *
@@ -69,32 +59,10 @@ class padding_filter extends php_user_filter {
      */
     function filter($in, $out, &$consumed, $closing) {
         while ($bucket = stream_bucket_make_writeable($in)) {
-            if ($this->padding != 0 && $bucket->datalen < 8192) {
-                $bucket->data .= str_pad($bucket->data, $this->padding, 0x0);
-            }
-            $consumed += ($this->padding != 0 && $bucket->datalen < 8192) ? ($bucket->datalen + $this->padding) : $bucket->datalen;
+            $bucket->data = str_replace("\0", "", $bucket->data);
+            $consumed += $bucket->datalen;
             stream_bucket_append($out, $bucket);
         }
         return PSFS_PASS_ON;
     }
-
-    /**
-     * Called when creating the filter
-     *
-     * @see php_user_filter::onCreate()
-     *
-     * @access public
-     * @return boolean
-     */
-    function onCreate() {
-        $delim = strrpos($this->filtername, '.');
-        if ($delim !== false) {
-            $padding = substr($this->filtername, $delim + 1);
-            if (is_numeric($padding))
-                $this->padding = $padding;
-        }
-        return true;
-    }
 }
-
-stream_filter_register("padding.*", "padding_filter");

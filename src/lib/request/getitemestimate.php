@@ -6,7 +6,7 @@
 *
 * Created   :   16.02.2012
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2015 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -67,7 +67,8 @@ class GetItemEstimate extends RequestProcessor {
             $spastatus = false;
 
             // read the folder properties
-            while (1) {
+            WBXMLDecoder::ResetInWhile("getItemEstimateFolders");
+            while(WBXMLDecoder::InWhile("getItemEstimateFolders")) {
                 if(self::$decoder->getElementStartTag(SYNC_SYNCKEY)) {
                     try {
                         $spa->SetSyncKey(self::$decoder->getElementContent());
@@ -81,7 +82,9 @@ class GetItemEstimate extends RequestProcessor {
                 }
 
                 elseif(self::$decoder->getElementStartTag(SYNC_GETITEMESTIMATE_FOLDERID)) {
-                    $spa->SetFolderId( self::$decoder->getElementContent());
+                    $fid = self::$decoder->getElementContent();
+                    $spa->SetFolderId($fid);
+                    $spa->SetBackendFolderId(self::$deviceManager->GetBackendIdForFolderId($fid));
 
                     if(!self::$decoder->getElementEndTag())
                         return false;
@@ -91,7 +94,7 @@ class GetItemEstimate extends RequestProcessor {
                 elseif(self::$decoder->getElementStartTag(SYNC_CONVERSATIONMODE)) {
                     $spa->SetConversationMode(true);
                     if(($conversationmode = self::$decoder->getElementContent()) !== false) {
-                        $spa->SetConversationMode((boolean)$conversationmode);
+                        $spa->SetConversationMode((bool)$conversationmode);
                         if(!self::$decoder->getElementEndTag())
                             return false;
                     }
@@ -114,7 +117,8 @@ class GetItemEstimate extends RequestProcessor {
                 }
 
                 while(self::$decoder->getElementStartTag(SYNC_OPTIONS)) {
-                    while(1) {
+                    WBXMLDecoder::ResetInWhile("getItemEstimateOptions");
+                    while(WBXMLDecoder::InWhile("getItemEstimateOptions")) {
                         $firstOption = true;
                         // foldertype definition
                         if(self::$decoder->getElementStartTag(SYNC_FOLDERTYPE)) {
@@ -192,8 +196,8 @@ class GetItemEstimate extends RequestProcessor {
                     $sc->AddParameter($spa, "state", self::$deviceManager->GetStateManager()->GetSyncState($spa->GetSyncKey()));
 
                     // if this is an additional folder the backend has to be setup correctly
-                    if (!self::$backend->Setup(ZPush::GetAdditionalSyncFolderStore($spa->GetFolderId())))
-                        throw new StatusException(sprintf("HandleGetItemEstimate() could not Setup() the backend for folder id '%s'", $spa->GetFolderId()), SYNC_GETITEMESTSTATUS_COLLECTIONINVALID);
+                    if (!self::$backend->Setup(ZPush::GetAdditionalSyncFolderStore($spa->GetBackendFolderId())))
+                        throw new StatusException(sprintf("HandleGetItemEstimate() could not Setup() the backend for folder id %s/%s", $spa->GetFolderId(), $spa->GetBackendFolderId()), SYNC_GETITEMESTSTATUS_COLLECTIONINVALID);
                 }
                 catch (StateNotFoundException $snfex) {
                     // ok, the key is invalid. Question is, if the hierarchycache is still ok

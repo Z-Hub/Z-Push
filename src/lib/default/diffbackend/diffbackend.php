@@ -51,15 +51,6 @@
 * Consult LICENSE file for details
 ************************************************/
 
-// default backend
-include_once('lib/default/backend.php');
-
-// DiffBackend components
-include_once('diffstate.php');
-include_once('importchangesdiff.php');
-include_once('exportchangesdiff.php');
-
-
 abstract class BackendDiff extends Backend {
     protected $store;
 

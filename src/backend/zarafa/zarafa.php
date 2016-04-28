@@ -10,7 +10,7 @@
 *
 * Created   :   01.10.2011
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -74,6 +74,8 @@ include_once('backend/zarafa/mapistreamwrapper.php');
 include_once('backend/zarafa/importer.php');
 include_once('backend/zarafa/exporter.php');
 
+//setlocale to UTF-8 in order to support properties containing Unicode characters
+setlocale(LC_CTYPE, "en_US.UTF-8");
 
 class BackendZarafa implements IBackend, ISearchProvider {
     private $mainUser;
@@ -89,9 +91,15 @@ class BackendZarafa implements IBackend, ISearchProvider {
     private $changesSinkStores;
     private $wastebasket;
     private $addressbook;
+    private $folderStatCache;
 
     // ZCP config parameter for PR_EC_ENABLED_FEATURES / PR_EC_DISABLED_FEATURES
     const ZPUSH_ENABLED = 'mobile';
+
+    const MAXAMBIGUOUSRECIPIENTS = 9999;
+    const FREEBUSYENUMBLOCKS = 50;
+    const MAXFREEBUSYSLOTS = 32767; // max length of 32k for the MergedFreeBusy element is allowed
+    const HALFHOURSECONDS = 1800;
 
     /**
      * Constructor of the Zarafa Backend
@@ -108,8 +116,10 @@ class BackendZarafa implements IBackend, ISearchProvider {
         $this->changesSink = false;
         $this->changesSinkFolders = array();
         $this->changesSinkStores = array();
+        $this->changesSinkHierarchyHash = false;
         $this->wastebasket = false;
         $this->session = false;
+        $this->folderStatCache = array();
 
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendZarafa using PHP-MAPI version: %s", phpversion("mapi")));
     }
@@ -166,7 +176,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
                 // send Z-Push version and user agent to ZCP - ZP-589
                 if (Utils::CheckMapiExtVersion('7.2.0')) {
                     $zpush_version = 'Z-Push_' . @constant('ZPUSH_VERSION');
-                    $user_agent = ZPush::GetDeviceManager()->GetUserAgent();
+                    $user_agent = (Request::GetDeviceID()) ? ZPush::GetDeviceManager()->GetUserAgent() : "unknown";
                     $this->session = @mapi_logon_zarafa($user, $pass, MAPI_SERVER, null, null, 0, $zpush_version, $user_agent);
                 }
                 else {
@@ -509,10 +519,25 @@ class BackendZarafa implements IBackend, ISearchProvider {
             if(!isset($fwmessage) || !$fwmessage)
                 throw new StatusException(sprintf("ZarafaBackend->SendMail(): Could not open message id '%s' in folder id '%s' to be replied/forwarded: 0x%X", $sm->source->itemid, $sm->source->folderid, mapi_last_hresult()), SYNC_COMMONSTATUS_ITEMNOTFOUND);
 
-            //update icon when forwarding or replying message
-            if ($sm->forwardflag) mapi_setprops($fwmessage, array(PR_ICON_INDEX=>262));
-            elseif ($sm->replyflag) mapi_setprops($fwmessage, array(PR_ICON_INDEX=>261));
-            mapi_savechanges($fwmessage);
+            // update icon and last_verb when forwarding or replying message
+            // reply-all (verb 103) is not supported, as we cannot really detect this case
+            if ($sm->forwardflag) {
+                $updateProps = array(
+                    PR_ICON_INDEX           => 262,
+                    PR_LAST_VERB_EXECUTED   => 104,
+                );
+            }
+            elseif ($sm->replyflag) {
+                $updateProps = array(
+                    PR_ICON_INDEX           => 261,
+                    PR_LAST_VERB_EXECUTED   => 102,
+                );
+            }
+            if (isset($updateProps)) {
+                $updateProps[PR_LAST_VERB_EXECUTION_TIME] = time();
+                mapi_setprops($fwmessage, $updateProps);
+                mapi_savechanges($fwmessage);
+            }
 
             // only attach the original message if the mobile does not send it itself
             if (!isset($sm->replacemime)) {
@@ -645,13 +670,17 @@ class BackendZarafa implements IBackend, ISearchProvider {
         if(!strpos($attname, ":"))
             throw new StatusException(sprintf("ZarafaBackend->GetAttachmentData('%s'): Error, attachment requested for non-existing item", $attname), SYNC_ITEMOPERATIONSSTATUS_INVALIDATT);
 
-        list($id, $attachnum) = explode(":", $attname);
+        list($id, $attachnum, $parentEntryid) = explode(":", $attname);
+        if (isset($parentEntryid)) {
+            $this->Setup(ZPush::GetAdditionalSyncFolderStore($parentEntryid));
+        }
 
         $entryid = hex2bin($id);
         $message = mapi_msgstore_openentry($this->store, $entryid);
         if(!$message)
             throw new StatusException(sprintf("ZarafaBackend->GetAttachmentData('%s'): Error, unable to open item for attachment data for id '%s' with: 0x%X", $attname, $id, mapi_last_hresult()), SYNC_ITEMOPERATIONSSTATUS_INVALIDATT);
 
+        MAPIUtils::ParseSmime($this->session, $this->defaultstore, $this->getAddressbook(), $message);
         $attach = mapi_message_openattach($message, $attachnum);
         if(!$attach)
             throw new StatusException(sprintf("ZarafaBackend->GetAttachmentData('%s'): Error, unable to open attachment number '%s' with: 0x%X", $attname, $attachnum, mapi_last_hresult()), SYNC_ITEMOPERATIONSSTATUS_INVALIDATT);
@@ -832,7 +861,8 @@ class BackendZarafa implements IBackend, ISearchProvider {
             return false;
         }
 
-        ZLog::Write(LOGLEVEL_DEBUG, "ZarafaBackend->HasChangesSink(): created");
+        $this->changesSinkHierarchyHash = $this->getHierarchyHash();
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->HasChangesSink(): created - HierarchyHash: %s", $this->changesSinkHierarchyHash));
 
         // advise the main store and also to check if the connection supports it
         return $this->adviseStoreToSink($this->defaultstore);
@@ -874,9 +904,26 @@ class BackendZarafa implements IBackend, ISearchProvider {
      * @return array
      */
     public function ChangesSink($timeout = 30) {
+        // clear the folder stats cache
+        unset($this->folderStatCache);
+
         $notifications = array();
+        $hierarchyNotifications = array();
         $sinkresult = @mapi_sink_timedwait($this->changesSink, $timeout * 1000);
+        // reverse array so that the changes on folders are before changes on messages and
+        // it's possible to filter such notifications
+        $sinkresult = array_reverse($sinkresult, true);
         foreach ($sinkresult as $sinknotif) {
+            // add a notification on a folder
+            if ($sinknotif['objtype'] == MAPI_FOLDER) {
+                $hierarchyNotifications[$sinknotif['entryid']] = IBackend::HIERARCHYNOTIFICATION;
+            }
+            // change on a message, remove hierarchy notification
+            if (isset($sinknotif['parentid']) && $sinknotif['objtype'] == MAPI_MESSAGE && isset($notifications[$sinknotif['parentid']])) {
+                unset($hierarchyNotifications[$sinknotif['parentid']]);
+            }
+
+            // TODO check if adding $sinknotif['objtype'] = MAPI_MESSAGE wouldn't break anything
             // check if something in the monitored folders changed
             if (isset($sinknotif['parentid']) && array_key_exists($sinknotif['parentid'], $this->changesSinkFolders)) {
                 $notifications[] = $this->changesSinkFolders[$sinknotif['parentid']];
@@ -884,6 +931,16 @@ class BackendZarafa implements IBackend, ISearchProvider {
             // deletes and moves
             if (isset($sinknotif['oldparentid']) && array_key_exists($sinknotif['oldparentid'], $this->changesSinkFolders)) {
                 $notifications[] = $this->changesSinkFolders[$sinknotif['oldparentid']];
+            }
+        }
+
+        // validate hierarchy notifications by comparing the hierarchy hashes (too many false positives otherwise)
+        if (!empty($hierarchyNotifications)) {
+            $hash = $this->getHierarchyHash();
+            if ($hash !== $this->changesSinkHierarchyHash) {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendZarafa->ChangesSink() Hierarchy notification, pending validation. New hierarchyHash: %s", $hash));
+                $notifications[] = IBackend::HIERARCHYNOTIFICATION;
+                $this->changesSinkHierarchyHash = $hash;
             }
         }
         return $notifications;
@@ -920,25 +977,79 @@ class BackendZarafa implements IBackend, ISearchProvider {
     public function ResolveRecipients($resolveRecipients) {
         if ($resolveRecipients instanceof SyncResolveRecipients) {
             $resolveRecipients->status = SYNC_RESOLVERECIPSSTATUS_SUCCESS;
-            $resolveRecipients->recipient = array();
+            $resolveRecipients->response = array();
+            $resolveRecipientsOptions = new SyncResolveRecipientsOptions();
+            $maxAmbiguousRecipients = self::MAXAMBIGUOUSRECIPIENTS;
+
+            if (isset($resolveRecipients->options)) {
+                $resolveRecipientsOptions = $resolveRecipients->options;
+                // only limit ambiguous recipients if the client requests it.
+
+                if (isset($resolveRecipientsOptions->maxambiguousrecipients) &&
+                        $resolveRecipientsOptions->maxambiguousrecipients >= 0 &&
+                        $resolveRecipientsOptions->maxambiguousrecipients <= self::MAXAMBIGUOUSRECIPIENTS) {
+                    $maxAmbiguousRecipients = $resolveRecipientsOptions->maxambiguousrecipients;
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("The client requested %d max ambigous recipients to resolve.", $maxAmbiguousRecipients));
+                }
+            }
+
             foreach ($resolveRecipients->to as $i => $to) {
-                $recipient = $this->resolveRecipient($to);
-                if ($recipient instanceof SyncResolveRecipient) {
-                    $resolveRecipients->recipient[$i] = $recipient;
+                $response = new SyncResolveRecipientsResponse();
+                $response->to = $to;
+                $response->status = SYNC_RESOLVERECIPSSTATUS_SUCCESS;
+
+                $recipient = $this->resolveRecipient($to, $maxAmbiguousRecipients);
+                if (is_array($recipient) && !empty($recipient)) {
+                    $response->recipientcount = 0;
+                    foreach ($recipient as $entry) {
+                        if ($entry instanceof SyncResolveRecipient) {
+                            // certificates are already set. Unset them if they weren't required.
+                            if (!isset($resolveRecipientsOptions->certificateretrieval)) {
+                                unset($entry->certificates);
+                            }
+                            if (isset($resolveRecipientsOptions->availability)) {
+                                if (!isset($resolveRecipientsOptions->starttime)) {
+                                    // TODO error, the request must include a valid StartTime element value
+                                }
+                                $entry->availability = $this->getAvailability($to, $entry, $resolveRecipientsOptions);
+                            }
+                            if (isset($resolveRecipientsOptions->picture)) {
+                                // TODO implement picture retrieval of the recipient
+                            }
+                            $response->recipientcount++;
+                            $response->recipient[] = $entry;
+                        }
+                        elseif (is_int($recipient)) {
+                            $response->status = $recipient;
+                        }
+                    }
                 }
-                elseif (is_int($recipient)) {
-                    $resolveRecipients->status = $recipient;
-                }
+
+                $resolveRecipients->response[$i] = $response;
             }
 
             return $resolveRecipients;
         }
+
         ZLog::Write(LOGLEVEL_WARN, "Not a valid SyncResolveRecipients object.");
         // return a SyncResolveRecipients object so that sync doesn't fail
         $r = new SyncResolveRecipients();
         $r->status = SYNC_RESOLVERECIPSSTATUS_PROTOCOLERROR;
-        $r->recipient = array();
         return $r;
+    }
+
+    /**
+     * Returns the policy name for the user.
+     * If the backend returns false, the 'default' policy is used.
+     * If the backend returns any other name than 'default' the policygroup with
+     * that name (defined in the policies.ini file) will be applied for this user.
+     *
+     * @access public
+     * @return string|boolean
+     */
+    public function GetUserPolicyName() {
+        // TODO: get the user's policy from the users' directory
+        return false;
     }
 
 
@@ -974,6 +1085,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
         // only return users whose displayName or the username starts with $name
         //TODO: use PR_ANR for this restriction instead of PR_DISPLAY_NAME and PR_ACCOUNT
         $addrbook = $this->getAddressbook();
+        // FIXME: create a function to get the adressbook contentstable
         if ($addrbook)
             $ab_entryid = mapi_ab_getdefaultdir($addrbook);
         if ($ab_entryid)
@@ -1127,6 +1239,11 @@ class BackendZarafa implements IBackend, ISearchProvider {
     */
     public function TerminateSearch($pid) {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->TerminateSearch(): terminating search for pid %d", $pid));
+        if (!isset($this->store) || $this->store === false) {
+            ZLog::Write(LOGLEVEL_WARN, sprintf("The store is not available. It is not possible to remove search folder with pid %d", $pid));
+            return false;
+        }
+
         $storeProps = mapi_getprops($this->store, array(PR_STORE_SUPPORT_MASK, PR_FINDER_ENTRYID));
         if (($storeProps[PR_STORE_SUPPORT_MASK] & STORE_SEARCH_OK) != STORE_SEARCH_OK) {
             ZLog::Write(LOGLEVEL_WARN, "Store doesn't support search folders. Public store doesn't have FINDER_ROOT folder");
@@ -1221,9 +1338,97 @@ class BackendZarafa implements IBackend, ISearchProvider {
         return $this->storeName;
     }
 
+    /**
+     * Indicates if the Backend supports folder statistics.
+     *
+     * @access public
+     * @return boolean
+     */
+    public function HasFolderStats() {
+        return true;
+    }
+
+    /**
+     * Returns a status indication of the folder.
+     * If there are changes in the folder, the returned value must change.
+     * The returned values are compared with '===' to determine if a folder needs synchronization or not.
+     *
+     * @param string $store         the store where the folder resides
+     * @param string $folderid      the folder id
+     *
+     * @access public
+     * @return string
+     */
+    public function GetFolderStat($store, $folderid) {
+        list($user, $domain) = Utils::SplitDomainUser($store);
+        if ($user === false) {
+            $user = $this->mainUser;
+        }
+
+        if (!isset($this->folderStatCache[$user])) {
+            $this->folderStatCache[$user] = array();
+        }
+
+        // TODO remove nameCache
+        if (!isset($this->nameCache))
+            $this->nameCache = array();
+
+        // if there is nothing in the cache for a store, load the data for all folders of it
+        if (empty($this->folderStatCache[$user])) {
+            // get the store
+            $userstore = $this->openMessageStore($user);
+            $rootfolder = mapi_msgstore_openentry($userstore);
+            $hierarchy =  mapi_folder_gethierarchytable($rootfolder, CONVENIENT_DEPTH);
+            $rows = mapi_table_queryallrows($hierarchy, array(PR_SOURCE_KEY, PR_LOCAL_COMMIT_TIME_MAX, PR_CONTENT_COUNT, PR_CONTENT_UNREAD, PR_DELETED_MSG_COUNT, PR_DISPLAY_NAME));
+
+            if (count($rows) == 0) {
+                ZLog::Write(LOGLEVEL_INFO, sprintf("ZarafaBackend->GetFolderStat(): could not access folder statistics for user '%s'. Probably missing 'read' permissions on the root folder! Folders of this store will be synchronized ONCE per hour only!", $user));
+            }
+
+            foreach($rows as $folder) {
+                $commit_time = isset($folder[PR_LOCAL_COMMIT_TIME_MAX])? $folder[PR_LOCAL_COMMIT_TIME_MAX] : "0000000000";
+                $content_count = isset($folder[PR_CONTENT_COUNT])? $folder[PR_CONTENT_COUNT] : -1;
+                $content_unread = isset($folder[PR_CONTENT_UNREAD])? $folder[PR_CONTENT_UNREAD] : -1;
+                $content_deleted = isset($folder[PR_DELETED_MSG_COUNT])? $folder[PR_DELETED_MSG_COUNT] : -1;
+
+                $this->folderStatCache[$user][bin2hex($folder[PR_SOURCE_KEY])] = $commit_time ."/". $content_count ."/". $content_unread ."/". $content_deleted;
+                $this->nameCache[bin2hex($folder[PR_SOURCE_KEY])] = $folder[PR_DISPLAY_NAME];
+            }
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->GetFolderStat() fetched status information of %d folders for store '%s'", count($this->folderStatCache[$user]), $user));
+            // TODO remove logging
+            foreach($this->folderStatCache[$user] as $fid => $stat) {
+                ZLog::Write(LOGLEVEL_INFO, sprintf("FolderStat: %s %s %s\t%s", $user, $fid, $stat, $this->nameCache[$fid]));
+            }
+        }
+
+        if (isset($this->folderStatCache[$user][$folderid])) {
+            // TODO remove nameCache output
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->GetFolderStat() found stat for '%s': %s", $this->nameCache[$folderid], $this->folderStatCache[$user][$folderid]));
+            return $this->folderStatCache[$user][$folderid];
+        }
+        else {
+            // a timestamp that changes once per hour is returned in case there is no data found for this folder. It will be synchronized only once per hour.
+            return gmdate("Y-m-d-H");
+        }
+    }
+
     /**----------------------------------------------------------------------------------------------------------
      * Private methods
      */
+
+    /**
+     * Returns a hash representing changes in the hierarchy of the main user.
+     * It changes if a folder is added, renamed or deleted.
+     *
+     * @access private
+     * @return string
+     */
+    private function getHierarchyHash() {
+        $rootfolder = mapi_msgstore_openentry($this->defaultstore);
+        $hierarchy =  mapi_folder_gethierarchytable($rootfolder, CONVENIENT_DEPTH);
+        return md5(serialize(mapi_table_queryallrows($hierarchy, array(PR_DISPLAY_NAME, PR_PARENT_ENTRYID))));
+    }
+
 
     /**
      * Advises a store to the changes sink
@@ -1236,15 +1441,16 @@ class BackendZarafa implements IBackend, ISearchProvider {
     private function adviseStoreToSink($store) {
         // check if we already advised the store
         if (!in_array($store, $this->changesSinkStores)) {
-            mapi_msgstore_advise($this->store, null, fnevObjectModified | fnevObjectCreated | fnevObjectMoved | fnevObjectDeleted, $this->changesSink);
-            $this->changesSinkStores[] = $store;
+            mapi_msgstore_advise($store, null, fnevObjectModified | fnevObjectCreated | fnevObjectMoved | fnevObjectDeleted, $this->changesSink);
 
             if (mapi_last_hresult()) {
-                ZLog::Write(LOGLEVEL_WARN, sprintf("ZarafaBackend->adviseStoreToSink(): failed to advised store '%s' with code 0x%X. Polling will be performed.", $this->store, mapi_last_hresult()));
+                ZLog::Write(LOGLEVEL_WARN, sprintf("ZarafaBackend->adviseStoreToSink(): failed to advised store '%s' with code 0x%X. Polling will be performed.", $store, mapi_last_hresult()));
                 return false;
             }
-            else
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->adviseStoreToSink(): advised store '%s'", $this->store));
+            else {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->adviseStoreToSink(): advised store '%s'", $store));
+                $this->changesSinkStores[] = $store;
+            }
         }
         return true;
     }
@@ -1347,10 +1553,10 @@ class BackendZarafa implements IBackend, ISearchProvider {
     private function settingsOOF(&$oof) {
         //if oof state is set it must be set of oof and get otherwise
         if (isset($oof->oofstate)) {
-            $this->settingsOOFSEt($oof);
+            $this->settingsOofSet($oof);
         }
         else {
-            $this->settingsOOFGEt($oof);
+            $this->settingsOofGet($oof);
         }
     }
 
@@ -1362,8 +1568,8 @@ class BackendZarafa implements IBackend, ISearchProvider {
      * @access private
      * @return void
      */
-    private function settingsOOFGEt(&$oof) {
-        $oofprops = mapi_getprops($this->defaultstore, array(PR_EC_OUTOFOFFICE, PR_EC_OUTOFOFFICE_MSG, PR_EC_OUTOFOFFICE_SUBJECT));
+    private function settingsOofGet(&$oof) {
+        $oofprops = mapi_getprops($this->defaultstore, array(PR_EC_OUTOFOFFICE, PR_EC_OUTOFOFFICE_MSG, PR_EC_OUTOFOFFICE_SUBJECT, PR_EC_OUTOFOFFICE_FROM, PR_EC_OUTOFOFFICE_UNTIL));
         $oof->oofstate = SYNC_SETTINGSOOF_DISABLED;
         $oof->Status = SYNC_SETTINGSSTATUS_SUCCESS;
         if ($oofprops != false) {
@@ -1376,6 +1582,26 @@ class BackendZarafa implements IBackend, ISearchProvider {
             $oofmessage->bodytype = $oof->bodytype;
             unset($oofmessage->appliesToExternal, $oofmessage->appliesToExternalUnknown);
             $oof->oofmessage[] = $oofmessage;
+
+            // check whether time based out of office is set
+            if ($oof->oofstate == SYNC_SETTINGSOOF_GLOBAL && isset($oofprops[PR_EC_OUTOFOFFICE_FROM]) && isset($oofprops[PR_EC_OUTOFOFFICE_UNTIL])) {
+                if ($oofprops[PR_EC_OUTOFOFFICE_FROM] < $oofprops[PR_EC_OUTOFOFFICE_UNTIL]) {
+                    $oof->oofstate = SYNC_SETTINGSOOF_TIMEBASED;
+                    $oof->starttime = $oofprops[PR_EC_OUTOFOFFICE_FROM];
+                    $oof->endtime = $oofprops[PR_EC_OUTOFOFFICE_UNTIL];
+                }
+                else {
+                    ZLog::Write(LOGLEVEL_WARN, sprintf("Zarafa->settingsOofGet(): Time based out of office set but end time ('%s') is before startime ('%s').",
+                        date("Y-m-d H:i:s", $oofprops[PR_EC_OUTOFOFFICE_FROM]), date("Y-m-d H:i:s", $oofprops[PR_EC_OUTOFOFFICE_UNTIL])));
+                    $oof->Status = SYNC_SETTINGSSTATUS_PROTOCOLLERROR;
+                }
+            }
+            elseif ($oof->oofstate == SYNC_SETTINGSOOF_GLOBAL && (isset($oofprops[PR_EC_OUTOFOFFICE_FROM]) || isset($oofprops[PR_EC_OUTOFOFFICE_UNTIL]))) {
+                ZLog::Write(LOGLEVEL_WARN, sprintf("Zarafa->settingsOofGet(): Time based out of office set but either start time ('%s') or end time ('%s') is missing.",
+                    (isset($oofprops[PR_EC_OUTOFOFFICE_FROM]) ? date("Y-m-d H:i:s", $oofprops[PR_EC_OUTOFOFFICE_FROM]) : 'empty'),
+                    (isset($oofprops[PR_EC_OUTOFOFFICE_UNTIL]) ? date("Y-m-d H:i:s", $oofprops[PR_EC_OUTOFOFFICE_UNTIL]) : 'empty')));
+                $oof->Status = SYNC_SETTINGSSTATUS_PROTOCOLLERROR;
+            }
         }
         else {
             ZLog::Write(LOGLEVEL_WARN, "Unable to get out of office information");
@@ -1393,7 +1619,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
      * @access private
      * @return void
      */
-    private function settingsOOFSEt(&$oof) {
+    private function settingsOofSet(&$oof) {
         $oof->Status = SYNC_SETTINGSSTATUS_SUCCESS;
         $props = array();
         if ($oof->oofstate == SYNC_SETTINGSOOF_GLOBAL || $oof->oofstate == SYNC_SETTINGSOOF_TIMEBASED) {
@@ -1404,9 +1630,22 @@ class BackendZarafa implements IBackend, ISearchProvider {
                     $props[PR_EC_OUTOFOFFICE_SUBJECT] = "Out of office";
                 }
             }
+            if ($oof->oofstate == SYNC_SETTINGSOOF_TIMEBASED) {
+                if(isset($oof->starttime) && isset($oof->endtime)) {
+                    $props[PR_EC_OUTOFOFFICE_FROM] = $oof->starttime;
+                    $props[PR_EC_OUTOFOFFICE_UNTIL] = $oof->endtime;
+                }
+                elseif (isset($oof->starttime) || isset($oof->endtime)) {
+                    $oof->Status = SYNC_SETTINGSSTATUS_PROTOCOLLERROR;
+                }
+            }
+            else {
+                $deleteProps = array(PR_EC_OUTOFOFFICE_FROM, PR_EC_OUTOFOFFICE_UNTIL);
+            }
         }
         elseif($oof->oofstate == SYNC_SETTINGSOOF_DISABLED) {
             $props[PR_EC_OUTOFOFFICE] = false;
+            $deleteProps = array(PR_EC_OUTOFOFFICE_FROM, PR_EC_OUTOFOFFICE_UNTIL);
         }
 
         if (!empty($props)) {
@@ -1416,6 +1655,10 @@ class BackendZarafa implements IBackend, ISearchProvider {
                 ZLog::Write(LOGLEVEL_ERROR, sprintf("Setting oof information failed (%X)", $result));
                 return false;
             }
+        }
+
+        if (!empty($deleteProps)) {
+            @mapi_deleteprops($this->defaultstore, $deleteProps);
         }
 
         return true;
@@ -1629,17 +1872,18 @@ class BackendZarafa implements IBackend, ISearchProvider {
      * Resolve recipient based on his email address.
      *
      * @param string $to
+     * @param int $maxAmbiguousRecipients
      *
      * @return SyncResolveRecipient|boolean
      */
-    private function resolveRecipient($to) {
-        $recipient = $this->resolveRecipientGAL($to);
+    private function resolveRecipient($to, $maxAmbiguousRecipients) {
+        $recipient = $this->resolveRecipientGAL($to, $maxAmbiguousRecipients);
 
         if ($recipient !== false) {
             return $recipient;
         }
 
-        $recipient = $this->resolveRecipientContact($to);
+        $recipient = $this->resolveRecipientContact($to, $maxAmbiguousRecipients);
 
         if ($recipient !== false) {
             return $recipient;
@@ -1652,18 +1896,18 @@ class BackendZarafa implements IBackend, ISearchProvider {
      * Resolves recipient from the GAL and gets his certificates.
      *
      * @param string $to
-     * @return SyncResolveRecipient|boolean
+     * @param int $maxAmbiguousRecipients
+     * @return array|boolean
      */
-    private function resolveRecipientGAL($to) {
+    private function resolveRecipientGAL($to, $maxAmbiguousRecipients) {
+        ZLog::Write(LOGLEVEL_WBXML, sprintf("Resolving recipient '%s' in GAL", $to));
         $addrbook = $this->getAddressbook();
-            $ab_entryid = mapi_ab_getdefaultdir($addrbook);
+        // FIXME: create a function to get the adressbook contentstable
+        $ab_entryid = mapi_ab_getdefaultdir($addrbook);
         if ($ab_entryid)
             $ab_dir = mapi_ab_openentry($addrbook, $ab_entryid);
         if ($ab_dir)
             $table = mapi_folder_getcontentstable($ab_dir);
-
-        //         if (!$table)
-            //             throw new StatusException(sprintf("ZarafaBackend->resolveRecipient(): could not open addressbook: 0x%X", mapi_last_hresult()), SYNC_RESOLVERECIPSSTATUS_RESPONSE_UNRESOLVEDRECIP);
 
         if (!$table) {
             ZLog::Write(LOGLEVEL_WARN, sprintf("Unable to open addressbook:0x%X", mapi_last_hresult()));
@@ -1675,21 +1919,40 @@ class BackendZarafa implements IBackend, ISearchProvider {
 
         $querycnt = mapi_table_getrowcount($table);
         if ($querycnt > 0) {
-            $abentries = mapi_table_queryrows($table, array(PR_DISPLAY_NAME, PR_EMS_AB_TAGGED_X509_CERT), 0, 1);
-            $certificates =
-                // check if there are any certificates available
-                (isset($abentries[0][PR_EMS_AB_TAGGED_X509_CERT]) && is_array($abentries[0][PR_EMS_AB_TAGGED_X509_CERT]) && count($abentries[0][PR_EMS_AB_TAGGED_X509_CERT])) ?
-                    $this->getCertificates($abentries[0][PR_EMS_AB_TAGGED_X509_CERT], $querycnt) : false;
-            if ($certificates === false) {
-                // the recipient does not have a valid certificate, set the appropriate status
-                ZLog::Write(LOGLEVEL_INFO, sprintf("No certificates found for '%s'", $to));
-                $certificates = $this->getCertificates(false);
+            $recipientGal = array();
+            $rowsToQuery = $maxAmbiguousRecipients;
+            // some devices request 0 ambiguous recipients
+            if ($querycnt == 1 && $maxAmbiguousRecipients == 0) {
+                $rowsToQuery = 1;
             }
-            $recipient = $this->createResolveRecipient(SYNC_RESOLVERECIPIENTS_TYPE_GAL, w2u($abentries[0][PR_DISPLAY_NAME]), $to, $certificates);
-            return $recipient;
+            elseif ($querycnt > 1 && $maxAmbiguousRecipients == 0) {
+                ZLog::Write(LOGLEVEL_INFO, sprintf("GAL search found %d recipients but the device hasn't requested ambiguous recipients", $querycnt));
+                return $recipientGal;
+            }
+            // get the certificate every time because caching the certificate is less expensive than opening addressbook entry again
+            $abentries = mapi_table_queryrows($table, array(PR_ENTRYID, PR_DISPLAY_NAME, PR_EMS_AB_TAGGED_X509_CERT, PR_OBJECT_TYPE), 0, $rowsToQuery);
+            for ($i = 0, $nrEntries = count($abentries); $i < $nrEntries; $i++) {
+                if ($abentries[$i][PR_OBJECT_TYPE] == MAPI_DISTLIST) {
+                    // dist lists must be expanded into their members
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("'%s' is a dist list. Expand it to members.", $to));
+                    $distList = mapi_ab_openentry($addrbook, $abentries[$i][PR_ENTRYID]);
+                    $distListContent = mapi_folder_getcontentstable($distList);
+                    $distListMembers = mapi_table_queryallrows($distListContent, array(PR_ENTRYID, PR_DISPLAY_NAME, PR_EMS_AB_TAGGED_X509_CERT));
+                    for ($j = 0, $nrDistListMembers = mapi_table_getrowcount($distListContent); $j < $nrDistListMembers; $j++) {
+                        ZLog::Write(LOGLEVEL_WBXML, sprintf("distlist's '%s' member", $to, $distListMembers[$j][PR_DISPLAY_NAME]));
+                        $recipientGal[] = $this->createResolveRecipient(SYNC_RESOLVERECIPIENTS_TYPE_GAL, $to, $distListMembers[$j], $nrDistListMembers);
+                    }
+                }
+                elseif ($abentries[$i][PR_OBJECT_TYPE] == MAPI_MAILUSER) {
+                    $recipientGal[] = $this->createResolveRecipient(SYNC_RESOLVERECIPIENTS_TYPE_GAL, $to, $abentries[$i]);
+                }
+            }
+
+            ZLog::Write(LOGLEVEL_WBXML, "Found a recipient in GAL");
+            return $recipientGal;
         }
         else {
-            ZLog::Write(LOGLEVEL_WARN, sprintf("No recipient found for: '%s'", $to));
+            ZLog::Write(LOGLEVEL_WARN, sprintf("No recipient found for: '%s' in GAL", $to));
             return SYNC_RESOLVERECIPSSTATUS_RESPONSE_UNRESOLVEDRECIP;
         }
         return false;
@@ -1699,10 +1962,12 @@ class BackendZarafa implements IBackend, ISearchProvider {
      * Resolves recipient from the contact list and gets his certificates.
      *
      * @param string $to
+     * @param int $maxAmbiguousRecipients
      *
-     * @return SyncResolveRecipient|boolean
+     * @return array|boolean
      */
-    private function resolveRecipientContact($to) {
+    private function resolveRecipientContact($to, $maxAmbiguousRecipients) {
+        ZLog::Write(LOGLEVEL_WBXML, sprintf("Resolving recipient '%s' in user's contacts", $to));
         // go through all contact folders of the user and
         // check if there's a contact with the given email address
         $root = mapi_msgstore_openentry($this->defaultstore);
@@ -1714,32 +1979,22 @@ class BackendZarafa implements IBackend, ISearchProvider {
         $recipients = array();
 
         if ($contacts !== false) {
+            ZLog::Write(LOGLEVEL_WBXML, sprintf("Found %d contacts in main contacts folder.", count($contacts)));
             // create resolve recipient object
             foreach ($contacts as $contact) {
-                $certificates =
-                // check if there are any certificates available
-                (isset($contact[PR_USER_X509_CERTIFICATE]) && is_array($contact[PR_USER_X509_CERTIFICATE]) && count($contact[PR_USER_X509_CERTIFICATE])) ?
-                $this->getCertificates($contact[PR_USER_X509_CERTIFICATE], 1) : false;
-
-                if ($certificates !== false) {
-                    return $this->createResolveRecipient(SYNC_RESOLVERECIPIENTS_TYPE_CONTACT, u2w($contact[PR_DISPLAY_NAME]), $to, $certificates);
-                }
+                $recipients[] = $this->createResolveRecipient(SYNC_RESOLVERECIPIENTS_TYPE_CONTACT, $to, $contact);
             }
         }
 
         $contactfolder = mapi_msgstore_openentry($this->defaultstore, $rootprops[PR_IPM_CONTACT_ENTRYID]);
         $subfolders = MAPIUtils::GetSubfoldersForType($contactfolder, "IPF.Contact");
-        foreach($subfolders as $folder) {
-            $contacts = $this->getContactsFromFolder($this->defaultstore, $folder[PR_ENTRYID], $to);
-            if ($contacts !== false) {
-                foreach ($contacts as $contact) {
-                    $certificates =
-                    // check if there are any certificates available
-                    (isset($contact[PR_USER_X509_CERTIFICATE]) && is_array($contact[PR_USER_X509_CERTIFICATE]) && count($contact[PR_USER_X509_CERTIFICATE])) ?
-                    $this->getCertificates($contact[PR_USER_X509_CERTIFICATE], 1) : false;
-
-                    if ($certificates !== false) {
-                        return $this->createResolveRecipient(SYNC_RESOLVERECIPIENTS_TYPE_CONTACT, u2w($contact[PR_DISPLAY_NAME]), $to, $certificates);
+        if ($subfolders !== false) {
+            foreach($subfolders as $folder) {
+                $contacts = $this->getContactsFromFolder($this->defaultstore, $folder[PR_ENTRYID], $to);
+                if ($contacts !== false) {
+                    ZLog::Write(LOGLEVEL_WBXML, sprintf("Found %d contacts in contacts' subfolder.", count($contacts)));
+                    foreach ($contacts as $contact) {
+                        $recipients[] = $this->createResolveRecipient(SYNC_RESOLVERECIPIENTS_TYPE_CONTACT, $to, $contact);
                     }
                 }
             }
@@ -1762,15 +2017,9 @@ class BackendZarafa implements IBackend, ISearchProvider {
                         foreach($subfolders as $folder) {
                             $contacts = $this->getContactsFromFolder($publicstore, $folder[PR_ENTRYID], $to);
                             if ($contacts !== false) {
+                                ZLog::Write(LOGLEVEL_WBXML, sprintf("Found %d contacts in public contacts folder.", count($contacts)));
                                 foreach ($contacts as $contact) {
-                                    $certificates =
-                                    // check if there are any certificates available
-                                    (isset($contact[PR_USER_X509_CERTIFICATE]) && is_array($contact[PR_USER_X509_CERTIFICATE]) && count($contact[PR_USER_X509_CERTIFICATE])) ?
-                                    $this->getCertificates($contact[PR_USER_X509_CERTIFICATE], 1) : false;
-
-                                    if ($certificates !== false) {
-                                        return $this->createResolveRecipient(SYNC_RESOLVERECIPIENTS_TYPE_CONTACT, u2w($contact[PR_DISPLAY_NAME]), $to, $certificates);
-                                    }
+                                    $recipients[] = $this->createResolveRecipient(SYNC_RESOLVERECIPIENTS_TYPE_CONTACT, $to, $contact);
                                 }
                             }
                         }
@@ -1783,20 +2032,26 @@ class BackendZarafa implements IBackend, ISearchProvider {
             ZLog::Write(LOGLEVEL_WARN, sprintf("Unable to open public store: 0x%X", $result));
         }
 
-        $certificates = $this->getCertificates(false);
-        return $this->createResolveRecipient(SYNC_RESOLVERECIPIENTS_TYPE_CONTACT, $to, $to, $certificates);
+        if (empty($recipients)) {
+            $contactProperties = array();
+            $contactProperties[PR_DISPLAY_NAME] = $to;
+            $contactProperties[PR_USER_X509_CERTIFICATE] = false;
+
+            $recipients[] = $this->createResolveRecipient(SYNC_RESOLVERECIPIENTS_TYPE_CONTACT, $to, $contactProperties);
+        }
+        return $recipients;
     }
 
     /**
-     * Creates SyncRRCertificates object for ResolveRecipients
+     * Creates SyncResolveRecipientsCertificates object for ResolveRecipients
      *
      * @param binary $certificates
      * @param int $recipientCount
      *
-     * @return SyncRRCertificates
+     * @return SyncResolveRecipientsCertificates
      */
     private function getCertificates($certificates, $recipientCount = 0) {
-        $cert = new SyncRRCertificates();
+        $cert = new SyncResolveRecipientsCertificates();
         if ($certificates === false) {
             $cert->status = SYNC_RESOLVERECIPSSTATUS_CERTIFICATES_NOVALIDCERT;
             return $cert;
@@ -1812,28 +2067,147 @@ class BackendZarafa implements IBackend, ISearchProvider {
     }
 
     /**
-     *
+     * Creates SyncResolveRecipient object for ResolveRecipientsResponse.
      * @param int $type
-     * @param string $displayname
      * @param string $email
-     * @param array $certificates
+     * @param array $recipientProperties
+     * @param int $recipientCount
      *
      * @return SyncResolveRecipient
      */
-    private function createResolveRecipient($type, $displayname, $email, $certificates) {
+    private function createResolveRecipient($type, $email, $recipientProperties, $recipientCount = 0) {
         $recipient = new SyncResolveRecipient();
         $recipient->type = $type;
-        $recipient->displayname = $displayname;
+        $recipient->displayname = u2w($recipientProperties[PR_DISPLAY_NAME]);
         $recipient->emailaddress = $email;
+
+        if ($type == SYNC_RESOLVERECIPIENTS_TYPE_GAL) {
+            $certificateProp = PR_EMS_AB_TAGGED_X509_CERT;
+        }
+        elseif ($type == SYNC_RESOLVERECIPIENTS_TYPE_CONTACT) {
+            $certificateProp = PR_USER_X509_CERTIFICATE;
+        }
+        else {
+            $certificateProp = null;
+        }
+
+        if (isset($recipientProperties[$certificateProp]) && is_array($recipientProperties[$certificateProp]) && !empty($recipientProperties[$certificateProp])) {
+            $certificates = $this->getCertificates($recipientProperties[$certificateProp], $recipientCount);
+        }
+        else {
+            $certificates = $this->getCertificates(false);
+            ZLog::Write(LOGLEVEL_INFO, sprintf("No certificate found for '%s' (requested email address: '%s')", $recipientProperties[PR_DISPLAY_NAME], $email));
+        }
         $recipient->certificates = $certificates;
-        if ($recipient->certificates === false) {
-            // the recipient does not have a valid certificate, set the appropriate status
-            ZLog::Write(LOGLEVEL_INFO, sprintf("No certificates found for '%s'", $email));
-            $cert = new SyncRRCertificates();
-            $cert->status = SYNC_RESOLVERECIPSSTATUS_CERTIFICATES_NOVALIDCERT;
-            $recipient->certificates = $cert;
+
+        if (isset($recipientProperties[PR_ENTRYID])) {
+            $recipient->id = $recipientProperties[PR_ENTRYID];
         }
         return $recipient;
+    }
+
+    /**
+     * Gets the availability of a user for the given time window.
+     *
+     * @param string $to
+     * @param SyncResolveRecipient $resolveRecipient
+     * @param SyncResolveRecipientsOptions $resolveRecipientsOptions
+     *
+     * @access private
+     * @return SyncResolveRecipientsAvailability
+     */
+    private function getAvailability($to, $resolveRecipient, $resolveRecipientsOptions) {
+        $availability = new SyncResolveRecipientsAvailability();
+        $availability->status = SYNC_RESOLVERECIPSSTATUS_AVAILABILITY_SUCCESS;
+
+        if (!isset($resolveRecipient->id)) {
+            // TODO this shouldn't happen but try to get the recipient in such a case
+        }
+
+        $fbsupport = mapi_freebusysupport_open($this->session);
+        if (mapi_last_hresult()) {
+            ZLog::Write(LOGLEVEL_WARN, sprintf("Unable to open free busy support (0x%08X)", mapi_last_hresult()));
+            $availability->status = SYNC_RESOLVERECIPSSTATUS_AVAILABILITY_FAILED;
+            return $availability;
+        }
+        $fbDataArray = mapi_freebusysupport_loaddata($fbsupport, array($resolveRecipient->id));
+
+        $start = strtotime($resolveRecipientsOptions->availability->starttime);
+        $end = strtotime($resolveRecipientsOptions->availability->endtime);
+        // Each digit in the MergedFreeBusy indicates the free/busy status for the user for every 30 minute interval.
+        $timeslots = intval(ceil(($end - $start) / self::HALFHOURSECONDS));
+
+        if ($timeslots > self::MAXFREEBUSYSLOTS) {
+            throw new StatusException("ZarafaBackend->getAvailability(): the requested free busy range is too large.", SYNC_RESOLVERECIPSSTATUS_PROTOCOLERROR);
+        }
+
+        if(is_array($fbDataArray) && !empty($fbDataArray)) {
+            foreach($fbDataArray as $fbDataUser) {
+                $rangeuser = mapi_freebusydata_getpublishrange($fbDataUser);
+                if($rangeuser == null) {
+                    ZLog::Write(LOGLEVEL_INFO, sprintf("Unable to retrieve mapi_freebusydata_getpublishrange (0x%X) for '%s'", mapi_last_hresult(), $resolveRecipient->displayname));
+                    $availability->status = SYNC_RESOLVERECIPSSTATUS_AVAILABILITY_FAILED;
+                    return $availability;
+                }
+
+                // if free busy information is available for the whole requested period,
+                // assume that the user is free for the requested range.
+                if ($rangeuser['start'] <= $start && $rangeuser['end'] >= $end) {
+                    $mergedFreeBusy = str_pad(fbFree, $timeslots, fbFree);
+                }
+                // free busy information is not available at the begin of the requested period
+                elseif ($rangeuser['start'] > $start && $rangeuser['end'] >= $end) {
+                    $missingSlots = intval(ceil(($rangeuser['start'] - $start) / self::HALFHOURSECONDS));
+                    $mergedFreeBusy = str_pad(fbNoData, $missingSlots, fbNoData) . str_pad(fbFree, ($timeslots - $missingSlots), fbFree);
+                }
+                // free busy information is not available at the end of the requested period
+                elseif ($rangeuser['start'] <= $start && $rangeuser['end'] < $end) {
+                    $missingSlots = intval(ceil(($rangeuser['end'] - $end) / self::HALFHOURSECONDS));
+                    $mergedFreeBusy = str_pad(fbFree, ($timeslots - $missingSlots), fbFree) . str_pad(fbNoData, $missingSlots, fbNoData) ;
+                }
+                // free busy information is not available at the begin and at the end of the requested period
+                else {
+                    $missingBeginSlots = intval(ceil(($rangeuser['start'] - $start) / self::HALFHOURSECONDS));
+                    $missingEndSlots = intval(ceil(($rangeuser['end'] - $end) / self::HALFHOURSECONDS));
+                    $mergedFreeBusy = str_pad(fbNoData, $missingBeginSlots, fbNoData) .
+                                        str_pad(fbFree, ($timeslots - $missingBeginSlots - $missingEndSlots), fbFree) .
+                                        str_pad(fbNoData, $missingEndSlots, fbNoData) ;
+                }
+
+                $enumblock = mapi_freebusydata_enumblocks($fbDataUser, $start, $end);
+                mapi_freebusyenumblock_reset($enumblock);
+
+                // FIXME: use WBXMLDecoder::ResetInWhile("freebusyEnumblock"); after merging back into develop branch
+                while(true) {
+                    $blocks = mapi_freebusyenumblock_next($enumblock, self::FREEBUSYENUMBLOCKS);
+                    if(!$blocks) {
+                        break;
+                    }
+
+                    foreach($blocks as $blockItem) {
+                        // calculate which timeslot of mergedFreeBusy should be replaced.
+                        $blockDuration = ($blockItem['end'] - $blockItem['start']) / self::HALFHOURSECONDS;
+                        $startSlot = intval(floor(($blockItem['start'] - $start) / self::HALFHOURSECONDS));
+                        $endSlot = intval(floor(($blockItem['end'] - $start) / self::HALFHOURSECONDS));
+                        // check if the end slot is the exact begin of the next slot from request; in such case it's necessary to reduce the endslot.
+                        if ($start + $endSlot * self::HALFHOURSECONDS == $blockItem['end'] && $endSlot > $startSlot) {
+                            $endSlot--;
+                        }
+
+                        for ($i = $startSlot; $i <= $endSlot; $i++) {
+                            // only set the new slot's free busy status if it's higher than the current one
+                            if ($blockItem['status'] > $mergedFreeBusy[$i]) {
+                                $mergedFreeBusy[$i] = $blockItem['status'];
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        mapi_freebusysupport_close($fbsupport);
+        $availability->mergedfreebusy = $mergedFreeBusy;
+        return $availability;
     }
 
     /**
@@ -1851,7 +2225,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
         mapi_table_restrict($folderContent, MAPIUtils::GetEmailAddressRestriction($store, $email));
         // TODO max limit
         if (mapi_table_getrowcount($folderContent) > 0) {
-            return mapi_table_queryallrows($folderContent, array(PR_DISPLAY_NAME, PR_USER_X509_CERTIFICATE));
+            return mapi_table_queryallrows($folderContent, array(PR_DISPLAY_NAME, PR_USER_X509_CERTIFICATE, PR_ENTRYID));
         }
         return false;
     }

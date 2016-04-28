@@ -48,6 +48,7 @@ class MAPIStreamWrapper {
     private $mapistream;
     private $position;
     private $streamlength;
+    private $toTruncate;
 
     /**
      * Opens the stream
@@ -68,13 +69,19 @@ class MAPIStreamWrapper {
             return false;
 
         $this->position = 0;
+        $this->toTruncate = false;
 
         // this is our stream!
         $this->mapistream = $contextOptions[self::PROTOCOL]['stream'];
 
         // get the data length from mapi
-        $stat = mapi_stream_stat($this->mapistream);
-        $this->streamlength = $stat["cb"];
+        if ($this->mapistream) {
+            $stat = mapi_stream_stat($this->mapistream);
+            $this->streamlength = $stat["cb"];
+        }
+        else {
+            $this->streamlength = 0;
+        }
 
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("MAPIStreamWrapper::stream_open(): initialized mapistream: %s streamlength: %d", $this->mapistream, $this->streamlength));
 
@@ -91,9 +98,45 @@ class MAPIStreamWrapper {
      */
     public function stream_read($len) {
         $len = ($this->position + $len > $this->streamlength) ? ($this->streamlength - $this->position) : $len;
-        $data = mapi_stream_read($this->mapistream, $len);
+
+        // read 4 additional bytes from the stream so we can always truncate correctly
+        if ($this->toTruncate)
+            $len += 4;
+        if ($this->mapistream) {
+            $data = mapi_stream_read($this->mapistream, $len);
+        }
+        else {
+            $data = "";
+        }
         $this->position += strlen($data);
+
+        // we need to truncate UTF8 compatible if ftruncate() was called
+        if ($this->toTruncate && $this->position >= $this->streamlength) {
+            $data = Utils::Utf8_truncate($data, $this->streamlength);
+        }
+
         return $data;
+    }
+
+    /**
+     * Stream "seek" functionality.
+     *
+     * @param int $offset
+     * @param int $whence
+     * @return boolean
+     */
+    public function stream_seek($offset, $whence = SEEK_SET) {
+        switch($whence) {
+            case SEEK_SET:
+                $mapiWhence = STREAM_SEEK_SET;
+                break;
+            case SEEK_END:
+                $mapiWhence = STREAM_SEEK_END;
+                break;
+            default:
+                $mapiWhence = STREAM_SEEK_CUR;
+        }
+        return mapi_stream_seek($this->mapistream, $offset, $mapiWhence);
     }
 
     /**
@@ -114,6 +157,23 @@ class MAPIStreamWrapper {
      */
     public function stream_eof() {
         return ($this->position >= $this->streamlength);
+    }
+
+    /**
+     * Truncates the stream to the new size.
+     *
+     * @param int $new_size
+     * @return boolean
+     */
+    public function stream_truncate ($new_size) {
+        $this->streamlength = $new_size;
+        $this->toTruncate = true;
+
+        if ($this->position > $this->streamlength) {
+            ZLog::Write(LOGLEVEL_WARN, sprintf("MAPIStreamWrapper->stream_truncate(): stream position (%d) ahead of new size of %d. Repositioning pointer to end of stream.", $this->position, $this->streamlength));
+            $this->position = $this->streamlength;
+        }
+        return true;
     }
 
     /**

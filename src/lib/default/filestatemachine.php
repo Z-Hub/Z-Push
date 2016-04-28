@@ -154,7 +154,7 @@ class FileStateMachine implements IStateMachine {
         $state = serialize($state);
 
         $filename = $this->getFullFilePath($devid, $type, $key, $counter);
-        if (($bytes = file_put_contents($filename, $state)) === false)
+        if (($bytes = Utils::SafePutContents($filename, $state)) === false)
             throw new FatalMisconfigurationException(sprintf("FileStateMachine->SetState(): Could not write state '%s'",$filename));
 
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("FileStateMachine->SetState() written %d bytes on file: '%s'", $bytes, $filename));
@@ -176,6 +176,17 @@ class FileStateMachine implements IStateMachine {
      * @throws StateInvalidException
      */
     public function CleanStates($devid, $type, $key, $counter = false) {
+        // Remove permanent backend storage files
+        // TODO remove this block and implement it as described in ZP-835
+        if ($key === false && $type === IStateMachine::BACKENDSTORAGE) {
+            $file = $this->getFullFilePath($devid, $type, $key, $counter);
+            if (file_exists($file)) {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("FileStateMachine->CleanStates(): Deleting 'bs' file: '%s'", $file));
+                unlink($file);
+                return;
+            }
+        }
+
         $matching_files = glob($this->getFullFilePath($devid, $type, $key). "*", GLOB_NOSORT);
         if (is_array($matching_files)) {
             foreach($matching_files as $state) {
@@ -209,7 +220,6 @@ class FileStateMachine implements IStateMachine {
      * @return boolean     indicating if the user was added or not (existed already)
      */
     public function LinkUserDevice($username, $devid) {
-        include_once("simplemutex.php");
         $mutex = new SimpleMutex();
         $changed = false;
 
@@ -233,7 +243,7 @@ class FileStateMachine implements IStateMachine {
             }
 
             if ($changed) {
-                $bytes = file_put_contents($this->userfilename, serialize($users));
+                $bytes = Utils::SafePutContents($this->userfilename, serialize($users));
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("FileStateMachine->LinkUserDevice(): wrote %d bytes to users file", $bytes));
             }
             else
@@ -254,7 +264,6 @@ class FileStateMachine implements IStateMachine {
      * @return boolean
      */
     public function UnLinkUserDevice($username, $devid) {
-        include_once("simplemutex.php");
         $mutex = new SimpleMutex();
         $changed = false;
 
@@ -282,7 +291,7 @@ class FileStateMachine implements IStateMachine {
             }
 
             if ($changed) {
-                $bytes = file_put_contents($this->userfilename, serialize($users));
+                $bytes = Utils::SafePutContents($this->userfilename, serialize($users));
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("FileStateMachine->UnLinkUserDevice(): wrote %d bytes to users file", $bytes));
             }
             else
@@ -370,8 +379,7 @@ class FileStateMachine implements IStateMachine {
 
         $settings[self::VERSION] = $version;
         ZLog::Write(LOGLEVEL_INFO, sprintf("FileStateMachine->SetStateVersion() saving supported state version, value '%d'", $version));
-        $status = file_put_contents($this->settingsfilename, serialize($settings));
-        Utils::FixFileOwner($this->settingsfilename);
+        $status = Utils::SafePutContents($this->settingsfilename, serialize($settings));
         return $status;
     }
 
