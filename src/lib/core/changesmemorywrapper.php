@@ -77,13 +77,13 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
             foreach($state as $addKey => $addFolder) {
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("ChangesMemoryWrapper->Config(AdditionalFolders) : process folder '%s'", $addFolder->displayname));
                 if (isset($addFolder->NoBackendFolder) && $addFolder->NoBackendFolder == true) {
-                    $hasRights = ZPush::GetBackend()->Setup($addFolder->Store, true, $addFolder->serverid);
+                    $hasRights = ZPush::GetBackend()->Setup($addFolder->Store, true, $addFolder->BackendId);
                     // delete the folder on the device
                     if (! $hasRights) {
                         // delete the folder only if it was an additional folder before, else ignore it
                         $synchedfolder = $this->GetFolder($addFolder->serverid);
                         if (isset($synchedfolder->NoBackendFolder) && $synchedfolder->NoBackendFolder == true)
-                            $this->ImportFolderDeletion($addFolder->serverid, $addFolder->parentid);
+                            $this->ImportFolderDeletion($addFolder);
                         continue;
                     }
                 }
@@ -99,7 +99,7 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
                     // look if this folder is still in the list of additional folders and was not already deleted (e.g. missing permissions)
                     if (!array_key_exists($sid, $state) && !array_key_exists($sid, $alreadyDeleted)) {
                         ZLog::Write(LOGLEVEL_INFO, sprintf("ChangesMemoryWrapper->Config(AdditionalFolders) : previously synchronized folder '%s' is not to be synched anymore. Sending delete to mobile.", $folder->displayname));
-                        $this->ImportFolderDeletion($folder->serverid, $folder->parentid);
+                        $this->ImportFolderDeletion($folder);
                     }
                 }
             }
@@ -190,7 +190,7 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
      * @param SyncFolder    $folder     folder to be changed
      *
      * @access public
-     * @return boolean
+     * @return boolean/SyncObject           status/object with the ath least the serverid of the folder set
      */
     public function ImportFolderChange($folder) {
         // if the destinationImporter is set, then this folder should be processed by another importer
@@ -204,25 +204,37 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("ChangesMemoryWrapper->ImportFolderChange(): Set foldertype for folder '%s' from cache as it was not sent: '%s'", $folder->displayname, $folder->type));
             }
 
-
-            // Acacia ZO-42: When Notes folders are updated in Outlook, it tries to update the name (that fails, as it's a system folder)
+            // Acacia ZO-42: When Notes folders are updated in Outlook, it tries to update the name (that fails by default, as it's a system folder)
+            // catch this case here and ignore the change
             if (($folder->type == SYNC_FOLDER_TYPE_NOTE || $folder->type == SYNC_FOLDER_TYPE_USER_NOTE) && ZPush::GetDeviceManager()->IsOutlookClient()) {
-                $ret = false;
+                $retFolder = false;
             }
             // do regular folder update
             else {
-                $ret = $this->destinationImporter->ImportFolderChange($folder);
+                $retFolder = $this->destinationImporter->ImportFolderChange($folder);
             }
 
             // if the operation was sucessfull, update the HierarchyCache
-            if ($ret) {
-                // for folder creation, the serverid is not set and has to be updated before
-                if (!isset($folder->serverid) || $folder->serverid == "")
-                    $folder->serverid = $ret;
+            if ($retFolder) {
+                // if we get a folder back, we need to update some data in the cache
+                if (isset($retFolder->serverid) && $retFolder->serverid) {
+                    // for folder creation, the serverid & backendid are not set and have to be updated
+                    if (!isset($folder->serverid) || $folder->serverid == "") {
+                        $folder->serverid = $retFolder->serverid;
+                        if (isset($retFolder->BackendId) && $retFolder->BackendId) {
+                            $folder->BackendId = $retFolder->BackendId;
+                        }
+                    }
+
+                    // if the parentid changed (folder was moved) this needs to be updated as well
+                    if ($retFolder->parentid != $folder->parentid) {
+                        $folder->parentid = $retFolder->parentid;
+                    }
+                }
 
                 $this->AddFolder($folder);
             }
-            return $ret;
+            return $retFolder;
         }
         // load into memory
         else {
@@ -256,17 +268,18 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
     /**
      * Imports a folder deletion
      *
-     * @param string        $id
-     * @param string        $parent     (opt) the parent id of the folders
+     * @param SyncFolder    $folder         at least "serverid" needs to be set
      *
      * @access public
      * @return boolean
      */
-    public function ImportFolderDeletion($id, $parent = false) {
+    public function ImportFolderDeletion($folder) {
+        $id = $folder->serverid;
+
         // if the forwarder is set, then this folder should be processed by another importer
         // instead of being loaded in mem.
         if (isset($this->destinationImporter)) {
-            $ret = $this->destinationImporter->ImportFolderDeletion($id, $parent);
+            $ret = $this->destinationImporter->ImportFolderDeletion($folder);
 
             // if the operation was sucessfull, update the HierarchyCache
             if ($ret)
@@ -279,7 +292,7 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
             if ($this->GetFolder($id)) {
 
                 // load this change into memory
-                $this->changes[] = array(self::DELETION, $id, $parent);
+                $this->changes[] = array(self::DELETION, $folder);
 
                 // HierarchyCache: delete the folder so changes are not sent twice (if exported twice)
                 $this->DelFolder($id);
@@ -336,7 +349,7 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
             }
             // deletion
             else {
-                $this->exportImporter->ImportFolderDeletion($change[1], $change[2]);
+                $this->exportImporter->ImportFolderDeletion($change[1]);
             }
             $this->step++;
 

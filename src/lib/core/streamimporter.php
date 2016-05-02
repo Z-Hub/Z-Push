@@ -88,19 +88,33 @@ class ImportChangesStream implements IImportChanges {
             return false;
         }
 
-        // Acacia ZO-42: to sync Notes to Outlook we sync them as Tasks
+        // Acacia ZO-42: to sync Notes to Outlook we sync them as Appointments
         if ($this->classAsString == "SyncNote" && ZPush::GetDeviceManager()->IsOutlookClient()) {
-            $task = new SyncTask();
-            $task->flags = $message->flags;
-            if (isset($message->asbody))
-                $task->asbody = $message->asbody;
-            if (isset($message->categories))
-                $task->categories = $message->categories;
-            if (isset($message->subject))
-                $task->subject = $message->subject;
-            // TODO color of the note
+            // update category from SyncNote->Color
+            $message->SetCategoryFromColor();
 
-            $message = $task;
+            $appointment = new SyncAppointment();
+            $appointment->busystatus = 0;
+            $appointment->sensitivity = 0;
+            $appointment->alldayevent = 0;
+            $appointment->reminder = 0;
+            $appointment->meetingstatus = 0;
+            $appointment->responserequested = 0;
+
+            $appointment->flags = $message->flags;
+            if (isset($message->asbody))
+                $appointment->asbody = $message->asbody;
+            if (isset($message->categories))
+                $appointment->categories = $message->categories;
+            if (isset($message->subject))
+                $appointment->subject = $message->subject;
+            if (isset($message->lastmodified))
+                $appointment->dtstamp = $message->lastmodified;
+
+            $appointment->starttime = time();
+            $appointment->endtime = $appointment->starttime + 1;
+
+            $message = $appointment;
         }
 
         // prevent sending the same object twice in one request
@@ -243,7 +257,7 @@ class ImportChangesStream implements IImportChanges {
      * @param object        $folder     SyncFolder
      *
      * @access public
-     * @return string       id of the folder
+     * @return boolean/SyncObject           status/object with the ath least the serverid of the folder set
      */
     public function ImportFolderChange($folder) {
         // checks if the next message may cause a loop or is broken
@@ -267,16 +281,15 @@ class ImportChangesStream implements IImportChanges {
     /**
      * Imports a folder deletion
      *
-     * @param string        $id
-     * @param string        $parent id
+     * @param SyncFolder    $folder         at least "serverid" needs to be set
      *
      * @access public
      * @return boolean
      */
-    public function ImportFolderDeletion($id, $parent = false) {
+    public function ImportFolderDeletion($folder) {
         $this->encoder->startTag(SYNC_FOLDERHIERARCHY_REMOVE);
             $this->encoder->startTag(SYNC_FOLDERHIERARCHY_SERVERENTRYID);
-                $this->encoder->content($id);
+                $this->encoder->content($folder->serverid);
             $this->encoder->endTag();
         $this->encoder->endTag();
 

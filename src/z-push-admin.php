@@ -860,6 +860,14 @@ class ZPushAdminCLI {
         echo "WipeRequest on:\t\t". ($device->GetWipeRequestedOn() ? strftime("%Y-%m-%d %H:%M", $device->GetWipeRequestedOn()) : "not set")."\n";
         echo "WipeRequest by:\t\t". ($device->GetWipeRequestedBy() ? $device->GetWipeRequestedBy() : "not set")."\n";
         echo "Wiped on:\t\t". ($device->GetWipeActionOn() ? strftime("%Y-%m-%d %H:%M", $device->GetWipeActionOn()) : "not set")."\n";
+        echo "Policy name:\t\t". ($device->GetPolicyName() ? $device->GetPolicyName() : ASDevice::DEFAULTPOLICYNAME)."\n";
+
+        if ($device->GetOLPluginVersion()) {
+            echo "Acacia OL Plugin:\n";
+            echo "\tVersion:\t". $device->GetOLPluginVersion() ."\n";
+            echo "\tBuild:\t\t". $device->GetOLPluginBuild() ."\n";
+            echo "\tBuild Date:\t". strftime("%Y-%m-%d %H:%M",$device->GetOLPluginBuildDate()) ."\n";
+        }
 
         echo "Attention needed:\t";
 

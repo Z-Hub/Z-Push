@@ -184,6 +184,7 @@ class Ping extends RequestProcessor {
         // Check for changes on the default LifeTime, set interval and ONLY on pingable collections
         try {
             if (!$pingstatus && empty($fakechanges)) {
+                self::$deviceManager->DoAutomaticASDeviceSaving(false);
                 $foundchanges = $sc->CheckForChanges($sc->GetLifetime(), $interval, true);
             }
         }
@@ -283,8 +284,8 @@ class Ping extends RequestProcessor {
      */
     private function isClassValid($class, $spa) {
         if ($class == $spa->GetContentClass() ||
-                // Acacia ZO-42: Notes are synched as Tasks
-                (self::$deviceManager->IsOutlookClient() && $class == "Tasks" && $spa->GetContentClass() == "Notes")
+                // Acacia ZO-42: Notes are synched as Appointments
+                (self::$deviceManager->IsOutlookClient() && $class == "Calendar" && $spa->GetContentClass() == "Notes")
             ) {
             return true;
         }

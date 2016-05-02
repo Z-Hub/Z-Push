@@ -143,6 +143,9 @@
     // true - allow older devices, but enforce policies on devices which support it
     define('LOOSE_PROVISIONING', false);
 
+    // The file containing the policies' settings.
+    define('PROVISIONING_POLICYFILE', BASE_PATH . 'policies.ini');
+
     // Default conflict preference
     // Some devices allow to set if the server or PIM (mobile)
     // should win in case of a synchronization conflict

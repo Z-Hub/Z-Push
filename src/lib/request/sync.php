@@ -182,6 +182,7 @@ class Sync extends RequestProcessor {
 
                     // update folderid.. this might be a new object
                     $spa->SetFolderId($folderid);
+                    $spa->SetBackendFolderId(self::$deviceManager->GetBackendIdForFolderId($folderid));
 
                     if ($class !== false)
                         $spa->SetContentClass($class);
@@ -453,10 +454,10 @@ class Sync extends RequestProcessor {
                             if(($el = self::$decoder->getElementStartTag(SYNC_DATA)) && ($el[EN_FLAGS] & EN_FLAGS_CONTENT)) {
                                 $message = ZPush::getSyncObjectFromFolderClass($spa->GetContentClass());
 
-                                // Acacia ZO-42: OL sends Notes as Tasks
+                                // Acacia ZO-42: OL sends Notes as Appointments
                                 if ($spa->GetContentClass() == "Notes" && self::$deviceManager->IsOutlookClient()) {
-                                    ZLog::Write(LOGLEVEL_DEBUG, "HandleSync(): Outlook sends Notes as Tasks, read as Tasks and convert it into a SyncNote object.");
-                                    $message = new SyncTask();
+                                    ZLog::Write(LOGLEVEL_DEBUG, "HandleSync(): Outlook sends Notes as Appointments, read as SyncAppointment and convert it into a SyncNote object.");
+                                    $message = new SyncAppointment();
                                     $message->Decode(self::$decoder);
 
                                     $note = new SyncNote();
@@ -466,15 +467,21 @@ class Sync extends RequestProcessor {
                                         $note->categories = $message->categories;
                                     if (isset($message->subject))
                                         $note->subject = $message->subject;
-                                    // TODO color of the note
+                                    if (isset($message->dtstamp))
+                                        $note->lastmodified = $message->dtstamp;
+
+                                    // set SyncNote->Color from a color category
+                                    $note->SetColorFromCategory();
+
                                     $message = $note;
                                 }
                                 else {
                                     $message->Decode(self::$decoder);
+
+                                    // set Ghosted fields
+                                    $message->emptySupported(self::$deviceManager->GetSupportedFields($spa->GetFolderId()));
                                 }
 
-                                // set Ghosted fields
-                                $message->emptySupported(self::$deviceManager->GetSupportedFields($spa->GetFolderId()));
                                 if(!self::$decoder->getElementEndTag()) // end applicationdata
                                     return false;
                             }
@@ -719,7 +726,7 @@ class Sync extends RequestProcessor {
 
         // global status
         // SYNC_COMMONSTATUS_* start with values from 101
-        if ($status != SYNC_COMMONSTATUS_SUCCESS && $status > 100) {
+        if ($status != SYNC_COMMONSTATUS_SUCCESS && ($status == SYNC_STATUS_FOLDERHIERARCHYCHANGED || $status > 100)) {
             $this->sendStartTags();
             self::$encoder->startTag(SYNC_STATUS);
                 self::$encoder->content($status);
@@ -759,7 +766,8 @@ class Sync extends RequestProcessor {
                 // compare the folder statistics if the backend supports this
                 if ($setupExporter && self::$backend->HasFolderStats()) {
                     // check if the folder stats changed -> if not, don't setup the exporter, there are no changes!
-                    $newFolderStat = self::$backend->GetFolderStat(ZPush::GetAdditionalSyncFolderStore($spa->GetFolderId()), $spa->GetFolderId());
+
+                    $newFolderStat = self::$backend->GetFolderStat(ZPush::GetAdditionalSyncFolderStore($spa->GetBackendFolderId()), $spa->GetBackendFolderId());
                     if ($newFolderStat !== false && ! $spa->IsExporterRunRequired($newFolderStat, true)) {
                         $changecount = 0;
                         $setupExporter = false;
@@ -775,14 +783,14 @@ class Sync extends RequestProcessor {
                     if($status == SYNC_STATUS_SUCCESS) {
                         try {
                             // if this is an additional folder the backend has to be setup correctly
-                            if (!self::$backend->Setup(ZPush::GetAdditionalSyncFolderStore($spa->GetFolderId())))
-                                throw new StatusException(sprintf("HandleSync() could not Setup() the backend for folder id '%s'", $spa->GetFolderId()), SYNC_STATUS_FOLDERHIERARCHYCHANGED);
+                            if (!self::$backend->Setup(ZPush::GetAdditionalSyncFolderStore($spa->GetBackendFolderId())))
+                                throw new StatusException(sprintf("HandleSync() could not Setup() the backend for folder id %s/%s", $spa->GetFolderId(), $spa->GetBackendFolderId()), SYNC_STATUS_FOLDERHIERARCHYCHANGED);
 
                             // Use the state from the importer, as changes may have already happened
-                            $exporter = self::$backend->GetExporter($spa->GetFolderId());
+                            $exporter = self::$backend->GetExporter($spa->GetBackendFolderId());
 
                             if ($exporter === false)
-                                throw new StatusException(sprintf("HandleSync() could not get an exporter for folder id '%s'", $spa->GetFolderId()), SYNC_STATUS_FOLDERHIERARCHYCHANGED);
+                                throw new StatusException(sprintf("HandleSync() could not get an exporter for folder id %s/%s", $spa->GetFolderId(), $spa->GetBackendFolderId()), SYNC_STATUS_FOLDERHIERARCHYCHANGED);
                         }
                         catch (StatusException $stex) {
                            $status = $stex->getCode();
@@ -1017,10 +1025,10 @@ class Sync extends RequestProcessor {
                     $fetchstatus = SYNC_STATUS_SUCCESS;
 
                     // if this is an additional folder the backend has to be setup correctly
-                    if (!self::$backend->Setup(ZPush::GetAdditionalSyncFolderStore($spa->GetFolderId())))
-                        throw new StatusException(sprintf("HandleSync(): could not Setup() the backend to fetch in folder id '%s'", $spa->GetFolderId()), SYNC_STATUS_OBJECTNOTFOUND);
+                    if (!self::$backend->Setup(ZPush::GetAdditionalSyncFolderStore($spa->GetBackendFolderId())))
+                        throw new StatusException(sprintf("HandleSync(): could not Setup() the backend to fetch in folder id %s/%s", $spa->GetFolderId(), $spa->GetBackendFolderId()), SYNC_STATUS_OBJECTNOTFOUND);
 
-                    $data = self::$backend->Fetch($spa->GetFolderId(), $id, $spa->GetCPO());
+                    $data = self::$backend->Fetch($spa->GetBackendFolderId(), $id, $spa->GetCPO());
 
                     // check if the message is broken
                     if (ZPush::GetDeviceManager(false) && ZPush::GetDeviceManager()->DoNotStreamMessage($id, $data)) {
@@ -1205,8 +1213,8 @@ class Sync extends RequestProcessor {
                 }
 
                 // if this is an additional folder the backend has to be setup correctly
-                if (!self::$backend->Setup(ZPush::GetAdditionalSyncFolderStore($spa->GetFolderId())))
-                    throw new StatusException(sprintf("HandleSync() could not Setup() the backend for folder id '%s'", $spa->GetFolderId()), SYNC_STATUS_FOLDERHIERARCHYCHANGED);
+                if (!self::$backend->Setup(ZPush::GetAdditionalSyncFolderStore($spa->GetBackendFolderId())))
+                    throw new StatusException(sprintf("HandleSync() could not Setup() the backend for folder id %s/%s", $spa->GetFolderId(), $spa->GetBackendFolderId()), SYNC_STATUS_FOLDERHIERARCHYCHANGED);
             }
             catch (StateNotFoundException $snfex) {
                 $status = SYNC_STATUS_INVALIDSYNCKEY;
@@ -1244,11 +1252,11 @@ class Sync extends RequestProcessor {
 
         try {
             // Configure importer with last state
-            $this->importer = self::$backend->GetImporter($spa->GetFolderId());
+            $this->importer = self::$backend->GetImporter($spa->GetBackendFolderId());
 
             // if something goes wrong, ask the mobile to resync the hierarchy
             if ($this->importer === false)
-                throw new StatusException(sprintf("Sync->getImporter(): no importer for folder id '%s'", $spa->GetFolderId()), SYNC_STATUS_FOLDERHIERARCHYCHANGED);
+                throw new StatusException(sprintf("Sync->getImporter(): no importer for folder id %s/%s", $spa->GetFolderId(), $spa->GetBackendFolderId()), SYNC_STATUS_FOLDERHIERARCHYCHANGED);
 
             // if there is a valid state obtained after importing changes in a previous loop, we use that state
             if (isset($actiondata["failstate"]) && isset($actiondata["failstate"]["failedsyncstate"])) {

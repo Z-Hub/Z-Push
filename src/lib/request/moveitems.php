@@ -95,13 +95,15 @@ class MoveItems extends RequestProcessor {
             $status = SYNC_MOVEITEMSSTATUS_SUCCESS;
             $result = false;
             try {
-                // if the source folder is an additional folder the backend has to be setup correctly
-                if (!self::$backend->Setup(ZPush::GetAdditionalSyncFolderStore($move["srcfldid"])))
-                    throw new StatusException(sprintf("HandleMoveItems() could not Setup() the backend for folder id '%s'", $move["srcfldid"]), SYNC_MOVEITEMSSTATUS_INVALIDSOURCEID);
+                $sourceBackendFolderId = self::$deviceManager->GetBackendIdForFolderId($move["srcfldid"]);
 
-                $importer = self::$backend->GetImporter($move["srcfldid"]);
+                // if the source folder is an additional folder the backend has to be setup correctly
+                if (!self::$backend->Setup(ZPush::GetAdditionalSyncFolderStore($sourceBackendFolderId)))
+                    throw new StatusException(sprintf("HandleMoveItems() could not Setup() the backend for folder id %s/%s", $move["srcfldid"], $sourceBackendFolderId), SYNC_MOVEITEMSSTATUS_INVALIDSOURCEID);
+
+                $importer = self::$backend->GetImporter($sourceBackendFolderId);
                 if ($importer === false)
-                    throw new StatusException(sprintf("HandleMoveItems() could not get an importer for folder id '%s'", $move["srcfldid"]), SYNC_MOVEITEMSSTATUS_INVALIDSOURCEID);
+                    throw new StatusException(sprintf("HandleMoveItems() could not get an importer for folder id %s/%s", $move["srcfldid"], $sourceBackendFolderId), SYNC_MOVEITEMSSTATUS_INVALIDSOURCEID);
 
                 // get saved SyncParameters for this folder
                 $spa = self::$deviceManager->GetStateManager()->GetSynchedFolderState($move["srcfldid"]);
@@ -109,7 +111,7 @@ class MoveItems extends RequestProcessor {
                     throw new StatusException(sprintf("MoveItems(): Source folder id '%s' is not fully synchronized. Unable to perform operation.", $move["srcfldid"]), SYNC_MOVEITEMSSTATUS_INVALIDSOURCEID);
                 $importer->ConfigContentParameters($spa->GetCPO());
 
-                $result = $importer->ImportMessageMove($move["srcmsgid"], $move["dstfldid"]);
+                $result = $importer->ImportMessageMove($move["srcmsgid"], self::$deviceManager->GetBackendIdForFolderId($move["dstfldid"]));
                 // We discard the importer state for now.
             }
             catch (StatusException $stex) {

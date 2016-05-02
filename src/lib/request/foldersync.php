@@ -95,7 +95,7 @@ class FolderSync extends RequestProcessor {
         $changesMem = self::$deviceManager->GetHierarchyChangesWrapper();
 
         // the hierarchyCache should now fully be initialized - check for changes in the additional folders
-        $changesMem->Config(ZPush::GetAdditionalSyncFolders());
+        $changesMem->Config(ZPush::GetAdditionalSyncFolders(false));
 
         // process incoming changes
         if(self::$decoder->getElementStartTag(SYNC_FOLDERHIERARCHY_CHANGES)) {
@@ -118,6 +118,9 @@ class FolderSync extends RequestProcessor {
                 $folder = new SyncFolder();
                 if(!$folder->Decode(self::$decoder))
                     break;
+
+                // add the backendId to the SyncFolder object
+                $folder->BackendId = self::$deviceManager->GetBackendIdForFolderId($folder->serverid);
 
                 try {
                     if ($status == SYNC_FSSTATUS_SUCCESS && !$importer) {
