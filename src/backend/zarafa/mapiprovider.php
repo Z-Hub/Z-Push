@@ -887,11 +887,14 @@ class MAPIProvider {
             }
         }
 
-        $folder->serverid = bin2hex($folderprops[PR_SOURCE_KEY]);
-        if($folderprops[PR_PARENT_ENTRYID] == $storeprops[PR_IPM_SUBTREE_ENTRYID])
+        $folder->BackendId = bin2hex($folderprops[PR_SOURCE_KEY]);
+        $folder->serverid = ZPush::GetDeviceManager()->GetFolderIdForBackendId($folder->BackendId, true);
+        if($folderprops[PR_PARENT_ENTRYID] == $storeprops[PR_IPM_SUBTREE_ENTRYID]) {
             $folder->parentid = "0";
-        else
-            $folder->parentid = bin2hex($folderprops[PR_PARENT_SOURCE_KEY]);
+        }
+        else {
+            $folder->parentid = ZPush::GetDeviceManager()->GetFolderIdForBackendId(bin2hex($folderprops[PR_PARENT_SOURCE_KEY]));
+        }
         $folder->displayname = w2u($folderprops[PR_DISPLAY_NAME]);
         $folder->type = $this->GetFolderType($folderprops[PR_ENTRYID], isset($folderprops[PR_CONTAINER_CLASS])?$folderprops[PR_CONTAINER_CLASS]:false);
 
@@ -2385,15 +2388,20 @@ class MAPIProvider {
         }
 
         $stream = mapi_openproperty($mapimessage, $property, IID_IStream, 0, 0);
-        $stat = mapi_stream_stat($stream);
-        $streamsize = $stat['cb'];
+        if ($stream) {
+            $stat = mapi_stream_stat($stream);
+            $streamsize = $stat['cb'];
+        }
+        else {
+            $streamsize = 0;
+        }
 
         //set the properties according to supported AS version
         if (Request::GetProtocolVersion() >= 12.0) {
             $message->asbody = new SyncBaseBody();
             $message->asbody->type = $bpReturnType;
             if ($bpReturnType == SYNC_BODYPREFERENCE_RTF) {
-                $body = mapi_stream_read($stream, $streamsize);
+                $body = $this->mapiReadStream($stream, $streamsize);
                 $message->asbody->data = StringStreamWrapper::Open(base64_encode($body));
             }
             elseif (isset($message->internetcpid) && $bpReturnType == SYNC_BODYPREFERENCE_HTML) {
@@ -2402,7 +2410,7 @@ class MAPIProvider {
                     $message->asbody->data = MAPIStreamWrapper::Open($stream);
                 }
                 else {
-                    $body = mapi_stream_read($stream, $streamsize);
+                    $body = $this->mapiReadStream($stream, $streamsize);
                     $message->asbody->data = StringStreamWrapper::Open(Utils::ConvertCodepageStringToUtf8($message->internetcpid, $body));
                 }
             }
@@ -2412,13 +2420,29 @@ class MAPIProvider {
             $message->asbody->estimatedDataSize = $streamsize;
         }
         else {
-            $body = mapi_stream_read($stream, $streamsize);
+            $body = $this->mapiReadStream($stream, $streamsize);
             $message->body = str_replace("\n","\r\n", w2u(str_replace("\r", "", $body)));
             $message->bodysize = $streamsize;
             $message->bodytruncated = 0;
         }
 
         return true;
+    }
+
+    /**
+     * Reads from a mapi stream, if it's set. If not, returns an empty string.
+     *
+     * @param resource $stream
+     * @param int $size
+     *
+     * @access private
+     * @return string
+     */
+    private function mapiReadStream($stream, $size) {
+        if (!$stream || $size == 0) {
+            return "";
+        }
+        return mapi_stream_read($stream, $streamsize);
     }
 
     /**

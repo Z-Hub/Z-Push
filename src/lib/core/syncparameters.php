@@ -60,6 +60,7 @@ class SyncParameters extends StateObject {
                                     'uuidcounter' => false,
                                     'uuidnewcounter' => false,
                                     'folderid' => false,
+                                    'backendfolderid' => false,
                                     'referencelifetime' => 10,
                                     'lastsynctime' => false,
                                     'referencepolicykey' => true,
@@ -219,6 +220,20 @@ class SyncParameters extends StateObject {
         return true;
     }
 
+    /**
+     * Overwrite GetBackendFolderId() because on old profiles, this will not be set.
+     *
+     * @access public
+     * @return string
+     */
+    public function GetBackendFolderId() {
+        if ($this->backendfolderid) {
+            return $this->backendfolderid;
+        }
+        else {
+            return $this->GetFolderId();
+        }
+    }
 
     /**
      * CPO methods
