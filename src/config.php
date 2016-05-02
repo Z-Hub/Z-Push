@@ -65,10 +65,10 @@
      * (e.g. user@company.com) or the username only (user).
      * This is required for Z-Push to work properly after autodiscover.
      * Possible values:
-     * false - use the username only (default).
-     * true - use the complete email address.
+     *   false - use the username only.
+     *   true  - string the mobile sends as username, e.g. full email address (default).
      */
-    define('USE_FULLEMAIL_FOR_LOGIN', false);
+    define('USE_FULLEMAIL_FOR_LOGIN', true);
 
 /**********************************************************************************
  *  Default FileStateMachine settings
@@ -142,6 +142,9 @@
     // false (default) - Enforce provisioning for all devices
     // true - allow older devices, but enforce policies on devices which support it
     define('LOOSE_PROVISIONING', false);
+
+    // The file containing the policies' settings.
+    define('PROVISIONING_POLICYFILE', BASE_PATH . 'policies.ini');
 
     // Default conflict preference
     // Some devices allow to set if the server or PIM (mobile)

@@ -20,7 +20,7 @@
 *
 * Created   :   01.10.2007
 *
-* Copyright 2007 - 2015 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -350,6 +350,19 @@ abstract class Backend implements IBackend {
             catch (StateNotYetAvailableException $snyae) { }
             catch(StateNotFoundException $snfe) { }
         }
+    }
+
+    /**
+     * Returns the policy name for the user.
+     * If the backend returns false, the 'default' policy is used.
+     * If the backend returns any other name than 'default' the policygroup with
+     * that name (defined in the policies.ini file) will be applied for this user.
+     *
+     * @access public
+     * @return string|boolean
+     */
+    public function GetUserPolicyName() {
+        return false;
     }
 
 }

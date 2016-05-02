@@ -6,7 +6,7 @@
 *
 * Created   :   16.02.2012
 *
-* Copyright 2007 - 2015 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -78,19 +78,23 @@ class FolderChange extends RequestProcessor {
 
         // ServerID
         $serverid = false;
+        $backendid = false;
         if(self::$decoder->getElementStartTag(SYNC_FOLDERHIERARCHY_SERVERENTRYID)) {
             $serverid = self::$decoder->getElementContent();
+            $backendid = self::$deviceManager->GetBackendIdForFolderId($serverid);
             if(!self::$decoder->getElementEndTag())
                 return false;
         }
 
         // Parent
         $parentid = false;
+        $parentBackendId = false;
 
         // when creating or updating more information is necessary
         if (!$delete) {
             if(self::$decoder->getElementStartTag(SYNC_FOLDERHIERARCHY_PARENTID)) {
                 $parentid = self::$decoder->getElementContent();
+                $parentBackendId = self::$deviceManager->GetBackendIdForFolderId($parentid);
                 if(!self::$decoder->getElementEndTag())
                     return false;
             }
@@ -128,20 +132,20 @@ class FolderChange extends RequestProcessor {
             $changesMem = self::$deviceManager->GetHierarchyChangesWrapper();
 
             // the hierarchyCache should now fully be initialized - check for changes in the additional folders
-            $changesMem->Config(ZPush::GetAdditionalSyncFolders());
+            $changesMem->Config(ZPush::GetAdditionalSyncFolders(false));
 
             // there are unprocessed changes in the hierarchy, trigger resync
             if ($changesMem->GetChangeCount() > 0)
                 throw new StatusException("HandleFolderChange() can not proceed as there are unprocessed hierarchy changes", SYNC_FSSTATUS_SERVERERROR);
 
             // any additional folders can not be modified!
-            if ($serverid !== false && ZPush::GetAdditionalSyncFolderStore($serverid))
+            if ($serverid !== false && ZPush::GetAdditionalSyncFolderStore($backendid))
                 throw new StatusException("HandleFolderChange() can not change additional folders which are configured", SYNC_FSSTATUS_SYSTEMFOLDER);
 
             // switch user store if this this happens inside an additional folder
             // if this is an additional folder the backend has to be setup correctly
-            if (!self::$backend->Setup(ZPush::GetAdditionalSyncFolderStore((($parentid != false)?$parentid:$serverid))))
-                throw new StatusException(sprintf("HandleFolderChange() could not Setup() the backend for folder id '%s'", (($parentid != false)?$parentid:$serverid)), SYNC_FSSTATUS_SERVERERROR);
+            if (!self::$backend->Setup(ZPush::GetAdditionalSyncFolderStore((($parentBackendId != false)?$parentBackendId:$backendid))))
+                throw new StatusException(sprintf("HandleFolderChange() could not Setup() the backend for folder id '%s'", (($parentBackendId != false)?$parentBackendId:$backendid)), SYNC_FSSTATUS_SERVERERROR);
         }
         catch (StateNotFoundException $snfex) {
             $status = SYNC_FSSTATUS_SYNCKEYERROR;
@@ -163,20 +167,27 @@ class FolderChange extends RequestProcessor {
                 // the messages from the PIM will be forwarded to the real importer
                 $changesMem->SetDestinationImporter($importer);
 
+                // Create SyncFolder object
+                $folder = new SyncFolder();
+                $folder->serverid = $serverid;
+                $folder->parentid = $parentBackendId;
+                if (isset($displayname)) {
+                    $folder->displayname = $displayname;
+                }
+                if (isset($type)) {
+                    $folder->type = $type;
+                }
+                // add the backendId to the SyncFolder object
+                $folder->BackendId = $backendid;
+
                 // process incoming change
                 if (!$delete) {
-                    // Send change
-                    $folder = new SyncFolder();
-                    $folder->serverid = $serverid;
-                    $folder->parentid = $parentid;
-                    $folder->displayname = $displayname;
-                    $folder->type = $type;
-
-                    $serverid = $changesMem->ImportFolderChange($folder);
+                    // when creating, $folder->serverid is false, and the returned id is already mapped by the backend
+                    $folder = $changesMem->ImportFolderChange($folder);
                 }
                 else {
                     // delete folder
-                    $changesMem->ImportFolderDeletion($serverid, 0);
+                    $changesMem->ImportFolderDeletion($folder);
                 }
             }
             catch (StatusException $stex) {
@@ -199,7 +210,7 @@ class FolderChange extends RequestProcessor {
                     self::$encoder->endTag();
 
                     self::$encoder->startTag(SYNC_FOLDERHIERARCHY_SERVERENTRYID);
-                    self::$encoder->content($serverid);
+                    self::$encoder->content($folder->serverid);
                     self::$encoder->endTag();
                 }
             }
@@ -246,6 +257,7 @@ class FolderChange extends RequestProcessor {
 
             // update SPA & save it
             $spa->SetSyncKey($newsynckey);
+            $spa->SetFolderId(false);
             self::$deviceManager->GetStateManager()->SetSynchedFolderState($spa);
 
             // invalidate all pingable flags

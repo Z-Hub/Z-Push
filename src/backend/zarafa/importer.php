@@ -12,7 +12,7 @@
 *
 * Created   :   14.02.2011
 *
-* Copyright 2007 - 2015 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -311,6 +311,11 @@ class ImportChangesICS implements IImportChanges {
             // monitor how long it takes to export potential conflicts
             // if this takes "too long" we cancel this operation!
             $potConflicts = $exporter->GetChangeCount();
+            if ($potConflicts > 100) {
+                ZLog::Write(LOGLEVEL_WARN, sprintf("ImportChangesICS->lazyLoadConflicts(): conflict detection abandoned as there are too many (%d) changes to be exported.", $potConflicts));
+                $this->conflictsLoaded = true;
+                return;
+            }
             $started = time();
             $exported = 0;
             try {
@@ -581,12 +586,13 @@ class ImportChangesICS implements IImportChanges {
      * @param object        $folder     SyncFolder
      *
      * @access public
-     * @return string       id of the folder
+     * @return boolean|SyncFolder       false on error or a SyncFolder object with serverid and BackendId set (if available)
      * @throws StatusException
      */
     public function ImportFolderChange($folder) {
-        $id = isset($folder->serverid)?$folder->serverid:false;
+        $id = isset($folder->BackendId)?$folder->BackendId : false;
         $parent = $folder->parentid;
+        $parent_org = $folder->parentid;
         $displayname = u2wi($folder->displayname);
         $type = $folder->type;
 
@@ -620,13 +626,13 @@ class ImportChangesICS implements IImportChanges {
 
             $props =  mapi_getprops($newfolder, array(PR_SOURCE_KEY));
             if (isset($props[PR_SOURCE_KEY])) {
-                $sourcekey = bin2hex($props[PR_SOURCE_KEY]);
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("Created folder '%s' with id: '%s'", $displayname, $sourcekey));
-                return $sourcekey;
+                $folder->BackendId = bin2hex($props[PR_SOURCE_KEY]);
+                $folder->serverid = ZPush::GetDeviceManager()->GetFolderIdForBackendId($folder->BackendId, true);
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("ImportChangesICS->ImportFolderChange(): Created folder '%s' with id: '%s' backendid: '%s'", $displayname, $folder->serverid, $folder->BackendId));
+                return $folder;
             }
             else
                 throw new StatusException(sprintf("ImportChangesICS->ImportFolderChange('%s','%s','%s'): Error, folder created but PR_SOURCE_KEY not available: 0x%X", Utils::PrintAsString($folder->serverid), $folder->parentid, $displayname, mapi_last_hresult()), SYNC_FSSTATUS_SERVERERROR);
-            return false;
         }
 
         // open folder for update
@@ -679,8 +685,13 @@ class ImportChangesICS implements IImportChanges {
             if(! mapi_folder_copyfolder($sourceparentfolder, $entryid, $destfolder, $displayname, FOLDER_MOVE))
                 throw new StatusException(sprintf("ImportChangesICS->ImportFolderChange('%s','%s','%s'): Error, unable to move folder: 0x%X", Utils::PrintAsString($folder->serverid), $folder->parentid, $displayname, mapi_last_hresult()), SYNC_FSSTATUS_FOLDEREXISTS);
 
-            $folderProps = mapi_getprops($mfolder, array(PR_SOURCE_KEY));
-            return $folderProps[PR_SOURCE_KEY];
+            // the parent changed, but we got a backendID as parent and have to return an AS folderid - the parent-backendId must be mapped at this point already
+            if ($folder->parentid != 0) {
+                $folder->parentid = ZPush::GetDeviceManager()->GetFolderIdForBackendId($parent);
+            }
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ImportChangesICS->ImportFolderChange(): Moved folder '%s' with id: %s/%s from: %s to: %s/%s", $displayname, $folder->serverid, $folder->BackendId, bin2hex($props[PR_PARENT_SOURCE_KEY]), $folder->parentid, $parent_org));
+
+            return $folder;
         }
 
         // update the display name
@@ -691,20 +702,21 @@ class ImportChangesICS implements IImportChanges {
             throw new StatusException(sprintf("ImportChangesICS->ImportFolderChange('%s','%s','%s'): Error, mapi_savechanges() failed: 0x%X", Utils::PrintAsString($folder->serverid), $folder->parentid, $displayname, mapi_last_hresult()), SYNC_FSSTATUS_SERVERERROR);
 
         ZLog::Write(LOGLEVEL_DEBUG, "Imported changes for folder: $id");
-        return $id;
+        return true;
     }
 
     /**
      * Imports a folder deletion
      *
-     * @param string        $id
-     * @param string        $parent id is ignored in ICS
+     * @param SyncFolder    $folder         at least "serverid" needs to be set
      *
      * @access public
      * @return int          SYNC_FOLDERHIERARCHY_STATUS
      * @throws StatusException
      */
-    public function ImportFolderDeletion($id, $parent = false) {
+    public function ImportFolderDeletion($folder) {
+        $id = $folder->BackendId;
+        $parent = isset($folder->parentid) ? $folder->parentid : false;
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("ImportChangesICS->ImportFolderDeletion('%s','%s'): importing folder deletetion", $id, $parent));
 
         $folderentryid = mapi_msgstore_entryidfromsourcekey($this->store, hex2bin($id));

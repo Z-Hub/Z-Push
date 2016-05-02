@@ -10,7 +10,7 @@
 *
 * Created   :   01.10.2011
 *
-* Copyright 2007 - 2015 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -74,6 +74,8 @@ include_once('backend/zarafa/mapistreamwrapper.php');
 include_once('backend/zarafa/importer.php');
 include_once('backend/zarafa/exporter.php');
 
+//setlocale to UTF-8 in order to support properties containing Unicode characters
+setlocale(LC_CTYPE, "en_US.UTF-8");
 
 class BackendZarafa implements IBackend, ISearchProvider {
     private $mainUser;
@@ -114,6 +116,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
         $this->changesSink = false;
         $this->changesSinkFolders = array();
         $this->changesSinkStores = array();
+        $this->changesSinkHierarchyHash = false;
         $this->wastebasket = false;
         $this->session = false;
         $this->folderStatCache = array();
@@ -858,7 +861,8 @@ class BackendZarafa implements IBackend, ISearchProvider {
             return false;
         }
 
-        ZLog::Write(LOGLEVEL_DEBUG, "ZarafaBackend->HasChangesSink(): created");
+        $this->changesSinkHierarchyHash = $this->getHierarchyHash();
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->HasChangesSink(): created - HierarchyHash: %s", $this->changesSinkHierarchyHash));
 
         // advise the main store and also to check if the connection supports it
         return $this->adviseStoreToSink($this->defaultstore);
@@ -900,9 +904,26 @@ class BackendZarafa implements IBackend, ISearchProvider {
      * @return array
      */
     public function ChangesSink($timeout = 30) {
+        // clear the folder stats cache
+        unset($this->folderStatCache);
+
         $notifications = array();
+        $hierarchyNotifications = array();
         $sinkresult = @mapi_sink_timedwait($this->changesSink, $timeout * 1000);
+        // reverse array so that the changes on folders are before changes on messages and
+        // it's possible to filter such notifications
+        $sinkresult = array_reverse($sinkresult, true);
         foreach ($sinkresult as $sinknotif) {
+            // add a notification on a folder
+            if ($sinknotif['objtype'] == MAPI_FOLDER) {
+                $hierarchyNotifications[$sinknotif['entryid']] = IBackend::HIERARCHYNOTIFICATION;
+            }
+            // change on a message, remove hierarchy notification
+            if (isset($sinknotif['parentid']) && $sinknotif['objtype'] == MAPI_MESSAGE && isset($notifications[$sinknotif['parentid']])) {
+                unset($hierarchyNotifications[$sinknotif['parentid']]);
+            }
+
+            // TODO check if adding $sinknotif['objtype'] = MAPI_MESSAGE wouldn't break anything
             // check if something in the monitored folders changed
             if (isset($sinknotif['parentid']) && array_key_exists($sinknotif['parentid'], $this->changesSinkFolders)) {
                 $notifications[] = $this->changesSinkFolders[$sinknotif['parentid']];
@@ -910,6 +931,16 @@ class BackendZarafa implements IBackend, ISearchProvider {
             // deletes and moves
             if (isset($sinknotif['oldparentid']) && array_key_exists($sinknotif['oldparentid'], $this->changesSinkFolders)) {
                 $notifications[] = $this->changesSinkFolders[$sinknotif['oldparentid']];
+            }
+        }
+
+        // validate hierarchy notifications by comparing the hierarchy hashes (too many false positives otherwise)
+        if (!empty($hierarchyNotifications)) {
+            $hash = $this->getHierarchyHash();
+            if ($hash !== $this->changesSinkHierarchyHash) {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendZarafa->ChangesSink() Hierarchy notification, pending validation. New hierarchyHash: %s", $hash));
+                $notifications[] = IBackend::HIERARCHYNOTIFICATION;
+                $this->changesSinkHierarchyHash = $hash;
             }
         }
         return $notifications;
@@ -1005,6 +1036,20 @@ class BackendZarafa implements IBackend, ISearchProvider {
         $r = new SyncResolveRecipients();
         $r->status = SYNC_RESOLVERECIPSSTATUS_PROTOCOLERROR;
         return $r;
+    }
+
+    /**
+     * Returns the policy name for the user.
+     * If the backend returns false, the 'default' policy is used.
+     * If the backend returns any other name than 'default' the policygroup with
+     * that name (defined in the policies.ini file) will be applied for this user.
+     *
+     * @access public
+     * @return string|boolean
+     */
+    public function GetUserPolicyName() {
+        // TODO: get the user's policy from the users' directory
+        return false;
     }
 
 
@@ -1372,6 +1417,20 @@ class BackendZarafa implements IBackend, ISearchProvider {
      */
 
     /**
+     * Returns a hash representing changes in the hierarchy of the main user.
+     * It changes if a folder is added, renamed or deleted.
+     *
+     * @access private
+     * @return string
+     */
+    private function getHierarchyHash() {
+        $rootfolder = mapi_msgstore_openentry($this->defaultstore);
+        $hierarchy =  mapi_folder_gethierarchytable($rootfolder, CONVENIENT_DEPTH);
+        return md5(serialize(mapi_table_queryallrows($hierarchy, array(PR_DISPLAY_NAME, PR_PARENT_ENTRYID))));
+    }
+
+
+    /**
      * Advises a store to the changes sink
      *
      * @param mapistore $store              store to be advised
@@ -1382,15 +1441,16 @@ class BackendZarafa implements IBackend, ISearchProvider {
     private function adviseStoreToSink($store) {
         // check if we already advised the store
         if (!in_array($store, $this->changesSinkStores)) {
-            mapi_msgstore_advise($this->store, null, fnevObjectModified | fnevObjectCreated | fnevObjectMoved | fnevObjectDeleted, $this->changesSink);
-            $this->changesSinkStores[] = $store;
+            mapi_msgstore_advise($store, null, fnevObjectModified | fnevObjectCreated | fnevObjectMoved | fnevObjectDeleted, $this->changesSink);
 
             if (mapi_last_hresult()) {
-                ZLog::Write(LOGLEVEL_WARN, sprintf("ZarafaBackend->adviseStoreToSink(): failed to advised store '%s' with code 0x%X. Polling will be performed.", $this->store, mapi_last_hresult()));
+                ZLog::Write(LOGLEVEL_WARN, sprintf("ZarafaBackend->adviseStoreToSink(): failed to advised store '%s' with code 0x%X. Polling will be performed.", $store, mapi_last_hresult()));
                 return false;
             }
-            else
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->adviseStoreToSink(): advised store '%s'", $this->store));
+            else {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->adviseStoreToSink(): advised store '%s'", $store));
+                $this->changesSinkStores[] = $store;
+            }
         }
         return true;
     }
@@ -1493,10 +1553,10 @@ class BackendZarafa implements IBackend, ISearchProvider {
     private function settingsOOF(&$oof) {
         //if oof state is set it must be set of oof and get otherwise
         if (isset($oof->oofstate)) {
-            $this->settingsOOFSEt($oof);
+            $this->settingsOofSet($oof);
         }
         else {
-            $this->settingsOOFGEt($oof);
+            $this->settingsOofGet($oof);
         }
     }
 
@@ -1508,8 +1568,8 @@ class BackendZarafa implements IBackend, ISearchProvider {
      * @access private
      * @return void
      */
-    private function settingsOOFGEt(&$oof) {
-        $oofprops = mapi_getprops($this->defaultstore, array(PR_EC_OUTOFOFFICE, PR_EC_OUTOFOFFICE_MSG, PR_EC_OUTOFOFFICE_SUBJECT));
+    private function settingsOofGet(&$oof) {
+        $oofprops = mapi_getprops($this->defaultstore, array(PR_EC_OUTOFOFFICE, PR_EC_OUTOFOFFICE_MSG, PR_EC_OUTOFOFFICE_SUBJECT, PR_EC_OUTOFOFFICE_FROM, PR_EC_OUTOFOFFICE_UNTIL));
         $oof->oofstate = SYNC_SETTINGSOOF_DISABLED;
         $oof->Status = SYNC_SETTINGSSTATUS_SUCCESS;
         if ($oofprops != false) {
@@ -1522,6 +1582,26 @@ class BackendZarafa implements IBackend, ISearchProvider {
             $oofmessage->bodytype = $oof->bodytype;
             unset($oofmessage->appliesToExternal, $oofmessage->appliesToExternalUnknown);
             $oof->oofmessage[] = $oofmessage;
+
+            // check whether time based out of office is set
+            if ($oof->oofstate == SYNC_SETTINGSOOF_GLOBAL && isset($oofprops[PR_EC_OUTOFOFFICE_FROM]) && isset($oofprops[PR_EC_OUTOFOFFICE_UNTIL])) {
+                if ($oofprops[PR_EC_OUTOFOFFICE_FROM] < $oofprops[PR_EC_OUTOFOFFICE_UNTIL]) {
+                    $oof->oofstate = SYNC_SETTINGSOOF_TIMEBASED;
+                    $oof->starttime = $oofprops[PR_EC_OUTOFOFFICE_FROM];
+                    $oof->endtime = $oofprops[PR_EC_OUTOFOFFICE_UNTIL];
+                }
+                else {
+                    ZLog::Write(LOGLEVEL_WARN, sprintf("Zarafa->settingsOofGet(): Time based out of office set but end time ('%s') is before startime ('%s').",
+                        date("Y-m-d H:i:s", $oofprops[PR_EC_OUTOFOFFICE_FROM]), date("Y-m-d H:i:s", $oofprops[PR_EC_OUTOFOFFICE_UNTIL])));
+                    $oof->Status = SYNC_SETTINGSSTATUS_PROTOCOLLERROR;
+                }
+            }
+            elseif ($oof->oofstate == SYNC_SETTINGSOOF_GLOBAL && (isset($oofprops[PR_EC_OUTOFOFFICE_FROM]) || isset($oofprops[PR_EC_OUTOFOFFICE_UNTIL]))) {
+                ZLog::Write(LOGLEVEL_WARN, sprintf("Zarafa->settingsOofGet(): Time based out of office set but either start time ('%s') or end time ('%s') is missing.",
+                    (isset($oofprops[PR_EC_OUTOFOFFICE_FROM]) ? date("Y-m-d H:i:s", $oofprops[PR_EC_OUTOFOFFICE_FROM]) : 'empty'),
+                    (isset($oofprops[PR_EC_OUTOFOFFICE_UNTIL]) ? date("Y-m-d H:i:s", $oofprops[PR_EC_OUTOFOFFICE_UNTIL]) : 'empty')));
+                $oof->Status = SYNC_SETTINGSSTATUS_PROTOCOLLERROR;
+            }
         }
         else {
             ZLog::Write(LOGLEVEL_WARN, "Unable to get out of office information");
@@ -1539,7 +1619,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
      * @access private
      * @return void
      */
-    private function settingsOOFSEt(&$oof) {
+    private function settingsOofSet(&$oof) {
         $oof->Status = SYNC_SETTINGSSTATUS_SUCCESS;
         $props = array();
         if ($oof->oofstate == SYNC_SETTINGSOOF_GLOBAL || $oof->oofstate == SYNC_SETTINGSOOF_TIMEBASED) {
@@ -1550,9 +1630,22 @@ class BackendZarafa implements IBackend, ISearchProvider {
                     $props[PR_EC_OUTOFOFFICE_SUBJECT] = "Out of office";
                 }
             }
+            if ($oof->oofstate == SYNC_SETTINGSOOF_TIMEBASED) {
+                if(isset($oof->starttime) && isset($oof->endtime)) {
+                    $props[PR_EC_OUTOFOFFICE_FROM] = $oof->starttime;
+                    $props[PR_EC_OUTOFOFFICE_UNTIL] = $oof->endtime;
+                }
+                elseif (isset($oof->starttime) || isset($oof->endtime)) {
+                    $oof->Status = SYNC_SETTINGSSTATUS_PROTOCOLLERROR;
+                }
+            }
+            else {
+                $deleteProps = array(PR_EC_OUTOFOFFICE_FROM, PR_EC_OUTOFOFFICE_UNTIL);
+            }
         }
         elseif($oof->oofstate == SYNC_SETTINGSOOF_DISABLED) {
             $props[PR_EC_OUTOFOFFICE] = false;
+            $deleteProps = array(PR_EC_OUTOFOFFICE_FROM, PR_EC_OUTOFOFFICE_UNTIL);
         }
 
         if (!empty($props)) {
@@ -1562,6 +1655,10 @@ class BackendZarafa implements IBackend, ISearchProvider {
                 ZLog::Write(LOGLEVEL_ERROR, sprintf("Setting oof information failed (%X)", $result));
                 return false;
             }
+        }
+
+        if (!empty($deleteProps)) {
+            @mapi_deleteprops($this->defaultstore, $deleteProps);
         }
 
         return true;
