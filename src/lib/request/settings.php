@@ -60,7 +60,7 @@ class Settings extends RequestProcessor {
             self::$specialHeaders = array();
             // TODO these values need to be configurable, ZO-41
             self::$specialHeaders[] = "X-Push-Capabilities: gab,receiveflags,sendflags,ooftime,recover,notes"; // "oof" removed as "ooftime" superseeds it
-            self::$specialHeaders[] = "X-Push-GAB-Name: Z-Push-OL-GAB-Acacia";
+            self::$specialHeaders[] = "X-Push-GAB-Name: Z-Push-KOB-GAB";
         }
 
         //save the request parameters

@@ -88,7 +88,7 @@ class ImportChangesStream implements IImportChanges {
             return false;
         }
 
-        // Acacia ZO-42: to sync Notes to Outlook we sync them as Appointments
+        // KOP ZO-42: to sync Notes to Outlook we sync them as Appointments
         if ($this->classAsString == "SyncNote" && ZPush::GetDeviceManager()->IsOutlookClient()) {
             // update category from SyncNote->Color
             $message->SetCategoryFromColor();
@@ -138,7 +138,7 @@ class ImportChangesStream implements IImportChanges {
             return $stat;
         }
 
-        // Acacia ZO-3: Stream reply/forward flag and time as additional category to Outlook
+        // KOP ZO-3: Stream reply/forward flag and time as additional category to Outlook
         if (ZPush::GetDeviceManager()->IsOutlookClient() && isset($message->lastverbexectime) && isset($message->lastverbexecuted) && $message->lastverbexecuted > 0) {
             ZLog::Write(LOGLEVEL_DEBUG, "ImportChangesStream->ImportMessageChange('%s'): Outlook client detected. Adding LastVerb information as category.");
             if (!isset($message->categories)){

@@ -35,4 +35,4 @@ define('CERTIFICATE_PASSWORD', null);
 define('HIDDEN_FOLDERSTORE', 'SYSTEM');
 
 /// Do not change (unless you know exactly what you do)
-define('HIDDEN_FOLDERNAME', 'Z-Push-OL-GAB-Acacia');
+define('HIDDEN_FOLDERNAME', 'Z-Push-KOP-GAB');
