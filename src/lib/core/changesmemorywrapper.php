@@ -204,7 +204,7 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("ChangesMemoryWrapper->ImportFolderChange(): Set foldertype for folder '%s' from cache as it was not sent: '%s'", $folder->displayname, $folder->type));
             }
 
-            // Acacia ZO-42: When Notes folders are updated in Outlook, it tries to update the name (that fails by default, as it's a system folder)
+            // KOP ZO-42: When Notes folders are updated in Outlook, it tries to update the name (that fails by default, as it's a system folder)
             // catch this case here and ignore the change
             if (($folder->type == SYNC_FOLDER_TYPE_NOTE || $folder->type == SYNC_FOLDER_TYPE_USER_NOTE) && ZPush::GetDeviceManager()->IsOutlookClient()) {
                 $retFolder = false;

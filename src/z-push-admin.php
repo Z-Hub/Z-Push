@@ -863,7 +863,7 @@ class ZPushAdminCLI {
         echo "Policy name:\t\t". ($device->GetPolicyName() ? $device->GetPolicyName() : ASDevice::DEFAULTPOLICYNAME)."\n";
 
         if ($device->GetOLPluginVersion()) {
-            echo "Acacia OL Plugin:\n";
+            echo "Kopano OL Plugin:\n";
             echo "\tVersion:\t". $device->GetOLPluginVersion() ."\n";
             echo "\tBuild:\t\t". $device->GetOLPluginBuild() ."\n";
             echo "\tBuild Date:\t". strftime("%Y-%m-%d %H:%M",$device->GetOLPluginBuildDate()) ."\n";

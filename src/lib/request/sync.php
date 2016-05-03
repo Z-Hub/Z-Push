@@ -454,7 +454,7 @@ class Sync extends RequestProcessor {
                             if(($el = self::$decoder->getElementStartTag(SYNC_DATA)) && ($el[EN_FLAGS] & EN_FLAGS_CONTENT)) {
                                 $message = ZPush::getSyncObjectFromFolderClass($spa->GetContentClass());
 
-                                // Acacia ZO-42: OL sends Notes as Appointments
+                                // KOP ZO-42: OL sends Notes as Appointments
                                 if ($spa->GetContentClass() == "Notes" && self::$deviceManager->IsOutlookClient()) {
                                     ZLog::Write(LOGLEVEL_DEBUG, "HandleSync(): Outlook sends Notes as Appointments, read as SyncAppointment and convert it into a SyncNote object.");
                                     $message = new SyncAppointment();
