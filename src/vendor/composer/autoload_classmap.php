@@ -34,6 +34,7 @@ return array(
     'IChanges' => $baseDir . '/lib/interface/ichanges.php',
     'IExportChanges' => $baseDir . '/lib/interface/iexportchanges.php',
     'IImportChanges' => $baseDir . '/lib/interface/iimportchanges.php',
+    'IIpcProvider' => $baseDir . '/lib/interface/iipcprovider.php',
     'ISearchProvider' => $baseDir . '/lib/interface/isearchprovider.php',
     'IStateMachine' => $baseDir . '/lib/interface/istatemachine.php',
     'ImportChangesDiff' => $baseDir . '/lib/default/diffbackend/importchangesdiff.php',

@@ -71,10 +71,19 @@
     define('USE_FULLEMAIL_FOR_LOGIN', true);
 
 /**********************************************************************************
- *  Default FileStateMachine settings
+ *  Default State settings
  */
     define('STATE_DIR', '/var/lib/z-push/');
 
+/**********************************************************************************
+ *  IPC - InterProcessCommunication
+ *
+ *  Is either provided by using shared memory on a single host or
+ *  using the memcache provider for multi-host environments.
+ *  When another implementation should be used, the class can be set here explicitly.
+ *  If empty Z-Push will try to use available providers.
+ */
+    define('IPC_PROVIDER', '');
 
 /**********************************************************************************
  *  Logging settings
@@ -245,15 +254,6 @@
  */
     // the backend data provider
     define('BACKEND_PROVIDER', '');
-
-	// IPC backend class must either be already loaded, autoloadable or in lib/core/, like default IpcBackendShm!
-    if (!function_exists('sem_get') || !function_exists('shm_attach') || !function_exists('sem_acquire')|| !function_exists('shm_get_var'))
-	{
-       define('IPC_BACKEND_CLASS', 'IpcBackendShm');
-    }
-	// Memcached IPC backend configuration:
-	// $zpush_ipc_memcached_servers = array('localhost');	// or 'hostname:port'
-	// define('IPC_BACKEND_CLASS', 'IpcBackendMemcached');
 
 /**********************************************************************************
  *  Search provider settings

@@ -1,12 +1,12 @@
 <?php
 /***********************************************
-* File      :   ipcbackendshm.php
+* File      :   ipcsharedmemoryprovider.php
 * Project   :   Z-Push
-* Descr     :   IPC backend using SHM PHP extension
+* Descr     :   IPC Provider for PHP shared memory extension
 *
 * Created   :   20.10.2011
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -41,10 +41,7 @@
 * Consult LICENSE file for details
 ************************************************/
 
-include_once('lib/interface/iipcbackend.php');
-
-class IpcBackendShm implements IIpcBackend
-{
+class IpcSharedMemoryProvider implements IIpcProvider {
     private $mutexid;
     private $memid;
     protected $type;
@@ -53,13 +50,13 @@ class IpcBackendShm implements IIpcBackend
     /**
      * Constructor
      *
-	 * @param int $type
-	 * @param int $allocate
-	 * @param string $class
-	 */
+     * @param int $type
+     * @param int $allocate
+     * @param string $class
+     */
     public function __construct($type, $allocate, $class) {
-		$this->type = $type;
-		$this->allocate = $allocate;
+        $this->type = $type;
+        $this->allocate = $allocate;
 
         if ($this->InitSharedMem())
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("%s(): Initialized mutexid %s and memid %s.", $class, $this->mutexid, $this->memid));
@@ -72,28 +69,22 @@ class IpcBackendShm implements IIpcBackend
      * @return boolean
      */
     private function InitSharedMem() {
-        // shared mem general "turn off switch"
-        if (defined("USE_SHARED_MEM") && USE_SHARED_MEM === false) {
-            ZLog::Write(LOGLEVEL_INFO, "InterProcessData::InitSharedMem(): the usage of shared memory for Z-Push has been disabled. Check your config for 'USE_SHARED_MEM'.");
-            return false;
-        }
-
         if (!function_exists('sem_get') || !function_exists('shm_attach') || !function_exists('sem_acquire')|| !function_exists('shm_get_var')) {
-            ZLog::Write(LOGLEVEL_INFO, "InterProcessData::InitSharedMem(): PHP libraries for the use shared memory are not available. Functionalities like z-push-top or loop detection are not available. Check your php packages.");
+            ZLog::Write(LOGLEVEL_INFO, "IpcSharedMemoryProvider->InitSharedMem(): PHP libraries for the use shared memory are not available. Check the isntalled php packages or use e.g. the memcache IPC provider.");
             return false;
         }
 
         // Create mutex
         $this->mutexid = @sem_get($this->type, 1);
         if ($this->mutexid === false) {
-            ZLog::Write(LOGLEVEL_ERROR, "InterProcessData::InitSharedMem(): could not aquire semaphore");
+            ZLog::Write(LOGLEVEL_ERROR, "IpcSharedMemoryProvider->InitSharedMem(): could not aquire semaphore");
             return false;
         }
 
         // Attach shared memory
         $this->memid = shm_attach($this->type+10, $this->allocate);
         if ($this->memid === false) {
-            ZLog::Write(LOGLEVEL_ERROR, "InterProcessData::InitSharedMem(): could not attach shared memory");
+            ZLog::Write(LOGLEVEL_ERROR, "IpcSharedMemoryProvider->InitSharedMem(): could not attach shared memory");
             @sem_remove($this->mutexid);
             $this->mutexid = false;
             return false;
