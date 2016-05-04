@@ -244,7 +244,7 @@ class IpcSharedMemoryProvider implements IIpcProvider {
     }
 
     /**
-     * Sets the time when the shared memory block was created
+     * Sets the time when the shared memory block was created.
      *
      * @access private
      * @return boolean
