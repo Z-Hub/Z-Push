@@ -1,6 +1,6 @@
 <?php
 /***********************************************
-* File      :   ipcmemcacheprovider.php
+* File      :   ipcmemcachedprovider.php
 * Project   :   Z-Push
 * Descr     :   IPC provider using Memcached PHP extension
 *               and memcached servers defined in
