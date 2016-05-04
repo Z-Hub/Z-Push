@@ -886,11 +886,16 @@ class Utils {
         if(posix_getuid() == 0 && file_exists($file)) {
             $dir = dirname($file);
             $perm_dir = stat($dir);
-            $perm_log = stat($file);
+            $perm_file = stat($file);
 
-            if($perm_dir[4] !== $perm_log[4] || $perm_dir[5] !== $perm_log[5]) {
-                chown($file, $perm_dir[4]);
-                chgrp($file, $perm_dir[5]);
+            if ($perm_file['uid'] == 0 && $perm_dir['uid'] == 0) {
+                unlink($file);
+                throw new FatalException("FixFileOwner: $dir must be owned by the nginx/apache/php user instead of root");
+            }
+
+            if($perm_dir['uid'] !== $perm_file['uid'] || $perm_dir['gid'] !== $perm_file['gid']) {
+                chown($file, $perm_dir['uid']);
+                chgrp($file, $perm_dir['gid']);
             }
         }
         return true;
@@ -946,6 +951,30 @@ class Utils {
         $fBase = floor($base);
         $pow = pow(1024, $base - $fBase);
         return sprintf ("%.{$precision}f %s", $pow, $units[$fBase]);
+    }
+
+    /**
+     * Safely write data to disk, using an unique tmp file (concurrent write),
+     * and using rename for atomicity. It also calls FixFileOwner to prevent
+     * ownership/rights problems when running as root
+     *
+     * If you use SafePutContents, you can safely use file_get_contents
+     * (you will always read a fully written file)
+     *
+     * @param string $filename
+     * @param string $data
+     * @return boolean|int
+     */
+    public static function SafePutContents($filename, $data) {
+        //put the 'tmp' as a prefix (and not suffix) so all glob call will not see temp files
+        $tmp = dirname($filename).DIRECTORY_SEPARATOR.'tmp-'.getmypid().'-'.basename($filename);
+        if (($res = file_put_contents($tmp, $data)) !== false) {
+            self::FixFileOwner($tmp);
+            if (rename($tmp, $filename) !== true)
+                $res = false;
+        }
+
+        return $res;
     }
 }
 
