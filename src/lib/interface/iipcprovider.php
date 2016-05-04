@@ -54,7 +54,16 @@ interface IIpcProvider
     public function __construct($type, $allocate, $class);
 
     /**
-     * Cleans up the shared memory block
+     * Reinitializes the IPC data. If the provider has no way of performing
+     * this action, it should return 'false'.
+     *
+     * @access public
+     * @return boolean
+     */
+    public function ReInitIPC();
+
+    /**
+     * Cleans up the IPC data block.
      *
      * @access public
      * @return boolean
@@ -62,7 +71,7 @@ interface IIpcProvider
     public function Clean();
 
     /**
-     * Indicates if the shared memory is active
+     * Indicates if the IPC is active.
      *
      * @access public
      * @return boolean
@@ -70,53 +79,53 @@ interface IIpcProvider
     public function IsActive();
 
     /**
-     * Blocks the class mutex
+     * Blocks the class mutex.
      * Method blocks until mutex is available!
      * ATTENTION: make sure that you *always* release a blocked mutex!
      *
-     * @access protected
+     * @access public
      * @return boolean
      */
-    public function blockMutex();
+    public function BlockMutex();
 
     /**
-     * Releases the class mutex
-     * After the release other processes are able to block the mutex themselfs
+     * Releases the class mutex.
+     * After the release other processes are able to block the mutex themselves.
      *
-     * @access protected
+     * @access public
      * @return boolean
      */
-    public function releaseMutex();
+    public function ReleaseMutex();
 
     /**
-     * Indicates if the requested variable is available in shared memory
+     * Indicates if the requested variable is available in IPC data.
      *
      * @param int   $id     int indicating the variable
      *
-     * @access protected
+     * @access public
      * @return boolean
      */
-    public function hasData($id = 2);
+    public function HasData($id = 2);
 
     /**
-     * Returns the requested variable from shared memory
+     * Returns the requested variable from IPC data.
      *
      * @param int   $id     int indicating the variable
      *
-     * @access protected
+     * @access public
      * @return mixed
      */
-    public function getData($id = 2);
+    public function GetData($id = 2);
 
     /**
-     * Writes the transmitted variable to shared memory
+     * Writes the transmitted variable to IPC data.
      * Subclasses may never use an id < 2!
      *
-     * @param mixed $data   data which should be saved into shared memory
+     * @param mixed $data   data which should be saved into IPC data
      * @param int   $id     int indicating the variable (bigger than 2!)
      *
-     * @access protected
+     * @access public
      * @return boolean
      */
-    public function setData($data, $id = 2);
+    public function SetData($data, $id = 2);
 }

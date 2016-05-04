@@ -47,7 +47,7 @@
 include_once('backend/ipcsharedmemory/ipcsharedmemoryprovider.php');
 
 abstract class InterProcessData {
-    // Defines which IPC provider to laod, first has preference
+    // Defines which IPC provider to load, first has preference
     // if IPC_PROVIDER in the main config  is set, that class will be loaded
     const PROVIDER_LOAD_ORDER = array('IpcMemcachedProvider', 'IpcSharedMemoryProvider');
     const CLEANUPTIME = 1;
@@ -100,12 +100,12 @@ abstract class InterProcessData {
     }
 
     /**
-     * Initializes internal parameters
+     * Initializes internal parameters.
      *
-     * @access public
+     * @access protected
      * @return boolean
      */
-    public function InitializeParams() {
+    protected function initializeParams() {
         if (!isset(self::$devid)) {
             self::$devid = Request::GetDeviceID();
             self::$pid = @getmypid();
@@ -116,7 +116,17 @@ abstract class InterProcessData {
     }
 
     /**
-     * Cleans up the shared memory block
+     * Reinitializes the IPC data by removing, detaching and re-allocating it.
+     *
+     * @access public
+     * @return boolean
+     */
+    public function ReInitIPC() {
+        return $this->ipcProvider ? $this->ipcProvider->ReInitIPC() : false;
+    }
+
+    /**
+     * Cleans up the IPC data block.
      *
      * @access public
      * @return boolean
@@ -126,7 +136,7 @@ abstract class InterProcessData {
     }
 
     /**
-     * Indicates if the shared memory is active
+     * Indicates if the IPC is active.
      *
      * @access public
      * @return boolean
@@ -136,7 +146,7 @@ abstract class InterProcessData {
     }
 
     /**
-     * Blocks the class mutex
+     * Blocks the class mutex.
      * Method blocks until mutex is available!
      * ATTENTION: make sure that you *always* release a blocked mutex!
      *
@@ -144,22 +154,22 @@ abstract class InterProcessData {
      * @return boolean
      */
     protected function blockMutex() {
-        return $this->ipcProvider ? $this->ipcProvider->blockMutex() : false;
+        return $this->ipcProvider ? $this->ipcProvider->BlockMutex() : false;
     }
 
     /**
-     * Releases the class mutex
-     * After the release other processes are able to block the mutex themselfs
+     * Releases the class mutex.
+     * After the release other processes are able to block the mutex themselves.
      *
      * @access protected
      * @return boolean
      */
     protected function releaseMutex() {
-        return $this->ipcProvider ? $this->ipcProvider->releaseMutex() : false;
+        return $this->ipcProvider ? $this->ipcProvider->ReleaseMutex() : false;
     }
 
     /**
-     * Indicates if the requested variable is available in shared memory
+     * Indicates if the requested variable is available in IPC data.
      *
      * @param int   $id     int indicating the variable
      *
@@ -167,11 +177,11 @@ abstract class InterProcessData {
      * @return boolean
      */
     protected function hasData($id = 2) {
-        return $this->ipcProvider ? $this->ipcProvider->hasData($id) : false;
+        return $this->ipcProvider ? $this->ipcProvider->HasData($id) : false;
     }
 
     /**
-     * Returns the requested variable from shared memory
+     * Returns the requested variable from IPC data.
      *
      * @param int   $id     int indicating the variable
      *
@@ -179,20 +189,20 @@ abstract class InterProcessData {
      * @return mixed
      */
     protected function getData($id = 2) {
-        return $this->ipcProvider ? $this->ipcProvider->getData($id) : null;
+        return $this->ipcProvider ? $this->ipcProvider->GetData($id) : null;
     }
 
     /**
-     * Writes the transmitted variable to shared memory
+     * Writes the transmitted variable to IPC data.
      * Subclasses may never use an id < 2!
      *
-     * @param mixed $data   data which should be saved into shared memory
+     * @param mixed $data   data which should be saved into IPC data
      * @param int   $id     int indicating the variable (bigger than 2!)
      *
      * @access protected
      * @return boolean
      */
     protected function setData($data, $id = 2) {
-        return $this->ipcProvider ? $this->ipcProvider->setData($data, $id) : false;
+        return $this->ipcProvider ? $this->ipcProvider->SetData($data, $id) : false;
     }
 }

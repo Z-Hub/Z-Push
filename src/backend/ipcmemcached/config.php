@@ -42,10 +42,15 @@
 * Consult LICENSE file for details
 ************************************************/
 
-// The list of available memcache servers
-// More servers can be added as 'hostname:port'
-// if no port is specified, the default port 11211 will be used
-$zpush_ipc_memcached_servers = array('localhost');
+// Comma separated list of available memcache servers.
+// Servers can be added as 'hostname:port,otherhost:port'
+define('MEMCACHED_SERVERS','localhost:11211');
+
+// Memcached down indicator
+// In case memcached is not available, a lock file will be written to disk
+define('MEMCACHED_DOWN_LOCK_FILE', '/tmp/z-push-memcache-down');
+// indicates how long the lock file will be maintained (in seconds)
+define('MEMCACHED_DOWN_LOCK_EXPIRATION', 30);
 
 // Prefix to used for keys
 define('MEMCACHED_PREFIX', 'z-push-ipc');
@@ -53,8 +58,8 @@ define('MEMCACHED_PREFIX', 'z-push-ipc');
 // Connection timeout in ms
 define('MEMCACHED_TIMEOUT', 100);
 
-// Mutex timeout in s
+// Mutex timeout (in seconds)
 define('MEMCACHED_MUTEX_TIMEOUT', 5);
 
-// Waiting time before re-trying to aquire mutext (in millionth of sec)
-define('MEMCACHED_BLOCK_USLEEP', 10000);
+// Waiting time before re-trying to aquire mutex (in ms), must be higher than 0
+define('MEMCACHED_BLOCK_WAIT', 10);

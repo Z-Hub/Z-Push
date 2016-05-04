@@ -74,7 +74,7 @@ class SimpleMutex extends InterProcessData {
 
     /**
      * Releases the mutex
-     * After the release other processes are able to block the mutex themselfs
+     * After the release other processes are able to block the mutex themselves
      *
      * @access public
      * @return boolean
