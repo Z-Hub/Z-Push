@@ -75,10 +75,8 @@ abstract class InterProcessData {
             throw new FatalNotImplementedException(sprintf("Class InterProcessData can not be initialized. Subclass %s did not initialize type and allocable memory.", get_class($this)));
 
         $this->provider_class = defined('IPC_PROVIDER') ? IPC_PROVIDER : false;
-        ZLog::Write(LOGLEVEL_DEBUG, "---------------------------------------------- provider class:". Utils::PrintAsString($this->provider_class));
         if (!$this->provider_class) {
             foreach(self::PROVIDER_LOAD_ORDER as $provider) {
-                ZLog::Write(LOGLEVEL_DEBUG, "---------------------------------------------- provider $provider exists:". class_exists($provider));
                 if (class_exists($provider)) {
                     $this->provider_class = $provider;
                     break;
