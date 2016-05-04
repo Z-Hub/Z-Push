@@ -57,7 +57,7 @@ class SimpleMutex extends InterProcessData {
     }
 
     /**
-     * Blocks the mutex
+     * Blocks the mutex.
      * Method blocks until mutex is available!
      * ATTENTION: make sure that you *always* release a blocked mutex!
      *
@@ -74,7 +74,7 @@ class SimpleMutex extends InterProcessData {
 
     /**
      * Releases the mutex
-     * After the release other processes are able to block the mutex themselves
+     * After the release other processes are able to block the mutex themselves.
      *
      * @access public
      * @return boolean
