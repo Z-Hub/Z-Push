@@ -71,10 +71,19 @@
     define('USE_FULLEMAIL_FOR_LOGIN', true);
 
 /**********************************************************************************
- *  Default FileStateMachine settings
+ *  Default State settings
  */
     define('STATE_DIR', '/var/lib/z-push/');
 
+/**********************************************************************************
+ *  IPC - InterProcessCommunication
+ *
+ *  Is either provided by using shared memory on a single host or
+ *  using the memcache provider for multi-host environments.
+ *  When another implementation should be used, the class can be set here explicitly.
+ *  If empty Z-Push will try to use available providers.
+ */
+    define('IPC_PROVIDER', '');
 
 /**********************************************************************************
  *  Logging settings

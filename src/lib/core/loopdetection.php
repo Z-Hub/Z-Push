@@ -305,7 +305,7 @@ class LoopDetection extends InterProcessData {
      */
     private function updateProcessStack() {
         // initialize params
-        $this->InitializeParams();
+        $this->initializeParams();
         if ($this->blockMutex()) {
             $loopdata = ($this->hasData()) ? $this->getData() : array();
 
@@ -354,7 +354,7 @@ class LoopDetection extends InterProcessData {
      */
     private function getProcessStack() {
         // initialize params
-        $this->InitializeParams();
+        $this->initializeParams();
         $stack = array();
 
         if ($this->blockMutex()) {
@@ -401,7 +401,7 @@ class LoopDetection extends InterProcessData {
         $brokenkey = self::BROKENMSGS ."-". $folderid;
 
         // initialize params
-        $this->InitializeParams();
+        $this->initializeParams();
         if ($this->blockMutex()) {
             $loopdata = ($this->hasData()) ? $this->getData() : array();
 
@@ -443,7 +443,7 @@ class LoopDetection extends InterProcessData {
         $okIds = array();
 
         // initialize params
-        $this->InitializeParams();
+        $this->initializeParams();
         if ($this->blockMutex()) {
             $loopdata = ($this->hasData()) ? $this->getData() : array();
 
@@ -504,7 +504,7 @@ class LoopDetection extends InterProcessData {
      */
     public function SetSyncStateUsage($folderid, $uuid, $counter) {
         // initialize params
-        $this->InitializeParams();
+        $this->initializeParams();
 
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("LoopDetection->SetSyncStateUsage(): uuid: %s  counter: %d", $uuid, $counter));
 
@@ -551,7 +551,7 @@ class LoopDetection extends InterProcessData {
      */
     public function IsSyncStateObsolete($folderid, $uuid, $counter) {
         // initialize params
-        $this->InitializeParams();
+        $this->initializeParams();
 
         $obsolete = false;
 
@@ -636,7 +636,7 @@ class LoopDetection extends InterProcessData {
         }
 
         // initialize params
-        $this->InitializeParams();
+        $this->initializeParams();
 
         $loop = false;
 

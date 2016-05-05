@@ -1,12 +1,13 @@
 <?php
 /***********************************************
-* File      :   simplemutex.php
+* File      :   ipcmemcached/config.php
 * Project   :   Z-Push
-* Descr     :   Implements a simple mutex using InterProcessData
+* Descr     :   Configuration file for the
+*               memcache IPC provider.
 *
-* Created   :   29.02.2012
+* Created   :   02.05.2016
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007-2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -41,48 +42,24 @@
 * Consult LICENSE file for details
 ************************************************/
 
-class SimpleMutex extends InterProcessData {
-    /**
-     * Constructor
-     */
-    public function SimpleMutex() {
-        // initialize super parameters
-        $this->allocate = 64;
-        $this->type = 5173;
-        parent::__construct();
+// Comma separated list of available memcache servers.
+// Servers can be added as 'hostname:port,otherhost:port'
+define('MEMCACHED_SERVERS','localhost:11211');
 
-        if (!$this->IsActive()) {
-            ZLog::Write(LOGLEVEL_ERROR, "SimpleMutex not available as InterProcessData is not available. This is not recommended on duty systems and may result in corrupt user/device linking.");
-        }
-    }
+// Memcached down indicator
+// In case memcached is not available, a lock file will be written to disk
+define('MEMCACHED_DOWN_LOCK_FILE', '/tmp/z-push-memcache-down');
+// indicates how long the lock file will be maintained (in seconds)
+define('MEMCACHED_DOWN_LOCK_EXPIRATION', 30);
 
-    /**
-     * Blocks the mutex.
-     * Method blocks until mutex is available!
-     * ATTENTION: make sure that you *always* release a blocked mutex!
-     *
-     * @access public
-     * @return boolean
-     */
-    public function Block() {
-        if ($this->IsActive())
-            return $this->blockMutex();
+// Prefix to used for keys
+define('MEMCACHED_PREFIX', 'z-push-ipc');
 
-        ZLog::Write(LOGLEVEL_WARN, "Could not enter mutex as InterProcessData is not available. This is not recommended on duty systems and may result in corrupt user/device linking!");
-        return true;
-    }
+// Connection timeout in ms
+define('MEMCACHED_TIMEOUT', 100);
 
-    /**
-     * Releases the mutex
-     * After the release other processes are able to block the mutex themselves.
-     *
-     * @access public
-     * @return boolean
-     */
-    public function Release() {
-        if ($this->IsActive())
-            return $this->releaseMutex();
+// Mutex timeout (in seconds)
+define('MEMCACHED_MUTEX_TIMEOUT', 5);
 
-        return true;
-    }
-}
+// Waiting time before re-trying to aquire mutex (in ms), must be higher than 0
+define('MEMCACHED_BLOCK_WAIT', 10);
