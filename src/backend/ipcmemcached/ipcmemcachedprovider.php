@@ -82,7 +82,7 @@ class IpcMemcachedProvider implements IIpcProvider {
         $this->init();
 
         // check if memcached was down recently
-        $this->isDownUntil = $this->getIsDownTime();
+        $this->isDownUntil = $this->getIsDownUntil();
         $this->wasDown = ! $this->IsActive();
     }
 
@@ -254,7 +254,7 @@ class IpcMemcachedProvider implements IIpcProvider {
      * @access private
      * @return long
      */
-    private function getIsDownTime() {
+    private function getIsDownUntil() {
         if (file_exists(MEMCACHED_DOWN_LOCK_FILE)) {
             $timestamp = file_get_contents(MEMCACHED_DOWN_LOCK_FILE);
             // is the lock file expired?
