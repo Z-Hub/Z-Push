@@ -166,7 +166,7 @@ class Sync extends RequestProcessor {
                         }
                         else if ($synckey !== false) {
                             if ($synckey !== $spa->GetSyncKey() && $synckey !== $spa->GetNewSyncKey()) {
-                                ZLog::Write(LOGLEVEL_DEBUG, "HandleSync(): Synckey does not match latest saved for this folder, removing folderstat to force Exporter setup". $spa->GetSyncKey());
+                                ZLog::Write(LOGLEVEL_DEBUG, "HandleSync(): Synckey does not match latest saved for this folder, removing folderstat to force Exporter setup");
                                 $spa->DelFolderStat();
                             }
                             $spa->SetSyncKey($synckey);
