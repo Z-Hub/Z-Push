@@ -12,7 +12,7 @@
 *
 * Created   :   14.02.2011
 *
-* Copyright 2007 - 2015 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -60,6 +60,7 @@ class PHPWrapper {
     private $store;
     private $contentparameters;
     private $folderid;
+    private $prefix;
 
 
     /**
@@ -78,6 +79,15 @@ class PHPWrapper {
         $this->store = $store;
         $this->mapiprovider = new MAPIProvider($session, $this->store);
         $this->folderid = $folderid;
+
+        $folderidHex = bin2hex($folderid);
+        $this->prefix = '';
+        $folderid = ZPush::GetDeviceManager()->GetFolderIdForBackendId($folderidHex);
+        if ($folderid != $folderidHex) {
+            $this->prefix = $folderid . ':';
+        }
+        // TODO remove this log output in 2.3.X
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("PHPWrapper: prefix:'%s'", $this->prefix));
     }
 
     /**
@@ -144,7 +154,8 @@ class PHPWrapper {
         if ($flags == SYNC_NEW_MESSAGE) $message->flags = SYNC_NEWMESSAGE;
         else $message->flags = $flags;
 
-        $this->importer->ImportMessageChange(bin2hex($this->folderid).":".bin2hex($sourcekey), $message);
+        $this->importer->ImportMessageChange($this->prefix.bin2hex($sourcekey), $message);
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("PHPWrapper->ImportMessageChange(): change for :'%s'", $this->prefix.bin2hex($sourcekey)));
 
         // Tell MAPI it doesn't need to do anything itself, as we've done all the work already.
         return SYNC_E_IGNORE;
@@ -168,7 +179,8 @@ class PHPWrapper {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("PHPWrapper->ImportMessageDeletion(): Received %d remove requests from ICS", $amount));
         }
         foreach($sourcekeys as $sourcekey) {
-            $this->importer->ImportMessageDeletion(bin2hex($this->folderid).":".bin2hex($sourcekey));
+            $this->importer->ImportMessageDeletion($this->prefix.bin2hex($sourcekey));
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("PHPWrapper->ImportMessageDeletion(): delete for :'%s'", $this->prefix.bin2hex($sourcekey)));
         }
     }
 
@@ -182,7 +194,8 @@ class PHPWrapper {
      */
     public function ImportPerUserReadStateChange($readstates) {
         foreach($readstates as $readstate) {
-            $this->importer->ImportMessageReadFlag(bin2hex($this->folderid).":".bin2hex($readstate["sourcekey"]), $readstate["flags"] & MSGFLAG_READ);
+            $this->importer->ImportMessageReadFlag($this->prefix.bin2hex($readstate["sourcekey"]), $readstate["flags"] & MSGFLAG_READ);
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("PHPWrapper->ImportPerUserReadStateChange(): read for :'%s'", $this->prefix.bin2hex($readstate["sourcekey"])));
         }
     }
 
