@@ -282,6 +282,9 @@ class Sync extends RequestProcessor {
                     // use default conflict handling if not specified by the mobile
                     $spa->SetConflict(SYNC_CONFLICT_DEFAULT);
 
+                    // save the current filtertype because it might have been changed on the mobile
+                    $currentFilterType = $spa->GetFilterType();
+
                     while(self::$decoder->getElementStartTag(SYNC_OPTIONS)) {
                         $firstOption = true;
                         WBXMLDecoder::ResetInWhile("syncOptions");
@@ -294,6 +297,9 @@ class Sync extends RequestProcessor {
                                 // switch the foldertype for the next options
                                 $spa->UseCPO($foldertype);
 
+                                // save the current filtertype because it might have been changed on the mobile
+                                $currentFilterType = $spa->GetFilterType();
+
                                 // set to synchronize all changes. The mobile could overwrite this value
                                 $spa->SetFilterType(SYNC_FILTERTYPE_ALL);
 
@@ -303,6 +309,8 @@ class Sync extends RequestProcessor {
                             // if no foldertype is defined, use default cpo
                             else if ($firstOption){
                                 $spa->UseCPO();
+                                // save the current filtertype because it might have been changed on the mobile
+                                $currentFilterType = $spa->GetFilterType();
                                 // set to synchronize all changes. The mobile could overwrite this value
                                 $spa->SetFilterType(SYNC_FILTERTYPE_ALL);
                             }
@@ -386,6 +394,11 @@ class Sync extends RequestProcessor {
                         (!$spa->HasFilterType() || $spa->GetFilterType() == SYNC_FILTERTYPE_ALL || $spa->GetFilterType() > SYNC_FILTERTIME_MAX)) {
                             ZLog::Write(LOGLEVEL_DEBUG, sprintf("SYNC_FILTERTIME_MAX defined. Filter set to value: %s", SYNC_FILTERTIME_MAX));
                             $spa->SetFilterType(SYNC_FILTERTIME_MAX);
+                    }
+
+                    if ($currentFilterType != $spa->GetFilterType()) {
+                        ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleSync(): filter type has changed (old: '%s', new: '%s'), removing folderstat to force Exporter setup", $currentFilterType, $spa->GetFilterType()));
+                        $spa->DelFolderStat();
                     }
 
                     // Check if the hierarchycache is available. If not, trigger a HierarchySync
