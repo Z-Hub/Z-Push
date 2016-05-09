@@ -47,11 +47,11 @@
 include_once('backend/ipcsharedmemory/ipcsharedmemoryprovider.php');
 
 abstract class InterProcessData {
-    // Defines which IPC provider to load, first has preference
-    // if IPC_PROVIDER in the main config  is set, that class will be loaded
-    const PROVIDER_LOAD_ORDER = array('IpcMemcachedProvider', 'IpcSharedMemoryProvider');
     const CLEANUPTIME = 1;
 
+    // Defines which IPC provider to load, first has preference
+    // if IPC_PROVIDER in the main config  is set, that class will be loaded
+    static private $providerLoadOrder = array('IpcMemcachedProvider', 'IpcSharedMemoryProvider');
     static protected $devid;
     static protected $pid;
     static protected $user;
@@ -76,7 +76,7 @@ abstract class InterProcessData {
 
         $this->provider_class = defined('IPC_PROVIDER') ? IPC_PROVIDER : false;
         if (!$this->provider_class) {
-            foreach(self::PROVIDER_LOAD_ORDER as $provider) {
+            foreach(self::$providerLoadOrder as $provider) {
                 if (class_exists($provider)) {
                     $this->provider_class = $provider;
                     break;
