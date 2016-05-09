@@ -49,13 +49,8 @@
 * Consult LICENSE file for details
 ************************************************/
 
-// default backend
-include_once('lib/default/backend.php');
-
 //include the CombinedBackend's own config file
 require_once("backend/combined/config.php");
-require_once("backend/combined/importer.php");
-require_once("backend/combined/exporter.php");
 
 class BackendCombined extends Backend implements ISearchProvider {
     public $config;
@@ -444,7 +439,7 @@ class BackendCombined extends Backend implements ISearchProvider {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCombined->ChangesSinkInitialize('%s') is supported, initializing", $folderid));
             return $backend->ChangesSinkInitialize($this->GetBackendFolder($folderid));
         }
-            
+
         // if the backend doesn't support ChangesSink, we also return true so we don't get an error
         return true;
      }

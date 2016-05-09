@@ -54,25 +54,7 @@ include_once('backend/zarafa/mapi/mapidefs.php');
 include_once('backend/zarafa/mapi/mapitags.php');
 include_once('backend/zarafa/mapi/mapicode.php');
 include_once('backend/zarafa/mapi/mapiguid.php');
-include_once('backend/zarafa/mapi/class.baseexception.php');
-include_once('backend/zarafa/mapi/class.mapiexception.php');
-include_once('backend/zarafa/mapi/class.baserecurrence.php');
-include_once('backend/zarafa/mapi/class.taskrecurrence.php');
-include_once('backend/zarafa/mapi/class.recurrence.php');
-include_once('backend/zarafa/mapi/class.meetingrequest.php');
-include_once('backend/zarafa/mapi/class.freebusypublish.php');
 
-// processing of RFC822 messages
-require_once('include/z_RFC822.php');
-
-// components of Zarafa backend
-include_once('backend/zarafa/mapiutils.php');
-include_once('backend/zarafa/mapimapping.php');
-include_once('backend/zarafa/mapiprovider.php');
-include_once('backend/zarafa/mapiphpwrapper.php');
-include_once('backend/zarafa/mapistreamwrapper.php');
-include_once('backend/zarafa/importer.php');
-include_once('backend/zarafa/exporter.php');
 
 //setlocale to UTF-8 in order to support properties containing Unicode characters
 setlocale(LC_CTYPE, "en_US.UTF-8");
@@ -121,7 +103,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
         $this->session = false;
         $this->folderStatCache = array();
 
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendZarafa using PHP-MAPI version: %s", phpversion("mapi")));
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendZarafa using PHP-MAPI version: %s - PHP version: %s", phpversion("mapi"), phpversion()));
     }
 
     /**
@@ -703,7 +685,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
             throw new StatusException(sprintf("ZarafaBackend->GetAttachmentData('%s'): Error, unable to open attachment data stream: 0x%X", $attname, mapi_last_hresult()), SYNC_ITEMOPERATIONSSTATUS_INVALIDATT);
 
         // put the mapi stream into a wrapper to get a standard stream
-        $attachment->data = MapiStreamWrapper::Open($stream);
+        $attachment->data = MAPIStreamWrapper::Open($stream);
         if (isset($attprops[PR_ATTACH_MIME_TAG]))
             $attachment->contenttype = $attprops[PR_ATTACH_MIME_TAG];
         elseif (isset($attprops[PR_ATTACH_MIME_TAG_W]))

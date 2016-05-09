@@ -43,9 +43,6 @@
 * Consult LICENSE file for details
 ************************************************/
 
-// TODO ZP-821 - remove when autoloading
-include_once('backend/ipcsharedmemory/ipcsharedmemoryprovider.php');
-
 abstract class InterProcessData {
     const CLEANUPTIME = 1;
 
