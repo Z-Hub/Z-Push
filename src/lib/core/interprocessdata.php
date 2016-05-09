@@ -43,9 +43,6 @@
 * Consult LICENSE file for details
 ************************************************/
 
-// TODO ZP-821 - remove when autoloading
-include_once('backend/ipcsharedmemory/ipcsharedmemoryprovider.php');
-
 abstract class InterProcessData {
     // Defines which IPC provider to load, first has preference
     // if IPC_PROVIDER in the main config  is set, that class will be loaded

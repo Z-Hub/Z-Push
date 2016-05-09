@@ -482,8 +482,7 @@ class ZPush {
             return false;
 
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("Including backend file: '%s'", $toLoad));
-        include_once($toLoad);
-        return true;
+        return include_once($toLoad);
     }
 
     /**
@@ -535,20 +534,19 @@ class ZPush {
 
             // if no backend provider is defined, try to include automatically
             if ($ourBackend == false || $ourBackend == "") {
-                $loaded = false;
                 foreach (self::$autoloadBackendPreference as $autoloadBackend) {
                     ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPush::GetBackend(): trying autoload backend '%s'", $autoloadBackend));
-                    $loaded = class_exists($autoloadBackend) || self::IncludeBackend($autoloadBackend);
-                    if ($loaded) {
+                    if (class_exists($autoloadBackend)) {
                         $ourBackend = $autoloadBackend;
                         break;
                     }
                 }
-                if (!$ourBackend || !$loaded)
-                    throw new FatalMisconfigurationException("No Backend provider can not be loaded. Check your installation and configuration!");
+                if (!$ourBackend)
+                    throw new FatalMisconfigurationException("No Backend provider can be found. Check your installation and/or configuration!");
             }
-            elseif (!class_exists($ourBackend))
-                self::IncludeBackend($ourBackend);
+            elseif (!class_exists($ourBackend)) {
+                spl_autoload_register('\ZPush::IncludeBackend');
+            }
 
             if (class_exists($ourBackend))
                 ZPush::$backend = new $ourBackend();

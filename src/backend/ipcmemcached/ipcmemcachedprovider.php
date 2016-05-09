@@ -42,6 +42,8 @@
 *
 * Consult LICENSE file for details
 ************************************************/
+//include own config file
+require_once("backend/ipcmemcached/config.php");
 
 class IpcMemcachedProvider implements IIpcProvider {
     protected $type;
