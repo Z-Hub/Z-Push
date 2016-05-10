@@ -97,6 +97,7 @@ class ImportChangesICS implements IImportChanges {
         if ($folderid) {
             $entryid = mapi_msgstore_entryidfromsourcekey($store, $folderid);
             $folderidForBackendId = ZPush::GetDeviceManager()->GetFolderIdForBackendId($this->folderidHex);
+            // Only append backend id if the mapping backendid<->folderid is available.
             if ($folderidForBackendId != $this->folderidHex) {
                 $this->prefix = $folderidForBackendId . ':';
             }
@@ -362,11 +363,10 @@ class ImportChangesICS implements IImportChanges {
         $flags = 0;
         $props = array();
         $props[PR_PARENT_SOURCE_KEY] = $this->folderid;
-        $fsk = null;
 
         // set the PR_SOURCE_KEY if available or mark it as new message
         if($id) {
-            list($fsk, $sk) = MAPIUtils::SplitMessageId($id);
+            list(, $sk) = MAPIUtils::SplitMessageId($id);
             $props[PR_SOURCE_KEY] = hex2bin($sk);
 
             // on editing an existing message, check if it is in the synchronization interval
@@ -389,14 +389,8 @@ class ImportChangesICS implements IImportChanges {
                 return false;
             }
         }
-        else {
+        else
             $flags = SYNC_NEW_MESSAGE;
-            $folderid = ZPush::GetDeviceManager()->GetFolderIdForBackendId($this->folderidHex);
-            // Only append backend id if the mapping backendid<->folderid is available.
-            if ($folderid != $this->folderidHex && is_int($folderid) ) {
-                $fsk = $this->folderidHex;
-            }
-        }
 
         if(mapi_importcontentschanges_importmessagechange($this->importer, $props, $flags, $mapimessage)) {
             $this->mapiprovider->SetMessage($mapimessage, $message);
