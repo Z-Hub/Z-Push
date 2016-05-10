@@ -72,6 +72,7 @@ class ImportChangesICS implements IImportChanges {
     private $conflictsState;
     private $cutoffdate;
     private $contentClass;
+    private $prefix;
 
     /**
      * Constructor
@@ -91,9 +92,14 @@ class ImportChangesICS implements IImportChanges {
         $this->conflictsLoaded = false;
         $this->cutoffdate = false;
         $this->contentClass = false;
+        $this->prefix = '';
 
         if ($folderid) {
             $entryid = mapi_msgstore_entryidfromsourcekey($store, $folderid);
+            $folderidForBackendId = ZPush::GetDeviceManager()->GetFolderIdForBackendId($this->folderidHex);
+            if ($folderidForBackendId != $this->folderidHex) {
+                $this->prefix = $folderidForBackendId . ':';
+            }
         }
         else {
             $storeprops = mapi_getprops($store, array(PR_IPM_SUBTREE_ENTRYID));
@@ -118,6 +124,9 @@ class ImportChangesICS implements IImportChanges {
             $this->importer = mapi_openproperty($folder, PR_COLLECTOR, IID_IExchangeImportContentsChanges, 0 , 0);
         else
             $this->importer = mapi_openproperty($folder, PR_COLLECTOR, IID_IExchangeImportHierarchyChanges, 0 , 0);
+
+        // TODO remove this log output in 2.3.X
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ImportChangesICS: prefix:'%s'", $this->prefix));
     }
 
     /**
@@ -383,6 +392,7 @@ class ImportChangesICS implements IImportChanges {
         else {
             $flags = SYNC_NEW_MESSAGE;
             $folderid = ZPush::GetDeviceManager()->GetFolderIdForBackendId($this->folderidHex);
+            // Only append backend id if the mapping backendid<->folderid is available.
             if ($folderid != $this->folderidHex && is_int($folderid) ) {
                 $fsk = $this->folderidHex;
             }
@@ -397,7 +407,7 @@ class ImportChangesICS implements IImportChanges {
 
             $sourcekeyprops = mapi_getprops($mapimessage, array (PR_SOURCE_KEY));
 
-            return ZPush::GetDeviceManager()->GetFolderIdForBackendId($fsk) .":". bin2hex($sourcekeyprops[PR_SOURCE_KEY]);
+            return $this->prefix . bin2hex($sourcekeyprops[PR_SOURCE_KEY]);
         }
         else
             throw new StatusException(sprintf("ImportChangesICS->ImportMessageChange('%s','%s'): Error updating object: 0x%X", $id, get_class($message), mapi_last_hresult()), SYNC_STATUS_OBJECTNOTFOUND);
@@ -572,7 +582,7 @@ class ImportChangesICS implements IImportChanges {
 
         $sourcekeyprops = mapi_getprops($newmessage, array (PR_SOURCE_KEY));
         if (isset($sourcekeyprops[PR_SOURCE_KEY]) && $sourcekeyprops[PR_SOURCE_KEY])
-            return ZPush::GetDeviceManager()->GetFolderIdForBackendId($newfolder) .":". bin2hex($sourcekeyprops[PR_SOURCE_KEY]);
+            return $this->prefix . bin2hex($sourcekeyprops[PR_SOURCE_KEY]);
 
         return false;
     }

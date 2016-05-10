@@ -613,15 +613,17 @@ class BackendZarafa implements IBackend, ISearchProvider {
      * @throws StatusException
      */
     public function Fetch($folderid, $id, $contentparameters) {
+        // id might be in the new longid format, so we have to split it here
+        list($fsk, $sk) = MAPIUtils::SplitMessageId($id);
         // get the entry id of the message
-        $entryid = mapi_msgstore_entryidfromsourcekey($this->store, hex2bin($folderid), hex2bin($id));
+        $entryid = mapi_msgstore_entryidfromsourcekey($this->store, hex2bin($folderid), hex2bin($sk));
         if(!$entryid)
-            throw new StatusException(sprintf("BackendZarafa->Fetch('%s','%s'): Error getting entryid: 0x%X", $folderid, $id, mapi_last_hresult()), SYNC_STATUS_OBJECTNOTFOUND);
+            throw new StatusException(sprintf("BackendZarafa->Fetch('%s','%s'): Error getting entryid: 0x%X", $folderid, $sk, mapi_last_hresult()), SYNC_STATUS_OBJECTNOTFOUND);
 
         // open the message
         $message = mapi_msgstore_openentry($this->store, $entryid);
         if(!$message)
-            throw new StatusException(sprintf("BackendZarafa->Fetch('%s','%s'): Error, unable to open message: 0x%X", $folderid, $id, mapi_last_hresult()), SYNC_STATUS_OBJECTNOTFOUND);
+            throw new StatusException(sprintf("BackendZarafa->Fetch('%s','%s'): Error, unable to open message: 0x%X", $folderid, $sk, mapi_last_hresult()), SYNC_STATUS_OBJECTNOTFOUND);
 
         // convert the mapi message into a SyncObject and return it
         $mapiprovider = new MAPIProvider($this->session, $this->store);
