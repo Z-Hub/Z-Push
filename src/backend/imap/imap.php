@@ -46,11 +46,6 @@
 // config file
 require_once("backend/imap/config.php");
 
-include_once('lib/default/diffbackend/diffbackend.php');
-include_once('include/mimeDecode.php');
-require_once('include/z_RFC822.php');
-
-
 class BackendIMAP extends BackendDiff {
     protected $wasteID;
     protected $sentID;
@@ -1810,7 +1805,7 @@ class BackendIMAP extends BackendDiff {
     protected function cleanupDate($receiveddate) {
         $receiveddate = strtotime(preg_replace("/\(.*\)/", "", $receiveddate));
         if ($receiveddate == false || $receiveddate == -1) {
-            debugLog("Received date is false. Message might be broken.");
+            ZLog::Write(LOGLEVEL_DEBUG, "Received date is false. Message might be broken.");
             return null;
         }
 

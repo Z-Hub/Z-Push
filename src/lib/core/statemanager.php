@@ -129,15 +129,17 @@ class StateManager {
     /**
      * Returns a folder state (SyncParameters) for a folder id
      *
-     * @param $folderid
+     * @param string    $folderid
+     * @param boolean   $fromCacheIfAvailable   if set to false, the folderdata is always reloaded, default: true
      *
      * @access public
      * @return SyncParameters
      */
-    public function GetSynchedFolderState($folderid) {
+    public function GetSynchedFolderState($folderid, $fromCacheIfAvailable = true) {
         // new SyncParameters are cached
-        if (isset($this->synchedFolders[$folderid]))
+        if ($fromCacheIfAvailable && isset($this->synchedFolders[$folderid])) {
             return $this->synchedFolders[$folderid];
+        }
 
         $uuid = $this->device->GetFolderUUID($folderid);
         if ($uuid) {
@@ -520,8 +522,10 @@ class StateManager {
         foreach ($hc->GetDeletedFolders() as $delfolder)
             self::UnLinkState($this->device, $delfolder->serverid);
 
-        foreach ($hc->ExportFolders() as $folder)
+        foreach ($hc->ExportFolders() as $folder) {
             $this->device->SetFolderType($folder->serverid, $folder->type);
+            $this->device->SetFolderBackendId($folder->serverid, $folder->BackendId);
+        }
 
         return $this->statemachine->SetState($this->device->GetHierarchyCacheData(), $this->device->GetDeviceId(), IStateMachine::HIERARCHY, $this->uuid, $this->newStateCounter);
     }

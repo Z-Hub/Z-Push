@@ -211,7 +211,7 @@ class ImportChangesStream implements IImportChanges {
      * @param object        $folder     SyncFolder
      *
      * @access public
-     * @return string       id of the folder
+     * @return boolean/SyncObject           status/object with the ath least the serverid of the folder set
      */
     public function ImportFolderChange($folder) {
         // checks if the next message may cause a loop or is broken
@@ -235,16 +235,15 @@ class ImportChangesStream implements IImportChanges {
     /**
      * Imports a folder deletion
      *
-     * @param string        $id
-     * @param string        $parent id
+     * @param SyncFolder    $folder         at least "serverid" needs to be set
      *
      * @access public
      * @return boolean
      */
-    public function ImportFolderDeletion($id, $parent = false) {
+    public function ImportFolderDeletion($folder) {
         $this->encoder->startTag(SYNC_FOLDERHIERARCHY_REMOVE);
             $this->encoder->startTag(SYNC_FOLDERHIERARCHY_SERVERENTRYID);
-                $this->encoder->content($id);
+                $this->encoder->content($folder->serverid);
             $this->encoder->endTag();
         $this->encoder->endTag();
 

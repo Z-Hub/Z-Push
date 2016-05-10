@@ -6,7 +6,7 @@
 *
 * Created   :   23.12.2011
 *
-* Copyright 2007 - 2015 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -486,6 +486,7 @@ class ZPushAdmin {
             $new_list = array();
             foreach ($device->GetAdditionalFolders() as $folder) {
                 $folder['source'] = 'user';
+                $folder['syncfolderid'] = $device->GetFolderIdForBackendId($folder['folderid'], false);
                 $new_list[$folder['folderid']] = $folder;
             }
             foreach (ZPush::GetAdditionalSyncFolders() as $fid => $so) {
@@ -494,6 +495,7 @@ class ZPushAdmin {
                     $new_list[$fid] = array(
                                         'store' => $so->Store,
                                         'folderid' => $fid,
+                                        'syncfolderid' => $device->GetFolderIdForBackendId($fid, false),
                                         'name' => $so->displayname,
                                         'type' => $so->type,
                                         'source' => 'static'
@@ -864,24 +866,38 @@ class ZPushAdmin {
                         continue;
                     }
                     $seen++;
+                    $needsFixing = false;
+                    $spa = false;
 
                     // try getting the FOLDERDATA for that state
                     try {
-                        $data = ZPush::GetStateMachine()->GetState($device->GetDeviceId(), IStateMachine::FOLDERDATA, $hierarchyUuid);
+                        $spa = ZPush::GetStateMachine()->GetState($device->GetDeviceId(), IStateMachine::FOLDERDATA, $hierarchyUuid);
                     }
                     catch(StateNotFoundException $snfe) {
-                        // No FD found, search all states, and find the highest counter for the hierarchy UUID
-                        $allStates = ZPush::GetStateMachine()->GetAllStatesForDevice($devid);
-                        $maxCounter = 1;
-                        foreach ($allStates as $state) {
-                            if ($state["uuid"] == $hierarchyUuid && $state['counter'] > $maxCounter && ($state['type'] == "" || $state['type'] == false)) {
-                                $maxCounter = $state['counter'];
-                            }
+                        $needsFixing = true;
+                    }
+                    // Search all states, and find the highest counter for the hierarchy UUID
+                    $allStates = ZPush::GetStateMachine()->GetAllStatesForDevice($devid);
+                    $maxCounter = 1;
+                    foreach ($allStates as $state) {
+                        if ($state["uuid"] == $hierarchyUuid && $state['counter'] > $maxCounter && ($state['type'] == "" || $state['type'] == false)) {
+                            $maxCounter = $state['counter'];
                         }
+                    }
+                    $hierarchySyncKey = StateManager::BuildStateKey($hierarchyUuid, $maxCounter);
 
-                        // generate FOLDERDATA
+                    if ($spa) {
+                        if ($spa->GetSyncKey() !== $hierarchySyncKey) {
+                            $needsFixing = true;
+                        }
+                    }
+                    else {
                         $spa = new SyncParameters();
-                        $spa->SetSyncKey(StateManager::BuildStateKey($hierarchyUuid, $maxCounter));
+                    }
+
+                    if ($needsFixing) {
+                        // generate FOLDERDATA
+                        $spa->SetSyncKey($hierarchySyncKey);
                         $spa->SetFolderId(false);
                         ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::FixStatesHierarchyFolderData(): write data for %s", $spa->GetSyncKey()));
                         ZPush::GetStateMachine()->SetState($spa, $device->GetDeviceId(), IStateMachine::FOLDERDATA, $hierarchyUuid);

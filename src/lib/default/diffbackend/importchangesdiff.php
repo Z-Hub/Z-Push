@@ -209,7 +209,7 @@ class ImportChangesDiff extends DiffState implements IImportChanges {
      * @param object        $folder     SyncFolder
      *
      * @access public
-     * @return string       id of the folder
+     * @return boolean/SyncObject           status/object with the ath least the serverid of the folder set
      * @throws StatusException
      */
     public function ImportFolderChange($folder) {
@@ -236,20 +236,22 @@ class ImportChangesDiff extends DiffState implements IImportChanges {
         if($stat)
             $this->updateState("change", $stat);
 
-        return $stat["id"];
+        $folder->serverid = $stat["id"];
+        return $folder;
     }
 
     /**
      * Imports a folder deletion
      *
-     * @param string        $id
-     * @param string        $parent id
+     * @param SyncFolder    $folder         at least "serverid" needs to be set
      *
      * @access public
      * @return int          SYNC_FOLDERHIERARCHY_STATUS
      * @throws StatusException
      */
-    public function ImportFolderDeletion($id, $parent = false) {
+    public function ImportFolderDeletion($folder) {
+        $id = $folder->serverid;
+        $parent = isset($folder->parentid) ? $folder->parentid : false;
         //do nothing if it is a dummy folder
         if ($parent == SYNC_FOLDER_TYPE_DUMMY)
             throw new StatusException(sprintf("ImportChangesDiff->ImportFolderDeletion('%s','%s'): can not be done on a dummy folder", $id, $parent), SYNC_FSSTATUS_SERVERERROR);
@@ -259,9 +261,9 @@ class ImportChangesDiff extends DiffState implements IImportChanges {
         if (isset($folder->type) && Utils::IsSystemFolder($folder->type))
             throw new StatusException(sprintf("ImportChangesDiff->ImportFolderDeletion('%s','%s'): Error deleting system/default folder", $id, $parent), SYNC_FSSTATUS_SYSTEMFOLDER);
 
-        $ret = $this->backend->DeleteFolder($id, $parent);
+        $ret = $this->backend->DeleteFolder($folder);
         if (!$ret)
-            throw new StatusException(sprintf("ImportChangesDiff->ImportFolderDeletion('%s','%s'): can not be done on a dummy folder", $id, $parent), SYNC_FSSTATUS_FOLDERDOESNOTEXIST);
+            throw new StatusException(sprintf("ImportChangesDiff->ImportFolderDeletion('%s','%s'): can not be deleted", $id, $parent), SYNC_FSSTATUS_FOLDERDOESNOTEXIST);
 
         $change = array();
         $change["id"] = $id;

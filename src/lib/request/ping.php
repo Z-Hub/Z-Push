@@ -185,6 +185,7 @@ class Ping extends RequestProcessor {
         // Check for changes on the default LifeTime, set interval and ONLY on pingable collections
         try {
             if (!$pingstatus && empty($fakechanges)) {
+                self::$deviceManager->DoAutomaticASDeviceSaving(false);
                 $foundchanges = $sc->CheckForChanges($sc->GetLifetime(), $interval, true);
             }
         }

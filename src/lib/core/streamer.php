@@ -12,7 +12,7 @@
 *
 * Created   :   01.10.2007
 *
-* Copyright 2007 - 2015 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -82,7 +82,7 @@ class Streamer implements Serializable {
 
 
     /**
-     * Return the streamer mapping for this object 
+     * Return the streamer mapping for this object
      *
      * @access public
      */
@@ -419,6 +419,20 @@ class Streamer implements Serializable {
             $this->$k = unserialize($v);
 
         return true;
+    }
+
+    /**
+     * Returns SyncObject's streamer variable names.
+     *
+     * @access public
+     * @return multitype:array
+     */
+    public function GetStreamerVars() {
+        $streamerVars = array();
+        foreach ($this->mapping as $v) {
+            $streamerVars[] = $v[self::STREAMER_VAR];
+        }
+        return $streamerVars;
     }
 
     /**----------------------------------------------------------------------------------------------------------

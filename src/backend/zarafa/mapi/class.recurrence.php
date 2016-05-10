@@ -48,8 +48,6 @@
  *
  */
 
-    include_once('backend/zarafa/mapi/class.baserecurrence.php');
-
     /**
      * Recurrence
      * @author Steve Hardy <steve@zarafa.com>

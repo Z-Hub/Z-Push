@@ -57,6 +57,7 @@ class DeviceManager {
 
     private $device;
     private $deviceHash;
+    private $saveDevice;
     private $statemachine;
     private $stateManager;
     private $incomingData = 0;
@@ -78,6 +79,7 @@ class DeviceManager {
         $this->statemachine = ZPush::GetStateMachine();
         $this->deviceHash = false;
         $this->devid = Request::GetDeviceID();
+        $this->saveDevice = true;
         $this->windowSize = array();
         $this->latestFolder = false;
         $this->hierarchySyncRequired = false;
@@ -151,7 +153,7 @@ class DeviceManager {
 
         // data to be saved
         $data = $this->device->GetData();
-        if ($data && Request::IsValidDeviceID()) {
+        if ($data && Request::IsValidDeviceID() && $this->saveDevice) {
             ZLog::Write(LOGLEVEL_DEBUG, "DeviceManager->Save(): Device data changed");
 
             try {
@@ -182,6 +184,19 @@ class DeviceManager {
             $this->loopdetection->ProcessLoopDetectionTerminate();
 
         return true;
+    }
+
+    /**
+     * Sets if the AS Device should automatically be saved when terminating the request.
+     *
+     * @param boolean $doSave
+     *
+     * @access public
+     * @return void
+     */
+    public function DoAutomaticASDeviceSaving($doSave) {
+        ZLog::Write(LOGLEVEL_DEBUG, "DeviceManager->DoAutomaticASDeviceSaving(): save automatically: ". Utils::PrintAsString($doSave));
+        $this->saveDevice = $doSave;
     }
 
     /**
@@ -219,11 +234,12 @@ class DeviceManager {
      *
      * @param string        $policykey
      * @param boolean       $noDebug        (opt) by default, debug message is shown
+     * @param boolean       $checkPolicies  (opt) by default check if the provisioning policies changed
      *
      * @access public
      * @return boolean
      */
-    public function ProvisioningRequired($policykey, $noDebug = false) {
+    public function ProvisioningRequired($policykey, $noDebug = false, $checkPolicies = true) {
         $this->loadDeviceData();
 
         // check if a remote wipe is required
@@ -234,8 +250,18 @@ class DeviceManager {
 
         $p = ( ($this->device->GetWipeStatus() != SYNC_PROVISION_RWSTATUS_NA && $policykey != $this->device->GetPolicyKey()) ||
               Request::WasPolicyKeySent() && $this->device->GetPolicyKey() == ASDevice::UNDEFINED );
+
         if (!$noDebug || $p)
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("DeviceManager->ProvisioningRequired('%s') saved device key '%s': %s", $policykey, $this->device->GetPolicyKey(), Utils::PrintAsString($p)));
+
+        if ($checkPolicies) {
+            $policyHash = $this->GetProvisioningObject()->GetPolicyHash();
+            if ($this->device->hasPolicyhash() && $this->device->getPolicyhash() != $policyHash) {
+                $p = true;
+                ZLog::Write(LOGLEVEL_INFO, sprintf("DeviceManager->ProvisioningRequired(): saved policy hash '%s' changed '%s'. Provisioning required.", $this->device->getPolicyhash(), $policyHash));
+            }
+        }
+
         return $p;
     }
 
@@ -269,9 +295,9 @@ class DeviceManager {
      * @return SyncProvisioning
      */
     public function GetProvisioningObject() {
-        $p = new SyncProvisioning();
-        // TODO load systemwide Policies
-        $p->Load($this->device->GetPolicies());
+        $policyName = $this->getPolicyName();
+        $p = SyncProvisioning::GetObjectWithPolicies($this->getProvisioningPolicies($policyName));
+        $p->PolicyName = $policyName;
         return $p;
     }
 
@@ -302,6 +328,21 @@ class DeviceManager {
         }
         $this->device->SetWipeStatus($status);
         return true;
+    }
+
+    /**
+     * Saves the policy hash and name in device's state.
+     *
+     * @param SyncProvisioning  $provisioning
+     *
+     * @access public
+     * @return void
+     */
+    public function SavePolicyHashAndName($provisioning) {
+        // save policies' hash and name
+        $this->device->SetPolicyname($provisioning->PolicyName);
+        $this->device->SetPolicyhash($provisioning->GetPolicyHash());
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("DeviceManager->SavePolicyHashAndName(): Set policy: %s with hash: %s", $this->device->GetPolicyname(), $this->device->GetPolicyhash()));
     }
 
 
@@ -410,13 +451,14 @@ class DeviceManager {
      * Returns the additional folders as SyncFolder objects.
      *
      * @access public
-     * @return array of SyncFolder
+     * @return array of SyncFolder with backendids as keys
      */
     public function GetAdditionalUserSyncFolders() {
         $folders = array();
         foreach($this->device->GetAdditionalFolders() as $df) {
             $folder = new SyncFolder();
-            $folder->serverid = $df['folderid'];
+            $folder->BackendId = $df['folderid'];
+            $folder->serverid = $this->GetFolderIdForBackendId($folder->BackendId, true);
             $folder->parentid = 0;                  // only top folders are supported
             $folder->displayname = $df['name'];
             $folder->type = $df['type'];
@@ -424,7 +466,7 @@ class DeviceManager {
             $folder->NoBackendFolder = true;
             $folder->Store = $df['store'];
 
-            $folders[$folder->serverid] = $folder;
+            $folders[$folder->BackendId] = $folder;
         }
         return $folders;
     }
@@ -812,6 +854,40 @@ class DeviceManager {
         return $this->device->GetDeviceUserAgent();
     }
 
+    /**
+     * Returns the backend folder id from the AS folderid known to the mobile.
+     * If the id is not known, it's returned as is.
+     *
+     * @param mixed     $folderid
+     *
+     * @access public
+     * @return int/boolean  returns false if the type is not set
+     */
+    public function GetBackendIdForFolderId($folderid) {
+        $backendId = $this->device->GetFolderBackendId($folderid);
+        if (!$backendId) {
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("DeviceManager->GetBackendIdForFolderId(): no backend-folderid available for '%s', returning as is.", $folderid));
+            return $folderid;
+        }
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("DeviceManager->GetBackendIdForFolderId(): folderid %d => %s", $folderid, $backendId));
+        return $backendId;
+    }
+
+    /**
+     * Gets the AS folderid for a backendFolderId.
+     * If there is no known AS folderId a new one is being created.
+     *
+     * @param string    $backendid
+     * @param boolean   $generateNewIdIfNew     Generates a new AS folderid for the case the backend folder is not known yet, default: false.
+     *
+     * @access public
+     * @return int/boolean  returns false if there is folderid known for this backendid and $generateNewIdIfNew is not set or false.
+     */
+    public function GetFolderIdForBackendId($backendid, $generateNewIdIfNew = false) {
+        return $this->device->GetFolderIdForBackendId($backendid, $generateNewIdIfNew);
+    }
+
+
     /**----------------------------------------------------------------------------------------------------------
      * private DeviceManager methods
      */
@@ -938,5 +1014,38 @@ class DeviceManager {
      */
     private function getLatestFolder() {
         return $this->latestFolder;
+    }
+
+    /**
+     * Loads Provisioning policies from the policies file.
+     *
+     * @param string    $policyName     The name of the policy
+     *
+     * @access private
+     * @return array
+     */
+    private function getProvisioningPolicies($policyName) {
+        $policies = ZPush::GetPolicies();
+
+        if (!isset($policies[$policyName]) && $policyName != ASDevice::DEFAULTPOLICYNAME) {
+            ZLog::Write(LOGLEVEL_WARN, sprintf("The '%s' policy is configured, but it is not available in the policies' file. Please check %s file. Loading default policy.", $policyName, PROVISIONING_POLICYFILE));
+            return $policies[ASDevice::DEFAULTPOLICYNAME];
+        }
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("DeviceManager->getProvisioningPolicies(): loaded '%s' policy.", $policyName));
+        return $policies[$policyName];
+    }
+
+    /**
+     * Gets the policy name set in the backend or in device data.
+     *
+     * @access private
+     * @return string
+     */
+
+    private function getPolicyName() {
+        $policyName = ZPush::GetBackend()->GetUserPolicyName();
+        $policyName = ((!empty($policyName) && $policyName !== false) ? $policyName : ASDevice::DEFAULTPOLICYNAME);
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("DeviceManager->getPolicyName(): determined policy name: '%s'", $policyName));
+        return $policyName;
     }
 }
