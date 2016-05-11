@@ -123,13 +123,14 @@ class SyncCollections implements Iterator {
      *                                          through a backend->Setup() to check permissions.
      *                                          If this fails a StatusException will be thrown.
      * @param boolean $loadHierarchy            (opt) if the hierarchy sync states should be loaded, default false
+     * @param boolean $confirmedOnly            (opt) indicates if only confirmed states should be loaded, default: false
      *
      * @access public
      * @throws StatusException                  with SyncCollections::ERROR_WRONG_HIERARCHY if permission check fails
      * @throws StateInvalidException            if the sync state can not be found or relation between states is invalid ($loadState = true)
      * @return boolean
      */
-    public function LoadAllCollections($overwriteLoaded = false, $loadState = false, $checkPermissions = false, $loadHierarchy = false) {
+    public function LoadAllCollections($overwriteLoaded = false, $loadState = false, $checkPermissions = false, $loadHierarchy = false, $confirmedOnly = false) {
         $this->loadStateManager();
 
         // this operation should not remove old state counters
@@ -141,12 +142,12 @@ class SyncCollections implements Iterator {
                 continue;
 
             // Load Collection!
-            if (! $this->LoadCollection($folderid, $loadState, $checkPermissions))
+            if (! $this->LoadCollection($folderid, $loadState, $checkPermissions, $confirmedOnly))
                 $invalidStates = true;
         }
 
         // load the hierarchy data - there are no permissions to verify so we just set it to false
-        if ($loadHierarchy && !$this->LoadCollection(false, $loadState, false))
+        if ($loadHierarchy && !$this->LoadCollection(false, $loadState, false, false))
             throw new StatusException("Invalid states found while loading hierarchy data. Forcing hierarchy sync");
 
         if ($invalidStates)
@@ -163,13 +164,14 @@ class SyncCollections implements Iterator {
      * @param boolean $checkPermissions         (opt) if set to true each folder will pass
      *                                          through a backend->Setup() to check permissions.
      *                                          If this fails a StatusException will be thrown.
+     * @param boolean $confirmedOnly            (opt) indicates if only confirmed states should be loaded, default: false
      *
      * @access public
      * @throws StatusException                  with SyncCollections::ERROR_WRONG_HIERARCHY if permission check fails
      * @throws StateInvalidException            if the sync state can not be found or relation between states is invalid ($loadState = true)
      * @return boolean
      */
-    public function LoadCollection($folderid, $loadState = false, $checkPermissions = false) {
+    public function LoadCollection($folderid, $loadState = false, $checkPermissions = false, $confirmedOnly = false) {
         $this->loadStateManager();
 
         try {
@@ -206,7 +208,7 @@ class SyncCollections implements Iterator {
         if ($addStatus && $loadState === true) {
             try {
                 // make sure the hierarchy cache is loaded when we are loading hierarchy states
-                $this->addparms[$folderid]["state"] = $this->stateManager->GetSyncState($spa->GetLatestSyncKey(), ($folderid === false));
+                $this->addparms[$folderid]["state"] = $this->stateManager->GetSyncState($spa->GetLatestSyncKey($confirmedOnly), ($folderid === false));
             }
             catch (StateNotFoundException $snfe) {
                 // if we can't find the state, first we should try a sync of that folder, so
