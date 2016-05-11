@@ -2465,12 +2465,12 @@ class MAPIProvider {
                 if (Request::GetProtocolVersion() >= 12.0) {
                     if (!isset($message->asbody))
                         $message->asbody = new SyncBaseBody();
-                    $message->asbody->data = MapiStreamWrapper::Open($stream);
+                    $message->asbody->data = MAPIStreamWrapper::Open($stream);
                     $message->asbody->estimatedDataSize = $streamsize;
                     $message->asbody->truncated = 0;
                 }
                 else {
-                    $message->mimedata = MapiStreamWrapper::Open($stream);
+                    $message->mimedata = MAPIStreamWrapper::Open($stream);
                     $message->mimesize = $streamsize;
                     $message->mimetruncated = 0;
                 }

@@ -48,9 +48,6 @@
  *
  */
 
-
-    require_once("backend/zarafa/mapi/class.baserecurrence.php");
-
     class TaskRecurrence extends BaseRecurrence
     {
         /**

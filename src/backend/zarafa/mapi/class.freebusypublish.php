@@ -49,8 +49,6 @@
  */
 
 
-include_once('backend/zarafa/mapi/class.recurrence.php');
-
 class FreeBusyPublish {
 
     var $session;

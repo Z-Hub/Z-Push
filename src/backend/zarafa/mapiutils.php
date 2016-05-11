@@ -6,7 +6,7 @@
 *
 * Created   :   14.02.2011
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2013, 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -618,5 +618,21 @@ class MAPIUtils {
             mapi_setprops($mapimessage, array(PR_MESSAGE_CLASS => 'IPM.Note.SMIME.MultipartSigned'));
         }
         // TODO check if we need to do this for encrypted (and signed?) message as well
+    }
+
+    /**
+     * Splits the id into folder id and message id parts. A colon in the $id indicates
+     * that the id has folderid:messageid format.
+     *
+     * @param string            $id
+     *
+     * @access public
+     * @return array
+     */
+    public static function SplitMessageId($id) {
+        if (strpos($id, ':') !== false) {
+            return explode(':', $id);
+        }
+        return array(null, $id);
     }
 }

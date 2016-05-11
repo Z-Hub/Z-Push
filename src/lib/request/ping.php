@@ -6,7 +6,7 @@
 *
 * Created   :   16.02.2012
 *
-* Copyright 2007 - 2015 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -63,9 +63,9 @@ class Ping extends RequestProcessor {
         // read from stream to see if the symc params are being sent
         $params_present = self::$decoder->getElementStartTag(SYNC_PING_PING);
 
-        // Load all collections - do load states and check permissions
+        // Load all collections - do load states, check permissions and allow unconfirmed states
         try {
-            $sc->LoadAllCollections(true, true, true, true);
+            $sc->LoadAllCollections(true, true, true, true, false);
         }
         catch (StateInvalidException $siex) {
             // if no params are present, indicate to send params, else do hierarchy sync

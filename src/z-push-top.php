@@ -480,7 +480,7 @@ class ZPushTop {
                 else if ($cmds[0] == "clear" ) {
                     $this->topCollector->ClearLatest(true);
                     $this->topCollector->CollectData(true);
-                    $this->topCollector->ReInitSharedMem();
+                    $this->topCollector->ReInitIPC();
                 }
                 else if ($cmds[0] == "filter" || $cmds[0] == "f") {
                     if (!isset($cmds[1]) || $cmds[1] == "") {
