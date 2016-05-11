@@ -43,7 +43,8 @@
 ************************************************/
 
 /**
- * DON'T FORGET TO INSTALL THE PHP-DRIVER PACKAGE!!!
+ * More information about the configuration on https://wiki.z-hub.io/x/xIAa
+ *
  * STATE_SQL_ENGINE:    the DB engine
  * STATE_SQL_SERVER:    the DB server URI or IP
  * STATE_SQL_PORT:      the DB server port
@@ -55,7 +56,8 @@
 define('STATE_SQL_ENGINE', 'mysql');
 define('STATE_SQL_SERVER', 'localhost');
 define('STATE_SQL_PORT', '3306');
-define('STATE_SQL_DATABASE', 'zpushstates');
+define('STATE_SQL_DATABASE', 'zpush');
 define('STATE_SQL_USER', 'root');
 define('STATE_SQL_PASSWORD', '');
 define('STATE_SQL_OPTIONS', serialize(array(PDO::ATTR_PERSISTENT => true)));
+

@@ -62,37 +62,10 @@ try {
     define('BASE_PATH_CLI',  ZPUSH_BASE_PATH ."/");
     set_include_path(get_include_path() . PATH_SEPARATOR . ZPUSH_BASE_PATH);
 
-    include_once('lib/core/zpushdefs.php');
-    include_once('lib/core/zpush.php');
-    include_once('lib/core/zlog.php');
-    include_once('lib/core/statemanager.php');
-    include_once('lib/core/stateobject.php');
-    include_once('lib/core/asdevice.php');
-    include_once('lib/interface/ichanges.php');
-    include_once('lib/interface/iexportchanges.php');
-    include_once('lib/interface/iimportchanges.php');
-    include_once('lib/core/hierarchycache.php');
-    include_once('lib/core/interprocessdata.php');
-    include_once('lib/core/syncparameters.php');
-    include_once('lib/core/bodypreference.php');
-    include_once('lib/core/contentparameters.php');
-    include_once('lib/core/changesmemorywrapper.php');
-    include_once('lib/core/streamer.php');
-    include_once('lib/exceptions/exceptions.php');
-    include_once('lib/utils/utils.php');
-    include_once('lib/request/request.php');
-    include_once('lib/request/requestprocessor.php');
-    include_once('lib/interface/ibackend.php');
-    include_once('lib/interface/ichanges.php');
-    include_once('lib/interface/iexportchanges.php');
-    include_once('lib/interface/iimportchanges.php');
-    include_once('lib/interface/isearchprovider.php');
-    include_once('lib/interface/istatemachine.php');
-    include_once('lib/syncobjects/syncobject.php');
-    include_once('lib/syncobjects/syncfolder.php');
-    include_once('config.php');
-    include_once('lib/default/filestatemachine.php');
-    include_once('backend/sqlstatemachine/sqlstatemachine.php');
+    require_once 'vendor/autoload.php';
+
+    if (!defined('ZPUSH_CONFIG')) define('ZPUSH_CONFIG', 'config.php');
+    include_once(ZPUSH_CONFIG);
 
 
     if (STATE_MACHINE != 'FILE') {
@@ -105,7 +78,6 @@ try {
     $migrate = new StateMigratorFileToDB();
 
     if (!$migrate->MigrationNecessary()) {
-        print("Migration script was run before and eventually no migration is necessary." . PHP_EOL);
         exit(1);
     }
 
@@ -134,8 +106,8 @@ class StateMigratorFileToDB {
         print("StateMigratorFileToDB->MigrationNecessary(): checking if migration is necessary." . PHP_EOL);
         try {
             $this->dbsm = new SqlStateMachine();
-            if ($this->dbsm->checkTablesHaveData()) {
-                print ("All state tables have data already. A migration is not necessary." . PHP_EOL);
+            if ($this->dbsm->DoTablesHaveData()) {
+                print ("Tables already have data. Migration aborted. Drop database or truncate tables and try again." . PHP_EOL);
                 return false;
             }
         }
@@ -153,6 +125,9 @@ class StateMigratorFileToDB {
      */
     public function DoMigration() {
         print("StateMigratorFileToDB->DoMigration(): Starting migration routine." . PHP_EOL);
+        $starttime = time();
+        $deviceCount = 0;
+        $stateCount = 0;
         try {
             // Fix hierarchy folder data before starting the migration
             ZPushAdmin::FixStatesHierarchyFolderData();
@@ -166,29 +141,33 @@ class StateMigratorFileToDB {
             // get all state information for all devices
             $alldevices = $this->fsm->GetAllDevices(false);
             foreach ($alldevices as $devid) {
+                $deviceCount++;
                 $lowerDevid = strtolower($devid);
 
                 $allStates = $this->fsm->GetAllStatesForDevice($lowerDevid);
-                printf("Processing device: %s with %d states\t", $devid, count($allStates));
+                printf("Processing device: %s with %s states\t", str_pad($devid,35), str_pad(count($allStates), 4, ' ',STR_PAD_LEFT));
+                $migrated = 0;
                 foreach ($allStates as $stateInfo) {
                     $state = $this->fsm->GetState($lowerDevid, $stateInfo['type'], $stateInfo['uuid'], (int) $stateInfo['counter'], false);
                     $this->dbsm->SetState($state, $lowerDevid, $stateInfo['type'], (empty($stateInfo['uuid']) ? NULL : $stateInfo['uuid']), (int) $stateInfo['counter']);
-                    printf("%s\t\tsetting state:%s-%s-%d", PHP_EOL, $stateInfo['uuid'], (empty($stateInfo['type']) ? NULL : $stateInfo['type']), (int) $stateInfo['counter']);
+                    $migrated++;
                 }
 
                 // link devices to users
                 $devState = $this->fsm->GetState($lowerDevid, IStateMachine::DEVICEDATA);
                 foreach ($devState->devices as $user => $dev) {
-                    $this->dbsm->LinkUserDevice($user, $dev->deviceid, date("Y-m-d H:i:s", $dev->firstsynctime), date("Y-m-d H:i:s", $dev->lastupdatetime));
+                    $this->dbsm->LinkUserDevice($user, $dev->deviceid);
                 }
 
-                print("\tcompleted" . PHP_EOL);
+                print(" completed migration of $migrated states" . PHP_EOL);
+                $stateCount += $migrated;
             }
         }
         catch (ZPushException $ex) {
             print (PHP_EOL . "Something went wrong during the migration. The script will now exit." . PHP_EOL);
             die(get_class($ex) . ": ". $ex->getMessage() . PHP_EOL);
         }
-        print("StateMigratorFileToDB->DoMigration(): Migration completed successfuly." . PHP_EOL);
+        $timeSpent = gmdate("H:i:s", time() - $starttime);
+        printf(PHP_EOL ."StateMigratorFileToDB->DoMigration(): Migration completed successfuly. Migrated %d devices with %d states in %s.".PHP_EOL.PHP_EOL, $deviceCount, $stateCount, $timeSpent);
     }
 }

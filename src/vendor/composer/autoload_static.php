@@ -101,6 +101,7 @@ class ComposerStaticInitd6749fc2fb9944bbe86b2b7d79a7852f
         'SendMail' => __DIR__ . '/../..' . '/lib/request/sendmail.php',
         'Settings' => __DIR__ . '/../..' . '/lib/request/settings.php',
         'SimpleMutex' => __DIR__ . '/../..' . '/lib/default/simplemutex.php',
+        'SqlStateMachine' => __DIR__ . '/../..' . '/backend/sqlstatemachine/sqlstatemachine.php',
         'StateInvalidException' => __DIR__ . '/../..' . '/lib/exceptions/stateinvalidexception.php',
         'StateManager' => __DIR__ . '/../..' . '/lib/core/statemanager.php',
         'StateNotFoundException' => __DIR__ . '/../..' . '/lib/exceptions/statenotfoundexception.php',

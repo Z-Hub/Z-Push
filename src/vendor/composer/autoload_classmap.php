@@ -94,6 +94,7 @@ return array(
     'SendMail' => $baseDir . '/lib/request/sendmail.php',
     'Settings' => $baseDir . '/lib/request/settings.php',
     'SimpleMutex' => $baseDir . '/lib/default/simplemutex.php',
+    'SqlStateMachine' => $baseDir . '/backend/sqlstatemachine/sqlstatemachine.php',
     'StateInvalidException' => $baseDir . '/lib/exceptions/stateinvalidexception.php',
     'StateManager' => $baseDir . '/lib/core/statemanager.php',
     'StateNotFoundException' => $baseDir . '/lib/exceptions/statenotfoundexception.php',
