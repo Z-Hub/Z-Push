@@ -1208,7 +1208,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
         $items["range"] = $cpo->GetSearchRange();
         for ($i = 0; $i < $cnt; $i++) {
             $items[$i]['class'] = 'Email';
-            $items[$i]['longid'] = bin2hex($rows[$i][PR_PARENT_SOURCE_KEY]) . ":" . bin2hex($rows[$i][PR_SOURCE_KEY]);
+            $items[$i]['longid'] = ZPush::GetDeviceManager()->GetFolderIdForBackendId(bin2hex($rows[$i][PR_PARENT_SOURCE_KEY])) . ":" . bin2hex($rows[$i][PR_SOURCE_KEY]);
             $items[$i]['folderid'] = bin2hex($rows[$i][PR_PARENT_SOURCE_KEY]);
         }
         return $items;
