@@ -712,7 +712,7 @@ class DeviceManager {
      * @return boolean
      */
     public function IsOutlookClient() {
-        if (Request::GetDeviceType() == "WindowsOutlook" && $this->device->GetOLPluginVersion() !== false) {
+        if (Request::GetDeviceType() == "WindowsOutlook" && ($this->device->GetOLPluginVersion() !== false || Request::HasOLPluginStats())) {
             return true;
         }
         return false;
