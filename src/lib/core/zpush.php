@@ -288,9 +288,15 @@ class ZPush {
 
         // check if Provisioning is enabled and the default policies are available
         if (PROVISIONING) {
-            ZPush::$policies = parse_ini_file(PROVISIONING_POLICYFILE, true);
+            if (file_exists(REAL_BASE_PATH . PROVISIONING_POLICYFILE)) {
+                $policyfile = REAL_BASE_PATH . PROVISIONING_POLICYFILE;
+            }
+            else {
+                $policyfile = PROVISIONING_POLICYFILE;
+            }
+            ZPush::$policies = parse_ini_file($policyfile, true);
             if (!isset(ZPush::$policies['default'])) {
-                throw new FatalMisconfigurationException(sprintf("Your policies' configuration file doesn't contain the required [default] section. Please check the %s file.", constant('PROVISIONING_POLICYFILE')));
+                throw new FatalMisconfigurationException(sprintf("Your policies' configuration file doesn't contain the required [default] section. Please check the '%s' file.", $policyfile));
             }
         }
         return true;
@@ -404,7 +410,12 @@ class ZPush {
             }
             else {
                 // Initialize the default StateMachine
-                ZPush::$stateMachine = new FileStateMachine();
+                if (defined('STATE_MACHINE') && STATE_MACHINE == 'SQL') {
+                    ZPush::$stateMachine = new SqlStateMachine();
+                }
+                else {
+                    ZPush::$stateMachine = new FileStateMachine();
+                }
             }
 
             if (ZPush::$stateMachine->GetStateVersion() !== ZPush::GetLatestStateVersion()) {

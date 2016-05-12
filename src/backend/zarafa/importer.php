@@ -482,8 +482,9 @@ class ImportChangesICS implements IImportChanges {
             if (ctype_digit($fsk)) {
                 $fsk = ZPush::GetDeviceManager()->GetBackendIdForFolderId($fsk);
             }
-            $entryid = mapi_msgstore_entryidfromsourcekey($this->store, hex2bin($fsk), hex2bin($sk));
-            $realMessage = mapi_msgstore_openentry($this->store, $entryid);
+            $store = ZPush::GetBackend()->GetMAPIStoreForFolderId(ZPush::GetAdditionalSyncFolderStore($fsk), $fsk);
+            $entryid = mapi_msgstore_entryidfromsourcekey($store, hex2bin($fsk), hex2bin($sk));
+            $realMessage = mapi_msgstore_openentry($store, $entryid);
             $flag = 0;
             if ($flags == 0)
                 $flag |= CLEAR_READ_FLAG;

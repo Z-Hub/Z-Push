@@ -71,8 +71,14 @@
     define('USE_FULLEMAIL_FOR_LOGIN', true);
 
 /**********************************************************************************
- *  Default State settings
+ * StateMachine setting
+ *
+ * These StateMachines can be used:
+ *   FILE  - FileStateMachine (default). Needs STATE_DIR set as well.
+ *   SQL   - SqlStateMachine has own configuration file. STATE_DIR is ignored.
+ *           State migration script is available, more informations: https://wiki.z-hub.io/x/xIAa
  */
+    define('STATE_MACHINE', 'FILE');
     define('STATE_DIR', '/var/lib/z-push/');
 
 /**********************************************************************************
@@ -153,7 +159,8 @@
     define('LOOSE_PROVISIONING', false);
 
     // The file containing the policies' settings.
-    define('PROVISIONING_POLICYFILE', BASE_PATH . 'policies.ini');
+    // Set a full path or relative to the z-push main directory
+    define('PROVISIONING_POLICYFILE', 'policies.ini');
 
     // Default conflict preference
     // Some devices allow to set if the server or PIM (mobile)

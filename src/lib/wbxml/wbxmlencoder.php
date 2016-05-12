@@ -508,10 +508,13 @@ class WBXMLEncoder extends WBXMLDefs {
 
         fwrite($this->_out, pack("iii", ($nrBodyparts + 1), $blockstart, $len));
 
-        foreach ($this->bodyparts as $bp) {
+        foreach ($this->bodyparts as $i=>$bp) {
             $blockstart = $blockstart + $len;
             $len = fstat($bp);
             $len = (isset($len['size'])) ? $len['size'] : 0;
+            if ($len == 0) {
+                ZLog::Write(LOGLEVEL_WARN, sprintf("WBXMLEncoder->processMultipart(): the length of the body part at position %d is 0", $i));
+            }
             fwrite($this->_out, pack("ii", $blockstart, $len));
         }
 
