@@ -281,7 +281,7 @@
     define('SEARCH_MAXRESULTS', 10);
 
 /**********************************************************************************
- *  Kopano Outlook Plugin - Settings
+ *  Kopano Outlook Extension - Settings
  *
  *  The Kopano Outlook Extension (KOE) provides MS Outlook 2013 and newer with
  *  functionality not provided by ActiveSync or not implemented by Outlook.

@@ -104,7 +104,7 @@ class DeviceManager {
         $this->additionalFoldersHash = $this->getAdditionalFoldersHash();
 
         if ($this->IsOutlookClient()) {
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("KOP: %s / %s / %s", $this->device->GetOLPluginVersion(), $this->device->GetOLPluginBuild(), strftime("%Y-%m-%d %H:%M", $this->device->GetOLPluginBuildDate())));
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("KOE: %s / %s / %s", $this->device->GetOLPluginVersion(), $this->device->GetOLPluginBuild(), strftime("%Y-%m-%d %H:%M", $this->device->GetOLPluginBuildDate())));
         }
     }
 
