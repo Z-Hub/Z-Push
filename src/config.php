@@ -153,7 +153,8 @@
     define('LOOSE_PROVISIONING', false);
 
     // The file containing the policies' settings.
-    define('PROVISIONING_POLICYFILE', BASE_PATH . 'policies.ini');
+    // Set a full path or relative to the z-push main directory
+    define('PROVISIONING_POLICYFILE', 'policies.ini');
 
     // Default conflict preference
     // Some devices allow to set if the server or PIM (mobile)
