@@ -154,6 +154,7 @@ class ComposerStaticInitd6749fc2fb9944bbe86b2b7d79a7852f
         'TaskRequest' => __DIR__ . '/../..' . '/backend/zarafa/mapi/class.taskrequest.php',
         'TimezoneUtil' => __DIR__ . '/../..' . '/lib/utils/timezoneutil.php',
         'TopCollector' => __DIR__ . '/../..' . '/lib/core/topcollector.php',
+        'UnavailableException' => __DIR__ . '/../..' . '/lib/exceptions/unavailableexception.php',
         'Utils' => __DIR__ . '/../..' . '/lib/utils/utils.php',
         'ValidateCert' => __DIR__ . '/../..' . '/lib/request/validatecert.php',
         'WBXMLDecoder' => __DIR__ . '/../..' . '/lib/wbxml/wbxmldecoder.php',

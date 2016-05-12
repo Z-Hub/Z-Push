@@ -230,7 +230,7 @@ class SqlStateMachine implements IStateMachine {
      *
      * @access public
      * @return boolean
-     * @throws StateInvalidException
+     * @throws StateInvalidException, UnavailableException
      */
     public function SetState($state, $devid, $type, $key = null, $counter = false) {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("SqlStateMachine->SetState(): devid:'%s' type:'%s' key:'%s' counter:'%s'", $devid, $type, ($key == null ? 'null' : $key), Utils::PrintAsString($counter)));
@@ -271,7 +271,7 @@ class SqlStateMachine implements IStateMachine {
             if (!$sth->execute() ) {
                 $errInfo = $sth->errorInfo();
                 $this->clearConnection($this->dbh, $sth);
-                throw new FatalException(sprintf("SqlStateMachine->SetState(): Could not write state: %s", isset($errInfo[2]) ? $errInfo[2] : 'unknown'));
+                throw new UnavailableException(sprintf("SqlStateMachine->SetState(): Could not write state: %s", isset($errInfo[2]) ? $errInfo[2] : 'unknown'));
             }
             else {
                 $bytes = strlen(serialize($state));
@@ -279,7 +279,7 @@ class SqlStateMachine implements IStateMachine {
         }
         catch(PDOException $ex) {
             $this->clearConnection($this->dbh, $sth);
-            throw new FatalException(sprintf("SqlStateMachine->SetState(): Could not write state: %s", $ex->getMessage()));
+            throw new UnavailableException(sprintf("SqlStateMachine->SetState(): Could not write state: %s", $ex->getMessage()));
         }
 
         return $bytes;
@@ -297,7 +297,6 @@ class SqlStateMachine implements IStateMachine {
      *
      * @access public
      * @return
-     * @throws StateInvalidException
      */
     public function CleanStates($devid, $type, $key = null, $counter = false) {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("SqlStateMachine->CleanStates(): devid:'%s' type:'%s' key:'%s' counter:'%s'", $devid, $type, ($key == null ? 'null' : $key), Utils::PrintAsString($counter)));
@@ -676,12 +675,12 @@ class SqlStateMachine implements IStateMachine {
      *
      * @access private
      * @return boolean
-     * @throws RuntimeException
+     * @throws UnavailableException
      */
     private function checkDbAndTables() {
         ZLog::Write(LOGLEVEL_DEBUG, "SqlStateMachine->checkDbAndTables(): Checking if database and tables are available.");
         try {
-            $sqlStmt = sprintf("SHOW TABLES FROM %s LIKE 'zpush%%'", STATE_SQL_DATABASE);
+            $sqlStmt = sprintf("SHOW TABLES FROM %s", STATE_SQL_DATABASE);
             $sth = $this->getDbh(false)->prepare($sqlStmt);
             $sth->execute();
             if ($sth->rowCount() != 3) {
@@ -697,7 +696,7 @@ class SqlStateMachine implements IStateMachine {
                 $this->createDB();
             }
             else {
-                throw new RuntimeException(sprintf("SqlStateMachine->checkDbAndTables(): PDOException (%s): %s", $ex->getCode(), $ex->getMessage()));
+                throw new UnavailableException(sprintf("SqlStateMachine->checkDbAndTables(): PDOException (%s): %s", $ex->getCode(), $ex->getMessage()));
             }
         }
 
@@ -710,7 +709,7 @@ class SqlStateMachine implements IStateMachine {
      *
      * @access private
      * @return boolean
-     * @throws RuntimeException
+     * @throws UnavailableException
      */
     private function createDB() {
         ZLog::Write(LOGLEVEL_INFO, sprintf("SqlStateMachine->createDB(): database '%s' is not available, trying to create it.", STATE_SQL_DATABASE));
@@ -726,7 +725,7 @@ class SqlStateMachine implements IStateMachine {
             return true;
         }
         catch (PDOException $ex) {
-            throw new RuntimeException(sprintf("SqlStateMachine->createDB(): PDOException (%s): %s", $ex->getCode(), $ex->getMessage()));
+            throw new UnavailableException(sprintf("SqlStateMachine->createDB(): PDOException (%s): %s", $ex->getCode(), $ex->getMessage()));
         }
     }
 
@@ -735,7 +734,7 @@ class SqlStateMachine implements IStateMachine {
      *
      * @access private
      * @return boolean
-     * @throws RuntimeException
+     * @throws UnavailableException
      */
     private function createTables() {
         ZLog::Write(LOGLEVEL_INFO, "SqlStateMachine->createTables(): tables are not available, trying to create them.");
@@ -747,7 +746,7 @@ class SqlStateMachine implements IStateMachine {
             return true;
         }
         catch (PDOException $ex) {
-            throw new RuntimeException(sprintf("SqlStateMachine->createTables(): PDOException (%s): %s", $ex->getCode(), $ex->getMessage()));
+            throw new UnavailableException(sprintf("SqlStateMachine->createTables(): PDOException (%s): %s", $ex->getCode(), $ex->getMessage()));
         }
     }
 
@@ -756,7 +755,7 @@ class SqlStateMachine implements IStateMachine {
      *
      * @access public
      * @return boolean
-     * @throws RuntimeException
+     * @throws UnavailableException
      */
     public function DoTablesHaveData() {
         try {
@@ -796,7 +795,7 @@ class SqlStateMachine implements IStateMachine {
             return ($dataSettings || $dataStates || $dataUsers);
         }
         catch (PDOException $ex) {
-            throw new RuntimeException(sprintf("SqlStateMachine->DoTablesHaveData(): PDOException (%s): %s", $ex->getCode(), $ex->getMessage()));
+            throw new UnavailableException(sprintf("SqlStateMachine->DoTablesHaveData(): PDOException (%s): %s", $ex->getCode(), $ex->getMessage()));
         }
         return false;
     }
