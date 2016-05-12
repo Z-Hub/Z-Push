@@ -46,7 +46,12 @@
 ************************************************/
 
 define("PHP_MAPI_PATH", "/usr/share/php/mapi/");
-define('MAPI_SERVER', 'file:///var/run/zarafa');
+if (CheckMapiExtVersion('7.2.0')) {
+    define('MAPI_SERVER', 'file:///var/run/zarafad/server.sock');
+}
+else {
+    define('MAPI_SERVER', 'file:///var/run/zarafa');
+}
 define('SSLCERT_FILE', null);
 define('SSLCERT_PASS', null);
 
@@ -215,4 +220,22 @@ function listfolders_getlist ($adminStore, $session, $user) {
             echo "\n";
         }
     }
+}
+
+function CheckMapiExtVersion($version = "") {
+    // compare build number if requested
+    if (preg_match('/^\d+$/', $version) && strlen($version) > 3) {
+        $vs = preg_split('/-/', phpversion("mapi"));
+        return ($version <= $vs[1]);
+    }
+
+    if (extension_loaded("mapi")){
+        if (version_compare(phpversion("mapi"), $version) == -1){
+            return false;
+        }
+    }
+    else
+        return false;
+
+    return true;
 }
