@@ -405,7 +405,6 @@ class ZPush {
             else {
                 // Initialize the default StateMachine
                 if (defined('STATE_MACHINE') && STATE_MACHINE == 'SQL') {
-                    include_once('backend/sqlstatemachine/sqlstatemachine.php');
                     ZPush::$stateMachine = new SqlStateMachine();
                 }
                 else {
