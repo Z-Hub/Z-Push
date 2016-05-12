@@ -88,7 +88,7 @@ class SendMail extends RequestProcessor {
             $sm->saveinsent = Request::GetGETSaveInSent();
         }
 
-        // KOP ZO-6: grep for the OL header and set flags accordingly.
+        // KOE ZO-6: grep for the OL header and set flags accordingly.
         // The header has the values verb/message-source-key/folder-source-key
         if (KOE_CAPABILITY_SENDFLAGS && preg_match("/X-Push-Flags: (\d{3})\/([\da-f]+)\/([\da-f]+)/i", $sm->mime, $ol_flags)) {
             // "reply" and "reply-all" are handled as "reply"
@@ -106,7 +106,7 @@ class SendMail extends RequestProcessor {
             $sm->source->folderid = $ol_flags[3];
             $sm->replacemime = true;
 
-            ZLog::Write(LOGLEVEL_DEBUG, "SendMail(): KOP support: overwrite reply/forward flag, set parent-id and item-id, replacemime - original message should not be attached.");
+            ZLog::Write(LOGLEVEL_DEBUG, "SendMail(): KOE support: overwrite reply/forward flag, set parent-id and item-id, replacemime - original message should not be attached.");
         }
 
         // Check if it is a reply or forward. Two cases are possible:

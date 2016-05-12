@@ -88,7 +88,7 @@ class ImportChangesStream implements IImportChanges {
             return false;
         }
 
-        // KOP ZO-42: to sync Notes to Outlook we sync them as Appointments
+        // KOE ZO-42: to sync Notes to Outlook we sync them as Appointments
         if (KOE_CAPABILITY_NOTES && $this->classAsString == "SyncNote" && ZPush::GetDeviceManager()->IsOutlookClient()) {
             // update category from SyncNote->Color
             $message->SetCategoryFromColor();
@@ -138,7 +138,7 @@ class ImportChangesStream implements IImportChanges {
             return $stat;
         }
 
-        // KOP ZO-3: Stream reply/forward flag and time as additional category to Outlook
+        // KOE ZO-3: Stream reply/forward flag and time as additional category to Outlook
         if (ZPush::GetDeviceManager()->IsOutlookClient() && KOE_CAPABILITY_RECEIVEFLAGS && isset($message->lastverbexectime) && isset($message->lastverbexecuted) && $message->lastverbexecuted > 0) {
             ZLog::Write(LOGLEVEL_DEBUG, "ImportChangesStream->ImportMessageChange('%s'): KOE detected. Adding LastVerb information as category.");
             if (!isset($message->categories)){
