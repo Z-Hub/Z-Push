@@ -6,7 +6,7 @@
 *
 * Created   :   16.02.2012
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2013, 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -90,7 +90,7 @@ class SendMail extends RequestProcessor {
 
         // KOP ZO-6: grep for the OL header and set flags accordingly.
         // The header has the values verb/message-source-key/folder-source-key
-        if (preg_match("/X-Push-Flags: (\d{3})\/([\da-f]+)\/([\da-f]+)/i", $sm->mime, $ol_flags)) {
+        if (KOE_CAPABILITY_SENDFLAGS && preg_match("/X-Push-Flags: (\d{3})\/([\da-f]+)\/([\da-f]+)/i", $sm->mime, $ol_flags)) {
             // "reply" and "reply-all" are handled as "reply"
             if ($ol_flags[1] == 102 || $ol_flags[1] == 103) {
                 $reply = true;

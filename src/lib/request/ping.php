@@ -285,7 +285,7 @@ class Ping extends RequestProcessor {
     private function isClassValid($class, $spa) {
         if ($class == $spa->GetContentClass() ||
                 // KOP ZO-42: Notes are synched as Appointments
-                (self::$deviceManager->IsOutlookClient() && $class == "Calendar" && $spa->GetContentClass() == "Notes")
+                (self::$deviceManager->IsOutlookClient() && KOE_CAPABILITY_NOTES && $class == "Calendar" && $spa->GetContentClass() == "Notes")
             ) {
             return true;
         }
