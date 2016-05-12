@@ -410,7 +410,12 @@ class ZPush {
             }
             else {
                 // Initialize the default StateMachine
-                ZPush::$stateMachine = new FileStateMachine();
+                if (defined('STATE_MACHINE') && STATE_MACHINE == 'SQL') {
+                    ZPush::$stateMachine = new SqlStateMachine();
+                }
+                else {
+                    ZPush::$stateMachine = new FileStateMachine();
+                }
             }
 
             if (ZPush::$stateMachine->GetStateVersion() !== ZPush::GetLatestStateVersion()) {

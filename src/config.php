@@ -71,8 +71,14 @@
     define('USE_FULLEMAIL_FOR_LOGIN', true);
 
 /**********************************************************************************
- *  Default State settings
+ * StateMachine setting
+ *
+ * These StateMachines can be used:
+ *   FILE  - FileStateMachine (default). Needs STATE_DIR set as well.
+ *   SQL   - SqlStateMachine has own configuration file. STATE_DIR is ignored.
+ *           State migration script is available, more informations: https://wiki.z-hub.io/x/xIAa
  */
+    define('STATE_MACHINE', 'FILE');
     define('STATE_DIR', '/var/lib/z-push/');
 
 /**********************************************************************************
