@@ -176,7 +176,7 @@ class SqlStateMachine implements IStateMachine {
      *
      * @access public
      * @return mixed
-     * @throws StateNotFoundException, StateInvalidException
+     * @throws StateNotFoundException, StateInvalidException, UnavailableException
      */
     public function GetState($devid, $type, $key = null, $counter = false, $cleanstates = true) {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("SqlStateMachine->GetState(): devid:'%s' type:'%s' key:'%s' counter:'%s'", $devid, $type, ($key == null ? 'null' : $key), Utils::PrintAsString($counter), Utils::PrintAsString($cleanstates)));
@@ -297,6 +297,7 @@ class SqlStateMachine implements IStateMachine {
      *
      * @access public
      * @return
+     * @throws StateInvalidException
      */
     public function CleanStates($devid, $type, $key = null, $counter = false) {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("SqlStateMachine->CleanStates(): devid:'%s' type:'%s' key:'%s' counter:'%s'", $devid, $type, ($key == null ? 'null' : $key), Utils::PrintAsString($counter)));
