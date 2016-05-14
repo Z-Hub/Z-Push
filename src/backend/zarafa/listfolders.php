@@ -10,7 +10,7 @@
 *
 * Created   :   06.05.2011
 *
-* Copyright 2007 - 2013, 2015 Zarafa Deutschland GmbH
+* Copyright 2007 - 2013, 2015-2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -46,7 +46,12 @@
 ************************************************/
 
 define("PHP_MAPI_PATH", "/usr/share/php/mapi/");
-define('MAPI_SERVER', 'file:///var/run/zarafa');
+if (CheckMapiExtVersion('7.2.0')) {
+    define('MAPI_SERVER', 'file:///var/run/zarafad/server.sock');
+}
+else {
+    define('MAPI_SERVER', 'file:///var/run/zarafa');
+}
 define('SSLCERT_FILE', null);
 define('SSLCERT_PASS', null);
 
@@ -217,4 +222,21 @@ function listfolders_getlist ($adminStore, $session, $user) {
     }
 }
 
+function CheckMapiExtVersion($version = "") {
+    // compare build number if requested
+    if (preg_match('/^\d+$/', $version) && strlen($version) > 3) {
+        $vs = preg_split('/-/', phpversion("mapi"));
+        return ($version <= $vs[1]);
+    }
+
+    if (extension_loaded("mapi")){
+        if (version_compare(phpversion("mapi"), $version) == -1){
+            return false;
+        }
+    }
+    else
+        return false;
+
+    return true;
+}
 ?>
