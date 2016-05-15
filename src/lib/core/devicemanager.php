@@ -502,15 +502,16 @@ class DeviceManager {
                 $deviceGabId = $this->device->GetKoeGabBackendFolderId();
                 if (!ZPush::GetBackend()->Setup(KOE_GAB_STORE)) {
                     ZLog::Write(LOGLEVEL_WARN, sprintf("DeviceManager->GetAdditionalUserSyncFolders(): setup for store '%s' failed. Unable to search for KOE GAB folder.", KOE_GAB_STORE));
-                    return false;
                 }
-                $backendGabId = ZPush::GetBackend()->GetKoeGabBackendFolderId(KOE_GAB_NAME);
-                if ($deviceGabId !== $backendGabId) {
-                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("DeviceManager->GetAdditionalUserSyncFolders(): Backend found different KOE GAB backend folderid: '%s'. Updating ASDevice.", $backendGabId));
-                    $this->device->SetKoeGabBackendFolderId($backendGabId);
-                }
+                else {
+                    $backendGabId = ZPush::GetBackend()->GetKoeGabBackendFolderId(KOE_GAB_NAME);
+                    if ($deviceGabId !== $backendGabId) {
+                        ZLog::Write(LOGLEVEL_DEBUG, sprintf("DeviceManager->GetAdditionalUserSyncFolders(): Backend found different KOE GAB backend folderid: '%s'. Updating ASDevice.", $backendGabId));
+                        $this->device->SetKoeGabBackendFolderId($backendGabId);
+                    }
 
-                $folders[$backendGabId] = $this->getAdditionalSyncFolder(KOE_GAB_STORE, $backendGabId, KOE_GAB_NAME, SYNC_FOLDER_TYPE_USER_APPOINTMENT);
+                    $folders[$backendGabId] = $this->getAdditionalSyncFolder(KOE_GAB_STORE, $backendGabId, KOE_GAB_NAME, SYNC_FOLDER_TYPE_USER_APPOINTMENT);
+                }
             }
         }
         return $folders;
