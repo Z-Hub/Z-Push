@@ -736,12 +736,13 @@ class SyncCollections implements Iterator {
                  if ($this->hierarchyExporterChecked === true && !$this->LoadCollection(false, true, false))
                      throw new StatusException("Invalid states found while re-loading hierarchy data.");
 
-                 // reset backend to the main store
-                 ZPush::GetBackend()->Setup(false);
-                 $changesMem = ZPush::GetDeviceManager()->GetHierarchyChangesWrapper();
 
+                 $changesMem = ZPush::GetDeviceManager()->GetHierarchyChangesWrapper();
                  // the hierarchyCache should now fully be initialized - check for changes in the additional folders
                  $changesMem->Config(ZPush::GetAdditionalSyncFolders(false));
+
+                 // reset backend to the main store
+                 ZPush::GetBackend()->Setup(false);
                  $exporter = ZPush::GetBackend()->GetExporter();
                  if ($exporter !== false && isset($this->addparms[$folderid]["state"])) {
                      $exporter->Config($this->addparms[$folderid]["state"]);
