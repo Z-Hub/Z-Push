@@ -1061,7 +1061,6 @@ class BackendZarafa implements IBackend, ISearchProvider {
         if ($querycnt == 1) {
             $entry = mapi_table_queryallrows($table, array(PR_SOURCE_KEY));
             if (isset($entry[0]) && isset($entry[0][PR_SOURCE_KEY])) {
-                ZLog::Write(LOGLEVEL_WARN, sprintf("ZarafaBackend->GetKoeGabBackendFolderId() Found folder:".  bin2hex($entry[0][PR_SOURCE_KEY])));
                 return bin2hex($entry[0][PR_SOURCE_KEY]);
             }
         }
