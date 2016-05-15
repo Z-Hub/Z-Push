@@ -86,7 +86,10 @@ class SyncCollections implements Iterator {
             $sc = new SyncCollections();
             $sc->LoadAllCollections();
             foreach ($sc as $folderid => $spa) {
-                $sc->invalidateFolderStat($spa);
+                if ($spa->GetPingableFlag() == true) {
+                    $spa->DelPingableFlag();
+                    $sc->SaveCollection($spa);
+                }
             }
             return true;
         }
