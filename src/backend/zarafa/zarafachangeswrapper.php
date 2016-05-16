@@ -115,6 +115,7 @@ class ZarafaChangesWrapper implements IImportChanges, IExportChanges {
      * @param mapisession       $session
      * @param mapistore         $store
      * @param string            $folderid
+     * @param boolean           $ownFolder
      *
      * @access public
      * @throws StatusException
@@ -134,7 +135,7 @@ class ZarafaChangesWrapper implements IImportChanges, IExportChanges {
     /**
      * Indicates if the wrapper is requested to be an exporter or an importer.
      *
-     * @param int $type     eiter ZarafaChangesWrapper::IMPORTER or ZarafaChangesWrapper::EXPORTER
+     * @param int $type     either ZarafaChangesWrapper::IMPORTER or ZarafaChangesWrapper::EXPORTER
      *
      * @access public
      * @return void

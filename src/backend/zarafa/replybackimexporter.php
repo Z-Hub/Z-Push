@@ -153,7 +153,72 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
      * @throws StatusException
      */
     public function ImportMessageMove($id, $newfolder) {
-        return true;
+        if (strtolower($newfolder) == strtolower(bin2hex($this->folderid)) )
+            throw new StatusException(sprintf("ReplyBackImExporter->ImportMessageMove('%s','%s'): Error, source and destination are equal", $id, $newfolder), SYNC_MOVEITEMSSTATUS_SAMESOURCEANDDEST);
+
+        // Get the entryid of the message we're moving
+        $entryid = mapi_msgstore_entryidfromsourcekey($this->store, $this->folderid, hex2bin($id));
+        if(!$entryid)
+            throw new StatusException(sprintf("ReplyBackImExporter->ImportMessageMove('%s','%s'): Error, unable to resolve source message id", $id, $newfolder), SYNC_MOVEITEMSSTATUS_INVALIDSOURCEID);
+
+        //open the source message
+        $srcmessage = mapi_msgstore_openentry($this->store, $entryid);
+        if (!$srcmessage) {
+            $code = SYNC_MOVEITEMSSTATUS_INVALIDSOURCEID;
+            // if we move to the trash and the source message is not found, we can also just tell the mobile that we successfully moved to avoid errors (ZP-624)
+            if ($newfolder == ZPush::GetBackend()->GetWasteBasket()) {
+                $code = SYNC_MOVEITEMSSTATUS_SUCCESS;
+            }
+            throw new StatusException(sprintf("ReplyBackImExporter->ImportMessageMove('%s','%s'): Error, unable to open source message: 0x%X", $id, $newfolder, mapi_last_hresult()), $code);
+        }
+
+        // check if the source message is in the current syncinterval
+        // TODO check if we need this
+//         if (!$this->isMessageInSyncInterval($id))
+//             throw new StatusException(sprintf("ReplyBackImExporter->ImportMessageMove('%s','%s'): Source message is outside the sync interval. Move not performed.", $id, $newfolder), SYNC_MOVEITEMSSTATUS_INVALIDSOURCEID);
+
+        // get correct mapi store for the destination folder
+        $dststore = ZPush::GetBackend()->GetMAPIStoreForFolderId(ZPush::GetAdditionalSyncFolderStore($newfolder), $newfolder);
+        if ($dststore === false)
+            throw new StatusException(sprintf("ReplyBackImExporter->ImportMessageMove('%s','%s'): Error, unable to open store of destination folder", $id, $newfolder), SYNC_MOVEITEMSSTATUS_INVALIDDESTID);
+
+        $dstentryid = mapi_msgstore_entryidfromsourcekey($dststore, hex2bin($newfolder));
+        if(!$dstentryid)
+            throw new StatusException(sprintf("ReplyBackImExporter->ImportMessageMove('%s','%s'): Error, unable to resolve destination folder", $id, $newfolder), SYNC_MOVEITEMSSTATUS_INVALIDDESTID);
+
+        $dstfolder = mapi_msgstore_openentry($dststore, $dstentryid);
+        if(!$dstfolder)
+            throw new StatusException(sprintf("ReplyBackImExporter->ImportMessageMove('%s','%s'): Error, unable to open destination folder", $id, $newfolder), SYNC_MOVEITEMSSTATUS_INVALIDDESTID);
+
+        $newmessage = mapi_folder_createmessage($dstfolder);
+        if (!$newmessage)
+            throw new StatusException(sprintf("ReplyBackImExporter->ImportMessageMove('%s','%s'): Error, unable to create message in destination folder: 0x%X", $id, $newfolder, mapi_last_hresult()), SYNC_MOVEITEMSSTATUS_INVALIDDESTID);
+
+        // Copy message
+        mapi_copyto($srcmessage, array(), array(), $newmessage);
+        if (mapi_last_hresult())
+            throw new StatusException(sprintf("ReplyBackImExporter->ImportMessageMove('%s','%s'): Error, copy to destination message failed: 0x%X", $id, $newfolder, mapi_last_hresult()), SYNC_MOVEITEMSSTATUS_CANNOTMOVE);
+
+        $srcfolderentryid = mapi_msgstore_entryidfromsourcekey($this->store, $this->folderid);
+        if(!$srcfolderentryid)
+            throw new StatusException(sprintf("ReplyBackImExporter->ImportMessageMove('%s','%s'): Error, unable to resolve source folder", $id, $newfolder), SYNC_MOVEITEMSSTATUS_INVALIDSOURCEID);
+
+        $srcfolder = mapi_msgstore_openentry($this->store, $srcfolderentryid);
+        if (!$srcfolder)
+            throw new StatusException(sprintf("ReplyBackImExporter->ImportMessageMove('%s','%s'): Error, unable to open source folder: 0x%X", $id, $newfolder, mapi_last_hresult()), SYNC_MOVEITEMSSTATUS_INVALIDSOURCEID);
+
+        // Save changes
+        mapi_savechanges($newmessage);
+        if (mapi_last_hresult())
+            throw new StatusException(sprintf("ReplyBackImExporter->ImportMessageMove('%s','%s'): Error, mapi_savechanges() failed: 0x%X", $id, $newfolder, mapi_last_hresult()), SYNC_MOVEITEMSSTATUS_CANNOTMOVE);
+
+        $sourcekeyprops = mapi_getprops($newmessage, array (PR_SOURCE_KEY));
+        if (isset($sourcekeyprops[PR_SOURCE_KEY]) && $sourcekeyprops[PR_SOURCE_KEY]) {
+            $this->changes[] = array(self::DELETION, $id, null);
+            return bin2hex($sourcekeyprops[PR_SOURCE_KEY]);
+        }
+
+        return false;
     }
 
     /**
@@ -239,8 +304,7 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
      */
     public function ImportMessageDeletion($id) {
         $this->changes[] = array(self::DELETION, $id, null);
-        throw new StatusException(sprintf("ReplyBackImExporter->ImportMessageDeletion('%s'): Read only folder. Data from PIM will be dropped! Server will readd data.", $id), SYNC_STATUS_CONFLICTCLIENTSERVEROBJECT, null, LOGLEVEL_INFO);
-        return false;
+        throw new StatusException(sprintf("ReplyBackImExporter->ImportMessageDeletion('%s'): Read only folder. Data from PIM will be dropped! Server will read data.", $id), SYNC_STATUS_CONFLICTCLIENTSERVEROBJECT, null, LOGLEVEL_INFO);
     }
 
     /**
@@ -255,8 +319,9 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
      * @throws StatusException
      */
     public function ImportMessageReadFlag($id, $flags) {
-        throw new StatusException(sprintf("ReplyBackImExporter->ImportMessageReadFlag('%s','%s'): Read only folder. Data from PIM will be dropped! Server overwrites PIM.", $id, $flags), SYNC_STATUS_CONFLICTCLIENTSERVEROBJECT, null, LOGLEVEL_INFO);
-        return false;
+        $this->changes[] = array(self::READFLAG, $id, $flags);
+//         throw new StatusException(sprintf("ReplyBackImExporter->ImportMessageReadFlag('%s','%s'): Read only folder. Data from PIM will be dropped! Server overwrites PIM.", $id, $flags), SYNC_STATUS_CONFLICTCLIENTSERVEROBJECT, null, LOGLEVEL_INFO);
+        return true;
     }
 
 
@@ -308,6 +373,10 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
 
             if ($change[0] === self::CREATION) {
                 $this->exportImporter->ImportMessageDeletion($id);
+            }
+            elseif ($change[0] === self::READFLAG) {
+                // TODO do it right - get the read flag from the message!
+                $this->exportImporter->ImportMessageReadFlag($id, ($change[2] == 0) ? 1 : 0);
             }
             else {
                 // get the server side message
