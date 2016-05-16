@@ -300,12 +300,12 @@
     // Notes support
     define('KOE_CAPABILITY_NOTES', true);
 
-    // To synchronize the GAB, the GAB store and folderid need to be specified.
-    // Use the gab-sync script to generate the GAB information. The name needs to
-    // match the config of the gab-sync script. The folderid is informed by the script.
-// TODO use defines
-//    define('KOE_GAB_STORE', 'SYSTEM');
-//    define('KOE_GAB_FOLDERID', '');
+    // To synchronize the GAB KOE, the GAB store and folderid need to be specified.
+    // Use the gab-sync script to generate this data. The name needs to
+    // match the config of the gab-sync script. 
+    // More information here: https://wiki.z-hub.io/x/z4Aa (GAB Sync Script)
+    define('KOE_GAB_STORE', 'SYSTEM');
+    define('KOE_GAB_FOLDERID', '');
     define('KOE_GAB_NAME', 'Z-Push-KOE-GAB');
 
 /**********************************************************************************

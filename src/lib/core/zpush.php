@@ -360,6 +360,15 @@ class ZPush {
         if (!defined('KOE_CAPABILITY_NOTES')) {
             define('KOE_CAPABILITY_NOTES', false);
         }
+        if (!defined('KOE_GAB_FOLDERID')) {
+            define('KOE_GAB_FOLDERID', '');
+        }
+        if (!defined('KOE_GAB_STORE')) {
+            define('KOE_GAB_STORE', '');
+        }
+        if (!defined('KOE_GAB_NAME')) {
+            define('KOE_GAB_NAME', false);
+        }
 
         // the check on additional folders will not throw hard errors, as this is probably changed on live systems
         if (isset($additionalFolders) && !is_array($additionalFolders))

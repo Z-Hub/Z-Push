@@ -396,6 +396,12 @@ class Sync extends RequestProcessor {
                             $spa->SetFilterType(SYNC_FILTERTIME_MAX);
                     }
 
+                    // unset filtertype for KOE GAB folder
+                    if (KOE_CAPABILITY_GAB && self::$deviceManager->IsOutlookClient() && $spa->GetBackendFolderId() == self::$deviceManager->GetKoeGabBackendFolderId()) {
+                        $spa->SetFilterType(SYNC_FILTERTYPE_ALL);
+                        ZLog::Write(LOGLEVEL_DEBUG, "HandleSync(): KOE GAB folder - setting filter type to unlimited");
+                    }
+
                     if ($currentFilterType != $spa->GetFilterType()) {
                         ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleSync(): filter type has changed (old: '%s', new: '%s'), removing folderstat to force Exporter setup", $currentFilterType, $spa->GetFilterType()));
                         $spa->DelFolderStat();

@@ -1043,6 +1043,30 @@ class BackendZarafa implements IBackend, ISearchProvider {
         return false;
     }
 
+    /**
+     * Returns the backend ID of the folder of the KOE GAB.
+     *
+     * @param string $foldername
+     *
+     * @access public
+     * @return string|boolean
+     */
+    public function GetKoeGabBackendFolderId($foldername) {
+        $rootfolder = mapi_msgstore_openentry($this->store);
+        $table = mapi_folder_gethierarchytable($rootfolder, CONVENIENT_DEPTH);
+
+        $restriction = array(RES_PROPERTY, array(RELOP => RELOP_EQ, ULPROPTAG => PR_DISPLAY_NAME, VALUE => $foldername));
+        mapi_table_restrict($table, $restriction);
+        $querycnt = mapi_table_getrowcount($table);
+        if ($querycnt == 1) {
+            $entry = mapi_table_queryallrows($table, array(PR_SOURCE_KEY));
+            if (isset($entry[0]) && isset($entry[0][PR_SOURCE_KEY])) {
+                return bin2hex($entry[0][PR_SOURCE_KEY]);
+            }
+        }
+        ZLog::Write(LOGLEVEL_WARN, sprintf("ZarafaBackend->GetKoeGabBackendFolderId() Found %d entries in the store '%s' matching the name '%s'.", $querycnt, $this->storeName, $foldername));
+        return false;
+    }
 
     /**----------------------------------------------------------------------------------------------------------
      * Implementation of the ISearchProvider interface

@@ -75,6 +75,7 @@ class ASDevice extends StateObject {
                                     'olpluginversion' => false,
                                     'olpluginbuild' => false,
                                     'olpluginbuilddate' => false,
+                                    'koegabbackendfolderid' => false,
                                 );
 
     static private $loadedData;
