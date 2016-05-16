@@ -2718,6 +2718,16 @@ class MAPIProvider {
         if (!isset($this->storeProps) || empty($this->storeProps)) {
             ZLog::Write(LOGLEVEL_DEBUG, "MAPIProvider->getStoreProps(): Getting store properties.");
             $this->storeProps = mapi_getprops($this->store, array(PR_IPM_SUBTREE_ENTRYID, PR_IPM_OUTBOX_ENTRYID, PR_IPM_WASTEBASKET_ENTRYID, PR_IPM_SENTMAIL_ENTRYID, PR_ENTRYID, PR_IPM_PUBLIC_FOLDERS_ENTRYID, PR_IPM_FAVORITES_ENTRYID, PR_MAILBOX_OWNER_ENTRYID));
+            // make sure all properties are set
+            if(!isset($this->storeProps[PR_IPM_WASTEBASKET_ENTRYID])) {
+                $this->storeProps[PR_IPM_WASTEBASKET_ENTRYID] = false;
+            }
+            if(!isset($this->storeProps[PR_IPM_SENTMAIL_ENTRYID])) {
+                $this->storeProps[PR_IPM_SENTMAIL_ENTRYID] = false;
+            }
+            if(!isset($this->storeProps[PR_IPM_OUTBOX_ENTRYID])) {
+                $this->storeProps[PR_IPM_OUTBOX_ENTRYID] = false;
+            }
         }
         return $this->storeProps;
     }
@@ -2733,6 +2743,34 @@ class MAPIProvider {
             ZLog::Write(LOGLEVEL_DEBUG, "MAPIProvider->getInboxProps(): Getting inbox properties.");
             $inbox = mapi_msgstore_getreceivefolder($this->store);
             $this->inboxProps = mapi_getprops($inbox, array(PR_ENTRYID, PR_IPM_DRAFTS_ENTRYID, PR_IPM_TASK_ENTRYID, PR_IPM_APPOINTMENT_ENTRYID, PR_IPM_CONTACT_ENTRYID, PR_IPM_NOTE_ENTRYID, PR_IPM_JOURNAL_ENTRYID));
+            if ($inbox) {
+                $this->inboxProps = mapi_getprops($inbox, array(PR_ENTRYID, PR_IPM_DRAFTS_ENTRYID, PR_IPM_TASK_ENTRYID, PR_IPM_APPOINTMENT_ENTRYID, PR_IPM_CONTACT_ENTRYID, PR_IPM_NOTE_ENTRYID, PR_IPM_JOURNAL_ENTRYID));
+                // make sure all properties are set
+                if(!isset($this->inboxProps[PR_ENTRYID])) {
+                    $this->inboxProps[PR_ENTRYID] = false;
+                }
+                if(!isset($this->inboxProps[PR_IPM_DRAFTS_ENTRYID])) {
+                    $this->inboxProps[PR_IPM_DRAFTS_ENTRYID] = false;
+                }
+                if(!isset($this->inboxProps[PR_IPM_TASK_ENTRYID])) {
+                    $this->inboxProps[PR_IPM_TASK_ENTRYID] = false;
+                }
+                if(!isset($this->inboxProps[PR_IPM_APPOINTMENT_ENTRYID])) {
+                    $this->inboxProps[PR_IPM_APPOINTMENT_ENTRYID] = false;
+                }
+                if(!isset($this->inboxProps[PR_IPM_CONTACT_ENTRYID])) {
+                    $this->inboxProps[PR_IPM_CONTACT_ENTRYID] = false;
+                }
+                if(!isset($this->inboxProps[PR_IPM_NOTE_ENTRYID])) {
+                    $this->inboxProps[PR_IPM_NOTE_ENTRYID] = false;
+                }
+                if(!isset($this->inboxProps[PR_IPM_JOURNAL_ENTRYID])) {
+                    $this->inboxProps[PR_IPM_JOURNAL_ENTRYID] = false;
+                }
+            }
+            else {
+                $this->inboxProps = array();
+            }
         }
         return $this->inboxProps;
     }
