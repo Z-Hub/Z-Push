@@ -2741,8 +2741,8 @@ class MAPIProvider {
     private function getInboxProps() {
         if (!isset($this->inboxProps) || empty($this->inboxProps)) {
             ZLog::Write(LOGLEVEL_DEBUG, "MAPIProvider->getInboxProps(): Getting inbox properties.");
+            $this->inboxProps = array();
             $inbox = mapi_msgstore_getreceivefolder($this->store);
-            $this->inboxProps = mapi_getprops($inbox, array(PR_ENTRYID, PR_IPM_DRAFTS_ENTRYID, PR_IPM_TASK_ENTRYID, PR_IPM_APPOINTMENT_ENTRYID, PR_IPM_CONTACT_ENTRYID, PR_IPM_NOTE_ENTRYID, PR_IPM_JOURNAL_ENTRYID));
             if ($inbox) {
                 $this->inboxProps = mapi_getprops($inbox, array(PR_ENTRYID, PR_IPM_DRAFTS_ENTRYID, PR_IPM_TASK_ENTRYID, PR_IPM_APPOINTMENT_ENTRYID, PR_IPM_CONTACT_ENTRYID, PR_IPM_NOTE_ENTRYID, PR_IPM_JOURNAL_ENTRYID));
                 // make sure all properties are set
@@ -2767,9 +2767,6 @@ class MAPIProvider {
                 if(!isset($this->inboxProps[PR_IPM_JOURNAL_ENTRYID])) {
                     $this->inboxProps[PR_IPM_JOURNAL_ENTRYID] = false;
                 }
-            }
-            else {
-                $this->inboxProps = array();
             }
         }
         return $this->inboxProps;
