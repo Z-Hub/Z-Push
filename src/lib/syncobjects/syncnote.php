@@ -84,7 +84,8 @@ class SyncNote extends SyncObject {
 
                     SYNC_NOTES_SUBJECT                                  => array (  self::STREAMER_VAR      => "subject"),
 
-                    SYNC_NOTES_IGNORE_COLOR                             => array (  self::STREAMER_VAR      => "Color"),
+                    SYNC_NOTES_IGNORE_COLOR                             => array (  self::STREAMER_VAR      => "Color",
+                                                                                    self::STREAMER_TYPE     => self::STREAMER_TYPE_IGNORE),
                 );
 
         parent::SyncObject($mapping);

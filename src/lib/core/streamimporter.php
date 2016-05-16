@@ -89,32 +89,38 @@ class ImportChangesStream implements IImportChanges {
         }
 
         // KOE ZO-42: to sync Notes to Outlook we sync them as Appointments
-        if (KOE_CAPABILITY_NOTES && $this->classAsString == "SyncNote" && ZPush::GetDeviceManager()->IsOutlookClient()) {
-            // update category from SyncNote->Color
-            $message->SetCategoryFromColor();
+        if ($this->classAsString == "SyncNote") {
+            if (KOE_CAPABILITY_NOTES && ZPush::GetDeviceManager()->IsOutlookClient()) {
+                // update category from SyncNote->Color
+                $message->SetCategoryFromColor();
 
-            $appointment = new SyncAppointment();
-            $appointment->busystatus = 0;
-            $appointment->sensitivity = 0;
-            $appointment->alldayevent = 0;
-            $appointment->reminder = 0;
-            $appointment->meetingstatus = 0;
-            $appointment->responserequested = 0;
+                $appointment = new SyncAppointment();
+                $appointment->busystatus = 0;
+                $appointment->sensitivity = 0;
+                $appointment->alldayevent = 0;
+                $appointment->reminder = 0;
+                $appointment->meetingstatus = 0;
+                $appointment->responserequested = 0;
 
-            $appointment->flags = $message->flags;
-            if (isset($message->asbody))
-                $appointment->asbody = $message->asbody;
-            if (isset($message->categories))
-                $appointment->categories = $message->categories;
-            if (isset($message->subject))
-                $appointment->subject = $message->subject;
-            if (isset($message->lastmodified))
-                $appointment->dtstamp = $message->lastmodified;
+                $appointment->flags = $message->flags;
+                if (isset($message->asbody))
+                    $appointment->asbody = $message->asbody;
+                if (isset($message->categories))
+                    $appointment->categories = $message->categories;
+                if (isset($message->subject))
+                    $appointment->subject = $message->subject;
+                if (isset($message->lastmodified))
+                    $appointment->dtstamp = $message->lastmodified;
 
-            $appointment->starttime = time();
-            $appointment->endtime = $appointment->starttime + 1;
+                $appointment->starttime = time();
+                $appointment->endtime = $appointment->starttime + 1;
 
-            $message = $appointment;
+                $message = $appointment;
+            }
+            else if (Request::GetDeviceType() == "WindowsOutlook") {
+                ZLog::Write(LOGLEVEL_WARN, "MS Outlook is synchronizing Notes folder without active KOE settings or extension. Not streaming SyncNote change!");
+                return false;
+            }
         }
 
         // prevent sending the same object twice in one request
