@@ -71,6 +71,8 @@ class ImportChangesStream implements IImportChanges {
     public function Config($state, $flags = 0) { return true; }
     public function ConfigContentParameters($contentparameters) { return true; }
     public function GetState() { return false;}
+    public function SetMoveStates($srcState, $dstState = null) { return true; }
+    public function GetMoveStates() { return array(false, false); }
     public function LoadConflicts($contentparameters, $state) { return true; }
 
     /**

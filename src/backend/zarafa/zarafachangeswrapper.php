@@ -64,6 +64,8 @@ class ZarafaChangesWrapper implements IImportChanges, IExportChanges {
     private $replyback;
     private $ownFolder;
     private $state;
+    private $moveSrcState;
+    private $moveDstState;
 
     /**
      * Sets the backend to be used by the wrappers. This is used to check for permissions.
@@ -130,6 +132,9 @@ class ZarafaChangesWrapper implements IImportChanges, IExportChanges {
         $this->replyback = null;
         $this->current = null;
         $this->state = null;
+        $this->didMove = false;
+        $this->moveSrcState = false;
+        $this->moveDstState = false;
     }
 
     /**
@@ -237,17 +242,20 @@ class ZarafaChangesWrapper implements IImportChanges, IExportChanges {
      * @throws StatusException
      */
     public function Config($state, $flags = 0) {
+        ZLog::Write(LOGLEVEL_DEBUG, "-------------------- ZarafaChangesWrapper->Config:". $state);
         // if there is an ICS state, it will remain untouched in the ReplyBackState object
         $this->state = ReplyBackState::FromState($state);
 
         $this->init();
 
-        if ($this->isReplyBackExporter()) {
-            return $this->current->Config($this->state->GetReplyBackState(), $flags);
+        $config = false;
+        if ($this->isReplyBackExporter() || !empty($this->moveSrcState)) {
+            $config = $this->current->Config($this->state->GetReplyBackState(), $flags);
         }
         else {
-            return $this->current->Config($this->state->GetICSState(), $flags);
+            $config = $this->current->Config($this->state->GetICSState(), $flags);
         }
+        $this->current->SetMoveStates($this->moveSrcState, $this->moveDstState);
     }
 
     /**
@@ -260,7 +268,7 @@ class ZarafaChangesWrapper implements IImportChanges, IExportChanges {
      * @throws StatusException
      */
     public function ConfigContentParameters($contentparameters) {
-        $this->init();
+        //$this->init();
         return $this->current->ConfigContentParameters($contentparameters);
     }
 
@@ -279,6 +287,33 @@ class ZarafaChangesWrapper implements IImportChanges, IExportChanges {
             $this->state->SetICSState($newState);
         }
         return ReplyBackState::ToState($this->state);
+    }
+
+    /**
+     * Sets the states from move operations.
+     * When src and dst state are set, a MOVE operation is being executed.
+     *
+     * @param mixed         $srcState
+     * @param mixed         (opt) $dstState, default: null
+     *
+     * @access public
+     * @return boolean
+     */
+    public function SetMoveStates($srcState, $dstState = null) {
+        ZLog::Write(LOGLEVEL_DEBUG, "-------------------- ZarafaChangesWrapper: SetMoveStates: src:". print_r($srcState,1). "  dest:". print_r($dstState,1));
+        $this->moveSrcState = $srcState;
+        $this->moveDstState = $dstState;
+        return true;
+    }
+
+    /**
+     * Gets the states of special move operations.
+     *
+     * @access public
+     * @return array(0 => $srcState, 1 => $dstState)
+     */
+    public function GetMoveStates() {
+        return $this->current->GetMoveStates();
     }
 
     /**----------------------------------------------------------------------------------------------------------
@@ -354,6 +389,21 @@ class ZarafaChangesWrapper implements IImportChanges, IExportChanges {
      * @throws StatusException
      */
     public function ImportMessageMove($id, $newfolder) {
+        $this->didMove = true;
+        // Wwhen we setup the $current importer, we didn't know what we needed to do, so we look only at the src folder.
+        // Now the $newfolder could be read only as well. So we need to check it's permissions and then switch to a ReplyBackImExporter if its r/o.
+        if (!self::$backend->HasSecretaryACLs($this->store, $this->folderid)) {
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaChangesWrapper->ImportMessageMove(): destination folderid '%s' is missing permissions. Switching to ReplyBackImExporter.", Utils::PrintAsString($this->folderid)));
+            // save the state
+            $this->state->SetICSState( $this->current->GetState());
+            $this->replyback = $this->getReplyBackImExporter();
+            $this->current = $this->replyback;
+
+            $this->current->SetMoveStates($this->moveSrcState, $this->moveDstState);
+            $this->current->Config($this->state->GetReplyBackState());
+            // TODO: the contentparameters are not available anymore. Do we really need them?
+        }
+
         return $this->current->ImportMessageMove($id, $newfolder);
     }
 

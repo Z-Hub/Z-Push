@@ -788,6 +788,7 @@ class Sync extends RequestProcessor {
                             $streamimporter = new ImportChangesStream(self::$encoder, ZPush::getSyncObjectFromFolderClass($spa->GetContentClass()));
 
                             if ($exporter !== false) {
+                                $exporter->SetMoveStates($spa->GetMoveState());
                                 $exporter->Config($sc->GetParameter($spa, "state"));
                                 $exporter->ConfigContentParameters($spa->GetCPO());
                                 $exporter->InitializeExporter($streamimporter);
@@ -1154,8 +1155,15 @@ class Sync extends RequestProcessor {
             self::$topCollector->AnnounceInformation("Saving state");
 
             try {
-                if (isset($exporter) && $exporter)
+                if (isset($exporter) && $exporter) {
                     $state = $exporter->GetState();
+
+                    // update the move state (it should be gone now)
+                    list($moveState,) = $exporter->GetMoveStates();
+                    // TODO REMOVE LOG
+                    ZLog::Write(LOGLEVEL_DEBUG, "EXPORTER ---> GET Move state: ". Utils::PrintAsString($moveState));
+                    $spa->SetMoveStates($moveState);
+                }
 
                 // nothing exported, but possibly imported - get the importer state
                 else if ($sc->GetParameter($spa, "state") !== null)
@@ -1255,13 +1263,16 @@ class Sync extends RequestProcessor {
                 if ($this->importer === false)
                     throw new StatusException(sprintf("Sync->getImporter(): no importer for folder id %s/%s", $spa->GetFolderId(), $spa->GetBackendFolderId()), SYNC_STATUS_FOLDERHIERARCHYCHANGED);
 
+                // set the move state so the importer is aware of previous made moves
+                $this->importer->SetMoveStates($spa->GetMoveState());
+                ZLog::Write(LOGLEVEL_DEBUG, "-----------after setmove steates");
                 // if there is a valid state obtained after importing changes in a previous loop, we use that state
                 if (isset($actiondata["failstate"]) && isset($actiondata["failstate"]["failedsyncstate"])) {
                     $this->importer->Config($actiondata["failstate"]["failedsyncstate"], $spa->GetConflict());
                 }
                 else
                     $this->importer->Config($sc->GetParameter($spa, "state"), $spa->GetConflict());
-
+                ZLog::Write(LOGLEVEL_DEBUG, "-----------after config");
                 // the CPO is also needed by the importer to check if imported changes are inside the sync window - see ZP-258
                 $this->importer->ConfigContentParameters($spa->GetCPO());
                 $this->importer->LoadConflicts($spa->GetCPO(), $sc->GetParameter($spa, "state"));

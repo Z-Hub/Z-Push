@@ -76,6 +76,7 @@ class SyncParameters extends StateObject {
                                     'foldersyncremaining' => false,
                                     'folderstat' => false,
                                     'folderstattimeout' => false,
+                                    'movestate' => false,
                                 );
 
     /**

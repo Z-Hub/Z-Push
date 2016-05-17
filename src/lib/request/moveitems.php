@@ -105,14 +105,34 @@ class MoveItems extends RequestProcessor {
                 if ($importer === false)
                     throw new StatusException(sprintf("HandleMoveItems() could not get an importer for folder id %s/%s", $move["srcfldid"], $sourceBackendFolderId), SYNC_MOVEITEMSSTATUS_INVALIDSOURCEID);
 
-                // get saved SyncParameters for this folder
+                // get saved SyncParameters of the source folder
                 $spa = self::$deviceManager->GetStateManager()->GetSynchedFolderState($move["srcfldid"]);
                 if (!$spa->HasSyncKey())
                     throw new StatusException(sprintf("MoveItems(): Source folder id '%s' is not fully synchronized. Unable to perform operation.", $move["srcfldid"]), SYNC_MOVEITEMSSTATUS_INVALIDSOURCEID);
+
+                // get saved SyncParameters of the destination folder
+                $destSpa = self::$deviceManager->GetStateManager()->GetSynchedFolderState($move["dstfldid"]);
+                if (!$spa->HasSyncKey())
+                    throw new StatusException(sprintf("MoveItems(): Destination folder id '%s' is not fully synchronized. Unable to perform operation.", $move["dstfldid"]), SYNC_MOVEITEMSSTATUS_INVALIDDESTID);
+
+                $importer->SetMoveStates($spa->GetMoveState(), $destSpa->GetMoveState());
                 $importer->ConfigContentParameters($spa->GetCPO());
 
                 $result = $importer->ImportMessageMove($move["srcmsgid"], self::$deviceManager->GetBackendIdForFolderId($move["dstfldid"]));
-                // We discard the importer state for now.
+                // We discard the standard importer state for now.
+
+                // Get the move states and save them in the SyncParameters of the src and dst folder
+                list($srcMoveState, $dstMoveState) = $importer->GetMoveStates();
+                // TODO REMOVE LOG
+                ZLog::Write(LOGLEVEL_DEBUG, "Importer ---> GET Move state: src: ". print_r($srcMoveState,1) . " dst: ".print_r($dstMoveState,1));
+                $spa->SetMoveStates($srcMoveState);
+                $destSpa->SetMoveStates($dstMoveState);
+                if ($spa->IsDataChanged()) {
+                    self::$deviceManager->GetStateManager()->SetSynchedFolderState($spa);
+                }
+                if ($destSpa->IsDataChanged()) {
+                    self::$deviceManager->GetStateManager()->SetSynchedFolderState($destSpa);
+                }
             }
             catch (StatusException $stex) {
                 if ($stex->getCode() == SYNC_STATUS_FOLDERHIERARCHYCHANGED) // same as SYNC_FSSTATUS_CODEUNKNOWN

@@ -54,10 +54,13 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
     private $store;
     private $folderid;
     private $changes;
+    private $changesDest;
     private $step;
     private $exportImporter;
     private $mapiprovider;
     private $contentparameters;
+    private $moveSrcState;
+    private $moveDstState;
 
     /**
      * Constructor
@@ -77,7 +80,10 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
         $this->changes = array();
         $this->step = 0;
 
+        $this->changesDest = array();
         $this->mapiprovider = new MAPIProvider($this->session, $this->store);
+        $this->moveSrcState = false;
+        $this->moveDstState = false;
     }
 
     /**
@@ -92,7 +98,7 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
      */
     public function Config($state, $flags = 0) {
         if (is_array($state)) {
-            $this->changes = $state;
+            $this->changes = array_merge($this->changes, $state);
         }
         $this->step = 0;
         return true;
@@ -122,6 +128,48 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
         // we can discard all entries in the $changes array up to $step
         return array_slice($this->changes, $this->step);
     }
+
+    /**
+     * Sets the states from move operations.
+     * When src and dst state are set, a MOVE operation is being executed.
+     *
+     * @param mixed         $srcState
+     * @param mixed         (opt) $dstState, default: null
+     *
+     * @access public
+     * @return boolean
+     */
+    public function SetMoveStates($srcState, $dstState = null) {
+        // TODO remove log
+        ZLog::Write(LOGLEVEL_DEBUG, "-------------------- ReplyBackImExporter: SetMoveStates: src:". print_r($srcState,1). "  dest:". print_r($dstState,1));
+        if (is_array($srcState)) {
+            $this->changes = array_merge($this->changes, $srcState);
+        }
+        if (is_array($dstState)) {
+            $this->changesDest = array_merge($this->changes, $dstState);
+        }
+        return true;
+    }
+
+    /**
+     * Gets the states of special move operations.
+     *
+     * @access public
+     * @return array(0 => $srcState, 1 => $dstState)
+     */
+    public function GetMoveStates() {
+        // if a move was executed, there will be changes for the destination folder, so we have to return the
+        // source changes as well. If not, they will be transported via GetState().
+        $srcMoveState = false;
+        if (!empty($this->changesDest)) {
+            $srcMoveState = $this->changesDest;
+        }
+        $ret = array($srcMoveState, $this->changesDest);
+        // TODO remove log
+        ZLog::Write(LOGLEVEL_DEBUG, "-------------------- ReplyBackImExporter: GetMoveState: ".print_r($ret,1));
+        return $ret;
+    }
+
 
     /**
      * Implement interfaces which are never used
@@ -156,69 +204,24 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
         if (strtolower($newfolder) == strtolower(bin2hex($this->folderid)) )
             throw new StatusException(sprintf("ReplyBackImExporter->ImportMessageMove('%s','%s'): Error, source and destination are equal", $id, $newfolder), SYNC_MOVEITEMSSTATUS_SAMESOURCEANDDEST);
 
-        // Get the entryid of the message we're moving
-        $entryid = mapi_msgstore_entryidfromsourcekey($this->store, $this->folderid, hex2bin($id));
-        if(!$entryid)
-            throw new StatusException(sprintf("ReplyBackImExporter->ImportMessageMove('%s','%s'): Error, unable to resolve source message id", $id, $newfolder), SYNC_MOVEITEMSSTATUS_INVALIDSOURCEID);
+        // At this point, we don't know which case of move is happening:
+        // 1. ReadOnly -> Writeable     (should normally work, message is duplicated)
+        // 2. ReadOnly -> ReadOnly
+        // 3. Writeable -> ReadOnly
+        // As we don't know which case happens, we do the same for all cases (no move, no duplication!):
+        //   1. in the src folder, the message is added again (same case as a deletion in RO)
+        //   2. generate a tmp-id for the destination message in the destination folder
+        //   3. for the destination folder, the tmp-id message is deleted (same as creation in RO)
 
-        //open the source message
-        $srcmessage = mapi_msgstore_openentry($this->store, $entryid);
-        if (!$srcmessage) {
-            $code = SYNC_MOVEITEMSSTATUS_INVALIDSOURCEID;
-            // if we move to the trash and the source message is not found, we can also just tell the mobile that we successfully moved to avoid errors (ZP-624)
-            if ($newfolder == ZPush::GetBackend()->GetWasteBasket()) {
-                $code = SYNC_MOVEITEMSSTATUS_SUCCESS;
-            }
-            throw new StatusException(sprintf("ReplyBackImExporter->ImportMessageMove('%s','%s'): Error, unable to open source message: 0x%X", $id, $newfolder, mapi_last_hresult()), $code);
-        }
+        // make sure the message is added again to the src folder
+        $this->changes[] = array(self::DELETION, $id, null);
 
-        // check if the source message is in the current syncinterval
-        // TODO check if we need this
-//         if (!$this->isMessageInSyncInterval($id))
-//             throw new StatusException(sprintf("ReplyBackImExporter->ImportMessageMove('%s','%s'): Source message is outside the sync interval. Move not performed.", $id, $newfolder), SYNC_MOVEITEMSSTATUS_INVALIDSOURCEID);
+        // generate tmp-id and have it removed later via the dest changes (saved via DstMoveState)
+        $tmpId = "ReplyBackImExporter-temporaryId-". microtime();
+        $this->changesDest[] = array(self::CREATION, $tmpId, null);
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ReplyBackImExporter->ImportMessageMove(): Move forbidden. Restoring message in source folder and added a delete request for the destination folder for the id: %s", $tmpId));
 
-        // get correct mapi store for the destination folder
-        $dststore = ZPush::GetBackend()->GetMAPIStoreForFolderId(ZPush::GetAdditionalSyncFolderStore($newfolder), $newfolder);
-        if ($dststore === false)
-            throw new StatusException(sprintf("ReplyBackImExporter->ImportMessageMove('%s','%s'): Error, unable to open store of destination folder", $id, $newfolder), SYNC_MOVEITEMSSTATUS_INVALIDDESTID);
-
-        $dstentryid = mapi_msgstore_entryidfromsourcekey($dststore, hex2bin($newfolder));
-        if(!$dstentryid)
-            throw new StatusException(sprintf("ReplyBackImExporter->ImportMessageMove('%s','%s'): Error, unable to resolve destination folder", $id, $newfolder), SYNC_MOVEITEMSSTATUS_INVALIDDESTID);
-
-        $dstfolder = mapi_msgstore_openentry($dststore, $dstentryid);
-        if(!$dstfolder)
-            throw new StatusException(sprintf("ReplyBackImExporter->ImportMessageMove('%s','%s'): Error, unable to open destination folder", $id, $newfolder), SYNC_MOVEITEMSSTATUS_INVALIDDESTID);
-
-        $newmessage = mapi_folder_createmessage($dstfolder);
-        if (!$newmessage)
-            throw new StatusException(sprintf("ReplyBackImExporter->ImportMessageMove('%s','%s'): Error, unable to create message in destination folder: 0x%X", $id, $newfolder, mapi_last_hresult()), SYNC_MOVEITEMSSTATUS_INVALIDDESTID);
-
-        // Copy message
-        mapi_copyto($srcmessage, array(), array(), $newmessage);
-        if (mapi_last_hresult())
-            throw new StatusException(sprintf("ReplyBackImExporter->ImportMessageMove('%s','%s'): Error, copy to destination message failed: 0x%X", $id, $newfolder, mapi_last_hresult()), SYNC_MOVEITEMSSTATUS_CANNOTMOVE);
-
-        $srcfolderentryid = mapi_msgstore_entryidfromsourcekey($this->store, $this->folderid);
-        if(!$srcfolderentryid)
-            throw new StatusException(sprintf("ReplyBackImExporter->ImportMessageMove('%s','%s'): Error, unable to resolve source folder", $id, $newfolder), SYNC_MOVEITEMSSTATUS_INVALIDSOURCEID);
-
-        $srcfolder = mapi_msgstore_openentry($this->store, $srcfolderentryid);
-        if (!$srcfolder)
-            throw new StatusException(sprintf("ReplyBackImExporter->ImportMessageMove('%s','%s'): Error, unable to open source folder: 0x%X", $id, $newfolder, mapi_last_hresult()), SYNC_MOVEITEMSSTATUS_INVALIDSOURCEID);
-
-        // Save changes
-        mapi_savechanges($newmessage);
-        if (mapi_last_hresult())
-            throw new StatusException(sprintf("ReplyBackImExporter->ImportMessageMove('%s','%s'): Error, mapi_savechanges() failed: 0x%X", $id, $newfolder, mapi_last_hresult()), SYNC_MOVEITEMSSTATUS_CANNOTMOVE);
-
-        $sourcekeyprops = mapi_getprops($newmessage, array (PR_SOURCE_KEY));
-        if (isset($sourcekeyprops[PR_SOURCE_KEY]) && $sourcekeyprops[PR_SOURCE_KEY]) {
-            $this->changes[] = array(self::DELETION, $id, null);
-            return bin2hex($sourcekeyprops[PR_SOURCE_KEY]);
-        }
-
-        return false;
+        return $tmpId;
     }
 
     /**

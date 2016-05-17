@@ -103,12 +103,8 @@ class BackendZarafa implements IBackend, ISearchProvider {
         $this->session = false;
         $this->folderStatCache = array();
 
-<<<<<<< HEAD
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendZarafa using PHP-MAPI version: %s", phpversion("mapi")));
-        ZarafaChangesWrapper::SetBackend($this);
-=======
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendZarafa using PHP-MAPI version: %s - PHP version: %s", phpversion("mapi"), phpversion()));
->>>>>>> FETCH_HEAD
+        ZarafaChangesWrapper::SetBackend($this);
     }
 
     /**
