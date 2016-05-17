@@ -2435,7 +2435,7 @@ class MAPIProvider {
         if (!$stream || $size == 0) {
             return "";
         }
-        return mapi_stream_read($stream, $streamsize);
+        return mapi_stream_read($stream, $size);
     }
 
     /**
