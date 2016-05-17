@@ -55,6 +55,11 @@ class DeviceManager {
     const FLD_SYNC_INPROGRESS = 2;
     const FLD_SYNC_COMPLETED = 4;
 
+    const FLD_ORIGIN_USER = "U";
+    const FLD_ORIGIN_CONFIG = "C";
+    const FLD_ORIGIN_SHARED = "S";
+    const FLD_ORIGIN_GAB = "G";
+
     private $device;
     private $deviceHash;
     private $saveDevice;
@@ -458,7 +463,7 @@ class DeviceManager {
         foreach($this->device->GetAdditionalFolders() as $df) {
             $folder = new SyncFolder();
             $folder->BackendId = $df['folderid'];
-            $folder->serverid = $this->GetFolderIdForBackendId($folder->BackendId, true);
+            $folder->serverid = $this->GetFolderIdForBackendId($folder->BackendId, true, DeviceManager::FLD_ORIGIN_SHARED, $df['name']);
             $folder->parentid = 0;                  // only top folders are supported
             $folder->displayname = $df['name'];
             $folder->type = $df['type'];
@@ -877,14 +882,19 @@ class DeviceManager {
      * Gets the AS folderid for a backendFolderId.
      * If there is no known AS folderId a new one is being created.
      *
-     * @param string    $backendid
+     * @param string    $backendid              Backend folder id
      * @param boolean   $generateNewIdIfNew     Generates a new AS folderid for the case the backend folder is not known yet, default: false.
+     * @param string    $folderType             Folder type is one of   'U' (user)
+     *                                                                  'C' (configured)
+     *                                                                  'S' (shared)
+     *                                                                  'G' (global address book)
+     * @param string    $folderName             Folder name of the backend folder
      *
      * @access public
-     * @return int/boolean  returns false if there is folderid known for this backendid and $generateNewIdIfNew is not set or false.
+     * @return string/boolean  returns false if there is folderid known for this backendid and $generateNewIdIfNew is not set or false.
      */
-    public function GetFolderIdForBackendId($backendid, $generateNewIdIfNew = false) {
-        return $this->device->GetFolderIdForBackendId($backendid, $generateNewIdIfNew);
+    public function GetFolderIdForBackendId($backendid, $generateNewIdIfNew = false, $folderType = self::FLD_ORIGIN_USER, $folderName = null) {
+        return $this->device->GetFolderIdForBackendId($backendid, $generateNewIdIfNew, $folderType, $folderName);
     }
 
 

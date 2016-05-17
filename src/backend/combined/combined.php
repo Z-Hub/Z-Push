@@ -49,13 +49,8 @@
 * Consult LICENSE file for details
 ************************************************/
 
-// default backend
-include_once('lib/default/backend.php');
-
 //include the CombinedBackend's own config file
 require_once("backend/combined/config.php");
-require_once("backend/combined/importer.php");
-require_once("backend/combined/exporter.php");
 
 class BackendCombined extends Backend implements ISearchProvider {
     public $config;

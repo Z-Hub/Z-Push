@@ -1,12 +1,13 @@
 <?php
 /***********************************************
-* File      :   simplemutex.php
+* File      :   sqlstatemachine/config.php
 * Project   :   Z-Push
-* Descr     :   Implements a simple mutex using InterProcessData
+* Descr     :   configuration file for the
+*               SqlStateMachine backend.
 *
-* Created   :   29.02.2012
+* Created   :   19.01.2016
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007-2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -41,48 +42,22 @@
 * Consult LICENSE file for details
 ************************************************/
 
-class SimpleMutex extends InterProcessData {
-    /**
-     * Constructor
-     */
-    public function SimpleMutex() {
-        // initialize super parameters
-        $this->allocate = 64;
-        $this->type = 5173;
-        parent::__construct();
+/**
+ * More information about the configuration on https://wiki.z-hub.io/x/xIAa
+ *
+ * STATE_SQL_ENGINE:    the DB engine
+ * STATE_SQL_SERVER:    the DB server URI or IP
+ * STATE_SQL_PORT:      the DB server port
+ * STATE_SQL_DATABASE:  the DB name
+ * STATE_SQL_USER:      username to DB
+ * STATE_SQL_PASSWORD:  STATE_SQL_USER's password to DB
+ * STATE_SQL_OPTIONS:   array with options needed
+ */
+define('STATE_SQL_ENGINE', 'mysql');
+define('STATE_SQL_SERVER', 'localhost');
+define('STATE_SQL_PORT', '3306');
+define('STATE_SQL_DATABASE', 'zpush');
+define('STATE_SQL_USER', 'root');
+define('STATE_SQL_PASSWORD', '');
+define('STATE_SQL_OPTIONS', serialize(array(PDO::ATTR_PERSISTENT => true)));
 
-        if (!$this->IsActive()) {
-            ZLog::Write(LOGLEVEL_ERROR, "SimpleMutex not available as InterProcessData is not available. This is not recommended on duty systems and may result in corrupt user/device linking.");
-        }
-    }
-
-    /**
-     * Blocks the mutex.
-     * Method blocks until mutex is available!
-     * ATTENTION: make sure that you *always* release a blocked mutex!
-     *
-     * @access public
-     * @return boolean
-     */
-    public function Block() {
-        if ($this->IsActive())
-            return $this->blockMutex();
-
-        ZLog::Write(LOGLEVEL_WARN, "Could not enter mutex as InterProcessData is not available. This is not recommended on duty systems and may result in corrupt user/device linking!");
-        return true;
-    }
-
-    /**
-     * Releases the mutex
-     * After the release other processes are able to block the mutex themselves.
-     *
-     * @access public
-     * @return boolean
-     */
-    public function Release() {
-        if ($this->IsActive())
-            return $this->releaseMutex();
-
-        return true;
-    }
-}

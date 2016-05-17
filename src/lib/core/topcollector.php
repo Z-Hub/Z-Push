@@ -63,7 +63,7 @@ class TopCollector extends InterProcessData {
         parent::__construct();
 
         // initialize params
-        $this->InitializeParams();
+        $this->initializeParams();
 
         $this->preserved = array();
         // static vars come from the parent class
@@ -222,8 +222,9 @@ class TopCollector extends InterProcessData {
                         }
                     }
                 }
-                foreach ($toClear as $tc)
+                foreach ($toClear as $tc) {
                     unset($topdata[$tc[0]][$tc[1]][$tc[2]]);
+                }
             }
 
             $stat = $this->setData($topdata, self::TOPDATA);
@@ -258,6 +259,20 @@ class TopCollector extends InterProcessData {
     public function SetAsPushConnection() {
         $this->latest["push"] = true;
         return true;
+    }
+
+    /**
+     * Reinitializes the IPC data.
+     *
+     * @access public
+     * @return boolean
+     */
+    public function ReInitIPC() {
+        $status = parent::ReInitIPC();
+        if (!status) {
+            $this->SetData(array(), self::TOPDATA);
+        }
+        return $status;
     }
 
     /**

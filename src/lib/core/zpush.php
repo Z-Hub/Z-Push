@@ -288,9 +288,15 @@ class ZPush {
 
         // check if Provisioning is enabled and the default policies are available
         if (PROVISIONING) {
-            ZPush::$policies = parse_ini_file(PROVISIONING_POLICYFILE, true);
+            if (file_exists(REAL_BASE_PATH . PROVISIONING_POLICYFILE)) {
+                $policyfile = REAL_BASE_PATH . PROVISIONING_POLICYFILE;
+            }
+            else {
+                $policyfile = PROVISIONING_POLICYFILE;
+            }
+            ZPush::$policies = parse_ini_file($policyfile, true);
             if (!isset(ZPush::$policies['default'])) {
-                throw new FatalMisconfigurationException(sprintf("Your policies' configuration file doesn't contain the required [default] section. Please check the %s file.", constant('PROVISIONING_POLICYFILE')));
+                throw new FatalMisconfigurationException(sprintf("Your policies' configuration file doesn't contain the required [default] section. Please check the '%s' file.", $policyfile));
             }
         }
         return true;
@@ -362,7 +368,7 @@ class ZPush {
                 $folder = new SyncFolder();
 
                 $folder->BackendId = $af['folderid'];
-                $folder->serverid = ZPush::GetDeviceManager(true)->GetFolderIdForBackendId($folder->BackendId, true);
+                $folder->serverid = ZPush::GetDeviceManager(true)->GetFolderIdForBackendId($folder->BackendId, true, DeviceManager::FLD_ORIGIN_CONFIG, $af['name']);
                 $folder->parentid = 0;                  // only top folders are supported
                 $folder->displayname = $af['name'];
                 $folder->type = $af['type'];
@@ -406,7 +412,12 @@ class ZPush {
             }
             else {
                 // Initialize the default StateMachine
-                ZPush::$stateMachine = new FileStateMachine();
+                if (defined('STATE_MACHINE') && STATE_MACHINE == 'SQL') {
+                    ZPush::$stateMachine = new SqlStateMachine();
+                }
+                else {
+                    ZPush::$stateMachine = new FileStateMachine();
+                }
             }
 
             if (ZPush::$stateMachine->GetStateVersion() !== ZPush::GetLatestStateVersion()) {
@@ -484,8 +495,7 @@ class ZPush {
             return false;
 
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("Including backend file: '%s'", $toLoad));
-        include_once($toLoad);
-        return true;
+        return include_once($toLoad);
     }
 
     /**
@@ -537,20 +547,19 @@ class ZPush {
 
             // if no backend provider is defined, try to include automatically
             if ($ourBackend == false || $ourBackend == "") {
-                $loaded = false;
                 foreach (self::$autoloadBackendPreference as $autoloadBackend) {
                     ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPush::GetBackend(): trying autoload backend '%s'", $autoloadBackend));
-                    $loaded = class_exists($autoloadBackend) || self::IncludeBackend($autoloadBackend);
-                    if ($loaded) {
+                    if (class_exists($autoloadBackend)) {
                         $ourBackend = $autoloadBackend;
                         break;
                     }
                 }
-                if (!$ourBackend || !$loaded)
-                    throw new FatalMisconfigurationException("No Backend provider can not be loaded. Check your installation and configuration!");
+                if (!$ourBackend)
+                    throw new FatalMisconfigurationException("No Backend provider can be found. Check your installation and/or configuration!");
             }
-            elseif (!class_exists($ourBackend))
-                self::IncludeBackend($ourBackend);
+            elseif (!class_exists($ourBackend)) {
+                spl_autoload_register('\ZPush::IncludeBackend');
+            }
 
             if (class_exists($ourBackend))
                 ZPush::$backend = new $ourBackend();

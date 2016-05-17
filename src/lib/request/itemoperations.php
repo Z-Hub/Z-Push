@@ -293,7 +293,7 @@ class ItemOperations extends RequestProcessor {
                         else if (isset($operation['longid'])) {
                             self::$topCollector->AnnounceInformation("Fetching data from backend with long id");
                             $tmp = explode(":", $operation['longid']);
-                            $data = self::$backend->Fetch($tmp[0], $tmp[1], $operation["cpo"]);
+                            $data = self::$backend->Fetch(self::$deviceManager->GetBackendIdForFolderId($tmp[0]), $tmp[1], $operation["cpo"]);
                         }
                     }
                     catch (StatusException $stex) {

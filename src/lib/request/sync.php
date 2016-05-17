@@ -165,7 +165,7 @@ class Sync extends RequestProcessor {
                             $spa->DelFolderStat();
                         }
                         else if ($synckey !== false) {
-                            if ($synckey !== $spa->GetSyncKey()) {
+                            if ($synckey !== $spa->GetSyncKey() && $synckey !== $spa->GetNewSyncKey()) {
                                 ZLog::Write(LOGLEVEL_DEBUG, "HandleSync(): Synckey does not match latest saved for this folder, removing folderstat to force Exporter setup");
                                 $spa->DelFolderStat();
                             }
@@ -282,6 +282,9 @@ class Sync extends RequestProcessor {
                     // use default conflict handling if not specified by the mobile
                     $spa->SetConflict(SYNC_CONFLICT_DEFAULT);
 
+                    // save the current filtertype because it might have been changed on the mobile
+                    $currentFilterType = $spa->GetFilterType();
+
                     while(self::$decoder->getElementStartTag(SYNC_OPTIONS)) {
                         $firstOption = true;
                         WBXMLDecoder::ResetInWhile("syncOptions");
@@ -294,6 +297,9 @@ class Sync extends RequestProcessor {
                                 // switch the foldertype for the next options
                                 $spa->UseCPO($foldertype);
 
+                                // save the current filtertype because it might have been changed on the mobile
+                                $currentFilterType = $spa->GetFilterType();
+
                                 // set to synchronize all changes. The mobile could overwrite this value
                                 $spa->SetFilterType(SYNC_FILTERTYPE_ALL);
 
@@ -303,6 +309,8 @@ class Sync extends RequestProcessor {
                             // if no foldertype is defined, use default cpo
                             else if ($firstOption){
                                 $spa->UseCPO();
+                                // save the current filtertype because it might have been changed on the mobile
+                                $currentFilterType = $spa->GetFilterType();
                                 // set to synchronize all changes. The mobile could overwrite this value
                                 $spa->SetFilterType(SYNC_FILTERTYPE_ALL);
                             }
@@ -386,6 +394,11 @@ class Sync extends RequestProcessor {
                         (!$spa->HasFilterType() || $spa->GetFilterType() == SYNC_FILTERTYPE_ALL || $spa->GetFilterType() > SYNC_FILTERTIME_MAX)) {
                             ZLog::Write(LOGLEVEL_DEBUG, sprintf("SYNC_FILTERTIME_MAX defined. Filter set to value: %s", SYNC_FILTERTIME_MAX));
                             $spa->SetFilterType(SYNC_FILTERTIME_MAX);
+                    }
+
+                    if ($currentFilterType != $spa->GetFilterType()) {
+                        ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleSync(): filter type has changed (old: '%s', new: '%s'), removing folderstat to force Exporter setup", $currentFilterType, $spa->GetFilterType()));
+                        $spa->DelFolderStat();
                     }
 
                     // Check if the hierarchycache is available. If not, trigger a HierarchySync
@@ -580,9 +593,9 @@ class Sync extends RequestProcessor {
         if ($status == SYNC_STATUS_SUCCESS && ($emptysync === true || $partial === true) ) {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleSync(): Partial or Empty sync requested. Retrieving data of synchronized folders."));
 
-            // Load all collections - do not overwrite existing (received!), load states and check permissions
+            // Load all collections - do not overwrite existing (received!), load states, check permissions and only load confirmed states!
             try {
-                $sc->LoadAllCollections(false, true, true, true);
+                $sc->LoadAllCollections(false, true, true, true, true);
             }
             catch (StateInvalidException $siex) {
                 $status = SYNC_STATUS_INVALIDSYNCKEY;

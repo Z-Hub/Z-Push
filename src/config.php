@@ -71,10 +71,25 @@
     define('USE_FULLEMAIL_FOR_LOGIN', true);
 
 /**********************************************************************************
- *  Default FileStateMachine settings
+ * StateMachine setting
+ *
+ * These StateMachines can be used:
+ *   FILE  - FileStateMachine (default). Needs STATE_DIR set as well.
+ *   SQL   - SqlStateMachine has own configuration file. STATE_DIR is ignored.
+ *           State migration script is available, more informations: https://wiki.z-hub.io/x/xIAa
  */
+    define('STATE_MACHINE', 'FILE');
     define('STATE_DIR', '/var/lib/z-push/');
 
+/**********************************************************************************
+ *  IPC - InterProcessCommunication
+ *
+ *  Is either provided by using shared memory on a single host or
+ *  using the memcache provider for multi-host environments.
+ *  When another implementation should be used, the class can be set here explicitly.
+ *  If empty Z-Push will try to use available providers.
+ */
+    define('IPC_PROVIDER', 'IpcSharedMemoryProvider');
 
 /**********************************************************************************
  *  Logging settings
@@ -144,7 +159,8 @@
     define('LOOSE_PROVISIONING', false);
 
     // The file containing the policies' settings.
-    define('PROVISIONING_POLICYFILE', BASE_PATH . 'policies.ini');
+    // Set a full path or relative to the z-push main directory
+    define('PROVISIONING_POLICYFILE', 'policies.ini');
 
     // Default conflict preference
     // Some devices allow to set if the server or PIM (mobile)
@@ -186,12 +202,14 @@
     // SYNC_FILEAS_LASTFIRST will be used
     define('FILEAS_ORDER', SYNC_FILEAS_LASTFIRST);
 
-    // Amount of items to be synchronized per request
+    // Maximum amount of items to be synchronized per request.
     // Normally this value is requested by the mobile. Common values are 5, 25, 50 or 100.
     // Exporting too much items can cause mobile timeout on busy systems.
-    // Z-Push will use the lowest value, either set here or by the mobile.
-    // default: 100 - value used if mobile does not limit amount of items
-    define('SYNC_MAX_ITEMS', 100);
+    // Z-Push will use the lowest provided value, either set here or by the mobile.
+    // MS Outlook 2013+ request up to 512 items to accelerate the sync process.
+    // If you detect high load (also on subsystems) you could try a lower setting.
+    // max: 512 - value used if mobile does not limit amount of items
+    define('SYNC_MAX_ITEMS', 512);
 
     // The devices usually send a list of supported properties for calendar and contact
     // items. If a device does not includes such a supported property in Sync request,
@@ -200,7 +218,7 @@
     // to tell if a property was deleted or it was not set at all if it does not appear in Sync.
     // This parameter defines Z-Push behaviour during Sync if a device does not issue a list with
     // supported properties.
-    // See also https://jira.zarafa.com/browse/ZP-302.
+    // See also https://jira.z-hub.io/browse/ZP-302.
     // Possible values:
     // false - do not unset properties which are not sent during Sync (default)
     // true  - unset properties which are not sent during Sync

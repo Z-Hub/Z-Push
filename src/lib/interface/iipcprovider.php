@@ -1,12 +1,13 @@
 <?php
 /***********************************************
-* File      :   simplemutex.php
+* File      :   iipcprovider.php
 * Project   :   Z-Push
-* Descr     :   Implements a simple mutex using InterProcessData
+* Descr     :   Interface for interprocess communication
+*               providers for different purposes
 *
-* Created   :   29.02.2012
+* Created   :   20.10.2011
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -41,48 +42,90 @@
 * Consult LICENSE file for details
 ************************************************/
 
-class SimpleMutex extends InterProcessData {
+interface IIpcProvider
+{
     /**
      * Constructor
-     */
-    public function SimpleMutex() {
-        // initialize super parameters
-        $this->allocate = 64;
-        $this->type = 5173;
-        parent::__construct();
-
-        if (!$this->IsActive()) {
-            ZLog::Write(LOGLEVEL_ERROR, "SimpleMutex not available as InterProcessData is not available. This is not recommended on duty systems and may result in corrupt user/device linking.");
-        }
-    }
+     *
+	 * @param int $type
+	 * @param int $allocate
+	 * @param string $class
+	 */
+    public function __construct($type, $allocate, $class);
 
     /**
-     * Blocks the mutex.
+     * Reinitializes the IPC data. If the provider has no way of performing
+     * this action, it should return 'false'.
+     *
+     * @access public
+     * @return boolean
+     */
+    public function ReInitIPC();
+
+    /**
+     * Cleans up the IPC data block.
+     *
+     * @access public
+     * @return boolean
+     */
+    public function Clean();
+
+    /**
+     * Indicates if the IPC is active.
+     *
+     * @access public
+     * @return boolean
+     */
+    public function IsActive();
+
+    /**
+     * Blocks the class mutex.
      * Method blocks until mutex is available!
      * ATTENTION: make sure that you *always* release a blocked mutex!
      *
      * @access public
      * @return boolean
      */
-    public function Block() {
-        if ($this->IsActive())
-            return $this->blockMutex();
-
-        ZLog::Write(LOGLEVEL_WARN, "Could not enter mutex as InterProcessData is not available. This is not recommended on duty systems and may result in corrupt user/device linking!");
-        return true;
-    }
+    public function BlockMutex();
 
     /**
-     * Releases the mutex
+     * Releases the class mutex.
      * After the release other processes are able to block the mutex themselves.
      *
      * @access public
      * @return boolean
      */
-    public function Release() {
-        if ($this->IsActive())
-            return $this->releaseMutex();
+    public function ReleaseMutex();
 
-        return true;
-    }
+    /**
+     * Indicates if the requested variable is available in IPC data.
+     *
+     * @param int   $id     int indicating the variable
+     *
+     * @access public
+     * @return boolean
+     */
+    public function HasData($id = 2);
+
+    /**
+     * Returns the requested variable from IPC data.
+     *
+     * @param int   $id     int indicating the variable
+     *
+     * @access public
+     * @return mixed
+     */
+    public function GetData($id = 2);
+
+    /**
+     * Writes the transmitted variable to IPC data.
+     * Subclasses may never use an id < 2!
+     *
+     * @param mixed $data   data which should be saved into IPC data
+     * @param int   $id     int indicating the variable (bigger than 2!)
+     *
+     * @access public
+     * @return boolean
+     */
+    public function SetData($data, $id = 2);
 }

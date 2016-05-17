@@ -99,7 +99,7 @@ interface IStateMachine {
      *
      * @access public
      * @return mixed
-     * @throws StateNotFoundException, StateInvalidException
+     * @throws StateNotFoundException, StateInvalidException, UnavailableException
      */
     public function GetState($devid, $type, $key = false, $counter = false, $cleanstates = true);
 
@@ -114,7 +114,7 @@ interface IStateMachine {
      *
      * @access public
      * @return boolean
-     * @throws StateInvalidException
+     * @throws StateInvalidException, UnavailableException
      */
     public function SetState($state, $devid, $type, $key = false, $counter = false);
 

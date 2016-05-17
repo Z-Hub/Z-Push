@@ -54,28 +54,6 @@ include_once('backend/zarafa/mapi/mapidefs.php');
 include_once('backend/zarafa/mapi/mapitags.php');
 include_once('backend/zarafa/mapi/mapicode.php');
 include_once('backend/zarafa/mapi/mapiguid.php');
-include_once('backend/zarafa/mapi/class.baseexception.php');
-include_once('backend/zarafa/mapi/class.mapiexception.php');
-include_once('backend/zarafa/mapi/class.baserecurrence.php');
-include_once('backend/zarafa/mapi/class.taskrecurrence.php');
-include_once('backend/zarafa/mapi/class.recurrence.php');
-include_once('backend/zarafa/mapi/class.meetingrequest.php');
-include_once('backend/zarafa/mapi/class.freebusypublish.php');
-
-// processing of RFC822 messages
-require_once('include/z_RFC822.php');
-
-// components of Zarafa backend
-include_once('backend/zarafa/mapiutils.php');
-include_once('backend/zarafa/mapimapping.php');
-include_once('backend/zarafa/mapiprovider.php');
-include_once('backend/zarafa/mapiphpwrapper.php');
-include_once('backend/zarafa/mapistreamwrapper.php');
-include_once('backend/zarafa/importer.php');
-include_once('backend/zarafa/exporter.php');
-include_once('backend/zarafa/replybackimexporter.php');
-include_once('backend/zarafa/zarafachangeswrapper.php');
-include_once('backend/zarafa/replybackstate.php');
 
 
 //setlocale to UTF-8 in order to support properties containing Unicode characters
@@ -125,8 +103,12 @@ class BackendZarafa implements IBackend, ISearchProvider {
         $this->session = false;
         $this->folderStatCache = array();
 
+<<<<<<< HEAD
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendZarafa using PHP-MAPI version: %s", phpversion("mapi")));
         ZarafaChangesWrapper::SetBackend($this);
+=======
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendZarafa using PHP-MAPI version: %s - PHP version: %s", phpversion("mapi"), phpversion()));
+>>>>>>> FETCH_HEAD
     }
 
     /**
@@ -618,15 +600,17 @@ class BackendZarafa implements IBackend, ISearchProvider {
      * @throws StatusException
      */
     public function Fetch($folderid, $id, $contentparameters) {
+        // id might be in the new longid format, so we have to split it here
+        list($fsk, $sk) = MAPIUtils::SplitMessageId($id);
         // get the entry id of the message
-        $entryid = mapi_msgstore_entryidfromsourcekey($this->store, hex2bin($folderid), hex2bin($id));
+        $entryid = mapi_msgstore_entryidfromsourcekey($this->store, hex2bin($folderid), hex2bin($sk));
         if(!$entryid)
-            throw new StatusException(sprintf("BackendZarafa->Fetch('%s','%s'): Error getting entryid: 0x%X", $folderid, $id, mapi_last_hresult()), SYNC_STATUS_OBJECTNOTFOUND);
+            throw new StatusException(sprintf("BackendZarafa->Fetch('%s','%s'): Error getting entryid: 0x%X", $folderid, $sk, mapi_last_hresult()), SYNC_STATUS_OBJECTNOTFOUND);
 
         // open the message
         $message = mapi_msgstore_openentry($this->store, $entryid);
         if(!$message)
-            throw new StatusException(sprintf("BackendZarafa->Fetch('%s','%s'): Error, unable to open message: 0x%X", $folderid, $id, mapi_last_hresult()), SYNC_STATUS_OBJECTNOTFOUND);
+            throw new StatusException(sprintf("BackendZarafa->Fetch('%s','%s'): Error, unable to open message: 0x%X", $folderid, $sk, mapi_last_hresult()), SYNC_STATUS_OBJECTNOTFOUND);
 
         // convert the mapi message into a SyncObject and return it
         $mapiprovider = new MAPIProvider($this->session, $this->store);
@@ -708,7 +692,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
             throw new StatusException(sprintf("ZarafaBackend->GetAttachmentData('%s'): Error, unable to open attachment data stream: 0x%X", $attname, mapi_last_hresult()), SYNC_ITEMOPERATIONSSTATUS_INVALIDATT);
 
         // put the mapi stream into a wrapper to get a standard stream
-        $attachment->data = MapiStreamWrapper::Open($stream);
+        $attachment->data = MAPIStreamWrapper::Open($stream);
         if (isset($attprops[PR_ATTACH_MIME_TAG]))
             $attachment->contenttype = $attprops[PR_ATTACH_MIME_TAG];
         elseif (isset($attprops[PR_ATTACH_MIME_TAG_W]))
@@ -1229,7 +1213,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
         $items["range"] = $cpo->GetSearchRange();
         for ($i = 0; $i < $cnt; $i++) {
             $items[$i]['class'] = 'Email';
-            $items[$i]['longid'] = bin2hex($rows[$i][PR_PARENT_SOURCE_KEY]) . ":" . bin2hex($rows[$i][PR_SOURCE_KEY]);
+            $items[$i]['longid'] = ZPush::GetDeviceManager()->GetFolderIdForBackendId(bin2hex($rows[$i][PR_PARENT_SOURCE_KEY])) . ":" . bin2hex($rows[$i][PR_SOURCE_KEY]);
             $items[$i]['folderid'] = bin2hex($rows[$i][PR_PARENT_SOURCE_KEY]);
         }
         return $items;
@@ -1452,15 +1436,16 @@ class BackendZarafa implements IBackend, ISearchProvider {
     private function adviseStoreToSink($store) {
         // check if we already advised the store
         if (!in_array($store, $this->changesSinkStores)) {
-            mapi_msgstore_advise($this->store, null, fnevObjectModified | fnevObjectCreated | fnevObjectMoved | fnevObjectDeleted, $this->changesSink);
-            $this->changesSinkStores[] = $store;
+            mapi_msgstore_advise($store, null, fnevObjectModified | fnevObjectCreated | fnevObjectMoved | fnevObjectDeleted, $this->changesSink);
 
             if (mapi_last_hresult()) {
-                ZLog::Write(LOGLEVEL_WARN, sprintf("ZarafaBackend->adviseStoreToSink(): failed to advised store '%s' with code 0x%X. Polling will be performed.", $this->store, mapi_last_hresult()));
+                ZLog::Write(LOGLEVEL_WARN, sprintf("ZarafaBackend->adviseStoreToSink(): failed to advised store '%s' with code 0x%X. Polling will be performed.", $store, mapi_last_hresult()));
                 return false;
             }
-            else
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->adviseStoreToSink(): advised store '%s'", $this->store));
+            else {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->adviseStoreToSink(): advised store '%s'", $store));
+                $this->changesSinkStores[] = $store;
+            }
         }
         return true;
     }
