@@ -968,10 +968,10 @@ class ASDevice extends StateObject {
         // until there aren't any collisions. Probably a smaller number is also sufficient.
         while (in_array($folderId, $this->backend2folderidCache) && $cnt < 10000) {
             $folderId = substr($folderOrigin . dechex(crc32($backendid . $folderName . $cnt++)), 0, 6);
+            ZLog::Write(LOGLEVEL_WARN, sprintf("ASDevice->generateFolderHash(): collision avoiding nr %05d. Generated hash: '%s'", $cnt, $folderId));
         }
-        if ($cnt == 10000) {
-            ZLog::Write(LOGLEVEL_WARN, "ASDevice->generateFolderHash(): too many colissions while generating folder hash.");
-
+        if ($cnt >= 10000) {
+            throw new FatalException("ASDevice->generateFolderHash(): too many colissions while generating folder hash.");
         }
 
         return $folderId;
