@@ -2124,12 +2124,17 @@ class BackendZarafa implements IBackend, ISearchProvider {
         if ($timeslots > self::MAXFREEBUSYSLOTS) {
             throw new StatusException("ZarafaBackend->getAvailability(): the requested free busy range is too large.", SYNC_RESOLVERECIPSSTATUS_PROTOCOLERROR);
         }
+        $mergedFreeBusy = str_pad(fbNoData, $timeslots, fbNoData);
 
         if(is_array($fbDataArray) && !empty($fbDataArray)) {
             foreach($fbDataArray as $fbDataUser) {
+                if ($fbDataUser == null) {
+                    ZLog::Write(LOGLEVEL_INFO, sprintf("ZarafaBackend->getAvailability(): freebusy user is null for '%s'. Unable to retrieve his availability.", $resolveRecipient->displayname));
+                    continue;
+                }
                 $rangeuser = mapi_freebusydata_getpublishrange($fbDataUser);
                 if($rangeuser == null) {
-                    ZLog::Write(LOGLEVEL_INFO, sprintf("Unable to retrieve mapi_freebusydata_getpublishrange (0x%X) for '%s'", mapi_last_hresult(), $resolveRecipient->displayname));
+                    ZLog::Write(LOGLEVEL_INFO, sprintf("ZarafaBackend->getAvailability(): Unable to retrieve mapi_freebusydata_getpublishrange (0x%X) for '%s'", mapi_last_hresult(), $resolveRecipient->displayname));
                     $availability->status = SYNC_RESOLVERECIPSSTATUS_AVAILABILITY_FAILED;
                     return $availability;
                 }
@@ -2138,6 +2143,10 @@ class BackendZarafa implements IBackend, ISearchProvider {
                 // assume that the user is free for the requested range.
                 if ($rangeuser['start'] <= $start && $rangeuser['end'] >= $end) {
                     $mergedFreeBusy = str_pad(fbFree, $timeslots, fbFree);
+                }
+                // available free busy information is outside of the requested data
+                elseif ($rangeuser['end'] <= $start || $rangeuser['start'] >= $end) {
+                    $mergedFreeBusy = str_pad(fbNoData, $timeslots, fbNoData);
                 }
                 // free busy information is not available at the begin of the requested period
                 elseif ($rangeuser['start'] > $start && $rangeuser['end'] >= $end) {
