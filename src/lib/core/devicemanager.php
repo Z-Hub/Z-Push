@@ -874,7 +874,7 @@ class DeviceManager {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("DeviceManager->GetBackendIdForFolderId(): no backend-folderid available for '%s', returning as is.", $folderid));
             return $folderid;
         }
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("DeviceManager->GetBackendIdForFolderId(): folderid %d => %s", $folderid, $backendId));
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("DeviceManager->GetBackendIdForFolderId(): folderid %s => %s", $folderid, $backendId));
         return $backendId;
     }
 
