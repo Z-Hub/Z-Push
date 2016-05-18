@@ -12,7 +12,7 @@
 // The field to be hashed that is unique and never changes
 // in the entire lifetime of the GAB entry.
 define('HASHFIELD', 'account');
-define('AMOUT_OF_CHUNKS', 10);
+define('AMOUNT_OF_CHUNKS', 10);
 
 // SyncWorker implementation to be used
 define('SYNCWORKER', 'Zarafa');
