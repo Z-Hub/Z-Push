@@ -698,9 +698,6 @@ class ASDevice extends StateObject {
 
         // nothing found? Then it's a new one, get and add it
         if (is_array($this->backend2folderidCache) && $generateNewIdIfNew) {
-            if (!in_array($folderOrigin, array(DeviceManager::FLD_ORIGIN_CONFIG, DeviceManager::FLD_ORIGIN_GAB, DeviceManager::FLD_ORIGIN_SHARED, DeviceManager::FLD_ORIGIN_USER))) {
-                ZLog::Write(LOGLEVEL_WARN, sprintf("ASDevice->GetFolderIdForBackendId(): folder type '%' is unknown in DeviceManager", $folderOrigin));
-            }
             if ($folderName == null) {
                 ZLog::Write(LOGLEVEL_INFO, "ASDevice->GetFolderIdForBackendId(): generating a new folder id for the folder without a name");
             }
