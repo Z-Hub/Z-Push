@@ -75,15 +75,15 @@ interface IImportChanges extends IChanges {
     public function ImportMessageChange($id, $message);
 
     /**
-     * Imports a deletion. This may conflict if the local object has been modified
+     * Imports a deletion. This may conflict if the local object has been modified.
      *
      * @param string        $id
+     * @param boolean       $asSoftDelete   (opt) if true, the deletion is exported as "SoftDelete", else as "Remove" - default: false
      *
      * @access public
      * @return boolean
-     * @throws StatusException
      */
-    public function ImportMessageDeletion($id);
+    public function ImportMessageDeletion($id, $asSoftDelete = false);
 
     /**
      * Imports a change in 'read' flag
