@@ -479,9 +479,7 @@ class ImportChangesICS implements IImportChanges {
         }
         // yeah OL sucks - ZP-779
         else {
-            if (ctype_digit($fsk)) {
-                $fsk = ZPush::GetDeviceManager()->GetBackendIdForFolderId($fsk);
-            }
+            $fsk = ZPush::GetDeviceManager()->GetBackendIdForFolderId($fsk);
             $store = ZPush::GetBackend()->GetMAPIStoreForFolderId(ZPush::GetAdditionalSyncFolderStore($fsk), $fsk);
             $entryid = mapi_msgstore_entryidfromsourcekey($store, hex2bin($fsk), hex2bin($sk));
             $realMessage = mapi_msgstore_openentry($store, $entryid);

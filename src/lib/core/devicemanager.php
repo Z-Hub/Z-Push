@@ -884,7 +884,7 @@ class DeviceManager {
      *
      * @param string    $backendid              Backend folder id
      * @param boolean   $generateNewIdIfNew     Generates a new AS folderid for the case the backend folder is not known yet, default: false.
-     * @param string    $folderType             Folder type is one of   'U' (user)
+     * @param string    $folderOrigin           Folder type is one of   'U' (user)
      *                                                                  'C' (configured)
      *                                                                  'S' (shared)
      *                                                                  'G' (global address book)
@@ -893,8 +893,11 @@ class DeviceManager {
      * @access public
      * @return string/boolean  returns false if there is folderid known for this backendid and $generateNewIdIfNew is not set or false.
      */
-    public function GetFolderIdForBackendId($backendid, $generateNewIdIfNew = false, $folderType = self::FLD_ORIGIN_USER, $folderName = null) {
-        return $this->device->GetFolderIdForBackendId($backendid, $generateNewIdIfNew, $folderType, $folderName);
+    public function GetFolderIdForBackendId($backendid, $generateNewIdIfNew = false, $folderOrigin = self::FLD_ORIGIN_USER, $folderName = null) {
+        if (!in_array($folderOrigin, array(DeviceManager::FLD_ORIGIN_CONFIG, DeviceManager::FLD_ORIGIN_GAB, DeviceManager::FLD_ORIGIN_SHARED, DeviceManager::FLD_ORIGIN_USER))) {
+            ZLog::Write(LOGLEVEL_WARN, sprintf("ASDevice->GetFolderIdForBackendId(): folder type '%' is unknown in DeviceManager", $folderOrigin));
+        }
+        return $this->device->GetFolderIdForBackendId($backendid, $generateNewIdIfNew, $folderOrigin, $folderName);
     }
 
 
