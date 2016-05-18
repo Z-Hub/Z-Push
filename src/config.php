@@ -332,11 +332,11 @@
         // uncomment (remove '/*' '*/') and fill in the folderid
 /*
         array(
-                'store'     => "SYSTEM",
-                'folderid'  => "",
-                'name'      => "Public Contacts",
-                'type'      => SYNC_FOLDER_TYPE_USER_CONTACT,
-                'readonly'  => false,
+            'store'     => "SYSTEM",
+            'folderid'  => "",
+            'name'      => "Public Contacts",
+            'type'      => SYNC_FOLDER_TYPE_USER_CONTACT,
+            'readonly'  => false,
         ),
 */
     );
