@@ -132,9 +132,7 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
     public function GetState() {
         // we can discard all entries in the $changes array up to $step
         $changes = array_slice($this->changes, $this->step);
-        $out = array_merge($changes, $this->changesNext);
-        ZLog::Write(LOGLEVEL_DEBUG, "------- ReplyBack getstate:".print_r($out,1));
-        return $out;
+        return array_merge($changes, $this->changesNext);
     }
 
     /**

@@ -1,6 +1,6 @@
 <?php
 /***********************************************
- * File      :   zarafachangeswrapper.php
+ * File      :   kopanochangeswrapper.php
  * Project   :   Z-Push
  * Descr     :   This class fullfills the IImportChanges
  *               and IExportChanges interfaces.
@@ -48,7 +48,7 @@
  * Consult LICENSE file for details
  ************************************************/
 
-class ZarafaChangesWrapper implements IImportChanges, IExportChanges {
+class KopanoChangesWrapper implements IImportChanges, IExportChanges {
     const IMPORTER = 1;
     const EXPORTER = 2;
 
@@ -89,7 +89,7 @@ class ZarafaChangesWrapper implements IImportChanges, IExportChanges {
      * @param boolean $ownFolder
      *
      * @access public
-     * @return ZarafaChangesWrapper | boolean
+     * @return KopanoChangesWrapper | boolean
      */
     static public function GetWrapper($storeName, $session, $store, $folderid, $ownFolder) {
         // check early due to the folderstats
@@ -102,7 +102,7 @@ class ZarafaChangesWrapper implements IImportChanges, IExportChanges {
         }
 
         if (!isset(self::$wrappers[$storeName][$folderid]) && $session) {
-            self::$wrappers[$storeName][$folderid] = new ZarafaChangesWrapper($session, $store, $folderid, $ownFolder);
+            self::$wrappers[$storeName][$folderid] = new KopanoChangesWrapper($session, $store, $folderid, $ownFolder);
         }
         else {
             return false;
@@ -122,7 +122,7 @@ class ZarafaChangesWrapper implements IImportChanges, IExportChanges {
      * @access public
      * @throws StatusException
      */
-    public function ZarafaChangesWrapper($session, $store, $folderid, $ownFolder) {
+    public function KopanoChangesWrapper($session, $store, $folderid, $ownFolder) {
         $this->preparedAs = null;
         $this->session = $session;
         $this->store = $store;
@@ -140,7 +140,7 @@ class ZarafaChangesWrapper implements IImportChanges, IExportChanges {
     /**
      * Indicates if the wrapper is requested to be an exporter or an importer.
      *
-     * @param int $type     either ZarafaChangesWrapper::IMPORTER or ZarafaChangesWrapper::EXPORTER
+     * @param int $type     either KopanoChangesWrapper::IMPORTER or KopanoChangesWrapper::EXPORTER
      *
      * @access public
      * @return void
@@ -183,12 +183,12 @@ class ZarafaChangesWrapper implements IImportChanges, IExportChanges {
             if (!($this->current instanceof ImportChangesICS)) {
                 // check if the user has permissions to import to this folderid
                 if (!$this->ownFolder && !self::$backend->HasSecretaryACLs($this->store, $this->folderid)) {
-                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaChangesWrapper->init(): Importer: missing permissions on folderid: '%s'. Working with ReplyBackImExporter.", Utils::PrintAsString($this->folderid)));
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoChangesWrapper->init(): Importer: missing permissions on folderid: '%s'. Working with ReplyBackImExporter.", Utils::PrintAsString($this->folderid)));
                     $this->replyback = $this->getReplyBackImExporter();
                     $this->current = $this->replyback;
                 }
                 else if (!empty($this->moveSrcState)) {
-                    ZLog::Write(LOGLEVEL_DEBUG, "ZarafaChangesWrapper->init(): Importer: Move state available. Working with ReplyBackImExporter.");
+                    ZLog::Write(LOGLEVEL_DEBUG, "KopanoChangesWrapper->init(): Importer: Move state available. Working with ReplyBackImExporter.");
                     $this->replyback = $this->getReplyBackImExporter();
                     $this->current = $this->replyback;
                 }
@@ -202,7 +202,7 @@ class ZarafaChangesWrapper implements IImportChanges, IExportChanges {
             if (!($this->current instanceof ExportChangesICS)) {
                 // if there was something imported on a read-only folder, we need to reply back the changes
                 if ($this->replyback || !empty($this->state->GetReplyBackState()) || !empty($this->moveSrcState)) {
-                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaChangesWrapper->init(): Exporter: read-only folder with folderid: '%s'. Working with ReplyBackImExporter.", Utils::PrintAsString($this->folderid)));
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoChangesWrapper->init(): Exporter: read-only folder with folderid: '%s'. Working with ReplyBackImExporter.", Utils::PrintAsString($this->folderid)));
                     if (!$this->replyback) {
                         $this->replyback = $this->getReplyBackImExporter();
                     }
@@ -211,14 +211,14 @@ class ZarafaChangesWrapper implements IImportChanges, IExportChanges {
                 else {
                     // check if the user has permissions to export from this folderid
                     if (!$this->ownFolder && !self::$backend->HasReadACLs($this->store, $this->folderid)) {
-                        throw new StatusException(sprintf("ZarafaChangesWrapper->init(): Exporter: missing read permissions on folderid: '%s'.", Utils::PrintAsString($this->folderid)), SYNC_STATUS_FOLDERHIERARCHYCHANGED);
+                        throw new StatusException(sprintf("KopanoChangesWrapper->init(): Exporter: missing read permissions on folderid: '%s'.", Utils::PrintAsString($this->folderid)), SYNC_STATUS_FOLDERHIERARCHYCHANGED);
                     }
                     $this->current = new ExportChangesICS($this->session, $this->store, hex2bin($this->folderid));
                 }
             }
         }
         else {
-            throw new FatalNotImplementedException("ZarafaChangesWrapper->init(): ZarafaChangesWrapper was not prepared as importer or exporter.");
+            throw new FatalNotImplementedException("KopanoChangesWrapper->init(): KopanoChangesWrapper was not prepared as importer or exporter.");
         }
     }
 
@@ -397,7 +397,7 @@ class ZarafaChangesWrapper implements IImportChanges, IExportChanges {
         // Now the $newfolder could be read only as well. So we need to check it's permissions and then switch to a ReplyBackImExporter if its r/o.
         if (!$this->isReplyBackExporter()) {
             if (!self::$backend->HasSecretaryACLs($this->store, $newfolder)) {
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaChangesWrapper->ImportMessageMove(): destination folderid '%s' is missing permissions. Switching to ReplyBackImExporter.", Utils::PrintAsString($newfolder)));
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoChangesWrapper->ImportMessageMove(): destination folderid '%s' is missing permissions. Switching to ReplyBackImExporter.", Utils::PrintAsString($newfolder)));
                 $this->replyback = $this->getReplyBackImExporter();
                 $this->current = $this->replyback;
 

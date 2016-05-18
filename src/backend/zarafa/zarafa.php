@@ -104,7 +104,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
         $this->folderStatCache = array();
 
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendZarafa using PHP-MAPI version: %s - PHP version: %s", phpversion("mapi"), phpversion()));
-        ZarafaChangesWrapper::SetBackend($this);
+        KopanoChangesWrapper::SetBackend($this);
     }
 
     /**
@@ -372,8 +372,8 @@ class BackendZarafa implements IBackend, ISearchProvider {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendZarafa->GetImporter() folderid: '%s'", Utils::PrintAsString($folderid)));
         if($folderid !== false) {
             $this->importedFolders[$folderid] = $this->store;
-            $wrapper = ZarafaChangesWrapper::GetWrapper($this->storeName, $this->session, $this->store, $folderid, $this->storeName == $this->mainUser);
-            $wrapper->Prepare(ZarafaChangesWrapper::IMPORTER);
+            $wrapper = KopanoChangesWrapper::GetWrapper($this->storeName, $this->session, $this->store, $folderid, $this->storeName == $this->mainUser);
+            $wrapper->Prepare(KopanoChangesWrapper::IMPORTER);
             return $wrapper;
         }
         else
@@ -392,8 +392,8 @@ class BackendZarafa implements IBackend, ISearchProvider {
      */
     public function GetExporter($folderid = false) {
         if($folderid !== false) {
-            $wrapper = ZarafaChangesWrapper::GetWrapper($this->storeName, $this->session, $this->store, $folderid, $this->storeName == $this->mainUser);
-            $wrapper->Prepare(ZarafaChangesWrapper::EXPORTER);
+            $wrapper = KopanoChangesWrapper::GetWrapper($this->storeName, $this->session, $this->store, $folderid, $this->storeName == $this->mainUser);
+            $wrapper->Prepare(KopanoChangesWrapper::EXPORTER);
             return $wrapper;
         }
         else
@@ -1351,7 +1351,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
         }
 
         // if there is a ReplyBackImExporter, the exporter needs to run!
-        $wrapper = ZarafaChangesWrapper::GetWrapper($user, false, null, $folderid, null);
+        $wrapper = KopanoChangesWrapper::GetWrapper($user, false, null, $folderid, null);
         if ($wrapper && $wrapper->HasReplyBackExporter()) {
             return "replyback-". time();
         }
