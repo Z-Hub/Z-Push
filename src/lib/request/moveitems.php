@@ -112,8 +112,10 @@ class MoveItems extends RequestProcessor {
 
                 // get saved SyncParameters of the destination folder
                 $destSpa = self::$deviceManager->GetStateManager()->GetSynchedFolderState($move["dstfldid"]);
-                if (!$spa->HasSyncKey())
-                    throw new StatusException(sprintf("MoveItems(): Destination folder id '%s' is not fully synchronized. Unable to perform operation.", $move["dstfldid"]), SYNC_MOVEITEMSSTATUS_INVALIDDESTID);
+                if (!$destSpa->HasSyncKey()) {
+                    $destSpa->SetFolderId($move["dstfldid"]);
+                    $destSpa->SetSyncKey(self::$deviceManager->GetStateManager()->GetZeroSyncKey());
+                }
 
                 $importer->SetMoveStates($spa->GetMoveState(), $destSpa->GetMoveState());
                 $importer->ConfigContentParameters($spa->GetCPO());
@@ -123,14 +125,12 @@ class MoveItems extends RequestProcessor {
 
                 // Get the move states and save them in the SyncParameters of the src and dst folder
                 list($srcMoveState, $dstMoveState) = $importer->GetMoveStates();
-                // TODO REMOVE LOG
-                ZLog::Write(LOGLEVEL_DEBUG, "Importer ---> GET Move state: src: ". print_r($srcMoveState,1) . " dst: ".print_r($dstMoveState,1));
-                $spa->SetMoveStates($srcMoveState);
-                $destSpa->SetMoveStates($dstMoveState);
-                if ($spa->IsDataChanged()) {
+                if ($spa->GetMoveState() !== $srcMoveState) {
+                    $spa->SetMoveState($srcMoveState);
                     self::$deviceManager->GetStateManager()->SetSynchedFolderState($spa);
                 }
-                if ($destSpa->IsDataChanged()) {
+                if ($destSpa->GetMoveState() !== $dstMoveState) {
+                    $destSpa->SetMoveState($dstMoveState);
                     self::$deviceManager->GetStateManager()->SetSynchedFolderState($destSpa);
                 }
             }

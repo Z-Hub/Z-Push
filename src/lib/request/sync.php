@@ -163,10 +163,11 @@ class Sync extends RequestProcessor {
                         if ($synckey == "0") {
                             $spa->RemoveSyncKey();
                             $spa->DelFolderStat();
+                            $spa->SetMoveState(false);
                         }
                         else if ($synckey !== false) {
-                            if ($synckey !== $spa->GetSyncKey() && $synckey !== $spa->GetNewSyncKey()) {
-                                ZLog::Write(LOGLEVEL_DEBUG, "HandleSync(): Synckey does not match latest saved for this folder, removing folderstat to force Exporter setup");
+                            if (($synckey !== $spa->GetSyncKey() && $synckey !== $spa->GetNewSyncKey()) || !!$spa->GetMoveState()) {
+                                ZLog::Write(LOGLEVEL_DEBUG, "HandleSync(): Synckey does not match latest saved for this folder or there is a move state, removing folderstat to force Exporter setup");
                                 $spa->DelFolderStat();
                             }
                             $spa->SetSyncKey($synckey);
@@ -1061,7 +1062,8 @@ class Sync extends RequestProcessor {
                 $windowSize = $globallyAvailable;
             }
             // send <MoreAvailable/> if there are more changes than fit in the folder windowsize
-            if($changecount > $windowSize) {
+            // or there is a move state (another sync should be done afterwards)
+            if($changecount > $windowSize || $spa->GetMoveState() !== false) {
                 self::$encoder->startTag(SYNC_MOREAVAILABLE, false, true);
                 $spa->DelFolderStat();
             }
@@ -1160,9 +1162,7 @@ class Sync extends RequestProcessor {
 
                     // update the move state (it should be gone now)
                     list($moveState,) = $exporter->GetMoveStates();
-                    // TODO REMOVE LOG
-                    ZLog::Write(LOGLEVEL_DEBUG, "EXPORTER ---> GET Move state: ". Utils::PrintAsString($moveState));
-                    $spa->SetMoveStates($moveState);
+                    $spa->SetMoveState($moveState);
                 }
 
                 // nothing exported, but possibly imported - get the importer state
@@ -1265,14 +1265,14 @@ class Sync extends RequestProcessor {
 
                 // set the move state so the importer is aware of previous made moves
                 $this->importer->SetMoveStates($spa->GetMoveState());
-                ZLog::Write(LOGLEVEL_DEBUG, "-----------after setmove steates");
+
                 // if there is a valid state obtained after importing changes in a previous loop, we use that state
                 if (isset($actiondata["failstate"]) && isset($actiondata["failstate"]["failedsyncstate"])) {
                     $this->importer->Config($actiondata["failstate"]["failedsyncstate"], $spa->GetConflict());
                 }
                 else
                     $this->importer->Config($sc->GetParameter($spa, "state"), $spa->GetConflict());
-                ZLog::Write(LOGLEVEL_DEBUG, "-----------after config");
+
                 // the CPO is also needed by the importer to check if imported changes are inside the sync window - see ZP-258
                 $this->importer->ConfigContentParameters($spa->GetCPO());
                 $this->importer->LoadConflicts($spa->GetCPO(), $sc->GetParameter($spa, "state"));

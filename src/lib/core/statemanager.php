@@ -200,6 +200,16 @@ class StateManager {
     }
 
     /**
+     * Returns a counter zero SyncKey.
+     *
+     * @access public
+     * @return string
+     */
+    public function GetZeroSyncKey() {
+        return self::BuildStateKey($this->getNewUuid(), 0);
+    }
+
+    /**
      * Gets the state for a specified synckey (uuid + counter)
      *
      * @param string    $synckey

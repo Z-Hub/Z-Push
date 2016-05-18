@@ -45,16 +45,20 @@
 ************************************************/
 
 class ReplyBackImExporter implements IImportChanges, IExportChanges {
+    const REPLYBACKID = "ReplyBack";
+    const EXPORT_DELETE_AFTER_MOVE_TIMES = 3;
     const CHANGE = 1;
     const DELETION = 2;
     const READFLAG = 3;
     const CREATION = 4;
+    const MOVEDHERE = 5;
 
     private $session;
     private $store;
     private $folderid;
     private $changes;
     private $changesDest;
+    private $changesNext;
     private $step;
     private $exportImporter;
     private $mapiprovider;
@@ -81,6 +85,7 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
         $this->step = 0;
 
         $this->changesDest = array();
+        $this->changesNext = array();
         $this->mapiprovider = new MAPIProvider($this->session, $this->store);
         $this->moveSrcState = false;
         $this->moveDstState = false;
@@ -126,7 +131,10 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
      */
     public function GetState() {
         // we can discard all entries in the $changes array up to $step
-        return array_slice($this->changes, $this->step);
+        $changes = array_slice($this->changes, $this->step);
+        $out = array_merge($changes, $this->changesNext);
+        ZLog::Write(LOGLEVEL_DEBUG, "------- ReplyBack getstate:".print_r($out,1));
+        return $out;
     }
 
     /**
@@ -140,8 +148,6 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
      * @return boolean
      */
     public function SetMoveStates($srcState, $dstState = null) {
-        // TODO remove log
-        ZLog::Write(LOGLEVEL_DEBUG, "-------------------- ReplyBackImExporter: SetMoveStates: src:". print_r($srcState,1). "  dest:". print_r($dstState,1));
         if (is_array($srcState)) {
             $this->changes = array_merge($this->changes, $srcState);
         }
@@ -161,13 +167,14 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
         // if a move was executed, there will be changes for the destination folder, so we have to return the
         // source changes as well. If not, they will be transported via GetState().
         $srcMoveState = false;
+        $dstMoveState = $this->changesDest;
         if (!empty($this->changesDest)) {
-            $srcMoveState = $this->changesDest;
+            $srcMoveState = $this->changes;
         }
-        $ret = array($srcMoveState, $this->changesDest);
-        // TODO remove log
-        ZLog::Write(LOGLEVEL_DEBUG, "-------------------- ReplyBackImExporter: GetMoveState: ".print_r($ret,1));
-        return $ret;
+        else {
+            $dstMoveState = false;
+        }
+        return array($srcMoveState, $dstMoveState);
     }
 
 
@@ -217,8 +224,8 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
         $this->changes[] = array(self::DELETION, $id, null);
 
         // generate tmp-id and have it removed later via the dest changes (saved via DstMoveState)
-        $tmpId = "ReplyBackImExporter-temporaryId-". microtime();
-        $this->changesDest[] = array(self::CREATION, $tmpId, null);
+        $tmpId = $this->getTmpId($newfolder);
+        $this->changesDest[] = array(self::MOVEDHERE, $tmpId, 0);
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("ReplyBackImExporter->ImportMessageMove(): Move forbidden. Restoring message in source folder and added a delete request for the destination folder for the id: %s", $tmpId));
 
         return $tmpId;
@@ -292,7 +299,7 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
             return true;
         }
         // if there is no $id it means it's a new object. We have to reply back that we accepted it and then delete it.
-        $id = "ReplyBackImExporter-temporaryId-". microtime();
+        $id = $this->getTmpId();
         $this->changes[] = array(self::CREATION, $id, $message);
         return $id;
     }
@@ -374,7 +381,18 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
             $id = $change[1];
             $oldmessage = $change[2];
 
-            if ($change[0] === self::CREATION) {
+
+            // MOVEDHERE is an OL hack: export the deletion of the destination folder
+            // several times, because OL doesn't removes the item the first time
+            // we generate the same change again for EXPORT_DELETE_AFTER_MOVE_TIMES.
+            if ($change[0] == self::MOVEDHERE) {
+                $this->exportImporter->ImportMessageDeletion($id);
+                if (is_int($oldmessage) && $oldmessage < self::EXPORT_DELETE_AFTER_MOVE_TIMES) {
+                    $change[2]++;
+                    $this->changesNext[] = $change;
+                }
+            }
+            else if ($change[0] === self::CREATION || $this->isTmpId($id)) {
                 $this->exportImporter->ImportMessageDeletion($id);
             }
             elseif ($change[0] === self::READFLAG) {
@@ -407,13 +425,38 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
             return false;
     }
 
+    /**
+     * Generates a temporary id.
+     *
+     * @param string    $backendfolderid
+     *
+     * @access private
+     * @return string
+     */
+    private function getTmpId($backendfolderid) {
+        return ZPush::GetDeviceManager()->GetFolderIdForBackendId($backendfolderid) .":". self::REPLYBACKID ."". substr(md5(microtime()), 0, 5);
+    }
+
+    /**
+     * Checks if an id is a temporary id generated by the ReplyBackImExporter.
+     *
+     * @access public
+     * @return boolean
+     */
+    private function isTmpId($id) {
+        return !!stripos($id, self::REPLYBACKID);
+    }
+
     private function getMessage($id, $announceErrors = true) {
         if (!$id) {
             return false;
         }
         $message = false;
-        $sourcekey = hex2bin($id);
-        $parentsourcekey = $this->folderid;
+
+        list($fsk, $sk) = MAPIUtils::SplitMessageId($id);
+
+        $sourcekey = hex2bin($sk);
+        $parentsourcekey = hex2bin(ZPush::GetDeviceManager()->GetBackendIdForFolderId($fsk));
         $entryid = mapi_msgstore_entryidfromsourcekey($this->store, $parentsourcekey, $sourcekey);
 
         if(!$entryid) {
