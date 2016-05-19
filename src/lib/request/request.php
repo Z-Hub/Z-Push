@@ -97,7 +97,7 @@ class Request {
     static private $koeVersion;
     static private $koeBuild;
     static private $koeBuildDate;
-
+    static private $expectedConnectionTimeout;
 
     /**
      * Initializes request data
@@ -626,17 +626,32 @@ class Request {
         // The amount of time returned is somehow lower than the max timeout so we have
         // time for processing.
 
-        // Apple and Windows Phone have higher timeouts (4min = 240sec)
-        if (in_array(self::GetDeviceType(), array("iPod", "iPad", "iPhone", "WP"))) {
-            return 200;
+        if (!isset(self::$expectedConnectionTimeout)) {
+            // Apple and Windows Phone have higher timeouts (4min = 240sec)
+            if (stripos(SYNC_TIMOUT_LONG_DEVICETYPES, self::GetDeviceType()) !== false) {
+                self::$expectedConnectionTimeout = 210;
+            }
+            // Samsung devices have a intermediate timeout (90sec)
+            else if (stripos(SYNC_TIMOUT_MEDIUM_DEVICETYPES, self::GetDeviceType()) !== false) {
+                self::$expectedConnectionTimeout = 85;
+            }
+            else {
+                // for all other devices, a timeout of 30 seconds is expected
+                self::$expectedConnectionTimeout = 28;
+            }
         }
-        // Samsung devices have a intermediate timeout (90sec)
-        if (in_array(self::GetDeviceType(), array("SAMSUNGGTI"))) {
-            return 50;
-        }
+        return self::$expectedConnectionTimeout;
+    }
 
-        // for all other devices, a timeout of 30 seconds is expected
-        return 20;
+    /**
+     * Indicates if the maximum timeout for the devicetype of this request is
+     * almost reached.
+     *
+     * @access public
+     * @return boolean
+     */
+    static public function IsRequestTimeoutReached() {
+        return (time() - $_SERVER["REQUEST_TIME"]) >= self::GetExpectedConnectionTimeout();
     }
 
     /**----------------------------------------------------------------------------------------------------------
