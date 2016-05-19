@@ -45,6 +45,7 @@
 class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IExportChanges {
     const CHANGE = 1;
     const DELETION = 2;
+    const SOFTDELETION = 3;
 
     private $changes;
     private $step;
@@ -150,13 +151,19 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
     /**
      * Imports a message deletion, which is imported into memory
      *
-     * @param string        $id     id of message which is deleted
+     * @param string        $id             id of message which is deleted
+     * @param boolean       $asSoftDelete   (opt) if true, the deletion is exported as "SoftDelete", else as "Remove" - default: false
      *
      * @access public
      * @return boolean
      */
-    public function ImportMessageDeletion($id) {
-        $this->changes[] = array(self::DELETION, $id);
+    public function ImportMessageDeletion($id, $asSoftDelete = false) {
+        if ($asSoftDelete === true) {
+            $this->changes[] = array(self::SOFTDELETION, $id);
+        }
+        else {
+            $this->changes[] = array(self::DELETION, $id);
+        }
         return true;
     }
 
@@ -181,7 +188,7 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
      * @return boolean
      */
     public function IsDeleted($id) {
-       return (array_search(array(self::DELETION, $id), $this->changes) === false) ? false:true;
+       return !((array_search(array(self::DELETION, $id), $this->changes) === false) && (array_search(array(self::SOFTDELETION, $id), $this->changes) === false));
     }
 
     /**

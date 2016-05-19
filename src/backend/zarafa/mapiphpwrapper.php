@@ -179,6 +179,7 @@ class PHPWrapper {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("PHPWrapper->ImportMessageDeletion(): Received %d remove requests from ICS", $amount));
         }
         foreach($sourcekeys as $sourcekey) {
+            // TODO if we would know that ICS is removing the message because it's outside the sync interval, we could send a $asSoftDelete = true to the importer. Could they pass that via $flags?
             $this->importer->ImportMessageDeletion($this->prefix.bin2hex($sourcekey));
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("PHPWrapper->ImportMessageDeletion(): delete for :'%s'", $this->prefix.bin2hex($sourcekey)));
         }

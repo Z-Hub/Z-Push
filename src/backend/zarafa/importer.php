@@ -408,15 +408,15 @@ class ImportChangesICS implements IImportChanges {
     }
 
     /**
-     * Imports a deletion. This may conflict if the local object has been modified
+     * Imports a deletion. This may conflict if the local object has been modified.
      *
      * @param string        $id
+     * @param boolean       $asSoftDelete   (opt) if true, the deletion is exported as "SoftDelete", else as "Remove" - default: false
      *
      * @access public
      * @return boolean
-     * @throws StatusException
      */
-    public function ImportMessageDeletion($id) {
+    public function ImportMessageDeletion($id, $asSoftDelete = false) {
         list(,$sk) = MAPIUtils::SplitMessageId($id);
         // check if the message is in the current syncinterval
         if (!$this->isMessageInSyncInterval($sk))

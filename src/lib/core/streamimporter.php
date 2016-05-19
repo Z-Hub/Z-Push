@@ -192,20 +192,26 @@ class ImportChangesStream implements IImportChanges {
     }
 
     /**
-     * Imports a deletion
+     * Imports a deletion.
      *
      * @param string        $id
+     * @param boolean       $asSoftDelete   (opt) if true, the deletion is exported as "SoftDelete", else as "Remove" - default: false
      *
      * @access public
      * @return boolean
      */
-    public function ImportMessageDeletion($id) {
+    public function ImportMessageDeletion($id, $asSoftDelete = false) {
         if ($this->checkForIgnoredMessages) {
            ZPush::GetDeviceManager()->RemoveBrokenMessage($id);
         }
 
         $this->importedMsgs++;
-        $this->encoder->startTag(SYNC_REMOVE);
+        if ($asSoftDelete) {
+            $this->encoder->startTag(SYNC_SOFTDELETE);
+        }
+        else {
+            $this->encoder->startTag(SYNC_REMOVE);
+        }
             $this->encoder->startTag(SYNC_SERVERENTRYID);
                 $this->encoder->content($id);
             $this->encoder->endTag();

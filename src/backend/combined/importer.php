@@ -98,19 +98,20 @@ class ImportChangesCombined implements IImportChanges {
     }
 
     /**
-     * Imports a deletion. This may conflict if the local object has been modified
+     * Imports a deletion. This may conflict if the local object has been modified.
      *
      * @param string        $id
+     * @param boolean       $asSoftDelete   (opt) if true, the deletion is exported as "SoftDelete", else as "Remove" - default: false
      *
      * @access public
      * @return boolean
      */
-    public function ImportMessageDeletion($id) {
+    public function ImportMessageDeletion($id, $asSoftDelete = false) {
         if (!$this->icc) {
             ZLog::Write(LOGLEVEL_ERROR, "ImportChangesCombined->ImportMessageDeletion() icc not configured");
             return false;
         }
-        return $this->icc->ImportMessageDeletion($id);
+        return $this->icc->ImportMessageDeletion($id, $asSoftDelete);
     }
 
     /**
