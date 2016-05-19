@@ -495,7 +495,7 @@ class ZPushAdmin {
                     $new_list[$fid] = array(
                                         'store' => $so->Store,
                                         'folderid' => $fid,
-                                        'syncfolderid' => $device->GetFolderIdForBackendId($fid, false),
+                                        'syncfolderid' => $device->GetFolderIdForBackendId($fid, false, false, null),
                                         'name' => $so->displayname,
                                         'type' => $so->type,
                                         'source' => 'static'
