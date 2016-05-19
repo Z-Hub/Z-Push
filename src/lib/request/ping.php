@@ -137,11 +137,10 @@ class Ping extends RequestProcessor {
                         $fakechanges[$folderid] = 1;
                         $foundchanges = true;
                     }
-                    else if ($class == $spa->GetContentClass()) {
+                    else if ($this->isClassValid($class, $spa)) {
                         $pingable[] = $folderid;
                         ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandlePing(): using saved sync state for '%s' id '%s'", $spa->GetContentClass(), $folderid));
                     }
-
                 }
                 if(!self::$decoder->getElementEndTag())
                     return false;
@@ -272,5 +271,24 @@ class Ping extends RequestProcessor {
             return $lifetime >= PING_LOWER_BOUND_LIFETIME;
         }
         return true;
+    }
+
+    /**
+     * Checks if a sent folder class is valid for that SyncParameters object.
+     *
+     * @param string $class
+     * @param SycnParameters $spa
+     *
+     * @access public
+     * @return boolean
+     */
+    private function isClassValid($class, $spa) {
+        if ($class == $spa->GetContentClass() ||
+                // KOE ZO-42: Notes are synched as Appointments
+                (self::$deviceManager->IsKoe() && KOE_CAPABILITY_NOTES && $class == "Calendar" && $spa->GetContentClass() == "Notes")
+            ) {
+            return true;
+        }
+        return false;
     }
 }

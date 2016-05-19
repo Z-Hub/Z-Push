@@ -632,7 +632,7 @@ class ZPushAdminCLI {
         $folders = array();
         foreach ($device->GetAllFolderIds() as $folderid) {
             // if  submitting a folderid as type to resync a specific folder.
-            if ($folderid == $type) {
+            if ($folderid == $type || $device->GetFolderBackendId($folderid) === $type) {
                 printf("Found and resynching requested folderid '%s' on device '%s' of user '%s'\n", $folderid, $deviceId, $user);
                 $folders[] = $folderid;
                 break;
@@ -861,6 +861,13 @@ class ZPushAdminCLI {
         echo "WipeRequest by:\t\t". ($device->GetWipeRequestedBy() ? $device->GetWipeRequestedBy() : "not set")."\n";
         echo "Wiped on:\t\t". ($device->GetWipeActionOn() ? strftime("%Y-%m-%d %H:%M", $device->GetWipeActionOn()) : "not set")."\n";
         echo "Policy name:\t\t". ($device->GetPolicyName() ? $device->GetPolicyName() : ASDevice::DEFAULTPOLICYNAME)."\n";
+
+        if ($device->GetKoeVersion()) {
+            echo "Kopano Outlook Extension:\n";
+            echo "\tVersion:\t". $device->GetKoeVersion() ."\n";
+            echo "\tBuild:\t\t". $device->GetKoeBuild() ."\n";
+            echo "\tBuild Date:\t". strftime("%Y-%m-%d %H:%M",$device->GetKoeBuildDate()) ."\n";
+        }
 
         echo "Attention needed:\t";
 

@@ -73,6 +73,8 @@ class ImportChangesICS implements IImportChanges {
     private $cutoffdate;
     private $contentClass;
     private $prefix;
+    private $moveSrcState;
+    private $moveDstState;
 
     /**
      * Constructor
@@ -116,7 +118,7 @@ class ImportChangesICS implements IImportChanges {
 
             // We throw an general error SYNC_FSSTATUS_CODEUNKNOWN (12) which is also SYNC_STATUS_FOLDERHIERARCHYCHANGED (12)
             // if this happened while doing content sync, the mobile will try to resync the folderhierarchy
-            throw new StatusException(sprintf("ImportChangesICS('%s','%s','%s'): Error, unable to open folder: 0x%X", $session, $store, Utils::PrintAsString($folderid), mapi_last_hresult()), SYNC_FSSTATUS_CODEUNKNOWN);
+            throw new StatusException(sprintf("ImportChangesICS('%s','%s'): Error, unable to open folder: 0x%X", $session, bin2hex($folderid), mapi_last_hresult()), SYNC_FSSTATUS_CODEUNKNOWN);
         }
 
         $this->mapiprovider = new MAPIProvider($this->session, $this->store);
@@ -228,6 +230,32 @@ class ImportChangesICS implements IImportChanges {
         }
 
         return $state;
+    }
+
+    /**
+     * Sets the states from move operations.
+     * When src and dst state are set, a MOVE operation is being executed.
+     *
+     * @param mixed         $srcState
+     * @param mixed         (opt) $dstState, default: null
+     *
+     * @access public
+     * @return boolean
+     */
+    public function SetMoveStates($srcState, $dstState = null) {
+        $this->moveSrcState = $srcState;
+        $this->moveDstState = $dstState;
+        return true;
+    }
+
+    /**
+     * Gets the states of special move operations.
+     *
+     * @access public
+     * @return array(0 => $srcState, 1 => $dstState)
+     */
+    public function GetMoveStates() {
+        return array($this->moveSrcState, $this->moveDstState);
     }
 
     /**
@@ -408,15 +436,15 @@ class ImportChangesICS implements IImportChanges {
     }
 
     /**
-     * Imports a deletion. This may conflict if the local object has been modified
+     * Imports a deletion. This may conflict if the local object has been modified.
      *
      * @param string        $id
+     * @param boolean       $asSoftDelete   (opt) if true, the deletion is exported as "SoftDelete", else as "Remove" - default: false
      *
      * @access public
      * @return boolean
-     * @throws StatusException
      */
-    public function ImportMessageDeletion($id) {
+    public function ImportMessageDeletion($id, $asSoftDelete = false) {
         list(,$sk) = MAPIUtils::SplitMessageId($id);
         // check if the message is in the current syncinterval
         if (!$this->isMessageInSyncInterval($sk))
@@ -453,6 +481,11 @@ class ImportChangesICS implements IImportChanges {
     public function ImportMessageReadFlag($id, $flags) {
         list($fsk,$sk) = MAPIUtils::SplitMessageId($id);
 
+        // if $fsk is set, we convert it into a backend id.
+        if ($fsk) {
+            $fsk = ZPush::GetDeviceManager()->GetBackendIdForFolderId($fsk);
+        }
+
         // read flag change for our current folder
         if ($this->folderidHex == $fsk || empty($fsk)) {
 
@@ -479,8 +512,8 @@ class ImportChangesICS implements IImportChanges {
         }
         // yeah OL sucks - ZP-779
         else {
-            if (ctype_digit($fsk)) {
-                $fsk = ZPush::GetDeviceManager()->GetBackendIdForFolderId($fsk);
+            if (!$fsk) {
+                throw new StatusException(sprintf("ImportChangesICS->ImportMessageReadFlag('%s','%d'): Error setting read state. The message is in another folder but id is unknown as no short folder id is available. Please remove your device states to fully resync your device. Operation ignored.", $id, $flags), SYNC_STATUS_OBJECTNOTFOUND);
             }
             $store = ZPush::GetBackend()->GetMAPIStoreForFolderId(ZPush::GetAdditionalSyncFolderStore($fsk), $fsk);
             $entryid = mapi_msgstore_entryidfromsourcekey($store, hex2bin($fsk), hex2bin($sk));
@@ -634,7 +667,7 @@ class ImportChangesICS implements IImportChanges {
             $props =  mapi_getprops($newfolder, array(PR_SOURCE_KEY));
             if (isset($props[PR_SOURCE_KEY])) {
                 $folder->BackendId = bin2hex($props[PR_SOURCE_KEY]);
-                $folder->serverid = ZPush::GetDeviceManager()->GetFolderIdForBackendId($folder->BackendId, true);
+                $folder->serverid = ZPush::GetDeviceManager()->GetFolderIdForBackendId($folder->BackendId, true, DeviceManager::FLD_ORIGIN_USER, $folder->displayname);
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("ImportChangesICS->ImportFolderChange(): Created folder '%s' with id: '%s' backendid: '%s'", $displayname, $folder->serverid, $folder->BackendId));
                 return $folder;
             }

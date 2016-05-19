@@ -103,6 +103,7 @@ class BackendKopano implements IBackend, ISearchProvider {
         $this->folderStatCache = array();
 
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendKopano using PHP-MAPI version: %s - PHP version: %s", phpversion("mapi"), phpversion()));
+        KopanoChangesWrapper::SetBackend($this);
     }
 
     /**
@@ -223,11 +224,12 @@ class BackendKopano implements IBackend, ISearchProvider {
      * @param string        $store              target store, could contain a "domain\user" value
      * @param boolean       $checkACLonly       if set to true, Setup() should just check ACLs
      * @param string        $folderid           if set, only ACLs on this folderid are relevant
+     * @param boolean       $readonly           if set, the folder needs at least read permissions
      *
      * @access public
      * @return boolean
      */
-    public function Setup($store, $checkACLonly = false, $folderid = false) {
+    public function Setup($store, $checkACLonly = false, $folderid = false, $readonly = false) {
         list($user, $domain) = Utils::SplitDomainUser($store);
 
         if (!isset($this->mainUser))
@@ -264,10 +266,15 @@ class BackendKopano implements IBackend, ISearchProvider {
                     ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->Setup(): Checking for admin ACLs on store '%s': '%s'", $user, Utils::PrintAsString($admin)));
                     return $admin;
                 }
-                // check 'secretary' permissions on this folder
+                // check permissions on this folder
                 else {
-                    $rights = $this->hasSecretaryACLs($userstore, $folderid);
-                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->Setup(): Checking for secretary ACLs on '%s' of store '%s': '%s'", $folderid, $user, Utils::PrintAsString($rights)));
+                    if (! $readonly) {
+                        $rights = $this->HasSecretaryACLs($userstore, $folderid);
+                    }
+                    else {
+                        $rights = $this->HasReadACLs($userstore, $folderid);
+                    }
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->Setup(): Checking for '%s' ACLs on '%s' of store '%s': '%s'", ($readonly?'read':'secretary'), $folderid, $user, Utils::PrintAsString($rights)));
                     return $rights;
                 }
             }
@@ -363,13 +370,10 @@ class BackendKopano implements IBackend, ISearchProvider {
     public function GetImporter($folderid = false) {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendKopano->GetImporter() folderid: '%s'", Utils::PrintAsString($folderid)));
         if($folderid !== false) {
-            // check if the user of the current store has permissions to import to this folderid
-            if ($this->storeName != $this->mainUser && !$this->hasSecretaryACLs($this->store, $folderid)) {
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendKopano->GetImporter(): missing permissions on folderid: '%s'.", Utils::PrintAsString($folderid)));
-                return false;
-            }
             $this->importedFolders[$folderid] = $this->store;
-            return new ImportChangesICS($this->session, $this->store, hex2bin($folderid));
+            $wrapper = KopanoChangesWrapper::GetWrapper($this->storeName, $this->session, $this->store, $folderid, $this->storeName == $this->mainUser);
+            $wrapper->Prepare(KopanoChangesWrapper::IMPORTER);
+            return $wrapper;
         }
         else
             return new ImportChangesICS($this->session, $this->store);
@@ -387,12 +391,9 @@ class BackendKopano implements IBackend, ISearchProvider {
      */
     public function GetExporter($folderid = false) {
         if($folderid !== false) {
-            // check if the user of the current store has permissions to export from this folderid
-            if ($this->storeName != $this->mainUser && !$this->hasSecretaryACLs($this->store, $folderid)) {
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendKopano->GetExporter(): missing permissions on folderid: '%s'.", Utils::PrintAsString($folderid)));
-                return false;
-            }
-            return new ExportChangesICS($this->session, $this->store, hex2bin($folderid));
+            $wrapper = KopanoChangesWrapper::GetWrapper($this->storeName, $this->session, $this->store, $folderid, $this->storeName == $this->mainUser);
+            $wrapper->Prepare(KopanoChangesWrapper::EXPORTER);
+            return $wrapper;
         }
         else
             return new ExportChangesICS($this->session, $this->store);
@@ -426,12 +427,12 @@ class BackendKopano implements IBackend, ISearchProvider {
             ZLog::Write(LOGLEVEL_WBXML, "RFC822: ". $rfc822line);
 
         $sendMailProps = MAPIMapping::GetSendMailProperties();
-        $sendMailProps = getPropIdsFromStrings($this->store, $sendMailProps);
+        $sendMailProps = getPropIdsFromStrings($this->defaultstore, $sendMailProps);
 
         // Open the outbox and create the message there
-        $storeprops = mapi_getprops($this->store, array($sendMailProps["outboxentryid"], $sendMailProps["ipmsentmailentryid"]));
+        $storeprops = mapi_getprops($this->defaultstore, array($sendMailProps["outboxentryid"], $sendMailProps["ipmsentmailentryid"]));
         if(isset($storeprops[$sendMailProps["outboxentryid"]]))
-            $outbox = mapi_msgstore_openentry($this->store, $storeprops[$sendMailProps["outboxentryid"]]);
+            $outbox = mapi_msgstore_openentry($this->defaultstore, $storeprops[$sendMailProps["outboxentryid"]]);
 
         if(!$outbox)
             throw new StatusException(sprintf("KopanoBackend->SendMail(): No Outbox found or unable to create message: 0x%X", mapi_last_hresult()), SYNC_COMMONSTATUS_SERVERERROR);
@@ -445,12 +446,12 @@ class BackendKopano implements IBackend, ISearchProvider {
 
         ZLog::Write(LOGLEVEL_DEBUG, "Use the mapi_inetmapi_imtomapi function");
         $ab = mapi_openaddressbook($this->session);
-        mapi_inetmapi_imtomapi($this->session, $this->store, $ab, $mapimessage, $sm->mime, array());
+        mapi_inetmapi_imtomapi($this->session, $this->defaultstore, $ab, $mapimessage, $sm->mime, array());
 
         // Set the appSeqNr so that tracking tab can be updated for meeting request updates
         // @see http://jira.zarafa.com/browse/ZP-68
         $meetingRequestProps = MAPIMapping::GetMeetingRequestProperties();
-        $meetingRequestProps = getPropIdsFromStrings($this->store, $meetingRequestProps);
+        $meetingRequestProps = getPropIdsFromStrings($this->defaultstore, $meetingRequestProps);
         $props = mapi_getprops($mapimessage, array(PR_MESSAGE_CLASS, $meetingRequestProps["goidtag"], $sendMailProps["internetcpid"], $sendMailProps["body"], $sendMailProps["html"], $sendMailProps["rtf"], $sendMailProps["rtfinsync"]));
 
         // Convert sent message's body to UTF-8 if it was a HTML message.
@@ -467,10 +468,10 @@ class BackendKopano implements IBackend, ISearchProvider {
         }
         if (stripos($props[PR_MESSAGE_CLASS], "IPM.Schedule.Meeting.Resp.") === 0) {
             // search for calendar items using goid
-            $mr = new Meetingrequest($this->store, $mapimessage);
+            $mr = new Meetingrequest($this->defaultstore, $mapimessage);
             $appointments = $mr->findCalendarItems($props[$meetingRequestProps["goidtag"]]);
             if (is_array($appointments) && !empty($appointments)) {
-                $app = mapi_msgstore_openentry($this->store, $appointments[0]);
+                $app = mapi_msgstore_openentry($this->defaultstore, $appointments[0]);
                 $appprops = mapi_getprops($app, array($meetingRequestProps["appSeqNr"]));
                 if (isset($appprops[$meetingRequestProps["appSeqNr"]]) && $appprops[$meetingRequestProps["appSeqNr"]]) {
                     $mapiprops[$meetingRequestProps["appSeqNr"]] = $appprops[$meetingRequestProps["appSeqNr"]];
@@ -497,75 +498,80 @@ class BackendKopano implements IBackend, ISearchProvider {
             if ($entryid)
                 $fwmessage = mapi_msgstore_openentry($this->store, $entryid);
 
-            if(!isset($fwmessage) || !$fwmessage)
-                throw new StatusException(sprintf("KopanoBackend->SendMail(): Could not open message id '%s' in folder id '%s' to be replied/forwarded: 0x%X", $sm->source->itemid, $sm->source->folderid, mapi_last_hresult()), SYNC_COMMONSTATUS_ITEMNOTFOUND);
+            if (isset($fwmessage) && $fwmessage) {
+                // update icon and last_verb when forwarding or replying message
+                // reply-all (verb 103) is not supported, as we cannot really detect this case
+                if ($sm->forwardflag) {
+                    $updateProps = array(
+                            PR_ICON_INDEX           => 262,
+                            PR_LAST_VERB_EXECUTED   => 104,
+                    );
+                }
+                elseif ($sm->replyflag) {
+                    $updateProps = array(
+                            PR_ICON_INDEX           => 261,
+                            PR_LAST_VERB_EXECUTED   => 102,
+                    );
+                }
+                if (isset($updateProps)) {
+                    $updateProps[PR_LAST_VERB_EXECUTION_TIME] = time();
+                    mapi_setprops($fwmessage, $updateProps);
+                    mapi_savechanges($fwmessage);
+                }
 
-            // update icon and last_verb when forwarding or replying message
-            // reply-all (verb 103) is not supported, as we cannot really detect this case
-            if ($sm->forwardflag) {
-                $updateProps = array(
-                    PR_ICON_INDEX           => 262,
-                    PR_LAST_VERB_EXECUTED   => 104,
-                );
+                // only attach the original message if the mobile does not send it itself
+                if (!isset($sm->replacemime)) {
+                    // get message's body in order to append forward or reply text
+                    if (!isset($body)) {
+                        $body = MAPIUtils::readPropStream($mapimessage, PR_BODY);
+                    }
+                    if (!isset($bodyHtml)) {
+                        $bodyHtml = MAPIUtils::readPropStream($mapimessage, PR_HTML);
+                    }
+                    $cpid = mapi_getprops($fwmessage, array($sendMailProps["internetcpid"]));
+                    if($sm->forwardflag) {
+                        // attach the original attachments to the outgoing message
+                        $this->copyAttachments($mapimessage, $fwmessage);
+                    }
+
+                    // regarding the conversion @see ZP-470
+                    if (strlen($body) > 0) {
+                        $fwbody = MAPIUtils::readPropStream($fwmessage, PR_BODY);
+                        // if only the old message's cpid is set, convert from old charset to utf-8
+                        if (isset($cpid[$sendMailProps["internetcpid"]]) && $cpid[$sendMailProps["internetcpid"]] != INTERNET_CPID_UTF8) {
+                            ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->SendMail(): convert plain forwarded message charset (only fw set) from '%s' to '65001'", $cpid[$sendMailProps["internetcpid"]]));
+                            $fwbody = Utils::ConvertCodepageStringToUtf8($cpid[$sendMailProps["internetcpid"]], $fwbody);
+                        }
+                        // otherwise to the general conversion
+                        else {
+                            ZLog::Write(LOGLEVEL_DEBUG, "KopanoBackend->SendMail(): no charset conversion done for plain forwarded message");
+                            $fwbody = w2u($fwbody);
+                        }
+
+                        $mapiprops[$sendMailProps["body"]] = $body."\r\n\r\n".$fwbody;
+                    }
+
+                    if (strlen($bodyHtml) > 0) {
+                        $fwbodyHtml = MAPIUtils::readPropStream($fwmessage, PR_HTML);
+                        // if only new message's cpid is set, convert to UTF-8
+                        if (isset($cpid[$sendMailProps["internetcpid"]]) && $cpid[$sendMailProps["internetcpid"]] != INTERNET_CPID_UTF8) {
+                            ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->SendMail(): convert html forwarded message charset (only fw set) from '%s' to '65001'", $cpid[$sendMailProps["internetcpid"]]));
+                            $fwbodyHtml = Utils::ConvertCodepageStringToUtf8($cpid[$sendMailProps["internetcpid"]], $fwbodyHtml);
+                        }
+                        // otherwise to the general conversion
+                        else {
+                            ZLog::Write(LOGLEVEL_DEBUG, "KopanoBackend->SendMail(): no charset conversion done for html forwarded message");
+                            $fwbodyHtml = w2u($fwbodyHtml);
+                        }
+
+                        $mapiprops[$sendMailProps["html"]] = $bodyHtml."<br><br>".$fwbodyHtml;
+                    }
+                }
             }
-            elseif ($sm->replyflag) {
-                $updateProps = array(
-                    PR_ICON_INDEX           => 261,
-                    PR_LAST_VERB_EXECUTED   => 102,
-                );
-            }
-            if (isset($updateProps)) {
-                $updateProps[PR_LAST_VERB_EXECUTION_TIME] = time();
-                mapi_setprops($fwmessage, $updateProps);
-                mapi_savechanges($fwmessage);
-            }
-
-            // only attach the original message if the mobile does not send it itself
-            if (!isset($sm->replacemime)) {
-                // get message's body in order to append forward or reply text
-                if (!isset($body)) {
-                    $body = MAPIUtils::readPropStream($mapimessage, PR_BODY);
-                }
-                if (!isset($bodyHtml)) {
-                    $bodyHtml = MAPIUtils::readPropStream($mapimessage, PR_HTML);
-                }
-                $cpid = mapi_getprops($fwmessage, array($sendMailProps["internetcpid"]));
-                if($sm->forwardflag) {
-                    // attach the original attachments to the outgoing message
-                    $this->copyAttachments($mapimessage, $fwmessage);
-                }
-
-                // regarding the conversion @see ZP-470
-                if (strlen($body) > 0) {
-                    $fwbody = MAPIUtils::readPropStream($fwmessage, PR_BODY);
-                    // if only the old message's cpid is set, convert from old charset to utf-8
-                    if (isset($cpid[$sendMailProps["internetcpid"]]) && $cpid[$sendMailProps["internetcpid"]] != INTERNET_CPID_UTF8) {
-                        ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->SendMail(): convert plain forwarded message charset (only fw set) from '%s' to '65001'", $cpid[$sendMailProps["internetcpid"]]));
-                        $fwbody = Utils::ConvertCodepageStringToUtf8($cpid[$sendMailProps["internetcpid"]], $fwbody);
-                    }
-                    // otherwise to the general conversion
-                    else {
-                        ZLog::Write(LOGLEVEL_DEBUG, "KopanoBackend->SendMail(): no charset conversion done for plain forwarded message");
-                        $fwbody = w2u($fwbody);
-                    }
-
-                    $mapiprops[$sendMailProps["body"]] = $body."\r\n\r\n".$fwbody;
-                }
-
-                if (strlen($bodyHtml) > 0) {
-                    $fwbodyHtml = MAPIUtils::readPropStream($fwmessage, PR_HTML);
-                    // if only new message's cpid is set, convert to UTF-8
-                    if (isset($cpid[$sendMailProps["internetcpid"]]) && $cpid[$sendMailProps["internetcpid"]] != INTERNET_CPID_UTF8) {
-                        ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->SendMail(): convert html forwarded message charset (only fw set) from '%s' to '65001'", $cpid[$sendMailProps["internetcpid"]]));
-                        $fwbodyHtml = Utils::ConvertCodepageStringToUtf8($cpid[$sendMailProps["internetcpid"]], $fwbodyHtml);
-                    }
-                    // otherwise to the general conversion
-                    else {
-                        ZLog::Write(LOGLEVEL_DEBUG, "KopanoBackend->SendMail(): no charset conversion done for html forwarded message");
-                        $fwbodyHtml = w2u($fwbodyHtml);
-                    }
-
-                    $mapiprops[$sendMailProps["html"]] = $bodyHtml."<br><br>".$fwbodyHtml;
+            else {
+                // no fwmessage could be opened and we need it because we do not replace mime
+                if (!isset($sm->replacemime) || $sm->replacemime == false) {
+                    throw new StatusException(sprintf("KopanoBackend->SendMail(): Could not open message id '%s' in folder id '%s' to be replied/forwarded: 0x%X", $sm->source->itemid, $sm->source->folderid, mapi_last_hresult()), SYNC_COMMONSTATUS_ITEMNOTFOUND);
                 }
             }
         }
@@ -1035,6 +1041,30 @@ class BackendKopano implements IBackend, ISearchProvider {
         return false;
     }
 
+    /**
+     * Returns the backend ID of the folder of the KOE GAB.
+     *
+     * @param string $foldername
+     *
+     * @access public
+     * @return string|boolean
+     */
+    public function GetKoeGabBackendFolderId($foldername) {
+        $rootfolder = mapi_msgstore_openentry($this->store);
+        $table = mapi_folder_gethierarchytable($rootfolder, CONVENIENT_DEPTH);
+
+        $restriction = array(RES_PROPERTY, array(RELOP => RELOP_EQ, ULPROPTAG => PR_DISPLAY_NAME, VALUE => $foldername));
+        mapi_table_restrict($table, $restriction);
+        $querycnt = mapi_table_getrowcount($table);
+        if ($querycnt == 1) {
+            $entry = mapi_table_queryallrows($table, array(PR_SOURCE_KEY));
+            if (isset($entry[0]) && isset($entry[0][PR_SOURCE_KEY])) {
+                return bin2hex($entry[0][PR_SOURCE_KEY]);
+            }
+        }
+        ZLog::Write(LOGLEVEL_WARN, sprintf("KopanoBackend->GetKoeGabBackendFolderId() Found %d entries in the store '%s' matching the name '%s'.", $querycnt, $this->storeName, $foldername));
+        return false;
+    }
 
     /**----------------------------------------------------------------------------------------------------------
      * Implementation of the ISearchProvider interface
@@ -1348,6 +1378,12 @@ class BackendKopano implements IBackend, ISearchProvider {
             $user = $this->mainUser;
         }
 
+        // if there is a ReplyBackImExporter, the exporter needs to run!
+        $wrapper = KopanoChangesWrapper::GetWrapper($user, false, null, $folderid, null);
+        if ($wrapper && $wrapper->HasReplyBackExporter()) {
+            return "replyback-". time();
+        }
+
         if (!isset($this->folderStatCache[$user])) {
             $this->folderStatCache[$user] = array();
         }
@@ -1504,7 +1540,16 @@ class BackendKopano implements IBackend, ISearchProvider {
         }
     }
 
-    private function hasSecretaryACLs($store, $folderid) {
+    /**
+     * Checks if the logged in user has secretary permissions on a folder.
+     *
+     * @param ressource $store
+     * @param string $folderid
+     *
+     * @access public
+     * @return boolean
+     */
+    public function HasSecretaryACLs($store, $folderid) {
         $entryid = mapi_msgstore_entryidfromsourcekey($store, hex2bin($folderid));
         if (!$entryid)  return false;
 
@@ -1523,6 +1568,30 @@ class BackendKopano implements IBackend, ISearchProvider {
             return true;
         }
         return false;
+    }
+
+    /**
+     * Checks if the logged in user has read permissions on a folder.
+     *
+     * @param ressource $store
+     * @param string $folderid
+     *
+     * @access public
+     * @return boolean
+     */
+    public function HasReadACLs($store, $folderid) {
+        $entryid = mapi_msgstore_entryidfromsourcekey($store, hex2bin($folderid));
+        if (!$entryid)  return false;
+
+        $folder = mapi_msgstore_openentry($store, $entryid);
+        if (!$folder) return false;
+
+        $props = mapi_getprops($folder, array(PR_RIGHTS));
+        if (isset($props[PR_RIGHTS]) &&
+                ($props[PR_RIGHTS] & ecRightsReadAny) ) {
+                    return true;
+                }
+                return false;
     }
 
     /**

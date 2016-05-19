@@ -888,7 +888,7 @@ class MAPIProvider {
         }
 
         $folder->BackendId = bin2hex($folderprops[PR_SOURCE_KEY]);
-        $folder->serverid = ZPush::GetDeviceManager()->GetFolderIdForBackendId($folder->BackendId, true);
+        $folder->serverid = ZPush::GetDeviceManager()->GetFolderIdForBackendId($folder->BackendId, true, DeviceManager::FLD_ORIGIN_USER, $folderprops[PR_DISPLAY_NAME]);
         if($folderprops[PR_PARENT_ENTRYID] == $storeprops[PR_IPM_SUBTREE_ENTRYID]) {
             $folder->parentid = "0";
         }
@@ -1635,6 +1635,11 @@ class MAPIProvider {
         // Setting it to an empty array will unset the property in KC as well
         if (!isset($note->categories)) $note->categories = array();
 
+        // update icon index to correspond to the color
+        if (isset($note->Color) && $note->Color > -1 && $note->Color < 5) {
+            $note->Iconindex = 768 + $note->Color;
+        }
+
         $this->setPropsInMAPI($mapimessage, $note, MAPIMapping::GetNoteMapping());
 
         $noteprops = MAPIMapping::GetNoteProperties();
@@ -1644,7 +1649,9 @@ class MAPIProvider {
         $props = array();
         $props[$noteprops["messageclass"]] = "IPM.StickyNote";
         // set body otherwise the note will be "broken" when editing it in outlook
-        $this->setASbody($note->asbody, $props, $noteprops);
+        if (isset($note->asbody)) {
+            $this->setASbody($note->asbody, $props, $noteprops);
+        }
 
         $props[$noteprops["internetcpid"]] = INTERNET_CPID_UTF8;
         mapi_setprops($mapimessage, $props);

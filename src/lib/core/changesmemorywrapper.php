@@ -45,6 +45,7 @@
 class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IExportChanges {
     const CHANGE = 1;
     const DELETION = 2;
+    const SOFTDELETION = 3;
 
     private $changes;
     private $step;
@@ -77,7 +78,7 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
             foreach($state as $addKey => $addFolder) {
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("ChangesMemoryWrapper->Config(AdditionalFolders) : process folder '%s'", $addFolder->displayname));
                 if (isset($addFolder->NoBackendFolder) && $addFolder->NoBackendFolder == true) {
-                    $hasRights = ZPush::GetBackend()->Setup($addFolder->Store, true, $addFolder->BackendId);
+                    $hasRights = ZPush::GetBackend()->Setup($addFolder->Store, true, $addFolder->BackendId, $addFolder->ReadOnly);
                     // delete the folder on the device
                     if (! $hasRights) {
                         // delete the folder only if it was an additional folder before, else ignore it
@@ -114,6 +115,8 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
     public function GetState() { return false;}
     public function LoadConflicts($contentparameters, $state) { return true; }
     public function ConfigContentParameters($contentparameters) { return true; }
+    public function SetMoveStates($srcState, $dstState = null) { return true; }
+    public function GetMoveStates() { return array(false, false); }
     public function ImportMessageReadFlag($id, $flags) { return true; }
     public function ImportMessageMove($id, $newfolder) { return true; }
 
@@ -150,13 +153,19 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
     /**
      * Imports a message deletion, which is imported into memory
      *
-     * @param string        $id     id of message which is deleted
+     * @param string        $id             id of message which is deleted
+     * @param boolean       $asSoftDelete   (opt) if true, the deletion is exported as "SoftDelete", else as "Remove" - default: false
      *
      * @access public
      * @return boolean
      */
-    public function ImportMessageDeletion($id) {
-        $this->changes[] = array(self::DELETION, $id);
+    public function ImportMessageDeletion($id, $asSoftDelete = false) {
+        if ($asSoftDelete === true) {
+            $this->changes[] = array(self::SOFTDELETION, $id);
+        }
+        else {
+            $this->changes[] = array(self::DELETION, $id);
+        }
         return true;
     }
 
@@ -181,7 +190,7 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
      * @return boolean
      */
     public function IsDeleted($id) {
-       return (array_search(array(self::DELETION, $id), $this->changes) === false) ? false:true;
+       return !((array_search(array(self::DELETION, $id), $this->changes) === false) && (array_search(array(self::SOFTDELETION, $id), $this->changes) === false));
     }
 
     /**
@@ -198,13 +207,21 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
         if (isset($this->destinationImporter)) {
             // normally the $folder->type is not set, but we need this value to check if the change operation is permitted
             // e.g. system folders can normally not be changed - set the type from cache and let the destinationImporter decide
-            if (!isset($folder->type)) {
+            if (!isset($folder->type) || ! $folder->type) {
                 $cacheFolder = $this->GetFolder($folder->serverid);
                 $folder->type = $cacheFolder->type;
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("ChangesMemoryWrapper->ImportFolderChange(): Set foldertype for folder '%s' from cache as it was not sent: '%s'", $folder->displayname, $folder->type));
             }
 
-            $retFolder = $this->destinationImporter->ImportFolderChange($folder);
+            // KOE ZO-42: When Notes folders are updated in Outlook, it tries to update the name (that fails by default, as it's a system folder)
+            // catch this case here and ignore the change
+            if (($folder->type == SYNC_FOLDER_TYPE_NOTE || $folder->type == SYNC_FOLDER_TYPE_USER_NOTE) && ZPush::GetDeviceManager()->IsKoe()) {
+                $retFolder = false;
+            }
+            // do regular folder update
+            else {
+                $retFolder = $this->destinationImporter->ImportFolderChange($folder);
+            }
 
             // if the operation was sucessfull, update the HierarchyCache
             if ($retFolder) {

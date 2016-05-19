@@ -72,6 +72,10 @@ class ASDevice extends StateObject {
                                     'announcedASversion' => false,
                                     'foldersynccomplete' => true,
                                     'additionalfolders' => array(),
+                                    'koeversion' => false,
+                                    'koebuild' => false,
+                                    'koebuilddate' => false,
+                                    'koegabbackendfolderid' => false,
                                 );
 
     static private $loadedData;
@@ -664,13 +668,18 @@ class ASDevice extends StateObject {
      * Gets the AS folderid for a backendFolderId.
      * If there is no known AS folderId a new one is being created.
      *
-     * @param string    $backendid
+     * @param string    $backendid              Backend folder id
      * @param boolean   $generateNewIdIfNew     Generates a new AS folderid for the case the backend folder is not known yet.
+     * @param string    $folderOrigin           Folder type is one of   'U' (user)
+     *                                                                  'C' (configured)
+     *                                                                  'S' (shared)
+     *                                                                  'G' (global address book)
+     * @param string    $folderName             Folder name of the backend folder
      *
      * @access public
-     * @return int
+     * @return string
      */
-    public function GetFolderIdForBackendId($backendid, $generateNewIdIfNew) {
+    public function GetFolderIdForBackendId($backendid, $generateNewIdIfNew, $folderOrigin, $folderName) {
         // build the backend-to-folderId backwards cache once
         if ($this->backend2folderidCache === false) {
             $this->backend2folderidCache = array();
@@ -693,11 +702,12 @@ class ASDevice extends StateObject {
 
         // nothing found? Then it's a new one, get and add it
         if (is_array($this->backend2folderidCache) && $generateNewIdIfNew) {
-            $keys = array_keys($this->contentData);
-            $next = (empty($keys) ? 0 : max($keys)) + 1;
-            $this->SetFolderBackendId($next, $backendid);
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ASDevice->GetFolderIdForBackendId(): generated new folderid '%s' for backend-folderid '%s'", $next, $backendid));
-            return $next;
+            if ($folderName == null) {
+                ZLog::Write(LOGLEVEL_INFO, "ASDevice->GetFolderIdForBackendId(): generating a new folder id for the folder without a name");
+            }
+            $newHash = $this->generateFolderHash($backendid, $folderOrigin, $folderName);
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ASDevice->GetFolderIdForBackendId(): generated new folderid '%s' for backend-folderid '%s'", $newHash, $backendid));
+            return $newHash;
         }
         return $backendid;
     }
@@ -821,11 +831,12 @@ class ASDevice extends StateObject {
      * @param string    $folderid   the folder id of the additional folder.
      * @param string    $name       the name of the additional folder (has to be unique for all folders on the device).
      * @param string    $type       AS foldertype of SYNC_FOLDER_TYPE_USER_*
+     * @param boolean   $readonly   Indicates if the folder should be synched if the user has at least read-only permissions.
      *
      * @access public
      * @return boolean
      */
-    public function AddAdditionalFolder($store, $folderid, $name, $type) {
+    public function AddAdditionalFolder($store, $folderid, $name, $type, $readonly) {
         // check if type is of a additional user type
         if (!in_array($type, array(SYNC_FOLDER_TYPE_USER_CONTACT, SYNC_FOLDER_TYPE_USER_APPOINTMENT, SYNC_FOLDER_TYPE_USER_TASK, SYNC_FOLDER_TYPE_USER_MAIL, SYNC_FOLDER_TYPE_USER_NOTE, SYNC_FOLDER_TYPE_USER_JOURNAL))) {
             ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->AddAdditionalFolder(): folder can not be added because the specified type '%s' is not a permitted user type.", $type));
@@ -867,11 +878,12 @@ class ASDevice extends StateObject {
                             'folderid'  => $folderid,
                             'name'      => $name,
                             'type'      => $type,
+                            'readonly'  => $readonly,
                          );
         $this->additionalfolders = $af;
 
         // generate an interger folderid for it
-        $id = $this->GetFolderIdForBackendId($folderid, true);
+        $id = $this->GetFolderIdForBackendId($folderid, true, DeviceManager::FLD_ORIGIN_SHARED, $name);
 
         return true;
     }
@@ -935,6 +947,37 @@ class ASDevice extends StateObject {
         unset($af[$folderid]);
         $this->additionalfolders = $af;
         return true;
+    }
+
+    /**
+     * Generates the AS folder hash from the backend folder id, type and name.
+     *
+     * @param string    $backendid              Backend folder id
+     * @param string    $folderOrigin             Folder type is one of   'U' (user)
+     *                                                                  'C' (configured)
+     *                                                                  'S' (shared)
+     *                                                                  'G' (global address book)
+     * @param string    $folderName             Folder name of the backend folder
+     *
+     * @access private
+     * @return string
+     */
+    private function generateFolderHash($backendid, $folderOrigin, $folderName) {
+        // Hash backendid with crc32 and get the hex representation of it.
+        // 5 chars of hash + $folderOrigin should still be enough to avoid collisions.
+        $folderId = substr($folderOrigin . dechex(crc32($backendid)), 0, 6);
+        $cnt = 0;
+        // Collision avoiding. Append an increasing number to the string to hash
+        // until there aren't any collisions. Probably a smaller number is also sufficient.
+        while (isset($this->contentData[$folderId]) && $cnt < 10000) {
+            $folderId = substr($folderOrigin . dechex(crc32($backendid . $folderName . $cnt++)), 0, 6);
+            ZLog::Write(LOGLEVEL_WARN, sprintf("ASDevice->generateFolderHash(): collision avoiding nr %05d. Generated hash: '%s'", $cnt, $folderId));
+        }
+        if ($cnt >= 10000) {
+            throw new FatalException("ASDevice->generateFolderHash(): too many colissions while generating folder hash.");
+        }
+
+        return $folderId;
     }
 
 }

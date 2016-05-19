@@ -134,12 +134,13 @@ class BackendCombined extends Backend implements ISearchProvider {
      * @param string        $store              target store, could contain a "domain\user" value
      * @param boolean       $checkACLonly       if set to true, Setup() should just check ACLs
      * @param string        $folderid           if set, only ACLs on this folderid are relevant
+     * @param boolean       $readonly           if set, the folder needs at least read permissions
      *
      * @access public
      * @return boolean
      */
-    public function Setup($store, $checkACLonly = false, $folderid = false) {
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("Combined->Setup('%s', '%s', '%s')", $store, Utils::PrintAsString($checkACLonly), $folderid));
+    public function Setup($store, $checkACLonly = false, $folderid = false, $readonly = false) {
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("Combined->Setup('%s', '%s', '%s', '%s')", $store, Utils::PrintAsString($checkACLonly), $folderid, Utils::PrintAsString($readonly)));
         if(!is_array($this->backends)){
             return false;
         }
@@ -148,7 +149,7 @@ class BackendCombined extends Backend implements ISearchProvider {
             if(isset($this->config['backends'][$i]['users']) && isset($this->config['backends'][$i]['users'][$store]['username'])){
                 $u = $this->config['backends'][$i]['users'][$store]['username'];
             }
-            if($this->backends[$i]->Setup($u, $checkACLonly, $folderid) == false){
+            if($this->backends[$i]->Setup($u, $checkACLonly, $folderid, $readonly) == false){
                 ZLog::Write(LOGLEVEL_WARN, "Combined->Setup() failed");
                 return false;
             }

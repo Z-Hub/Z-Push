@@ -105,7 +105,7 @@ abstract class Backend implements IBackend {
      * Methods to be implemented
      *
      * public function Logon($username, $domain, $password);
-     * public function Setup($store, $checkACLonly = false, $folderid = false);
+     * public function Setup($store, $checkACLonly = false, $folderid = false, $readonly = false);
      * public function Logoff();
      * public function GetHierarchy();
      * public function GetImporter($folderid = false);
@@ -365,4 +365,15 @@ abstract class Backend implements IBackend {
         return false;
     }
 
+    /**
+     * Returns the backend ID of the folder of the KOE GAB.
+     *
+     * @param string $foldername
+     *
+     * @access public
+     * @return string|boolean
+     */
+    public function GetKoeGabBackendFolderId($foldername) {
+        return false;
+    }
 }

@@ -326,6 +326,7 @@ define("SYNC_FOLDERHIERARCHY_VERSION","FolderHierarchy:Version");
 define("SYNC_FOLDERHIERARCHY_IGNORE_STORE","FolderHierarchy:IgnoreStore");
 define("SYNC_FOLDERHIERARCHY_IGNORE_NOBCKENDFLD","FolderHierarchy:IgnoreNoBackendFolder");
 define("SYNC_FOLDERHIERARCHY_IGNORE_BACKENDID","FolderHierarchy:IgnoreBackendId");
+define("SYNC_FOLDERHIERARCHY_IGNORE_READONLY","FolderHierarchy:IgnoreReadOnly");
 
 // MeetingResponse
 define("SYNC_MEETINGRESPONSE_CALENDARID","MeetingResponse:CalendarId");
@@ -681,6 +682,7 @@ define("SYNC_NOTES_MESSAGECLASS", "Notes:MessageClass");
 define("SYNC_NOTES_LASTMODIFIEDDATE", "Notes:LastModifiedDate");
 define("SYNC_NOTES_CATEGORIES", "Notes:Categories");
 define("SYNC_NOTES_CATEGORY", "Notes:Category");
+define("SYNC_NOTES_IGNORE_COLOR","Notes:IgnoreColor");
 
 //RightsManagement //post 14.0
 define("SYNC_RIGHTSMANAGEMENT_SUPPORT", "RightsManagement:RightsManagementSupport");

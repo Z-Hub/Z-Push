@@ -125,7 +125,7 @@
     // Users have to be encapusulated in quotes, several users are comma separated, like:
     //   $specialLogUsers = array('info@domain.com', 'myusername');
     define('LOGUSERLEVEL', LOGLEVEL_DEVICEID);
-    $specialLogUsers = array('samsung', 'user1', 'ipad', 'user4');
+    $specialLogUsers = array();
 
     // Filelog settings
     define('LOGFILEDIR', '/var/log/z-push/');
@@ -280,6 +280,33 @@
     // might result in timeout. Default is 10.
     define('SEARCH_MAXRESULTS', 10);
 
+/**********************************************************************************
+ *  Kopano Outlook Extension - Settings
+ *
+ *  The Kopano Outlook Extension (KOE) provides MS Outlook 2013 and newer with
+ *  functionality not provided by ActiveSync or not implemented by Outlook.
+ *  For more information, see: https://wiki.z-hub.io/x/z4Aa
+ */
+    // Global Address Book functionality
+    define('KOE_CAPABILITY_GAB', true);
+    // Synchronize mail flags from the server to Outlook/KOE
+    define('KOE_CAPABILITY_RECEIVEFLAGS', true);
+    // Encode flags when sending from Outlook/KOE
+    define('KOE_CAPABILITY_SENDFLAGS', true);
+    // Out-of-office support
+    define('KOE_CAPABILITY_OOF', true);
+    // Out-of-office support with start & end times (superseeds KOE_CAPABILITY_OOF)
+    define('KOE_CAPABILITY_OOFTIMES', true);
+    // Notes support
+    define('KOE_CAPABILITY_NOTES', true);
+
+    // To synchronize the GAB KOE, the GAB store and folderid need to be specified.
+    // Use the gab-sync script to generate this data. The name needs to
+    // match the config of the gab-sync script.
+    // More information here: https://wiki.z-hub.io/x/z4Aa (GAB Sync Script)
+    define('KOE_GAB_STORE', 'SYSTEM');
+    define('KOE_GAB_FOLDERID', '');
+    define('KOE_GAB_NAME', 'Z-Push-KOE-GAB');
 
 /**********************************************************************************
  *  Synchronize additional folders to all mobiles
@@ -301,13 +328,21 @@
  *                      SYNC_FOLDER_TYPE_USER_APPOINTMENT
  *                      SYNC_FOLDER_TYPE_USER_TASK
  *                      SYNC_FOLDER_TYPE_USER_MAIL
+ *                      SYNC_FOLDER_TYPE_USER_NOTE
+ *      readonly:   indicates if the folder should be opened read-only.
+ *                  If set to false, full writing permissions are required.
  *
  *  Additional notes:
  *  - on Kopanp systems use backend/kopano/listfolders.php script to get a list
  *    of available folders
  *
- *  - all Z-Push users must have full writing permissions (secretary rights) so
- *    the configured folders can be synchronized to the mobile
+ *  - all Z-Push users must have at least reading permissions so the configured
+ *    folders can be synchronized to the mobile. Else they are ignored.
+ *
+ *  - if read-only is set to 'false' only users with full permissions (secretary
+ *    rights) are able to change entries. For all others, the changes will be
+ *    discarted and overwritten with data from the server. Check backend
+ *    compatibility and configuration for this feature.
  *
  *  - this feature is only partly suitable for multi-tenancy environments,
  *    as ALL users from ALL tenents need access to the configured store & folder.
@@ -325,9 +360,10 @@
 
         array(
             'store'     => "SYSTEM",
-            'folderid'  => "5a37a3f4faa340e49f5c0dc09cf6cb04230f00000000",
-            'name'      => "onlyread",
-            'type'      => SYNC_FOLDER_TYPE_USER_MAIL,
+            'folderid'  => "",
+            'name'      => "Public Contacts",
+            'type'      => SYNC_FOLDER_TYPE_USER_CONTACT,
+            'readonly'  => false,
         ),
 
     );

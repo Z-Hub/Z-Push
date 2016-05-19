@@ -119,16 +119,15 @@ class ImportChangesDiff extends DiffState implements IImportChanges {
     }
 
     /**
-     * Imports a deletion. This may conflict if the local object has been modified
+     * Imports a deletion. This may conflict if the local object has been modified.
      *
      * @param string        $id
-     * @param SyncObject    $message
+     * @param boolean       $asSoftDelete   (opt) if true, the deletion is exported as "SoftDelete", else as "Remove" - default: false
      *
      * @access public
      * @return boolean
-     * @throws StatusException
      */
-    public function ImportMessageDeletion($id) {
+    public function ImportMessageDeletion($id, $asSoftDelete = false) {
         //do nothing if it is in a dummy folder
         if ($this->folderid == SYNC_FOLDER_TYPE_DUMMY)
             throw new StatusException(sprintf("ImportChangesDiff->ImportMessageDeletion('%s'): can not be done on a dummy folder", $id), SYNC_STATUS_SYNCCANNOTBECOMPLETED);

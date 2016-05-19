@@ -97,6 +97,9 @@ class FolderSync extends RequestProcessor {
         // the hierarchyCache should now fully be initialized - check for changes in the additional folders
         $changesMem->Config(ZPush::GetAdditionalSyncFolders(false));
 
+         // reset to default store in backend
+        self::$backend->Setup(false);
+
         // process incoming changes
         if(self::$decoder->getElementStartTag(SYNC_FOLDERHIERARCHY_CHANGES)) {
             // Ignore <Count> if present

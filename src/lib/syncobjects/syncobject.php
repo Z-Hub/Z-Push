@@ -167,6 +167,80 @@ abstract class SyncObject extends Streamer {
     }
 
     /**
+     * Compares this a SyncObject to another, while printing out all properties and showing where they differ.
+     *
+     * @see SyncObject
+     * @param SyncObject $odo       other SyncObject
+     * @param string     $odoName   how different data should be named
+     * @param int        $recCount  recursion counter
+     * @return array with one property per line, key being the property instance variable name
+     */
+    public function EvaluateAndCompare($odo, $odoName = "", $keyprefix = "", $recCount = 0) {
+        if ($odo === false)
+            return false;
+
+        // check objecttype
+        if (! ($odo instanceof SyncObject)) {
+            ZLog::Write(LOGLEVEL_DEBUG, "SyncObject->EvaluateAndCompare() the target object is not a SyncObject");
+            return false;
+        }
+
+        $out = array();
+        if ($keyprefix)
+            $keyprefix = $keyprefix . $recCount;
+
+        // check for mapped fields
+        foreach ($this->mapping as $v) {
+            $val = $v[self::STREAMER_VAR];
+            // array of values?
+            if (isset($v[self::STREAMER_ARRAY])) {
+                // if neither array is created then don't fail the comparison
+                if (!isset($this->$val) && !isset($odo->$val)) {
+                    continue;
+                }
+                else {
+                    // if both arrays exist then seek for differences in the arrays
+                    if (count(array_diff($this->$val, $odo->$val)) + count(array_diff($odo->$val, $this->$val)) > 0) {
+                        $out[$keyprefix.$val] = implode(", ", $this->$val) ." - ". $odoName .": ". implode(", ", $odo->$val);
+                    }
+                }
+            }
+            else {
+                // if both are not set, don't even bother the output
+                if (!isset($this->$val) && !isset($odo->$val)) {
+                    continue;
+                }
+                // they are both set
+                else if (isset($this->$val) && isset($odo->$val)) {
+                    //if they are subobjects, compare them recursively
+                    if (isset($v[self::STREAMER_TYPE])) {
+                        if ($this->$val instanceof SyncObject) {
+                            $out += $this->$val->EvaluateAndCompare($odo->$val, $odoName, substr(get_class($this->$val), 4), $recCount++);
+                        }
+                        // if they are streams, compare the streams
+                        else if ($v[self::STREAMER_TYPE] == self::STREAMER_TYPE_STREAM_ASPLAIN || $v[self::STREAMER_TYPE] == self::STREAMER_TYPE_STREAM_ASBASE64) {
+                            $t = stream_get_contents($this->$val);
+                            $o = stream_get_contents($odo->$val);
+                            $out[$keyprefix.$val] = ($t === $o) ? $t : $t." - ". $odoName .": ".$o;
+                        }
+                    }
+                    // else just compare their values
+                    else {
+                        if($this->$val === $odo->$val) {
+                            $out[$keyprefix.$val] = $this->$val;
+                        }
+                        else {
+                            $out[$keyprefix.$val] = (isset($this->$val) && $this->$val ? $this->$val:"undefined") ." - ". $odoName .": ". (isset($odo->$val) && $odo->$val ? $odo->$val:"undefined");
+                        }
+                    }
+                }
+            }
+        }
+
+        return $out;
+    }
+
+    /**
      * String representation of the object
      *
      * @return String
