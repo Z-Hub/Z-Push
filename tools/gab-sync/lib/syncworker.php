@@ -48,7 +48,7 @@ abstract class SyncWorker {
     private $hashFieldId;
 
     /**
-     * The constructer should do all required login actions.
+     * The constructor should do all required login actions.
      */
     public function __construct() {
         $this->chunkType = @constant("HASHFIELD") . "-" . @constant("AMOUNT_OF_CHUNKS");
@@ -57,6 +57,9 @@ abstract class SyncWorker {
 
     /**
      * Simulates the synchronization, showing statistics but without touching any data.
+     *
+     * @access public
+     * @return void
      */
     public function Simulate() {
         $this->Log("Simulating the synchronization. NO DATA IS GOING TO BE WRITTEN.".PHP_EOL);
@@ -324,7 +327,8 @@ abstract class SyncWorker {
     /**
      * Calculated the chunk-id of a value.
      *
-     * @parem string $value
+     * @param string $value
+     *
      * @access protected
      * @return number
      */
@@ -357,7 +361,7 @@ abstract class SyncWorker {
     protected abstract function DeleteHiddenFolder($folderid);
 
     /**
-     * Returns the internal identfier (folder-id) of the hidden folder.
+     * Returns the internal identifier (folder-id) of the hidden folder.
      *
      * @access protected
      * @return string

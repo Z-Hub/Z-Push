@@ -140,7 +140,7 @@ class Kopano extends SyncWorker {
     }
 
     /**
-     * Returns the internal identfier (folder-id) of the hidden folder.
+     * Returns the internal identifier (folder-id) of the hidden folder.
      *
      * @access protected
      * @return string|boolean on error
@@ -447,6 +447,8 @@ class Kopano extends SyncWorker {
      *
      * @param string $folderid
      * @param string $chunkName
+     *
+     * @access private
      * @return array
      */
     private function findChunk($folderid, $chunkName) {
@@ -467,12 +469,12 @@ class Kopano extends SyncWorker {
     }
 
     /**
-     * Open the store marked with PR_DEFAULT_STORE = TRUE
-     * if $return_public is set, the public store is opened
+     * Open the store marked with PR_DEFAULT_STORE = TRUE.
+     * If $return_public is set, the public store is opened.
      *
      * @param string    $user   User which store should be opened
      *
-     * @access public
+     * @access private
      * @return boolean
      */
     private function openMessageStore($user) {
@@ -556,7 +558,7 @@ class Kopano extends SyncWorker {
     }
 
     /**
-     * Opens the a folder.
+     * Opens a folder.
      *
      * @param string $folderid
      * @access private

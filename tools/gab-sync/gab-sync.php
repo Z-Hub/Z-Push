@@ -90,10 +90,10 @@ class GabSyncCLI {
     static private $errormessage;
 
     /**
-     * Returns usage instructions
+     * Returns usage instructions.
      *
-     * @return string
      * @access public
+     * @return string
      */
     static public function UsageInstructions() {
         return  "Usage:" .PHP_EOL.
@@ -112,6 +112,9 @@ class GabSyncCLI {
 
     /**
      * Setup of the SyncWorker implementation.
+     *
+     * @access public
+     * @return boolean
      */
     static public function SetupSyncWorker() {
         $file = "lib/" .strtolower(SYNCWORKER).".php";
@@ -136,10 +139,10 @@ class GabSyncCLI {
     }
 
     /**
-     * Checks the environment
+     * Checks the environment.
      *
-     * @return
      * @access public
+     * @return void
      */
     static public function CheckEnv() {
         if (php_sapi_name() != "cli")
@@ -150,10 +153,10 @@ class GabSyncCLI {
     }
 
     /**
-     * Checks the options from the command line
+     * Checks the options from the command line.
      *
-     * @return
      * @access public
+     * @return void
      */
     static public function CheckOptions() {
         if (self::$errormessage)
@@ -213,30 +216,30 @@ class GabSyncCLI {
 
     /**
      * Indicates if the options from the command line
-     * could be processed correctly
+     * could be processed correctly.
      *
-     * @return boolean
      * @access public
+     * @return boolean
      */
     static public function SureWhatToDo() {
         return isset(self::$command);
     }
 
     /**
-     * Returns a errormessage of things which could have gone wrong
+     * Returns a errormessage of things which could have gone wrong.
      *
-     * @return string
      * @access public
+     * @return string
      */
     static public function GetErrorMessage() {
         return (isset(self::$errormessage))?self::$errormessage:"";
     }
 
     /**
-     * Runs a command requested from an action of the command line
+     * Runs a command requested from an action of the command line.
      *
-     * @return
      * @access public
+     * @return void
      */
     static public function RunCommand() {
         echo PHP_EOL;

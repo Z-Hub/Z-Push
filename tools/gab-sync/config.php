@@ -49,11 +49,11 @@ define('AMOUNT_OF_CHUNKS', 10);
 // SyncWorker implementation to be used
 define('SYNCWORKER', 'Kopano');
 
-// unique id to find a contact from the GAB (value to be supplied by -u on the command line)
+// Unique id to find a contact from the GAB (value to be supplied by -u on the command line)
 // Zarafa supports: 'account' and 'smtpAddress' (email)
 define('UNIQUEID', 'account');
 
-// server connection settings
+// Server connection settings
 // Depending on your setup, it might be advisable to change the lines below to one defined with your
 // default socket location.
 // Normally "default:" points to the default setting ("file:///var/run/kopano/server.sock")

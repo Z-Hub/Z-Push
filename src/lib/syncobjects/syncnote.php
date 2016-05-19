@@ -47,7 +47,7 @@
 
 
 class SyncNote extends SyncObject {
-    // KOE transports note colors as categories
+    // Outlook transports note colors as categories
     static private $colors = array(
             0 => "Blue Category",
             1 => "Green Category",

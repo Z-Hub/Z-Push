@@ -418,7 +418,6 @@ class BackendZarafa implements IBackend, ISearchProvider {
             return false;
         }
 
-        // delayed logging to log to potentially log the parameters set for ZO-6
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->SendMail(): RFC822: %d bytes  forward-id: '%s' reply-id: '%s' parent-id: '%s' SaveInSent: '%s' ReplaceMIME: '%s'",
                                             strlen($sm->mime), Utils::PrintAsString($sm->forwardflag), Utils::PrintAsString($sm->replyflag),
                                             Utils::PrintAsString((isset($sm->source->folderid) ? $sm->source->folderid : false)),

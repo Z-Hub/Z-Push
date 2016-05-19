@@ -157,9 +157,9 @@ class DeviceManager {
 
         // update data from the OL plugin (if available)
         if (Request::HasKoeStats()) {
-            $this->device->SetOLPluginVersion(Request::GetKoeVersion());
-            $this->device->SetOLPluginBuild(Request::GetKoeBuild());
-            $this->device->SetOLPluginBuildDate(Request::GetKoeBuildDate());
+            $this->device->SetKoeVersion(Request::GetKoeVersion());
+            $this->device->SetKoeBuild(Request::GetKoeBuild());
+            $this->device->SetKoeBuildDate(Request::GetKoeBuildDate());
         }
 
         // data to be saved
