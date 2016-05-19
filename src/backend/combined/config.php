@@ -66,7 +66,7 @@ class BackendCombinedConfig {
                     'name' => 'BackendIMAP',
                 ),
                 'z' => array(
-                    'name' => 'BackendZarafa',
+                    'name' => 'BackendKopano',
                 ),
                 'm' => array(
                     'name' => 'BackendMaildir',

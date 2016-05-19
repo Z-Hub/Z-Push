@@ -4,7 +4,7 @@
 * Project   :   Z-Push
 * Descr     :   Device remote administration tasks
 *               used over webservice e.g. by the
-*               Mobile Device Management Plugin for Zarafa.
+*               Mobile Device Management Plugin for Kopano.
 *
 * Created   :   23.12.2011
 *

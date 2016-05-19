@@ -46,7 +46,10 @@
 ************************************************/
 
 define("PHP_MAPI_PATH", "/usr/share/php/mapi/");
-if (CheckMapiExtVersion('7.2.0')) {
+if (CheckMapiExtVersion('8.0.0')) {
+    define('MAPI_SERVER', 'default:');
+}
+elseif (CheckMapiExtVersion('7.2.0')) {
     define('MAPI_SERVER', 'file:///var/run/zarafad/server.sock');
 }
 else {
@@ -118,7 +121,7 @@ function listfolders_handle() {
         listfolders_getlist($zarafaAdmin['adminStore'], $zarafaAdmin['session'], trim($options['l']));
     }
     else {
-        echo "Usage:\nlistfolders.php [actions] [options]\n\nActions: [-l username]\n\t-l username\tlist folders of user, for public folder use 'SYSTEM'\n\nGlobal options: [-h path] [[-u remoteuser] [-p password]] [[-c certificate_path] [-p password]]\n\t-h path\t\tconnect through <path>, e.g. file:///var/run/socket or https://10.0.0.1:237/zarafa\n\t-u remoteuser\tlogin as authenticated administration user\n\t-c certificate\tlogin with a ssl certificate located in this location, e.g. /etc/zarafa/ssl/client.pem\n\t-p password\tpassword of the remoteuser or certificate\n\n";
+        echo "Usage:\nlistfolders.php [actions] [options]\n\nActions: [-l username]\n\t-l username\tlist folders of user, for public folder use 'SYSTEM'\n\nGlobal options: [-h path] [[-u remoteuser] [-p password]] [[-c certificate_path] [-p password]]\n\t-h path\t\tconnect through <path>, e.g. file:///var/run/socket or https://10.0.0.1:237/kopano\n\t-u remoteuser\tlogin as authenticated administration user\n\t-c certificate\tlogin with a ssl certificate located in this location, e.g. /etc/zarafa/ssl/client.pem\n\t-p password\tpassword of the remoteuser or certificate\n\n";
     }
 }
 

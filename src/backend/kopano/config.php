@@ -2,7 +2,7 @@
 /***********************************************
 * File      :   config.php
 * Project   :   Z-Push
-* Descr     :   Zarafa backend configuration file
+* Descr     :   Kopano backend configuration file
 *
 * Created   :   27.11.2012
 *
@@ -42,11 +42,26 @@
 ************************************************/
 
 // ************************
-//  BackendZarafa settings
+//  BackendKopano settings
 // ************************
 
-// Defines the server to which we want to connect
-define('MAPI_SERVER', 'http://127.0.0.1:236/zarafa');
+// Defines the server to which we want to connect.
+//
+// Depending on your setup, it might be advisable to change the lines below to one defined with your
+// default socket location.
+// Normally "default:" points to the default setting ("file:///var/run/kopano/server.sock")
+// Examples: define("MAPI_SERVER", "default:");
+//           define("MAPI_SERVER", "http://localhost:236/kopano");
+//           define("MAPI_SERVER", "https://localhost:237/kopano");
+//           define("MAPI_SERVER", "file:///var/run/kopano/server.sock");
+// If you are using ZCP >= 7.2.0, set it to the zarafa location, e.g.
+//           define("MAPI_SERVER", "http://localhost:236/zarafa");
+//           define("MAPI_SERVER", "https://localhost:237/zarafa");
+//           define("MAPI_SERVER", "file:///var/run/zarafad/server.sock");
+// For ZCP versions prior to 7.2.0 the socket location is different (http(s) sockets are the same):
+//           define("MAPI_SERVER", "file:///var/run/zarafa");
+
+define('MAPI_SERVER', 'default:');
 
 // Read-Only shared folders
 //   When trying to write a change on a read-only folder this data is dropped and replaced on the device of the user.

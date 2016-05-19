@@ -302,7 +302,7 @@
 
     // To synchronize the GAB KOE, the GAB store and folderid need to be specified.
     // Use the gab-sync script to generate this data. The name needs to
-    // match the config of the gab-sync script. 
+    // match the config of the gab-sync script.
     // More information here: https://wiki.z-hub.io/x/z4Aa (GAB Sync Script)
     define('KOE_GAB_STORE', 'SYSTEM');
     define('KOE_GAB_FOLDERID', '');
@@ -320,7 +320,7 @@
  *
  *  To synchronize a folder, add a section setting all parameters as below:
  *      store:      the ressource where the folder is located.
- *                  Zarafa users use 'SYSTEM' for the 'Public Folder'
+ *                  Kopano users use 'SYSTEM' for the 'Public Folder'
  *      folderid:   folder id of the folder to be synchronized
  *      name:       name to be displayed on the mobile device
  *      type:       supported types are:
@@ -333,7 +333,7 @@
  *                  If set to false, full writing permissions are required.
  *
  *  Additional notes:
- *  - on Zarafa systems use backend/zarafa/listfolders.php script to get a list
+ *  - on Kopano systems use backend/kopano/listfolders.php script to get a list
  *    of available folders
  *
  *  - all Z-Push users must have at least reading permissions so the configured

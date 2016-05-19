@@ -531,7 +531,7 @@ class ImportChangesICS implements IImportChanges {
      * Imports a move of a message. This occurs when a user moves an item to another folder
      *
      * Normally, we would implement this via the 'offical' importmessagemove() function on the ICS importer,
-     * but the Zarafa importer does not support this. Therefore we currently implement it via a standard mapi
+     * but the Zarafa/Kopano importer does not support this. Therefore we currently implement it via a standard mapi
      * call. This causes a mirror 'add/delete' to be sent to the PDA at the next sync.
      * Manfred, 2010-10-21. For some mobiles import was causing duplicate messages in the destination folder
      * (Mantis #202). Therefore we will create a new message in the destination folder, copy properties
