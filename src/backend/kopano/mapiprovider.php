@@ -2458,28 +2458,28 @@ class MAPIProvider {
         if (function_exists("mapi_inetmapi_imtoinet")) {
             $addrbook = $this->getAddressbook();
             $stream = mapi_inetmapi_imtoinet($this->session, $addrbook, $mapimessage, array('use_tnef' => -1));
-            $mstreamstat = mapi_stream_stat($stream);
-            $streamsize = $mstreamstat["cb"];
 
-            if (isset($stream) && isset($streamsize)) {
-                if (Request::GetProtocolVersion() >= 12.0) {
-                    if (!isset($message->asbody))
-                        $message->asbody = new SyncBaseBody();
-                    $message->asbody->data = MAPIStreamWrapper::Open($stream);
-                    $message->asbody->estimatedDataSize = $streamsize;
-                    $message->asbody->truncated = 0;
+            if (isset($stream)) {
+                $mstreamstat = mapi_stream_stat($stream);
+                $streamsize = $mstreamstat["cb"];
+                if (isset($streamsize)) {
+                    if (Request::GetProtocolVersion() >= 12.0) {
+                        if (!isset($message->asbody))
+                            $message->asbody = new SyncBaseBody();
+                        $message->asbody->data = MAPIStreamWrapper::Open($stream);
+                        $message->asbody->estimatedDataSize = $streamsize;
+                        $message->asbody->truncated = 0;
+                    }
+                    else {
+                        $message->mimedata = MAPIStreamWrapper::Open($stream);
+                        $message->mimesize = $streamsize;
+                        $message->mimetruncated = 0;
+                    }
+                    unset($message->body, $message->bodytruncated);
+                    return true;
                 }
-                else {
-                    $message->mimedata = MAPIStreamWrapper::Open($stream);
-                    $message->mimesize = $streamsize;
-                    $message->mimetruncated = 0;
-                }
-                unset($message->body, $message->bodytruncated);
-                return true;
             }
-            else {
-                ZLog::Write(LOGLEVEL_ERROR, sprintf("MAPIProvider->imtoinet(): got no stream or content from mapi_inetmapi_imtoinet()"));
-            }
+            ZLog::Write(LOGLEVEL_ERROR, sprintf("MAPIProvider->imtoinet(): got no stream or content from mapi_inetmapi_imtoinet()"));
         }
 
         return false;
