@@ -302,14 +302,16 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
     }
 
     /**
-     * Imports a message deletion, which is imported into memory.
+     * Imports a deletion. This may conflict if the local object has been modified.
      *
-     * @param string        $id     id of message which is deleted
+     * @param string        $id
+     * @param boolean       $asSoftDelete   (opt) if true, the deletion is exported as "SoftDelete", else as "Remove" - default: false
      *
      * @access public
      * @return boolean
      */
-    public function ImportMessageDeletion($id) {
+    public function ImportMessageDeletion($id, $asSoftDelete = false) {
+        // TODO do something different due to $asSoftDelete?
         $this->changes[] = array(self::DELETION, $id, null);
         throw new StatusException(sprintf("ReplyBackImExporter->ImportMessageDeletion('%s'): Read only folder. Data from PIM will be dropped! Server will read data.", $id), SYNC_STATUS_CONFLICTCLIENTSERVEROBJECT, null, LOGLEVEL_INFO);
     }
