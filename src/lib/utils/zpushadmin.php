@@ -486,7 +486,7 @@ class ZPushAdmin {
             $new_list = array();
             foreach ($device->GetAdditionalFolders() as $folder) {
                 $folder['source'] = 'user';
-                $folder['syncfolderid'] = $device->GetFolderIdForBackendId($folder['folderid'], false);
+                $folder['syncfolderid'] = $device->GetFolderIdForBackendId($folder['folderid'], false, false, null);
                 $new_list[$folder['folderid']] = $folder;
             }
             foreach (ZPush::GetAdditionalSyncFolders() as $fid => $so) {
@@ -495,7 +495,7 @@ class ZPushAdmin {
                     $new_list[$fid] = array(
                                         'store' => $so->Store,
                                         'folderid' => $fid,
-                                        'syncfolderid' => $device->GetFolderIdForBackendId($fid, false),
+                                        'syncfolderid' => $device->GetFolderIdForBackendId($fid, false, false, null),
                                         'name' => $so->displayname,
                                         'type' => $so->type,
                                         'readonly' => $so->ReadOnly,

@@ -6,7 +6,7 @@
 *
 * Created   :   01.10.2007
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -86,8 +86,44 @@ class ImportChangesStream implements IImportChanges {
      */
     public function ImportMessageChange($id, $message) {
         // ignore other SyncObjects
-        if(!($message instanceof $this->classAsString))
+        if(!($message instanceof $this->classAsString)) {
             return false;
+        }
+
+        // KOE ZO-42: to sync Notes to Outlook we sync them as Appointments
+        if ($this->classAsString == "SyncNote") {
+            if (KOE_CAPABILITY_NOTES && ZPush::GetDeviceManager()->IsKoe()) {
+                // update category from SyncNote->Color
+                $message->SetCategoryFromColor();
+
+                $appointment = new SyncAppointment();
+                $appointment->busystatus = 0;
+                $appointment->sensitivity = 0;
+                $appointment->alldayevent = 0;
+                $appointment->reminder = 0;
+                $appointment->meetingstatus = 0;
+                $appointment->responserequested = 0;
+
+                $appointment->flags = $message->flags;
+                if (isset($message->asbody))
+                    $appointment->asbody = $message->asbody;
+                if (isset($message->categories))
+                    $appointment->categories = $message->categories;
+                if (isset($message->subject))
+                    $appointment->subject = $message->subject;
+                if (isset($message->lastmodified))
+                    $appointment->dtstamp = $message->lastmodified;
+
+                $appointment->starttime = time();
+                $appointment->endtime = $appointment->starttime + 1;
+
+                $message = $appointment;
+            }
+            else if (Request::IsOutlook()) {
+                ZLog::Write(LOGLEVEL_WARN, "MS Outlook is synchronizing Notes folder without active KOE settings or extension. Not streaming SyncNote change!");
+                return false;
+            }
+        }
 
         // prevent sending the same object twice in one request
         if (in_array($id, $this->seenObjects)) {
@@ -108,6 +144,22 @@ class ImportChangesStream implements IImportChanges {
             $this->checkForIgnoredMessages = true;
 
             return $stat;
+        }
+
+        // KOE ZO-3: Stream reply/forward flag and time as additional category to KOE
+        if (ZPush::GetDeviceManager()->IsKoe() && KOE_CAPABILITY_RECEIVEFLAGS && isset($message->lastverbexectime) && isset($message->lastverbexecuted) && $message->lastverbexecuted > 0) {
+            ZLog::Write(LOGLEVEL_DEBUG, "ImportChangesStream->ImportMessageChange('%s'): KOE detected. Adding LastVerb information as category.");
+            if (!isset($message->categories)){
+                $message->categories = array();
+            }
+
+            $s = "Push: Email ";
+            if     ($message->lastverbexecuted == 1) $s .= "replied";
+            elseif ($message->lastverbexecuted == 2) $s .= "replied-to-all";
+            elseif ($message->lastverbexecuted == 3) $s .= "forwarded";
+            $s .= " on " . gmdate("d-m-Y H:i:s", $message->lastverbexectime) . " GMT";
+
+            $message->categories[] = $s;
         }
 
         if ($message->flags === false || $message->flags === SYNC_NEWMESSAGE)

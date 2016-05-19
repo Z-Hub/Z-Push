@@ -1635,6 +1635,11 @@ class MAPIProvider {
         // Setting it to an empty array will unset the property in Zarafa as well
         if (!isset($note->categories)) $note->categories = array();
 
+        // update icon index to correspond to the color
+        if (isset($note->Color) && $note->Color > -1 && $note->Color < 5) {
+            $note->Iconindex = 768 + $note->Color;
+        }
+
         $this->setPropsInMAPI($mapimessage, $note, MAPIMapping::GetNoteMapping());
 
         $noteprops = MAPIMapping::GetNoteProperties();
@@ -1644,7 +1649,9 @@ class MAPIProvider {
         $props = array();
         $props[$noteprops["messageclass"]] = "IPM.StickyNote";
         // set body otherwise the note will be "broken" when editing it in outlook
-        $this->setASbody($note->asbody, $props, $noteprops);
+        if (isset($note->asbody)) {
+            $this->setASbody($note->asbody, $props, $noteprops);
+        }
 
         $props[$noteprops["internetcpid"]] = INTERNET_CPID_UTF8;
         mapi_setprops($mapimessage, $props);
@@ -2435,7 +2442,7 @@ class MAPIProvider {
         if (!$stream || $size == 0) {
             return "";
         }
-        return mapi_stream_read($stream, $streamsize);
+        return mapi_stream_read($stream, $size);
     }
 
     /**
@@ -2718,6 +2725,16 @@ class MAPIProvider {
         if (!isset($this->storeProps) || empty($this->storeProps)) {
             ZLog::Write(LOGLEVEL_DEBUG, "MAPIProvider->getStoreProps(): Getting store properties.");
             $this->storeProps = mapi_getprops($this->store, array(PR_IPM_SUBTREE_ENTRYID, PR_IPM_OUTBOX_ENTRYID, PR_IPM_WASTEBASKET_ENTRYID, PR_IPM_SENTMAIL_ENTRYID, PR_ENTRYID, PR_IPM_PUBLIC_FOLDERS_ENTRYID, PR_IPM_FAVORITES_ENTRYID, PR_MAILBOX_OWNER_ENTRYID));
+            // make sure all properties are set
+            if(!isset($this->storeProps[PR_IPM_WASTEBASKET_ENTRYID])) {
+                $this->storeProps[PR_IPM_WASTEBASKET_ENTRYID] = false;
+            }
+            if(!isset($this->storeProps[PR_IPM_SENTMAIL_ENTRYID])) {
+                $this->storeProps[PR_IPM_SENTMAIL_ENTRYID] = false;
+            }
+            if(!isset($this->storeProps[PR_IPM_OUTBOX_ENTRYID])) {
+                $this->storeProps[PR_IPM_OUTBOX_ENTRYID] = false;
+            }
         }
         return $this->storeProps;
     }
@@ -2731,8 +2748,33 @@ class MAPIProvider {
     private function getInboxProps() {
         if (!isset($this->inboxProps) || empty($this->inboxProps)) {
             ZLog::Write(LOGLEVEL_DEBUG, "MAPIProvider->getInboxProps(): Getting inbox properties.");
+            $this->inboxProps = array();
             $inbox = mapi_msgstore_getreceivefolder($this->store);
-            $this->inboxProps = mapi_getprops($inbox, array(PR_ENTRYID, PR_IPM_DRAFTS_ENTRYID, PR_IPM_TASK_ENTRYID, PR_IPM_APPOINTMENT_ENTRYID, PR_IPM_CONTACT_ENTRYID, PR_IPM_NOTE_ENTRYID, PR_IPM_JOURNAL_ENTRYID));
+            if ($inbox) {
+                $this->inboxProps = mapi_getprops($inbox, array(PR_ENTRYID, PR_IPM_DRAFTS_ENTRYID, PR_IPM_TASK_ENTRYID, PR_IPM_APPOINTMENT_ENTRYID, PR_IPM_CONTACT_ENTRYID, PR_IPM_NOTE_ENTRYID, PR_IPM_JOURNAL_ENTRYID));
+                // make sure all properties are set
+                if(!isset($this->inboxProps[PR_ENTRYID])) {
+                    $this->inboxProps[PR_ENTRYID] = false;
+                }
+                if(!isset($this->inboxProps[PR_IPM_DRAFTS_ENTRYID])) {
+                    $this->inboxProps[PR_IPM_DRAFTS_ENTRYID] = false;
+                }
+                if(!isset($this->inboxProps[PR_IPM_TASK_ENTRYID])) {
+                    $this->inboxProps[PR_IPM_TASK_ENTRYID] = false;
+                }
+                if(!isset($this->inboxProps[PR_IPM_APPOINTMENT_ENTRYID])) {
+                    $this->inboxProps[PR_IPM_APPOINTMENT_ENTRYID] = false;
+                }
+                if(!isset($this->inboxProps[PR_IPM_CONTACT_ENTRYID])) {
+                    $this->inboxProps[PR_IPM_CONTACT_ENTRYID] = false;
+                }
+                if(!isset($this->inboxProps[PR_IPM_NOTE_ENTRYID])) {
+                    $this->inboxProps[PR_IPM_NOTE_ENTRYID] = false;
+                }
+                if(!isset($this->inboxProps[PR_IPM_JOURNAL_ENTRYID])) {
+                    $this->inboxProps[PR_IPM_JOURNAL_ENTRYID] = false;
+                }
+            }
         }
         return $this->inboxProps;
     }

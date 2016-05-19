@@ -72,6 +72,10 @@ class ASDevice extends StateObject {
                                     'announcedASversion' => false,
                                     'foldersynccomplete' => true,
                                     'additionalfolders' => array(),
+                                    'koeversion' => false,
+                                    'koebuild' => false,
+                                    'koebuilddate' => false,
+                                    'koegabbackendfolderid' => false,
                                 );
 
     static private $loadedData;

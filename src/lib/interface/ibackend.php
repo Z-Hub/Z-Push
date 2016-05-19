@@ -341,4 +341,14 @@ interface IBackend {
      * @return string|boolean
      */
     public function GetUserPolicyName();
+
+    /**
+     * Returns the backend ID of the folder of the KOE GAB.
+     *
+     * @param string $foldername
+     *
+     * @access public
+     * @return string|boolean
+     */
+    public function GetKoeGabBackendFolderId($foldername);
 }
