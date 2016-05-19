@@ -481,6 +481,11 @@ class ImportChangesICS implements IImportChanges {
     public function ImportMessageReadFlag($id, $flags) {
         list($fsk,$sk) = MAPIUtils::SplitMessageId($id);
 
+        // if $fsk is set, we convert it into a backend id.
+        if ($fsk) {
+            $fsk = ZPush::GetDeviceManager()->GetBackendIdForFolderId($fsk);
+        }
+
         // read flag change for our current folder
         if ($this->folderidHex == $fsk || empty($fsk)) {
 
@@ -507,7 +512,9 @@ class ImportChangesICS implements IImportChanges {
         }
         // yeah OL sucks - ZP-779
         else {
-            $fsk = ZPush::GetDeviceManager()->GetBackendIdForFolderId($fsk);
+            if (!$fsk) {
+                throw new StatusException(sprintf("ImportChangesICS->ImportMessageReadFlag('%s','%d'): Error setting read state. The message is in another folder but id is unknown as no short folder id is available. Please remove your device states to fully resync your device. Operation ignored.", $id, $flags), SYNC_STATUS_OBJECTNOTFOUND);
+            }
             $store = ZPush::GetBackend()->GetMAPIStoreForFolderId(ZPush::GetAdditionalSyncFolderStore($fsk), $fsk);
             $entryid = mapi_msgstore_entryidfromsourcekey($store, hex2bin($fsk), hex2bin($sk));
             $realMessage = mapi_msgstore_openentry($store, $entryid);
