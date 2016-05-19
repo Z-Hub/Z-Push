@@ -57,7 +57,7 @@
 // If you are using ZCP >= 7.2.0, set it to the zarafa location, e.g.
 //           define("MAPI_SERVER", "http://localhost:236/zarafa");
 //           define("MAPI_SERVER", "https://localhost:237/zarafa");
-//           define("MAPI_SERVER", "file:///var/run/zarafa/server.sock";
+//           define("MAPI_SERVER", "file:///var/run/zarafad/server.sock";
 // For ZCP versions prior to 7.2.0 the socket location is different (http(s) sockets are the same):
 //           define("MAPI_SERVER", "file:///var/run/zarafa";
 
