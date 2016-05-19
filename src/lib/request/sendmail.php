@@ -6,7 +6,7 @@
 *
 * Created   :   16.02.2012
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2013, 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -87,6 +87,28 @@ class SendMail extends RequestProcessor {
             // no wbxml output is provided, only a http OK
             $sm->saveinsent = Request::GetGETSaveInSent();
         }
+
+        // KOE ZO-6: grep for the OL header and set flags accordingly.
+        // The header has the values verb/message-source-key/folder-source-key
+        if (KOE_CAPABILITY_SENDFLAGS && preg_match("/X-Push-Flags: (\d{3})\/([\da-f]+)\/([\da-f]+)/i", $sm->mime, $ol_flags)) {
+            // "reply" and "reply-all" are handled as "reply"
+            if ($ol_flags[1] == 102 || $ol_flags[1] == 103) {
+                $reply = true;
+            }
+            else if ($ol_flags[1] == 104) {
+                $forward = true;
+            }
+            // set source folder+item and replacemime
+            if (!isset($sm->source)) {
+                $sm->source = new SyncSendMailSource();
+            }
+            $sm->source->itemid = $ol_flags[2];
+            $sm->source->folderid = $ol_flags[3];
+            $sm->replacemime = true;
+
+            ZLog::Write(LOGLEVEL_DEBUG, "SendMail(): KOE support: overwrite reply/forward flag, set parent-id and item-id, replacemime - original message should not be attached.");
+        }
+
         // Check if it is a reply or forward. Two cases are possible:
         // 1. Either $smartreply or $smartforward are set after reading WBXML
         // 2. Either $reply or $forward are set after geting the request parameters
@@ -111,10 +133,10 @@ class SendMail extends RequestProcessor {
                 $sm->forwardflag = true;
 
             if (!isset($sm->source->folderid))
-                ZLog::Write(LOGLEVEL_ERROR, sprintf("No parent folder id while replying or forwarding message:'%s'", (($reply) ? $reply : $forward)));
+                ZLog::Write(LOGLEVEL_ERROR, sprintf("SendMail(): No parent folder id while replying or forwarding message:'%s'", (($reply) ? $reply : $forward)));
         }
 
-        self::$topCollector->AnnounceInformation(sprintf("Sending email with %d bytes", strlen($sm->mime)), true);
+        self::$topCollector->AnnounceInformation(sprintf("SendMail(): Sending email with %d bytes", strlen($sm->mime)), true);
 
         try {
             $status = self::$backend->SendMail($sm);

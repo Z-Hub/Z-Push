@@ -862,6 +862,13 @@ class ZPushAdminCLI {
         echo "Wiped on:\t\t". ($device->GetWipeActionOn() ? strftime("%Y-%m-%d %H:%M", $device->GetWipeActionOn()) : "not set")."\n";
         echo "Policy name:\t\t". ($device->GetPolicyName() ? $device->GetPolicyName() : ASDevice::DEFAULTPOLICYNAME)."\n";
 
+        if ($device->GetOLPluginVersion()) {
+            echo "Kopano OL Plugin:\n";
+            echo "\tVersion:\t". $device->GetOLPluginVersion() ."\n";
+            echo "\tBuild:\t\t". $device->GetOLPluginBuild() ."\n";
+            echo "\tBuild Date:\t". strftime("%Y-%m-%d %H:%M",$device->GetOLPluginBuildDate()) ."\n";
+        }
+
         echo "Attention needed:\t";
 
         if ($device->GetDeviceError())

@@ -6,7 +6,7 @@
 *
 * Created   :   16.02.2012
 *
-* Copyright 2007 - 2015 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -396,6 +396,12 @@ class Sync extends RequestProcessor {
                             $spa->SetFilterType(SYNC_FILTERTIME_MAX);
                     }
 
+                    // unset filtertype for KOE GAB folder
+                    if (KOE_CAPABILITY_GAB && self::$deviceManager->IsOutlookClient() && $spa->GetBackendFolderId() == self::$deviceManager->GetKoeGabBackendFolderId()) {
+                        $spa->SetFilterType(SYNC_FILTERTYPE_ALL);
+                        ZLog::Write(LOGLEVEL_DEBUG, "HandleSync(): KOE GAB folder - setting filter type to unlimited");
+                    }
+
                     if ($currentFilterType != $spa->GetFilterType()) {
                         ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleSync(): filter type has changed (old: '%s', new: '%s'), removing folderstat to force Exporter setup", $currentFilterType, $spa->GetFilterType()));
                         $spa->DelFolderStat();
@@ -466,10 +472,35 @@ class Sync extends RequestProcessor {
                             // Get the SyncMessage if sent
                             if(($el = self::$decoder->getElementStartTag(SYNC_DATA)) && ($el[EN_FLAGS] & EN_FLAGS_CONTENT)) {
                                 $message = ZPush::getSyncObjectFromFolderClass($spa->GetContentClass());
-                                $message->Decode(self::$decoder);
 
-                                // set Ghosted fields
-                                $message->emptySupported(self::$deviceManager->GetSupportedFields($spa->GetFolderId()));
+                                // KOE ZO-42: OL sends Notes as Appointments
+                                if ($spa->GetContentClass() == "Notes" && KOE_CAPABILITY_NOTES && self::$deviceManager->IsOutlookClient()) {
+                                    ZLog::Write(LOGLEVEL_DEBUG, "HandleSync(): Outlook sends Notes as Appointments, read as SyncAppointment and convert it into a SyncNote object.");
+                                    $message = new SyncAppointment();
+                                    $message->Decode(self::$decoder);
+
+                                    $note = new SyncNote();
+                                    if (isset($message->asbody))
+                                        $note->asbody = $message->asbody;
+                                    if (isset($message->categories))
+                                        $note->categories = $message->categories;
+                                    if (isset($message->subject))
+                                        $note->subject = $message->subject;
+                                    if (isset($message->dtstamp))
+                                        $note->lastmodified = $message->dtstamp;
+
+                                    // set SyncNote->Color from a color category
+                                    $note->SetColorFromCategory();
+
+                                    $message = $note;
+                                }
+                                else {
+                                    $message->Decode(self::$decoder);
+
+                                    // set Ghosted fields
+                                    $message->emptySupported(self::$deviceManager->GetSupportedFields($spa->GetFolderId()));
+                                }
+
                                 if(!self::$decoder->getElementEndTag()) // end applicationdata
                                     return false;
                             }

@@ -54,6 +54,7 @@ class Request {
     const NUMBERS_ONLY = 4;
     const NUMBERSDOT_ONLY = 5;
     const HEX_EXTENDED = 6;
+    const ISO8601 = 7;
 
     /**
      * Command parameters for base64 encoded requests (AS >= 12.1)
@@ -93,6 +94,9 @@ class Request {
     static private $occurence; //TODO
     static private $saveInSent;
     static private $acceptMultipart;
+    static private $olPluginVersion;
+    static private $olPluginBuild;
+    static private $olPluginBuildDate;
 
 
     /**
@@ -231,6 +235,13 @@ class Request {
         }
 
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("Request::ProcessHeaders() ASVersion: %s", self::$asProtocolVersion));
+
+        if (isset(self::$headers["x-push-plugin"])) {
+            list($version, $build, $buildDate) = explode("/", self::$headers["x-push-plugin"]);
+            self::$olPluginVersion = self::filterEvilInput($version, self::NUMBERSDOT_ONLY);
+            self::$olPluginBuild = self::filterEvilInput($build, self::HEX_ONLY);
+            self::$olPluginBuildDate = strtotime(self::filterEvilInput($buildDate, self::ISO8601));
+        }
 
         if (defined('USE_X_FORWARDED_FOR_HEADER') && USE_X_FORWARDED_FOR_HEADER == true && isset(self::$headers["x-forwarded-for"])) {
             $forwardedIP = self::filterEvilInput(self::$headers["x-forwarded-for"], self::NUMBERSDOT_ONLY);
@@ -650,6 +661,7 @@ class Request {
         else if ($filter == self::NUMBERS_ONLY)       $re = "/[^0-9]/";
         else if ($filter == self::NUMBERSDOT_ONLY)    $re = "/[^0-9\.]/";
         else if ($filter == self::HEX_EXTENDED)       $re = "/[^A-Fa-f0-9\:]/";
+        else if ($filter == self::ISO8601)            $re = "/[^\d{8}T\d{6}Z]/";
 
         return ($re) ? preg_replace($re, $replacevalue, $input) : '';
     }
@@ -667,5 +679,54 @@ class Request {
         $wbxml = base64_encode(stream_get_contents($input));
         fclose($input);
         return $wbxml;
+    }
+
+    /**
+     * Indicates if the request contained the OL plugin stats header.
+     *
+     * @access public
+     * @return boolean
+     */
+    static public function HasOLPluginStats() {
+        return isset(self::$olPluginVersion) && isset(self::$olPluginBuild) && isset(self::$olPluginBuildDate);
+    }
+
+    /**
+     * Returns the version number of the OL plugin informed by the stats header.
+     *
+     * @access public
+     * @return string
+     */
+    static public function GetOLPluginVersion() {
+        if (isset(self::$olPluginVersion))
+            return self::$olPluginVersion;
+        else
+            return self::UNKNOWN;
+    }
+
+    /**
+     * Returns the build of the OL plugin informed by the stats header.
+     *
+     * @access public
+     * @return string
+     */
+    static public function GetOLPluginBuild() {
+        if (isset(self::$olPluginBuild))
+            return self::$olPluginBuild;
+        else
+            return self::UNKNOWN;
+    }
+
+    /**
+     * Returns the build date of the OL plugin informed by the stats header.
+     *
+     * @access public
+     * @return string
+     */
+    static public function GetOLPluginBuildDate() {
+        if (isset(self::$olPluginBuildDate))
+            return self::$olPluginBuildDate;
+        else
+            return self::UNKNOWN;
     }
 }

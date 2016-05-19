@@ -417,6 +417,8 @@ class BackendZarafa implements IBackend, ISearchProvider {
             throw new StatusException("ZarafaBackend->SendMail(): ZCP version is too old, INETMAPI_IMTOMAPI is not available. Install at least ZCP version 7.0.6 or later.", SYNC_COMMONSTATUS_MAILSUBMISSIONFAILED, null, LOGLEVEL_FATAL);
             return false;
         }
+
+        // delayed logging to log to potentially log the parameters set for ZO-6
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->SendMail(): RFC822: %d bytes  forward-id: '%s' reply-id: '%s' parent-id: '%s' SaveInSent: '%s' ReplaceMIME: '%s'",
                                             strlen($sm->mime), Utils::PrintAsString($sm->forwardflag), Utils::PrintAsString($sm->replyflag),
                                             Utils::PrintAsString((isset($sm->source->folderid) ? $sm->source->folderid : false)),
@@ -498,75 +500,80 @@ class BackendZarafa implements IBackend, ISearchProvider {
             if ($entryid)
                 $fwmessage = mapi_msgstore_openentry($this->store, $entryid);
 
-            if(!isset($fwmessage) || !$fwmessage)
-                throw new StatusException(sprintf("ZarafaBackend->SendMail(): Could not open message id '%s' in folder id '%s' to be replied/forwarded: 0x%X", $sm->source->itemid, $sm->source->folderid, mapi_last_hresult()), SYNC_COMMONSTATUS_ITEMNOTFOUND);
+            if (isset($fwmessage) && $fwmessage) {
+                // update icon and last_verb when forwarding or replying message
+                // reply-all (verb 103) is not supported, as we cannot really detect this case
+                if ($sm->forwardflag) {
+                    $updateProps = array(
+                        PR_ICON_INDEX           => 262,
+                        PR_LAST_VERB_EXECUTED   => 104,
+                    );
+                }
+                elseif ($sm->replyflag) {
+                    $updateProps = array(
+                        PR_ICON_INDEX           => 261,
+                        PR_LAST_VERB_EXECUTED   => 102,
+                    );
+                }
+                if (isset($updateProps)) {
+                    $updateProps[PR_LAST_VERB_EXECUTION_TIME] = time();
+                    mapi_setprops($fwmessage, $updateProps);
+                    mapi_savechanges($fwmessage);
+                }
 
-            // update icon and last_verb when forwarding or replying message
-            // reply-all (verb 103) is not supported, as we cannot really detect this case
-            if ($sm->forwardflag) {
-                $updateProps = array(
-                    PR_ICON_INDEX           => 262,
-                    PR_LAST_VERB_EXECUTED   => 104,
-                );
+                // only attach the original message if the mobile does not send it itself
+                if (!isset($sm->replacemime)) {
+                    // get message's body in order to append forward or reply text
+                    if (!isset($body)) {
+                        $body = MAPIUtils::readPropStream($mapimessage, PR_BODY);
+                    }
+                    if (!isset($bodyHtml)) {
+                        $bodyHtml = MAPIUtils::readPropStream($mapimessage, PR_HTML);
+                    }
+                    $cpid = mapi_getprops($fwmessage, array($sendMailProps["internetcpid"]));
+                    if($sm->forwardflag) {
+                        // attach the original attachments to the outgoing message
+                        $this->copyAttachments($mapimessage, $fwmessage);
+                    }
+
+                    // regarding the conversion @see ZP-470
+                    if (strlen($body) > 0) {
+                        $fwbody = MAPIUtils::readPropStream($fwmessage, PR_BODY);
+                        // if only the old message's cpid is set, convert from old charset to utf-8
+                        if (isset($cpid[$sendMailProps["internetcpid"]]) && $cpid[$sendMailProps["internetcpid"]] != INTERNET_CPID_UTF8) {
+                            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->SendMail(): convert plain forwarded message charset (only fw set) from '%s' to '65001'", $cpid[$sendMailProps["internetcpid"]]));
+                            $fwbody = Utils::ConvertCodepageStringToUtf8($cpid[$sendMailProps["internetcpid"]], $fwbody);
+                        }
+                        // otherwise to the general conversion
+                        else {
+                            ZLog::Write(LOGLEVEL_DEBUG, "ZarafaBackend->SendMail(): no charset conversion done for plain forwarded message");
+                            $fwbody = w2u($fwbody);
+                        }
+
+                        $mapiprops[$sendMailProps["body"]] = $body."\r\n\r\n".$fwbody;
+                    }
+
+                    if (strlen($bodyHtml) > 0) {
+                        $fwbodyHtml = MAPIUtils::readPropStream($fwmessage, PR_HTML);
+                        // if only new message's cpid is set, convert to UTF-8
+                        if (isset($cpid[$sendMailProps["internetcpid"]]) && $cpid[$sendMailProps["internetcpid"]] != INTERNET_CPID_UTF8) {
+                            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->SendMail(): convert html forwarded message charset (only fw set) from '%s' to '65001'", $cpid[$sendMailProps["internetcpid"]]));
+                            $fwbodyHtml = Utils::ConvertCodepageStringToUtf8($cpid[$sendMailProps["internetcpid"]], $fwbodyHtml);
+                        }
+                        // otherwise to the general conversion
+                        else {
+                            ZLog::Write(LOGLEVEL_DEBUG, "ZarafaBackend->SendMail(): no charset conversion done for html forwarded message");
+                            $fwbodyHtml = w2u($fwbodyHtml);
+                        }
+
+                        $mapiprops[$sendMailProps["html"]] = $bodyHtml."<br><br>".$fwbodyHtml;
+                    }
+                }
             }
-            elseif ($sm->replyflag) {
-                $updateProps = array(
-                    PR_ICON_INDEX           => 261,
-                    PR_LAST_VERB_EXECUTED   => 102,
-                );
-            }
-            if (isset($updateProps)) {
-                $updateProps[PR_LAST_VERB_EXECUTION_TIME] = time();
-                mapi_setprops($fwmessage, $updateProps);
-                mapi_savechanges($fwmessage);
-            }
-
-            // only attach the original message if the mobile does not send it itself
-            if (!isset($sm->replacemime)) {
-                // get message's body in order to append forward or reply text
-                if (!isset($body)) {
-                    $body = MAPIUtils::readPropStream($mapimessage, PR_BODY);
-                }
-                if (!isset($bodyHtml)) {
-                    $bodyHtml = MAPIUtils::readPropStream($mapimessage, PR_HTML);
-                }
-                $cpid = mapi_getprops($fwmessage, array($sendMailProps["internetcpid"]));
-                if($sm->forwardflag) {
-                    // attach the original attachments to the outgoing message
-                    $this->copyAttachments($mapimessage, $fwmessage);
-                }
-
-                // regarding the conversion @see ZP-470
-                if (strlen($body) > 0) {
-                    $fwbody = MAPIUtils::readPropStream($fwmessage, PR_BODY);
-                    // if only the old message's cpid is set, convert from old charset to utf-8
-                    if (isset($cpid[$sendMailProps["internetcpid"]]) && $cpid[$sendMailProps["internetcpid"]] != INTERNET_CPID_UTF8) {
-                        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->SendMail(): convert plain forwarded message charset (only fw set) from '%s' to '65001'", $cpid[$sendMailProps["internetcpid"]]));
-                        $fwbody = Utils::ConvertCodepageStringToUtf8($cpid[$sendMailProps["internetcpid"]], $fwbody);
-                    }
-                    // otherwise to the general conversion
-                    else {
-                        ZLog::Write(LOGLEVEL_DEBUG, "ZarafaBackend->SendMail(): no charset conversion done for plain forwarded message");
-                        $fwbody = w2u($fwbody);
-                    }
-
-                    $mapiprops[$sendMailProps["body"]] = $body."\r\n\r\n".$fwbody;
-                }
-
-                if (strlen($bodyHtml) > 0) {
-                    $fwbodyHtml = MAPIUtils::readPropStream($fwmessage, PR_HTML);
-                    // if only new message's cpid is set, convert to UTF-8
-                    if (isset($cpid[$sendMailProps["internetcpid"]]) && $cpid[$sendMailProps["internetcpid"]] != INTERNET_CPID_UTF8) {
-                        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->SendMail(): convert html forwarded message charset (only fw set) from '%s' to '65001'", $cpid[$sendMailProps["internetcpid"]]));
-                        $fwbodyHtml = Utils::ConvertCodepageStringToUtf8($cpid[$sendMailProps["internetcpid"]], $fwbodyHtml);
-                    }
-                    // otherwise to the general conversion
-                    else {
-                        ZLog::Write(LOGLEVEL_DEBUG, "ZarafaBackend->SendMail(): no charset conversion done for html forwarded message");
-                        $fwbodyHtml = w2u($fwbodyHtml);
-                    }
-
-                    $mapiprops[$sendMailProps["html"]] = $bodyHtml."<br><br>".$fwbodyHtml;
+            else {
+                // no fwmessage could be opened and we need it because we do not replace mime
+                if (!isset($sm->replacemime) || $sm->replacemime == false) {
+                    throw new StatusException(sprintf("ZarafaBackend->SendMail(): Could not open message id '%s' in folder id '%s' to be replied/forwarded: 0x%X", $sm->source->itemid, $sm->source->folderid, mapi_last_hresult()), SYNC_COMMONSTATUS_ITEMNOTFOUND);
                 }
             }
         }
@@ -1036,6 +1043,30 @@ class BackendZarafa implements IBackend, ISearchProvider {
         return false;
     }
 
+    /**
+     * Returns the backend ID of the folder of the KOE GAB.
+     *
+     * @param string $foldername
+     *
+     * @access public
+     * @return string|boolean
+     */
+    public function GetKoeGabBackendFolderId($foldername) {
+        $rootfolder = mapi_msgstore_openentry($this->store);
+        $table = mapi_folder_gethierarchytable($rootfolder, CONVENIENT_DEPTH);
+
+        $restriction = array(RES_PROPERTY, array(RELOP => RELOP_EQ, ULPROPTAG => PR_DISPLAY_NAME, VALUE => $foldername));
+        mapi_table_restrict($table, $restriction);
+        $querycnt = mapi_table_getrowcount($table);
+        if ($querycnt == 1) {
+            $entry = mapi_table_queryallrows($table, array(PR_SOURCE_KEY));
+            if (isset($entry[0]) && isset($entry[0][PR_SOURCE_KEY])) {
+                return bin2hex($entry[0][PR_SOURCE_KEY]);
+            }
+        }
+        ZLog::Write(LOGLEVEL_WARN, sprintf("ZarafaBackend->GetKoeGabBackendFolderId() Found %d entries in the store '%s' matching the name '%s'.", $querycnt, $this->storeName, $foldername));
+        return false;
+    }
 
     /**----------------------------------------------------------------------------------------------------------
      * Implementation of the ISearchProvider interface

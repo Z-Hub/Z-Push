@@ -102,6 +102,10 @@ class DeviceManager {
         $this->stateManager->SetDevice($this->device);
 
         $this->additionalFoldersHash = $this->getAdditionalFoldersHash();
+
+        if ($this->IsOutlookClient() && $this->device->GetOLPluginVersion() !== false) {
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("KOE: %s / %s / %s", $this->device->GetOLPluginVersion(), $this->device->GetOLPluginBuild(), strftime("%Y-%m-%d %H:%M", $this->device->GetOLPluginBuildDate())));
+        }
     }
 
     /**
@@ -150,6 +154,13 @@ class DeviceManager {
         // update the user agent and AS version on the device
         $this->device->SetUserAgent(Request::GetUserAgent());
         $this->device->SetASVersion(Request::GetProtocolVersion());
+
+        // update data from the OL plugin (if available)
+        if (Request::HasOLPluginStats()) {
+            $this->device->SetOLPluginVersion(Request::GetOLPluginVersion());
+            $this->device->SetOLPluginBuild(Request::GetOLPluginBuild());
+            $this->device->SetOLPluginBuildDate(Request::GetOLPluginBuildDate());
+        }
 
         // data to be saved
         $data = $this->device->GetData();
@@ -448,6 +459,25 @@ class DeviceManager {
     }
 
     /**
+     * Returns the backend folder id of the KOE GAB folder.
+     * This comes either from the configuration or from the device data.
+     *
+     * @return string|boolean   returns false if not set or found
+     */
+    public function GetKoeGabBackendFolderId() {
+        $gabid = false;
+        if (KOE_CAPABILITY_GAB) {
+            if (KOE_GAB_FOLDERID != false && KOE_GAB_FOLDERID != '') {
+                $gabid = KOE_GAB_FOLDERID;
+            }
+            else if (KOE_GAB_STORE != "" && KOE_GAB_NAME != "") {
+                $gabid = $this->device->GetKoeGabBackendFolderId();
+            }
+        }
+        return $gabid;
+    }
+
+    /**
      * Returns the additional folders as SyncFolder objects.
      *
      * @access public
@@ -456,17 +486,33 @@ class DeviceManager {
     public function GetAdditionalUserSyncFolders() {
         $folders = array();
         foreach($this->device->GetAdditionalFolders() as $df) {
-            $folder = new SyncFolder();
-            $folder->BackendId = $df['folderid'];
-            $folder->serverid = $this->GetFolderIdForBackendId($folder->BackendId, true);
-            $folder->parentid = 0;                  // only top folders are supported
-            $folder->displayname = $df['name'];
-            $folder->type = $df['type'];
-            // save store as custom property which is not streamed directly to the device
-            $folder->NoBackendFolder = true;
-            $folder->Store = $df['store'];
-
+            $folder = $this->getAdditionalSyncFolder($df['store'], $df['folderid'], $df['name'], $df['type']);
             $folders[$folder->BackendId] = $folder;
+        }
+
+        // ZO-40: add KOE GAB folder
+        if (KOE_CAPABILITY_GAB && $this->IsOutlookClient() && KOE_GAB_STORE != "" && KOE_GAB_NAME != "") {
+            // if KOE_GAB_FOLDERID is set, use it
+            if (KOE_GAB_FOLDERID != "") {
+                $folder = $this->getAdditionalSyncFolder(KOE_GAB_STORE, KOE_GAB_FOLDERID, KOE_GAB_NAME, SYNC_FOLDER_TYPE_USER_APPOINTMENT);
+                $folders[$folder->BackendId] = $folder;
+            }
+            else {
+                // get the GAB id from the device and from the backend
+                $deviceGabId = $this->device->GetKoeGabBackendFolderId();
+                if (!ZPush::GetBackend()->Setup(KOE_GAB_STORE)) {
+                    ZLog::Write(LOGLEVEL_WARN, sprintf("DeviceManager->GetAdditionalUserSyncFolders(): setup for store '%s' failed. Unable to search for KOE GAB folder.", KOE_GAB_STORE));
+                }
+                else {
+                    $backendGabId = ZPush::GetBackend()->GetKoeGabBackendFolderId(KOE_GAB_NAME);
+                    if ($deviceGabId !== $backendGabId) {
+                        ZLog::Write(LOGLEVEL_DEBUG, sprintf("DeviceManager->GetAdditionalUserSyncFolders(): Backend found different KOE GAB backend folderid: '%s'. Updating ASDevice.", $backendGabId));
+                        $this->device->SetKoeGabBackendFolderId($backendGabId);
+                    }
+
+                    $folders[$backendGabId] = $this->getAdditionalSyncFolder(KOE_GAB_STORE, $backendGabId, KOE_GAB_NAME, SYNC_FOLDER_TYPE_USER_APPOINTMENT);
+                }
+            }
         }
         return $folders;
     }
@@ -480,6 +526,11 @@ class DeviceManager {
      * @return boolean|string
      */
     public function GetAdditionalUserSyncFolderStore($folderid) {
+        // is this the KOE GAB folder?
+        if ($folderid == $this->GetKoeGabBackendFolderId()) {
+            return KOE_GAB_STORE;
+        }
+
         $f = $this->device->GetAdditionalFolder($folderid);
         if ($f) {
             return $f['store'];
@@ -692,6 +743,19 @@ class DeviceManager {
         }
         // check for potential process loops like described in ZP-5
         return $this->loopdetection->ProcessLoopDetectionIsHierarchyResyncRequired();
+    }
+
+    /**
+     * Indicates if an Outlook via ActiveSync is connected.
+     *
+     * @access public
+     * @return boolean
+     */
+    public function IsOutlookClient() {
+        if (Request::GetDeviceType() == "WindowsOutlook" && ($this->device->GetOLPluginVersion() !== false || Request::HasOLPluginStats())) {
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -1041,11 +1105,35 @@ class DeviceManager {
      * @access private
      * @return string
      */
-
     private function getPolicyName() {
         $policyName = ZPush::GetBackend()->GetUserPolicyName();
         $policyName = ((!empty($policyName) && $policyName !== false) ? $policyName : ASDevice::DEFAULTPOLICYNAME);
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("DeviceManager->getPolicyName(): determined policy name: '%s'", $policyName));
         return $policyName;
+    }
+
+    /**
+     * Generates and SyncFolder object and returns it.
+     *
+     * @param string    $store
+     * @param string    $folderid
+     * @param string    $name
+     * @param int       $type
+     *
+     * @access private
+     * @returns SyncFolder
+     */
+    private function getAdditionalSyncFolder($store, $folderid, $name, $type) {
+        $folder = new SyncFolder();
+        $folder->BackendId = $folderid;
+        $folder->serverid = $this->GetFolderIdForBackendId($folder->BackendId, true);
+        $folder->parentid = 0;                  // only top folders are supported
+        $folder->displayname = $name;
+        $folder->type = $type;
+        // save store as custom property which is not streamed directly to the device
+        $folder->NoBackendFolder = true;
+        $folder->Store = $store;
+
+        return $folder;
     }
 }

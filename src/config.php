@@ -280,6 +280,33 @@
     // might result in timeout. Default is 10.
     define('SEARCH_MAXRESULTS', 10);
 
+/**********************************************************************************
+ *  Kopano Outlook Extension - Settings
+ *
+ *  The Kopano Outlook Extension (KOE) provides MS Outlook 2013 and newer with
+ *  functionality not provided by ActiveSync or not implemented by Outlook.
+ *  For more information, see: https://wiki.z-hub.io/x/z4Aa
+ */
+    // Global Address Book functionality
+    define('KOE_CAPABILITY_GAB', true);
+    // Synchronize mail flags from the server to Outlook/KOE
+    define('KOE_CAPABILITY_RECEIVEFLAGS', true);
+    // Encode flags when sending from Outlook/KOE
+    define('KOE_CAPABILITY_SENDFLAGS', true);
+    // Out-of-office support
+    define('KOE_CAPABILITY_OOF', true);
+    // Out-of-office support with start & end times (superseeds KOE_CAPABILITY_OOF)
+    define('KOE_CAPABILITY_OOFTIMES', true);
+    // Notes support
+    define('KOE_CAPABILITY_NOTES', true);
+
+    // To synchronize the GAB KOE, the GAB store and folderid need to be specified.
+    // Use the gab-sync script to generate this data. The name needs to
+    // match the config of the gab-sync script. 
+    // More information here: https://wiki.z-hub.io/x/z4Aa (GAB Sync Script)
+    define('KOE_GAB_STORE', 'SYSTEM');
+    define('KOE_GAB_FOLDERID', '');
+    define('KOE_GAB_NAME', 'Z-Push-KOE-GAB');
 
 /**********************************************************************************
  *  Synchronize additional folders to all mobiles
