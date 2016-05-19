@@ -333,7 +333,7 @@
  *                  If set to false, full writing permissions are required.
  *
  *  Additional notes:
- *  - on Kopanp systems use backend/kopano/listfolders.php script to get a list
+ *  - on Kopano systems use backend/kopano/listfolders.php script to get a list
  *    of available folders
  *
  *  - all Z-Push users must have at least reading permissions so the configured
