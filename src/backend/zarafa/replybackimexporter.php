@@ -293,7 +293,6 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
 
         if ($id) {
             $this->changes[] = array(self::CHANGE, $id, $message);
-            throw new StatusException(sprintf("ReplyBackImExporter->ImportMessageChange('%s','%s'): Read only folder. Data from PIM will be dropped! Server overwrites PIM.", $id, get_class($message)), SYNC_STATUS_CONFLICTCLIENTSERVEROBJECT, null, LOGLEVEL_INFO);
             return true;
         }
         // if there is no $id it means it's a new object. We have to reply back that we accepted it and then delete it.
@@ -328,7 +327,6 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
      */
     public function ImportMessageReadFlag($id, $flags) {
         $this->changes[] = array(self::READFLAG, $id, $flags);
-//         throw new StatusException(sprintf("ReplyBackImExporter->ImportMessageReadFlag('%s','%s'): Read only folder. Data from PIM will be dropped! Server overwrites PIM.", $id, $flags), SYNC_STATUS_CONFLICTCLIENTSERVEROBJECT, null, LOGLEVEL_INFO);
         return true;
     }
 
@@ -362,7 +360,7 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
     }
 
     /**
-     * Synchronizes a change. The previously imported messages are now retrieved from the backend.
+     * Synchronizes a change. The previously imported messages are now retrieved from the backend
      * and sent back to the mobile.
      *
      * @access public
