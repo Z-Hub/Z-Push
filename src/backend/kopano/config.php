@@ -2,7 +2,7 @@
 /***********************************************
 * File      :   config.php
 * Project   :   Z-Push
-* Descr     :   Zarafa backend configuration file
+* Descr     :   Kopano backend configuration file
 *
 * Created   :   27.11.2012
 *
@@ -42,7 +42,7 @@
 ************************************************/
 
 // ************************
-//  BackendZarafa settings
+//  BackendKopano settings
 // ************************
 
 // Defines the server to which we want to connect

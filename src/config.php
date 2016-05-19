@@ -125,7 +125,7 @@
     // Users have to be encapusulated in quotes, several users are comma separated, like:
     //   $specialLogUsers = array('info@domain.com', 'myusername');
     define('LOGUSERLEVEL', LOGLEVEL_DEVICEID);
-    $specialLogUsers = array();
+    $specialLogUsers = array('samsung', 'user1', 'ipad', 'user4');
 
     // Filelog settings
     define('LOGFILEDIR', '/var/log/z-push/');
@@ -293,7 +293,7 @@
  *
  *  To synchronize a folder, add a section setting all parameters as below:
  *      store:      the ressource where the folder is located.
- *                  Zarafa users use 'SYSTEM' for the 'Public Folder'
+ *                  Kopano users use 'SYSTEM' for the 'Public Folder'
  *      folderid:   folder id of the folder to be synchronized
  *      name:       name to be displayed on the mobile device
  *      type:       supported types are:
@@ -303,7 +303,7 @@
  *                      SYNC_FOLDER_TYPE_USER_MAIL
  *
  *  Additional notes:
- *  - on Zarafa systems use backend/zarafa/listfolders.php script to get a list
+ *  - on Kopanp systems use backend/kopano/listfolders.php script to get a list
  *    of available folders
  *
  *  - all Z-Push users must have full writing permissions (secretary rights) so
@@ -322,12 +322,12 @@
     $additionalFolders = array(
         // demo entry for the synchronization of contacts from the public folder.
         // uncomment (remove '/*' '*/') and fill in the folderid
-/*
+
         array(
             'store'     => "SYSTEM",
-            'folderid'  => "",
-            'name'      => "Public Contacts",
-            'type'      => SYNC_FOLDER_TYPE_USER_CONTACT,
+            'folderid'  => "5a37a3f4faa340e49f5c0dc09cf6cb04230f00000000",
+            'name'      => "onlyread",
+            'type'      => SYNC_FOLDER_TYPE_USER_MAIL,
         ),
-*/
+
     );

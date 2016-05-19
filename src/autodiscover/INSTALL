@@ -68,7 +68,7 @@ Your configuration requires that this type of login is possible:
 - the entire email address is used to login.
  
 Which option is used has to be configured in the AutoDiscover configuration and
-in the underlying platform (e.g. ZCP (hosting mode)).
+in the underlying platform (e.g. KC (hosting mode)).
 Most companies use the user name as local part of the email by default. From the
 AutoDiscover point of view, it is not required that user is able to receive 
 emails at the used email address. It is recommended allowing that in order not 

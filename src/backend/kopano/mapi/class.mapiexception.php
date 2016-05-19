@@ -77,7 +77,7 @@
                 case MAPI_E_UNCONFIGURED:
                     return _("Logon Failed. Please check your username/password.");
                 case MAPI_E_NETWORK_ERROR:
-                    return _("Can not connect to Zarafa server.");
+                    return _("Can not connect to Kopano server.");
                 case MAPI_E_UNKNOWN_ENTRYID:
                     return _("Can not open object with provided id.");
                 case MAPI_E_NO_RECIPIENTS:

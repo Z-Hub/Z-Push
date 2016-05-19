@@ -102,7 +102,7 @@ class ZPush {
     const STATE_VERSION = IStateMachine::STATEVERSION_02;
 
     static private $autoloadBackendPreference = array(
-                    "BackendZarafa",
+                    "BackendKopano",
                     "BackendCombined",
                     "BackendIMAP",
                     "BackendVCardDir",

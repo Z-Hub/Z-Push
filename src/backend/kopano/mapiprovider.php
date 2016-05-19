@@ -1632,7 +1632,7 @@ class MAPIProvider {
     */
     private function setNote($mapimessage, $note) {
         // Touchdown does not send categories if all are unset or there is none.
-        // Setting it to an empty array will unset the property in Zarafa as well
+        // Setting it to an empty array will unset the property in KC as well
         if (!isset($note->categories)) $note->categories = array();
 
         $this->setPropsInMAPI($mapimessage, $note, MAPIMapping::GetNoteMapping());

@@ -5,7 +5,7 @@
 * Project   :   Z-Push
 * Descr     :   This is a small command line
 *               client to see and modify the
-*               wipe status of Zarafa users.
+*               wipe status of Kopano users.
 *
 * Created   :   14.05.2010
 *
