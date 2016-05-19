@@ -134,6 +134,9 @@ class FolderChange extends RequestProcessor {
             // the hierarchyCache should now fully be initialized - check for changes in the additional folders
             $changesMem->Config(ZPush::GetAdditionalSyncFolders(false));
 
+            // reset to default store in backend
+            self::$backend->Setup(false);
+
             // there are unprocessed changes in the hierarchy, trigger resync
             if ($changesMem->GetChangeCount() > 0)
                 throw new StatusException("HandleFolderChange() can not proceed as there are unprocessed hierarchy changes", SYNC_FSSTATUS_SERVERERROR);

@@ -862,6 +862,13 @@ class ZPushAdminCLI {
         echo "Wiped on:\t\t". ($device->GetWipeActionOn() ? strftime("%Y-%m-%d %H:%M", $device->GetWipeActionOn()) : "not set")."\n";
         echo "Policy name:\t\t". ($device->GetPolicyName() ? $device->GetPolicyName() : ASDevice::DEFAULTPOLICYNAME)."\n";
 
+        if ($device->GetKoeVersion()) {
+            echo "Kopano Outlook Extension:\n";
+            echo "\tVersion:\t". $device->GetKoeVersion() ."\n";
+            echo "\tBuild:\t\t". $device->GetKoeBuild() ."\n";
+            echo "\tBuild Date:\t". strftime("%Y-%m-%d %H:%M",$device->GetKoeBuildDate()) ."\n";
+        }
+
         echo "Attention needed:\t";
 
         if ($device->GetDeviceError())

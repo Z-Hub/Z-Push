@@ -341,6 +341,35 @@ class ZPush {
             throw new FatalMisconfigurationException("The PING_HIGHER_BOUND_LIFETIME value must be greater or equal to PING_LOWER_BOUND_LIFETIME.");
         }
 
+        // Check KOE flags
+        if (!defined('KOE_CAPABILITY_GAB')) {
+            define('KOE_CAPABILITY_GAB', false);
+        }
+        if (!defined('KOE_CAPABILITY_RECEIVEFLAGS')) {
+            define('KOE_CAPABILITY_RECEIVEFLAGS', false);
+        }
+        if (!defined('KOE_CAPABILITY_SENDFLAGS')) {
+            define('KOE_CAPABILITY_SENDFLAGS', false);
+        }
+        if (!defined('KOE_CAPABILITY_OOF')) {
+            define('KOE_CAPABILITY_OOF', false);
+        }
+        if (!defined('KOE_CAPABILITY_OOFTIMES')) {
+            define('KOE_CAPABILITY_OOFTIMES', false);
+        }
+        if (!defined('KOE_CAPABILITY_NOTES')) {
+            define('KOE_CAPABILITY_NOTES', false);
+        }
+        if (!defined('KOE_GAB_FOLDERID')) {
+            define('KOE_GAB_FOLDERID', '');
+        }
+        if (!defined('KOE_GAB_STORE')) {
+            define('KOE_GAB_STORE', '');
+        }
+        if (!defined('KOE_GAB_NAME')) {
+            define('KOE_GAB_NAME', false);
+        }
+
         // the check on additional folders will not throw hard errors, as this is probably changed on live systems
         if (isset($additionalFolders) && !is_array($additionalFolders))
             ZLog::Write(LOGLEVEL_ERROR, "ZPush::CheckConfig() : The additional folders synchronization not available as array.");
