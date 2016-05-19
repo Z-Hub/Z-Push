@@ -46,7 +46,10 @@
 ************************************************/
 
 define("PHP_MAPI_PATH", "/usr/share/php/mapi/");
-if (CheckMapiExtVersion('7.2.0')) {
+if (CheckMapiExtVersion('8.0.0')) {
+    define('MAPI_SERVER', 'default:');
+}
+elseif (CheckMapiExtVersion('7.2.0')) {
     define('MAPI_SERVER', 'file:///var/run/zarafad/server.sock');
 }
 else {
