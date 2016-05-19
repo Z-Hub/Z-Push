@@ -357,7 +357,7 @@
     $additionalFolders = array(
         // demo entry for the synchronization of contacts from the public folder.
         // uncomment (remove '/*' '*/') and fill in the folderid
-
+/*
         array(
             'store'     => "SYSTEM",
             'folderid'  => "",
@@ -365,5 +365,5 @@
             'type'      => SYNC_FOLDER_TYPE_USER_CONTACT,
             'readonly'  => false,
         ),
-
+*/
     );
