@@ -628,11 +628,11 @@ class Request {
 
         if (!isset(self::$expectedConnectionTimeout)) {
             // Apple and Windows Phone have higher timeouts (4min = 240sec)
-            if (stripos(SYNC_TIMOUT_LONG_DEVICETYPES, self::GetDeviceType()) !== false) {
+            if (stripos(SYNC_TIMEOUT_LONG_DEVICETYPES, self::GetDeviceType()) !== false) {
                 self::$expectedConnectionTimeout = 210;
             }
             // Samsung devices have a intermediate timeout (90sec)
-            else if (stripos(SYNC_TIMOUT_MEDIUM_DEVICETYPES, self::GetDeviceType()) !== false) {
+            else if (stripos(SYNC_TIMEOUT_MEDIUM_DEVICETYPES, self::GetDeviceType()) !== false) {
                 self::$expectedConnectionTimeout = 85;
             }
             else {

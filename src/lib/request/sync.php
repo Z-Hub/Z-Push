@@ -1089,7 +1089,7 @@ class Sync extends RequestProcessor {
         }
 
         if($sc->GetParameter($spa, "getchanges") && $spa->HasFolderId() && $spa->HasContentClass() && $spa->HasSyncKey()) {
-            $moreAvailbleSent = false;
+            $moreAvailableSent = false;
             $windowSize = self::$deviceManager->GetWindowSize($spa->GetFolderId(), $spa->GetUuid(), $spa->GetUuidCounter(), $changecount);
 
             // limit windowSize to the max available limit of the global window size left
@@ -1102,7 +1102,7 @@ class Sync extends RequestProcessor {
             // or there is a move state (another sync should be done afterwards)
             if($changecount > $windowSize || $spa->GetMoveState() !== false) {
                 self::$encoder->startTag(SYNC_MOREAVAILABLE, false, true);
-                $moreAvailbleSent = true;
+                $moreAvailableSent = true;
                 $spa->DelFolderStat();
             }
         }
@@ -1166,9 +1166,10 @@ class Sync extends RequestProcessor {
             if (Request::IsRequestTimeoutReached()) {
                 ZLog::Write(LOGLEVEL_DEBUG, "HandleSync(): Stopping export as maximum request timeout is almost reached!");
                 // Send a <MoreAvailable/> tag if we reached the request timout, there are more changes and a moreavailable was not already send
-                if (!$moreAvailbleSent && ($n > $windowSize)) {
+                if (!$moreAvailableSent && ($n > $windowSize)) {
                     self::$encoder->startTag(SYNC_MOREAVAILABLE, false, true);
                     $spa->DelFolderStat();
+                    $moreAvailableSent = true;
                 }
             }
 

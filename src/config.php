@@ -269,8 +269,8 @@
     // If a timeout is almost reached the server will break and sent the results it has until this
     // point. You can add DeviceType strings to the categories.
     // In general longer timeouts are better, because more data can be streamed at once.
-    define('SYNC_TIMOUT_MEDIUM_DEVICETYPES', "SAMSUNGGTI");
-    define('SYNC_TIMOUT_LONG_DEVICETYPES',   "iPod, iPad, iPhone, WP, WindowsOutlook");
+    define('SYNC_TIMEOUT_MEDIUM_DEVICETYPES', "SAMSUNGGTI");
+    define('SYNC_TIMEOUT_LONG_DEVICETYPES',   "iPod, iPad, iPhone, WP, WindowsOutlook");
 
 /**********************************************************************************
  *  Backend settings
