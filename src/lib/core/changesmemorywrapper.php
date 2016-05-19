@@ -198,13 +198,21 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
         if (isset($this->destinationImporter)) {
             // normally the $folder->type is not set, but we need this value to check if the change operation is permitted
             // e.g. system folders can normally not be changed - set the type from cache and let the destinationImporter decide
-            if (!isset($folder->type)) {
+            if (!isset($folder->type) || ! $folder->type) {
                 $cacheFolder = $this->GetFolder($folder->serverid);
                 $folder->type = $cacheFolder->type;
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("ChangesMemoryWrapper->ImportFolderChange(): Set foldertype for folder '%s' from cache as it was not sent: '%s'", $folder->displayname, $folder->type));
             }
 
-            $retFolder = $this->destinationImporter->ImportFolderChange($folder);
+            // KOE ZO-42: When Notes folders are updated in Outlook, it tries to update the name (that fails by default, as it's a system folder)
+            // catch this case here and ignore the change
+            if (($folder->type == SYNC_FOLDER_TYPE_NOTE || $folder->type == SYNC_FOLDER_TYPE_USER_NOTE) && ZPush::GetDeviceManager()->IsKoe()) {
+                $retFolder = false;
+            }
+            // do regular folder update
+            else {
+                $retFolder = $this->destinationImporter->ImportFolderChange($folder);
+            }
 
             // if the operation was sucessfull, update the HierarchyCache
             if ($retFolder) {
