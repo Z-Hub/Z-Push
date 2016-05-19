@@ -2238,7 +2238,6 @@ class BackendKopano implements IBackend, ISearchProvider {
                 $enumblock = mapi_freebusydata_enumblocks($fbDataUser, $start, $end);
                 mapi_freebusyenumblock_reset($enumblock);
 
-                // FIXME: use WBXMLDecoder::ResetInWhile("freebusyEnumblock"); after merging back into develop branch
                 while(true) {
                     $blocks = mapi_freebusyenumblock_next($enumblock, self::FREEBUSYENUMBLOCKS);
                     if(!$blocks) {
