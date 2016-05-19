@@ -94,9 +94,9 @@ class Request {
     static private $occurence; //TODO
     static private $saveInSent;
     static private $acceptMultipart;
-    static private $olPluginVersion;
-    static private $olPluginBuild;
-    static private $olPluginBuildDate;
+    static private $koeVersion;
+    static private $koeBuild;
+    static private $koeBuildDate;
 
 
     /**
@@ -238,9 +238,9 @@ class Request {
 
         if (isset(self::$headers["x-push-plugin"])) {
             list($version, $build, $buildDate) = explode("/", self::$headers["x-push-plugin"]);
-            self::$olPluginVersion = self::filterEvilInput($version, self::NUMBERSDOT_ONLY);
-            self::$olPluginBuild = self::filterEvilInput($build, self::HEX_ONLY);
-            self::$olPluginBuildDate = strtotime(self::filterEvilInput($buildDate, self::ISO8601));
+            self::$koeVersion = self::filterEvilInput($version, self::NUMBERSDOT_ONLY);
+            self::$koeBuild = self::filterEvilInput($build, self::HEX_ONLY);
+            self::$koeBuildDate = strtotime(self::filterEvilInput($buildDate, self::ISO8601));
         }
 
         if (defined('USE_X_FORWARDED_FOR_HEADER') && USE_X_FORWARDED_FOR_HEADER == true && isset(self::$headers["x-forwarded-for"])) {
@@ -682,51 +682,61 @@ class Request {
     }
 
     /**
-     * Indicates if the request contained the OL plugin stats header.
+     * Indicates if the request contained the KOE stats header.
      *
      * @access public
      * @return boolean
      */
-    static public function HasOLPluginStats() {
-        return isset(self::$olPluginVersion) && isset(self::$olPluginBuild) && isset(self::$olPluginBuildDate);
+    static public function HasKoeStats() {
+        return isset(self::$koeVersion) && isset(self::$koeBuild) && isset(self::$koeBuildDate);
     }
 
     /**
-     * Returns the version number of the OL plugin informed by the stats header.
+     * Returns the version number of the KOE informed by the stats header.
      *
      * @access public
      * @return string
      */
-    static public function GetOLPluginVersion() {
-        if (isset(self::$olPluginVersion))
-            return self::$olPluginVersion;
+    static public function GetKoeVersion() {
+        if (isset(self::$koeVersion))
+            return self::$koeVersion;
         else
             return self::UNKNOWN;
     }
 
     /**
-     * Returns the build of the OL plugin informed by the stats header.
+     * Returns the build of the KOE informed by the stats header.
      *
      * @access public
      * @return string
      */
-    static public function GetOLPluginBuild() {
-        if (isset(self::$olPluginBuild))
-            return self::$olPluginBuild;
+    static public function GetKoeBuild() {
+        if (isset(self::$koeBuild))
+            return self::$koeBuild;
         else
             return self::UNKNOWN;
     }
 
     /**
-     * Returns the build date of the OL plugin informed by the stats header.
+     * Returns the build date of the KOE informed by the stats header.
      *
      * @access public
      * @return string
      */
-    static public function GetOLPluginBuildDate() {
-        if (isset(self::$olPluginBuildDate))
-            return self::$olPluginBuildDate;
+    static public function GetKoeBuildDate() {
+        if (isset(self::$koeBuildDate))
+            return self::$koeBuildDate;
         else
             return self::UNKNOWN;
+    }
+
+    /**
+     * Returns whether it is an Outlook client.
+     *
+     * @access public
+     * @return boolean
+     */
+    static public function IsOutlook() {
+        return (self::GetDeviceType() == "WindowsOutlook");
     }
 }

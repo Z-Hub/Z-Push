@@ -397,7 +397,7 @@ class Sync extends RequestProcessor {
                     }
 
                     // unset filtertype for KOE GAB folder
-                    if (KOE_CAPABILITY_GAB && self::$deviceManager->IsOutlookClient() && $spa->GetBackendFolderId() == self::$deviceManager->GetKoeGabBackendFolderId()) {
+                    if (KOE_CAPABILITY_GAB && self::$deviceManager->IsKoe() && $spa->GetBackendFolderId() == self::$deviceManager->GetKoeGabBackendFolderId()) {
                         $spa->SetFilterType(SYNC_FILTERTYPE_ALL);
                         ZLog::Write(LOGLEVEL_DEBUG, "HandleSync(): KOE GAB folder - setting filter type to unlimited");
                     }
@@ -474,8 +474,8 @@ class Sync extends RequestProcessor {
                                 $message = ZPush::getSyncObjectFromFolderClass($spa->GetContentClass());
 
                                 // KOE ZO-42: OL sends Notes as Appointments
-                                if ($spa->GetContentClass() == "Notes" && KOE_CAPABILITY_NOTES && self::$deviceManager->IsOutlookClient()) {
-                                    ZLog::Write(LOGLEVEL_DEBUG, "HandleSync(): Outlook sends Notes as Appointments, read as SyncAppointment and convert it into a SyncNote object.");
+                                if ($spa->GetContentClass() == "Notes" && KOE_CAPABILITY_NOTES && self::$deviceManager->IsKoe()) {
+                                    ZLog::Write(LOGLEVEL_DEBUG, "HandleSync(): KOE sends Notes as Appointments, read as SyncAppointment and convert it into a SyncNote object.");
                                     $message = new SyncAppointment();
                                     $message->Decode(self::$decoder);
 

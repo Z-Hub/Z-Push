@@ -56,7 +56,7 @@ class Settings extends RequestProcessor {
             return false;
 
         // add capability header for KOE
-        if(self::$deviceManager->IsOutlookClient()) {
+        if(self::$deviceManager->IsKoe()) {
             // define the supported capabilites
             $cap = array();
             if(KOE_CAPABILITY_GAB)           $cap[] = "gab";

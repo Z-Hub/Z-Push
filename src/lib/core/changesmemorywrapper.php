@@ -206,7 +206,7 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
 
             // KOE ZO-42: When Notes folders are updated in Outlook, it tries to update the name (that fails by default, as it's a system folder)
             // catch this case here and ignore the change
-            if (($folder->type == SYNC_FOLDER_TYPE_NOTE || $folder->type == SYNC_FOLDER_TYPE_USER_NOTE) && ZPush::GetDeviceManager()->IsOutlookClient()) {
+            if (($folder->type == SYNC_FOLDER_TYPE_NOTE || $folder->type == SYNC_FOLDER_TYPE_USER_NOTE) && ZPush::GetDeviceManager()->IsKoe()) {
                 $retFolder = false;
             }
             // do regular folder update

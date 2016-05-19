@@ -88,7 +88,7 @@ class SendMail extends RequestProcessor {
             $sm->saveinsent = Request::GetGETSaveInSent();
         }
 
-        // KOE ZO-6: grep for the OL header and set flags accordingly.
+        // KOE ZO-6: grep for the KOE header and set flags accordingly.
         // The header has the values verb/message-source-key/folder-source-key
         if (KOE_CAPABILITY_SENDFLAGS && preg_match("/X-Push-Flags: (\d{3})\/([\da-f]+)\/([\da-f]+)/i", $sm->mime, $ol_flags)) {
             // "reply" and "reply-all" are handled as "reply"

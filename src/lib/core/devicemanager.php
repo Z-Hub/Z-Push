@@ -103,8 +103,8 @@ class DeviceManager {
 
         $this->additionalFoldersHash = $this->getAdditionalFoldersHash();
 
-        if ($this->IsOutlookClient() && $this->device->GetOLPluginVersion() !== false) {
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("KOE: %s / %s / %s", $this->device->GetOLPluginVersion(), $this->device->GetOLPluginBuild(), strftime("%Y-%m-%d %H:%M", $this->device->GetOLPluginBuildDate())));
+        if ($this->IsKoe() && $this->device->GetKoeVersion() !== false) {
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("KOE: %s / %s / %s", $this->device->GetKoeVersion(), $this->device->GetKoeBuild(), strftime("%Y-%m-%d %H:%M", $this->device->GetKoeBuildDate())));
         }
     }
 
@@ -156,10 +156,10 @@ class DeviceManager {
         $this->device->SetASVersion(Request::GetProtocolVersion());
 
         // update data from the OL plugin (if available)
-        if (Request::HasOLPluginStats()) {
-            $this->device->SetOLPluginVersion(Request::GetOLPluginVersion());
-            $this->device->SetOLPluginBuild(Request::GetOLPluginBuild());
-            $this->device->SetOLPluginBuildDate(Request::GetOLPluginBuildDate());
+        if (Request::HasKoeStats()) {
+            $this->device->SetOLPluginVersion(Request::GetKoeVersion());
+            $this->device->SetOLPluginBuild(Request::GetKoeBuild());
+            $this->device->SetOLPluginBuildDate(Request::GetKoeBuildDate());
         }
 
         // data to be saved
@@ -491,7 +491,7 @@ class DeviceManager {
         }
 
         // ZO-40: add KOE GAB folder
-        if (KOE_CAPABILITY_GAB && $this->IsOutlookClient() && KOE_GAB_STORE != "" && KOE_GAB_NAME != "") {
+        if (KOE_CAPABILITY_GAB && $this->IsKoe() && KOE_GAB_STORE != "" && KOE_GAB_NAME != "") {
             // if KOE_GAB_FOLDERID is set, use it
             if (KOE_GAB_FOLDERID != "") {
                 $folder = $this->getAdditionalSyncFolder(KOE_GAB_STORE, KOE_GAB_FOLDERID, KOE_GAB_NAME, SYNC_FOLDER_TYPE_USER_APPOINTMENT);
@@ -751,8 +751,8 @@ class DeviceManager {
      * @access public
      * @return boolean
      */
-    public function IsOutlookClient() {
-        if (Request::GetDeviceType() == "WindowsOutlook" && ($this->device->GetOLPluginVersion() !== false || Request::HasOLPluginStats())) {
+    public function IsKoe() {
+        if (Request::IsOutlook() && ($this->device->GetKoeVersion() !== false || Request::HasKoeStats())) {
             return true;
         }
         return false;

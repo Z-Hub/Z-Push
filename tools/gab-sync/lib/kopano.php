@@ -1,12 +1,44 @@
 <?php
 /***********************************************
-* File      :   zarafa.php
-* Project   :   Z-Push - tools - OL GAB sync
-* Descr     :   Zarafa implementation of SyncWorker.
+* File      :   kopano.php
+* Project   :   Z-Push - tools - GAB sync
+* Descr     :   Kopano implementation of SyncWorker.
 *
 * Created   :   28.01.2016
 *
 * Copyright 2016 Zarafa Deutschland GmbH
+*
+* This program is free software: you can redistribute it and/or modify
+* it under the terms of the GNU Affero General Public License, version 3,
+* as published by the Free Software Foundation with the following additional
+* term according to sec. 7:
+*
+* According to sec. 7 of the GNU Affero General Public License, version 3,
+* the terms of the AGPL are supplemented with the following terms:
+*
+* "Zarafa" is a registered trademark of Zarafa B.V.
+* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
+* The licensing of the Program under the AGPL does not imply a trademark license.
+* Therefore any rights, title and interest in our trademarks remain entirely with us.
+*
+* However, if you propagate an unmodified version of the Program you are
+* allowed to use the term "Z-Push" to indicate that you distribute the Program.
+* Furthermore you may use our trademarks where it is necessary to indicate
+* the intended purpose of a product or service provided you use it in accordance
+* with honest practices in industrial or commercial matters.
+* If you want to propagate modified versions of the Program under the name "Z-Push",
+* you may only do so if you have a written permission by Zarafa Deutschland GmbH
+* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+* GNU Affero General Public License for more details.
+*
+* You should have received a copy of the GNU Affero General Public License
+* along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*
+* Consult LICENSE file for details
 * ************************************************/
 
 include_once("syncworker.php");
@@ -19,8 +51,8 @@ include_once('mapi/mapiguid.php');
 
 define('PR_EMS_AB_THUMBNAIL_PHOTO', mapi_prop_tag(PT_BINARY, 0x8C9E));
 
-class Zarafa extends SyncWorker {
-    const NAME = "Z-Push Zarafa GAB Sync";
+class Kopano extends SyncWorker {
+    const NAME = "Z-Push Kopano GAB Sync";
     const VERSION = "1.0";
     private $session;
     private $store;
@@ -35,7 +67,7 @@ class Zarafa extends SyncWorker {
         parent::__construct();
         $this->session = mapi_logon_zarafa(USERNAME, PASSWORD, SERVER, CERTIFICATE, CERTIFICATE_PASSWORD, 0, self::VERSION, self::NAME. " ". self::VERSION);
         if (mapi_last_hresult()) {
-            $this->Terminate(sprintf("Zarafa: login failed with error code: 0x%08X", mapi_last_hresult()));
+            $this->Terminate(sprintf("Kopano: login failed with error code: 0x%08X", mapi_last_hresult()));
         }
         $this->mainUser = USERNAME;
         $this->store = $this->openMessageStore(HIDDEN_FOLDERSTORE);
@@ -69,7 +101,7 @@ class Zarafa extends SyncWorker {
         // mapi_folder_createfolder() fails if a folder with this name already exists -> MAPI_E_COLLISION
         $newfolder = mapi_folder_createfolder($parentfolder, HIDDEN_FOLDERNAME, "");
         if (mapi_last_hresult())
-            $this->Terminate(sprintf("Zarafa->CreateHiddenFolder(): Error, mapi_folder_createfolder() failed: 0x%08X", mapi_last_hresult()));
+            $this->Terminate(sprintf("Kopano->CreateHiddenFolder(): Error, mapi_folder_createfolder() failed: 0x%08X", mapi_last_hresult()));
 
         // TODO: set PR_HIDDEN
         mapi_setprops($newfolder, array(PR_CONTAINER_CLASS => "IPF.Appointment"));
@@ -81,7 +113,7 @@ class Zarafa extends SyncWorker {
             return $sourcekey;
         }
         else {
-            $this->Terminate(sprintf("Zarafa->CreateHiddenFolder(): Error, folder created but PR_SOURCE_KEY not available: 0x%08X", mapi_last_hresult()));
+            $this->Terminate(sprintf("Kopano->CreateHiddenFolder(): Error, folder created but PR_SOURCE_KEY not available: 0x%08X", mapi_last_hresult()));
         }
     }
 
@@ -98,11 +130,11 @@ class Zarafa extends SyncWorker {
 
         $folderentryid = mapi_msgstore_entryidfromsourcekey($this->store, hex2bin($folderid));
         if (mapi_last_hresult())
-            $this->Terminate(sprintf("Zarafa->DeleteHiddenFolder(): Error, could not get PR_ENTRYID for hidden folder: 0x%08X", mapi_last_hresult()));
+            $this->Terminate(sprintf("Kopano->DeleteHiddenFolder(): Error, could not get PR_ENTRYID for hidden folder: 0x%08X", mapi_last_hresult()));
 
         mapi_folder_deletefolder($parentfolder, $folderentryid);
         if (mapi_last_hresult())
-            $this->Terminate(sprintf("Zarafa->DeleteHiddenFolder(): Error, mapi_folder_deletefolder() failed: 0x%08X", mapi_last_hresult()));
+            $this->Terminate(sprintf("Kopano->DeleteHiddenFolder(): Error, mapi_folder_deletefolder() failed: 0x%08X", mapi_last_hresult()));
 
         return true;
     }
@@ -139,14 +171,14 @@ class Zarafa extends SyncWorker {
      * @return boolean
      */
     protected function ClearFolderContents($folderid) {
-        $this->Log("Zarafa->ClearFolderContents: emptying folder");
+        $this->Log("Kopano->ClearFolderContents: emptying folder");
         $folder = $this->getFolder($folderid);
 
         // empty folder!
         $flags = 0;
         mapi_folder_emptyfolder($folder, $flags);
         if (mapi_last_hresult())
-            $this->Terminate("Zarafa->ClearFolderContents: Error, mapi_folder_emptyfolder() failed: 0x%08X");
+            $this->Terminate("Kopano->ClearFolderContents: Error, mapi_folder_emptyfolder() failed: 0x%08X");
 
         return true;
     }
@@ -163,23 +195,23 @@ class Zarafa extends SyncWorker {
         $folder = $this->getFolder($folderid);
         $table = mapi_folder_getcontentstable($folder);
         if (!$table)
-            $this->Terminate(sprintf("Zarafa->ClearAllNotCurrentChunkType: Error, unable to read contents table: 0x%08X", mapi_last_hresult()));
+            $this->Terminate(sprintf("Kopano->ClearAllNotCurrentChunkType: Error, unable to read contents table: 0x%08X", mapi_last_hresult()));
 
         $restriction = array(RES_PROPERTY, array(RELOP => RELOP_NE, ULPROPTAG => $this->mapiprops['chunktype'], VALUE => $this->chunkType));
         mapi_table_restrict($table, $restriction);
         $querycnt = mapi_table_getrowcount($table);
         if ($querycnt == 0) {
-            $this->Log("Zarafa->ClearAllNotCurrentChunkType: no invalid items, done!");
+            $this->Log("Kopano->ClearAllNotCurrentChunkType: no invalid items, done!");
         }
         else {
-            $this->Log(sprintf("Zarafa->ClearAllNotCurrentChunkType: found %d invalid items, deleting", $querycnt));
+            $this->Log(sprintf("Kopano->ClearAllNotCurrentChunkType: found %d invalid items, deleting", $querycnt));
             $entries = mapi_table_queryallrows($table, array(PR_ENTRYID, $this->mapiprops['chunktype']));
             $entry_ids = array_reduce($entries, function ($result, $item) {
                                                     $result[] = $item[PR_ENTRYID];
                                                     return $result;
                                                 }, array());
             mapi_folder_deletemessages($folder, array_values($entry_ids));
-            $this->Log("Zarafa->ClearAllNotCurrentChunkType: done");
+            $this->Log("Kopano->ClearAllNotCurrentChunkType: done");
         }
         $this->Log("");
         return true;
@@ -205,16 +237,16 @@ class Zarafa extends SyncWorker {
 
         $addrbook = mapi_openaddressbook($this->session);
         if (mapi_last_hresult())
-            $this->Terminate(sprintf("Zarafa->GetGAB: Error opening addressbook 0x%08X", mapi_last_hresult()));
+            $this->Terminate(sprintf("Kopano->GetGAB: Error opening addressbook 0x%08X", mapi_last_hresult()));
         $ab_entryid = mapi_ab_getdefaultdir($addrbook);
         if (mapi_last_hresult())
-            $this->Terminate(sprintf("Zarafa->GetGAB: Error, could not get default address directory: 0x%08X", mapi_last_hresult()));
+            $this->Terminate(sprintf("Kopano->GetGAB: Error, could not get default address directory: 0x%08X", mapi_last_hresult()));
         $ab_dir = mapi_ab_openentry($addrbook, $ab_entryid);
         if (mapi_last_hresult())
-            $this->Terminate(sprintf("Zarafa->GetGAB: Error, could not open default address directory: 0x%08X", mapi_last_hresult()));
+            $this->Terminate(sprintf("Kopano->GetGAB: Error, could not open default address directory: 0x%08X", mapi_last_hresult()));
         $table = mapi_folder_getcontentstable($ab_dir);
         if (mapi_last_hresult())
-            $this->Terminate(sprintf("Zarafa->GetGAB: error, could not open addressbook content table: 0x%08X", mapi_last_hresult()));
+            $this->Terminate(sprintf("Kopano->GetGAB: error, could not open addressbook content table: 0x%08X", mapi_last_hresult()));
 
         // restrict the table if we should only return one
         if ($uniqueId) {
@@ -223,10 +255,10 @@ class Zarafa extends SyncWorker {
             mapi_table_restrict($table, $restriction);
             $querycnt = mapi_table_getrowcount($table);
             if ($querycnt == 0) {
-                $this->Log(sprintf("Zarafa->GetGAB(): Single GAB entry '%s' requested but could not be found.", $uniqueId));
+                $this->Log(sprintf("Kopano->GetGAB(): Single GAB entry '%s' requested but could not be found.", $uniqueId));
             }
             elseif ($querycnt > 1) {
-                $this->Terminate(sprintf("Zarafa->GetGAB(): Single GAB entry '%s' requested but %d entries found. Aborting.", $uniqueId, $querycnt));
+                $this->Terminate(sprintf("Kopano->GetGAB(): Single GAB entry '%s' requested but %d entries found. Aborting.", $uniqueId, $querycnt));
             }
         }
 
@@ -356,7 +388,7 @@ class Zarafa extends SyncWorker {
      * @return boolean
      */
     protected function SetChunkData($folderid, $chunkName, $amountEntries, $chunkData, $chunkCRC) {
-        $log = sprintf("Zarafa->SetChunkData: %s\tEntries: %d\t Size: %d B\tCRC: %s  -  ", $chunkName, $amountEntries, strlen($chunkData), $chunkCRC);
+        $log = sprintf("Kopano->SetChunkData: %s\tEntries: %d\t Size: %d B\tCRC: %s  -  ", $chunkName, $amountEntries, strlen($chunkData), $chunkCRC);
 
             // find the chunk message in the folder
         $chunkdata = $this->findChunk($folderid, $chunkName);
@@ -407,7 +439,7 @@ class Zarafa extends SyncWorker {
 
 
     /************************************************************************************
-     * Private Zarafa stuff
+     * Private Kopano stuff
      */
 
     /**
@@ -422,7 +454,7 @@ class Zarafa extends SyncWorker {
         $folder = $this->getFolder($folderid);
         $table = mapi_folder_getcontentstable($folder);
         if (!$table)
-            $this->Log(sprintf("Zarafa->findChunk: Error, unable to read contents table to find chunk '%d': 0x%08X", $chunkId, mapi_last_hresult()));
+            $this->Log(sprintf("Kopano->findChunk: Error, unable to read contents table to find chunk '%d': 0x%08X", $chunkId, mapi_last_hresult()));
 
         $restriction = array(RES_PROPERTY, array(RELOP => RELOP_EQ, ULPROPTAG => PR_SUBJECT, VALUE => $chunkName));
         mapi_table_restrict($table, $restriction);
@@ -475,15 +507,15 @@ class Zarafa extends SyncWorker {
             $entryid = @mapi_msgstore_createentryid($this->defaultstore, $user);
 
         if(!$entryid) {
-            $this->Terminate(sprintf("Zarafa->openMessageStore(): No store found for user '%s': 0x%08X - Aborting.", $user, mapi_last_hresult));
+            $this->Terminate(sprintf("Kopano->openMessageStore(): No store found for user '%s': 0x%08X - Aborting.", $user, mapi_last_hresult));
         }
 
         $store = @mapi_openmsgstore($this->session, $entryid);
         if (!$store) {
-            $this->Terminate(sprintf("Zarafa->openMessageStore(): Could not open store for '%s': 0x%08X - Aborting.", $user, mapi_last_hresult));
+            $this->Terminate(sprintf("Kopano->openMessageStore(): Could not open store for '%s': 0x%08X - Aborting.", $user, mapi_last_hresult));
         }
 
-        $this->Log(sprintf("Zarafa->openMessageStore(): Found '%s' store of user '%s': '%s'", (($return_public)?'PUBLIC':'DEFAULT'), $user, $store));
+        $this->Log(sprintf("Kopano->openMessageStore(): Found '%s' store of user '%s': '%s'", (($return_public)?'PUBLIC':'DEFAULT'), $user, $store));
         return $store;
     }
 
@@ -512,11 +544,11 @@ class Zarafa extends SyncWorker {
             }
 
             if (!$parentfentryid)
-                $this->Terminate(sprintf("Zarafa->getRootFolder(): Error, unable to open parent folder (no entry id): 0x%08X", mapi_last_hresult()));
+                $this->Terminate(sprintf("Kopano->getRootFolder(): Error, unable to open parent folder (no entry id): 0x%08X", mapi_last_hresult()));
 
             $parentfolder = mapi_msgstore_openentry($this->store, $parentfentryid);
             if (!$parentfolder)
-                $this->Terminate(sprintf("Zarafa->CreateHiddenPublicFolder(): Error, unable to open parent folder (open entry): 0x%08X", mapi_last_hresult()));
+                $this->Terminate(sprintf("Kopano->CreateHiddenPublicFolder(): Error, unable to open parent folder (open entry): 0x%08X", mapi_last_hresult()));
 
             $this->folderCache[$rootId] = $parentfolder;
         }
@@ -534,7 +566,7 @@ class Zarafa extends SyncWorker {
         if (!isset($this->folderCache[$folderid])) {
             $folderentryid = mapi_msgstore_entryidfromsourcekey($this->store, hex2bin($folderid));
             if (!$folderentryid)
-                $this->Terminate(sprintf("Zarafa->getFolder: Error, unable to open folder (no entry id): 0x%08X", mapi_last_hresult()));
+                $this->Terminate(sprintf("Kopano->getFolder: Error, unable to open folder (no entry id): 0x%08X", mapi_last_hresult()));
 
             $this->folderCache[$folderid] = mapi_msgstore_openentry($this->store, $folderentryid);
         }
@@ -561,7 +593,7 @@ class Zarafa extends SyncWorker {
                 break;
         }
         if (!$prop) {
-            $this->Terminate(sprintf("Zarafa->getPropertyForGABvalue: Could not get find a property for '%s'. Unsupported field.", $value));
+            $this->Terminate(sprintf("Kopano->getPropertyForGABvalue: Could not get find a property for '%s'. Unsupported field.", $value));
         }
         return $prop;
     }
@@ -579,11 +611,11 @@ class Zarafa extends SyncWorker {
         $stream = mapi_openproperty($message, $prop, IID_IStream, 0, 0);
         $ret = mapi_last_hresult();
         if ($ret == MAPI_E_NOT_FOUND) {
-            $this->Log(sprintf("Zarafa>readPropStream: property 0x%s not found. It is either empty or not set. It will be ignored.", str_pad(dechex($prop), 8, 0, STR_PAD_LEFT)));
+            $this->Log(sprintf("Kopano>readPropStream: property 0x%s not found. It is either empty or not set. It will be ignored.", str_pad(dechex($prop), 8, 0, STR_PAD_LEFT)));
             return "";
         }
         elseif ($ret) {
-            $this->Log("Zarafa->readPropStream error opening stream: 0x%08X", $ret);
+            $this->Log("Kopano->readPropStream error opening stream: 0x%08X", $ret);
             return "";
         }
         $data = "";
