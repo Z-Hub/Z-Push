@@ -151,7 +151,7 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
     /**
      * Imports a message deletion, which is imported into memory
      *
-     * @param string        $id
+     * @param string        $id             id of message which is deleted
      * @param boolean       $asSoftDelete   (opt) if true, the deletion is exported as "SoftDelete", else as "Remove" - default: false
      *
      * @access public
