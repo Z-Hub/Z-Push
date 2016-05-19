@@ -258,6 +258,20 @@
     // The minimum accepted value is 1 second. The maximum accepted value is 3540 seconds (59 minutes).
     define('PING_HIGHER_BOUND_LIFETIME', false);
 
+    // Maximum response time
+    // Mobiles implement different timeouts to their TCP/IP connections. Android devices for example
+    // have a hard timeout of 30 seconds. If the server is not able to answer a request within this timeframe,
+    // the answer will not be recieved and the device will send a new one overloading the server.
+    // There are three categories
+    //   - Short timeout  - server has up within 30 seconds - is automatically applied for not categorized types
+    //   - Medium timeout - server has up to 90 seconds to respond
+    //   - Long timeout   - server has up to 4 minutes to respond
+    // If a timeout is almost reached the server will break and sent the results it has until this
+    // point. You can add DeviceType strings to the categories.
+    // In general longer timeouts are better, because more data can be streamed at once.
+    define('SYNC_TIMEOUT_MEDIUM_DEVICETYPES', "SAMSUNGGTI");
+    define('SYNC_TIMEOUT_LONG_DEVICETYPES',   "iPod, iPad, iPhone, WP, WindowsOutlook");
+
 /**********************************************************************************
  *  Backend settings
  */

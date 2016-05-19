@@ -782,6 +782,11 @@ class Sync extends RequestProcessor {
                     ZLog::Write(LOGLEVEL_DEBUG, sprintf("Sync(): no exporter setup for '%s' as GlobalWindowSize is full.", $spa->GetFolderId()));
                     $setupExporter = false;
                 }
+                // if the maximum request timeout is reached, stop processing other collections
+                if (Request::IsRequestTimeoutReached()) {
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("Sync(): no exporter setup for '%s' as request timeout reached, omitting output for collection.", $spa->GetFolderId()));
+                    $setupExporter = false;
+                }
 
                 // compare the folder statistics if the backend supports this
                 if ($setupExporter && self::$backend->HasFolderStats()) {
@@ -1084,6 +1089,7 @@ class Sync extends RequestProcessor {
         }
 
         if($sc->GetParameter($spa, "getchanges") && $spa->HasFolderId() && $spa->HasContentClass() && $spa->HasSyncKey()) {
+            $moreAvailableSent = false;
             $windowSize = self::$deviceManager->GetWindowSize($spa->GetFolderId(), $spa->GetUuid(), $spa->GetUuidCounter(), $changecount);
 
             // limit windowSize to the max available limit of the global window size left
@@ -1096,6 +1102,7 @@ class Sync extends RequestProcessor {
             // or there is a move state (another sync should be done afterwards)
             if($changecount > $windowSize || $spa->GetMoveState() !== false) {
                 self::$encoder->startTag(SYNC_MOREAVAILABLE, false, true);
+                $moreAvailableSent = true;
                 $spa->DelFolderStat();
             }
         }
@@ -1141,7 +1148,7 @@ class Sync extends RequestProcessor {
                     }
                 }
 
-                if($n >= $windowSize) {
+                if($n >= $windowSize || Request::IsRequestTimeoutReached()) {
                     ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleSync(): Exported maxItems of messages: %d / %d", $n, $changecount));
                     break;
                 }
@@ -1154,6 +1161,18 @@ class Sync extends RequestProcessor {
             }
 
             self::$encoder->endTag();
+
+            // log the request timeout
+            if (Request::IsRequestTimeoutReached()) {
+                ZLog::Write(LOGLEVEL_DEBUG, "HandleSync(): Stopping export as maximum request timeout is almost reached!");
+                // Send a <MoreAvailable/> tag if we reached the request timeout, there are more changes and a moreavailable was not already send
+                if (!$moreAvailableSent && ($n > $windowSize)) {
+                    self::$encoder->startTag(SYNC_MOREAVAILABLE, false, true);
+                    $spa->DelFolderStat();
+                    $moreAvailableSent = true;
+                }
+            }
+
             self::$topCollector->AnnounceInformation(sprintf("Outgoing %d objects%s", $n, ($n >= $windowSize)?" of ".$changecount:""), $this->singleFolder);
             $this->saveMultiFolderInfo("outgoing", $n);
             $this->saveMultiFolderInfo("queued", $changecount);

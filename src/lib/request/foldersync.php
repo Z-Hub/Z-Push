@@ -191,9 +191,7 @@ class FolderSync extends RequestProcessor {
                     $exporter->InitializeExporter($changesMem);
 
                     // Stream all changes to the ImportExportChangesMem
-                    $maxExporttime = Request::GetExpectedConnectionTimeout();
                     $totalChanges = $exporter->GetChangeCount();
-                    $started = time();
                     $exported = 0;
                     $partial = false;
                     while(is_array($exporter->Synchronize())) {
@@ -204,8 +202,8 @@ class FolderSync extends RequestProcessor {
                         }
 
                         // if partial sync is allowed, stop if this takes too long
-                        if (USE_PARTIAL_FOLDERSYNC && (time() - $started) > $maxExporttime) {
-                            ZLog::Write(LOGLEVEL_WARN, sprintf("Request->HandleFolderSync(): Exporting folders is too slow. In %d seconds only %d from %d changes were processed.",(time() - $started), $exported, $totalChanges));
+                        if (USE_PARTIAL_FOLDERSYNC && Request::IsRequestTimeoutReached()) {
+                            ZLog::Write(LOGLEVEL_WARN, sprintf("Request->HandleFolderSync(): Exporting folders is too slow. In %d seconds only %d from %d changes were processed.",(time() - $_SERVER["REQUEST_TIME"]), $exported, $totalChanges));
                             self::$topCollector->AnnounceInformation(sprintf("Partial export of %d out of %d folders", $exported, $totalChanges), true);
                             self::$deviceManager->SetFolderSyncComplete(false);
                             $partial = true;
