@@ -470,6 +470,7 @@ class DeviceManager {
             // save store as custom property which is not streamed directly to the device
             $folder->NoBackendFolder = true;
             $folder->Store = $df['store'];
+            $folder->ReadOnly = $df['readonly'];
 
             $folders[$folder->BackendId] = $folder;
         }

@@ -827,11 +827,12 @@ class ASDevice extends StateObject {
      * @param string    $folderid   the folder id of the additional folder.
      * @param string    $name       the name of the additional folder (has to be unique for all folders on the device).
      * @param string    $type       AS foldertype of SYNC_FOLDER_TYPE_USER_*
+     * @param boolean   $readonly   Indicates if the folder should be synched if the user has at least read-only permissions.
      *
      * @access public
      * @return boolean
      */
-    public function AddAdditionalFolder($store, $folderid, $name, $type) {
+    public function AddAdditionalFolder($store, $folderid, $name, $type, $readonly) {
         // check if type is of a additional user type
         if (!in_array($type, array(SYNC_FOLDER_TYPE_USER_CONTACT, SYNC_FOLDER_TYPE_USER_APPOINTMENT, SYNC_FOLDER_TYPE_USER_TASK, SYNC_FOLDER_TYPE_USER_MAIL, SYNC_FOLDER_TYPE_USER_NOTE, SYNC_FOLDER_TYPE_USER_JOURNAL))) {
             ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->AddAdditionalFolder(): folder can not be added because the specified type '%s' is not a permitted user type.", $type));
@@ -873,6 +874,7 @@ class ASDevice extends StateObject {
                             'folderid'  => $folderid,
                             'name'      => $name,
                             'type'      => $type,
+                            'readonly'  => $readonly,
                          );
         $this->additionalfolders = $af;
 
