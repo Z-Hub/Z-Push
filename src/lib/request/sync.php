@@ -784,7 +784,7 @@ class Sync extends RequestProcessor {
                 }
                 // if the maximum request timeout is reached, stop processing other collections
                 if (Request::IsRequestTimeoutReached()) {
-                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("Sync(): no exporter setup for '%s' as request timout reached, omitting output for collection.", $spa->GetFolderId()));
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("Sync(): no exporter setup for '%s' as request timeout reached, omitting output for collection.", $spa->GetFolderId()));
                     $setupExporter = false;
                 }
 
@@ -1165,7 +1165,7 @@ class Sync extends RequestProcessor {
             // log the request timeout
             if (Request::IsRequestTimeoutReached()) {
                 ZLog::Write(LOGLEVEL_DEBUG, "HandleSync(): Stopping export as maximum request timeout is almost reached!");
-                // Send a <MoreAvailable/> tag if we reached the request timout, there are more changes and a moreavailable was not already send
+                // Send a <MoreAvailable/> tag if we reached the request timeout, there are more changes and a moreavailable was not already send
                 if (!$moreAvailableSent && ($n > $windowSize)) {
                     self::$encoder->startTag(SYNC_MOREAVAILABLE, false, true);
                     $spa->DelFolderStat();
