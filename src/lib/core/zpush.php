@@ -404,6 +404,8 @@ class ZPush {
                 // save store as custom property which is not streamed directly to the device
                 $folder->NoBackendFolder = true;
                 $folder->Store = $af['store'];
+                $folder->ReadOnly = $af['readonly'];
+
                 self::$addSyncFolders[$folder->BackendId] = $folder;
             }
 

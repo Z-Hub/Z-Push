@@ -73,6 +73,8 @@ class ImportChangesICS implements IImportChanges {
     private $cutoffdate;
     private $contentClass;
     private $prefix;
+    private $moveSrcState;
+    private $moveDstState;
 
     /**
      * Constructor
@@ -116,7 +118,7 @@ class ImportChangesICS implements IImportChanges {
 
             // We throw an general error SYNC_FSSTATUS_CODEUNKNOWN (12) which is also SYNC_STATUS_FOLDERHIERARCHYCHANGED (12)
             // if this happened while doing content sync, the mobile will try to resync the folderhierarchy
-            throw new StatusException(sprintf("ImportChangesICS('%s','%s','%s'): Error, unable to open folder: 0x%X", $session, $store, Utils::PrintAsString($folderid), mapi_last_hresult()), SYNC_FSSTATUS_CODEUNKNOWN);
+            throw new StatusException(sprintf("ImportChangesICS('%s','%s'): Error, unable to open folder: 0x%X", $session, bin2hex($folderid), mapi_last_hresult()), SYNC_FSSTATUS_CODEUNKNOWN);
         }
 
         $this->mapiprovider = new MAPIProvider($this->session, $this->store);
@@ -228,6 +230,32 @@ class ImportChangesICS implements IImportChanges {
         }
 
         return $state;
+    }
+
+    /**
+     * Sets the states from move operations.
+     * When src and dst state are set, a MOVE operation is being executed.
+     *
+     * @param mixed         $srcState
+     * @param mixed         (opt) $dstState, default: null
+     *
+     * @access public
+     * @return boolean
+     */
+    public function SetMoveStates($srcState, $dstState = null) {
+        $this->moveSrcState = $srcState;
+        $this->moveDstState = $dstState;
+        return true;
+    }
+
+    /**
+     * Gets the states of special move operations.
+     *
+     * @access public
+     * @return array(0 => $srcState, 1 => $dstState)
+     */
+    public function GetMoveStates() {
+        return array($this->moveSrcState, $this->moveDstState);
     }
 
     /**

@@ -163,10 +163,11 @@ class Sync extends RequestProcessor {
                         if ($synckey == "0") {
                             $spa->RemoveSyncKey();
                             $spa->DelFolderStat();
+                            $spa->SetMoveState(false);
                         }
                         else if ($synckey !== false) {
-                            if ($synckey !== $spa->GetSyncKey() && $synckey !== $spa->GetNewSyncKey()) {
-                                ZLog::Write(LOGLEVEL_DEBUG, "HandleSync(): Synckey does not match latest saved for this folder, removing folderstat to force Exporter setup");
+                            if (($synckey !== $spa->GetSyncKey() && $synckey !== $spa->GetNewSyncKey()) || !!$spa->GetMoveState()) {
+                                ZLog::Write(LOGLEVEL_DEBUG, "HandleSync(): Synckey does not match latest saved for this folder or there is a move state, removing folderstat to force Exporter setup");
                                 $spa->DelFolderStat();
                             }
                             $spa->SetSyncKey($synckey);
@@ -819,6 +820,7 @@ class Sync extends RequestProcessor {
                             $streamimporter = new ImportChangesStream(self::$encoder, ZPush::getSyncObjectFromFolderClass($spa->GetContentClass()));
 
                             if ($exporter !== false) {
+                                $exporter->SetMoveStates($spa->GetMoveState());
                                 $exporter->Config($sc->GetParameter($spa, "state"));
                                 $exporter->ConfigContentParameters($spa->GetCPO());
                                 $exporter->InitializeExporter($streamimporter);
@@ -1091,7 +1093,8 @@ class Sync extends RequestProcessor {
                 $windowSize = $globallyAvailable;
             }
             // send <MoreAvailable/> if there are more changes than fit in the folder windowsize
-            if($changecount > $windowSize) {
+            // or there is a move state (another sync should be done afterwards)
+            if($changecount > $windowSize || $spa->GetMoveState() !== false) {
                 self::$encoder->startTag(SYNC_MOREAVAILABLE, false, true);
                 $spa->DelFolderStat();
             }
@@ -1164,7 +1167,15 @@ class Sync extends RequestProcessor {
             // changecount is initialized with 'false', so 0 means no changes!
             if ($changecount === 0 || ($changecount !== false && $changecount <= $windowSize)) {
                 self::$deviceManager->SetFolderSyncStatus($spa->GetFolderId(), DeviceManager::FLD_SYNC_COMPLETED);
-                $this->setFolderStat($spa, $newFolderStat);
+
+                // we should update the folderstat, but we recheck to see if it changed. If so, it's not updated to force another sync
+                $newFolderStatAfterExport = self::$backend->GetFolderStat(ZPush::GetAdditionalSyncFolderStore($spa->GetBackendFolderId()), $spa->GetBackendFolderId());
+                if ($newFolderStat === $newFolderStatAfterExport) {
+                    $this->setFolderStat($spa, $newFolderStat);
+                }
+                else {
+                    ZLog::Write(LOGLEVEL_DEBUG, "Sync() Folderstat differs after export, force another exporter run.");
+                }
             }
             else
                 self::$deviceManager->SetFolderSyncStatus($spa->GetFolderId(), DeviceManager::FLD_SYNC_INPROGRESS);
@@ -1177,8 +1188,13 @@ class Sync extends RequestProcessor {
             self::$topCollector->AnnounceInformation("Saving state");
 
             try {
-                if (isset($exporter) && $exporter)
+                if (isset($exporter) && $exporter) {
                     $state = $exporter->GetState();
+
+                    // update the move state (it should be gone now)
+                    list($moveState,) = $exporter->GetMoveStates();
+                    $spa->SetMoveState($moveState);
+                }
 
                 // nothing exported, but possibly imported - get the importer state
                 else if ($sc->GetParameter($spa, "state") !== null)
@@ -1270,28 +1286,32 @@ class Sync extends RequestProcessor {
         $status = $this->loadStates($sc, $spa, $actiondata, true);
 
         try {
-            // Configure importer with last state
-            $this->importer = self::$backend->GetImporter($spa->GetBackendFolderId());
+            if ($status == SYNC_STATUS_SUCCESS) {
+                // Configure importer with last state
+                $this->importer = self::$backend->GetImporter($spa->GetBackendFolderId());
 
-            // if something goes wrong, ask the mobile to resync the hierarchy
-            if ($this->importer === false)
-                throw new StatusException(sprintf("Sync->getImporter(): no importer for folder id %s/%s", $spa->GetFolderId(), $spa->GetBackendFolderId()), SYNC_STATUS_FOLDERHIERARCHYCHANGED);
+                // if something goes wrong, ask the mobile to resync the hierarchy
+                if ($this->importer === false)
+                    throw new StatusException(sprintf("Sync->getImporter(): no importer for folder id %s/%s", $spa->GetFolderId(), $spa->GetBackendFolderId()), SYNC_STATUS_FOLDERHIERARCHYCHANGED);
 
-            // if there is a valid state obtained after importing changes in a previous loop, we use that state
-            if (isset($actiondata["failstate"]) && isset($actiondata["failstate"]["failedsyncstate"])) {
-                $this->importer->Config($actiondata["failstate"]["failedsyncstate"], $spa->GetConflict());
+                // set the move state so the importer is aware of previous made moves
+                $this->importer->SetMoveStates($spa->GetMoveState());
+
+                // if there is a valid state obtained after importing changes in a previous loop, we use that state
+                if (isset($actiondata["failstate"]) && isset($actiondata["failstate"]["failedsyncstate"])) {
+                    $this->importer->Config($actiondata["failstate"]["failedsyncstate"], $spa->GetConflict());
+                }
+                else
+                    $this->importer->Config($sc->GetParameter($spa, "state"), $spa->GetConflict());
+
+                // the CPO is also needed by the importer to check if imported changes are inside the sync window - see ZP-258
+                $this->importer->ConfigContentParameters($spa->GetCPO());
+                $this->importer->LoadConflicts($spa->GetCPO(), $sc->GetParameter($spa, "state"));
             }
-            else
-                $this->importer->Config($sc->GetParameter($spa, "state"), $spa->GetConflict());
-
-            // the CPO is also needed by the importer to check if imported changes are inside the sync window - see ZP-258
-            $this->importer->ConfigContentParameters($spa->GetCPO());
         }
         catch (StatusException $stex) {
            $status = $stex->getCode();
         }
-
-        $this->importer->LoadConflicts($spa->GetCPO(), $sc->GetParameter($spa, "state"));
 
         return $status;
     }

@@ -684,6 +684,7 @@ class SyncCollections implements Iterator {
             if ($exporter !== false && isset($this->addparms[$folderid]["state"])) {
                 $importer = false;
 
+                $exporter->SetMoveStates($spa->GetMoveState());
                 $exporter->Config($this->addparms[$folderid]["state"], BACKEND_DISCARD_DATA);
                 $exporter->ConfigContentParameters($spa->GetCPO());
                 $ret = $exporter->InitializeExporter($importer);

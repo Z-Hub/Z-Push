@@ -78,7 +78,7 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
             foreach($state as $addKey => $addFolder) {
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("ChangesMemoryWrapper->Config(AdditionalFolders) : process folder '%s'", $addFolder->displayname));
                 if (isset($addFolder->NoBackendFolder) && $addFolder->NoBackendFolder == true) {
-                    $hasRights = ZPush::GetBackend()->Setup($addFolder->Store, true, $addFolder->BackendId);
+                    $hasRights = ZPush::GetBackend()->Setup($addFolder->Store, true, $addFolder->BackendId, $addFolder->ReadOnly);
                     // delete the folder on the device
                     if (! $hasRights) {
                         // delete the folder only if it was an additional folder before, else ignore it
@@ -115,6 +115,8 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
     public function GetState() { return false;}
     public function LoadConflicts($contentparameters, $state) { return true; }
     public function ConfigContentParameters($contentparameters) { return true; }
+    public function SetMoveStates($srcState, $dstState = null) { return true; }
+    public function GetMoveStates() { return array(false, false); }
     public function ImportMessageReadFlag($id, $flags) { return true; }
     public function ImportMessageMove($id, $newfolder) { return true; }
 

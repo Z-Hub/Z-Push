@@ -104,6 +104,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
         $this->folderStatCache = array();
 
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendZarafa using PHP-MAPI version: %s - PHP version: %s", phpversion("mapi"), phpversion()));
+        KopanoChangesWrapper::SetBackend($this);
     }
 
     /**
@@ -224,11 +225,12 @@ class BackendZarafa implements IBackend, ISearchProvider {
      * @param string        $store              target store, could contain a "domain\user" value
      * @param boolean       $checkACLonly       if set to true, Setup() should just check ACLs
      * @param string        $folderid           if set, only ACLs on this folderid are relevant
+     * @param boolean       $readonly           if set, the folder needs at least read permissions
      *
      * @access public
      * @return boolean
      */
-    public function Setup($store, $checkACLonly = false, $folderid = false) {
+    public function Setup($store, $checkACLonly = false, $folderid = false, $readonly = false) {
         list($user, $domain) = Utils::SplitDomainUser($store);
 
         if (!isset($this->mainUser))
@@ -265,10 +267,15 @@ class BackendZarafa implements IBackend, ISearchProvider {
                     ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->Setup(): Checking for admin ACLs on store '%s': '%s'", $user, Utils::PrintAsString($admin)));
                     return $admin;
                 }
-                // check 'secretary' permissions on this folder
+                // check permissions on this folder
                 else {
-                    $rights = $this->hasSecretaryACLs($userstore, $folderid);
-                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->Setup(): Checking for secretary ACLs on '%s' of store '%s': '%s'", $folderid, $user, Utils::PrintAsString($rights)));
+                    if (! $readonly) {
+                        $rights = $this->HasSecretaryACLs($userstore, $folderid);
+                    }
+                    else {
+                        $rights = $this->HasReadACLs($userstore, $folderid);
+                    }
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->Setup(): Checking for '%s' ACLs on '%s' of store '%s': '%s'", ($readonly?'read':'secretary'), $folderid, $user, Utils::PrintAsString($rights)));
                     return $rights;
                 }
             }
@@ -364,13 +371,10 @@ class BackendZarafa implements IBackend, ISearchProvider {
     public function GetImporter($folderid = false) {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendZarafa->GetImporter() folderid: '%s'", Utils::PrintAsString($folderid)));
         if($folderid !== false) {
-            // check if the user of the current store has permissions to import to this folderid
-            if ($this->storeName != $this->mainUser && !$this->hasSecretaryACLs($this->store, $folderid)) {
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendZarafa->GetImporter(): missing permissions on folderid: '%s'.", Utils::PrintAsString($folderid)));
-                return false;
-            }
             $this->importedFolders[$folderid] = $this->store;
-            return new ImportChangesICS($this->session, $this->store, hex2bin($folderid));
+            $wrapper = KopanoChangesWrapper::GetWrapper($this->storeName, $this->session, $this->store, $folderid, $this->storeName == $this->mainUser);
+            $wrapper->Prepare(KopanoChangesWrapper::IMPORTER);
+            return $wrapper;
         }
         else
             return new ImportChangesICS($this->session, $this->store);
@@ -388,12 +392,9 @@ class BackendZarafa implements IBackend, ISearchProvider {
      */
     public function GetExporter($folderid = false) {
         if($folderid !== false) {
-            // check if the user of the current store has permissions to export from this folderid
-            if ($this->storeName != $this->mainUser && !$this->hasSecretaryACLs($this->store, $folderid)) {
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendZarafa->GetExporter(): missing permissions on folderid: '%s'.", Utils::PrintAsString($folderid)));
-                return false;
-            }
-            return new ExportChangesICS($this->session, $this->store, hex2bin($folderid));
+            $wrapper = KopanoChangesWrapper::GetWrapper($this->storeName, $this->session, $this->store, $folderid, $this->storeName == $this->mainUser);
+            $wrapper->Prepare(KopanoChangesWrapper::EXPORTER);
+            return $wrapper;
         }
         else
             return new ExportChangesICS($this->session, $this->store);
@@ -428,14 +429,14 @@ class BackendZarafa implements IBackend, ISearchProvider {
             ZLog::Write(LOGLEVEL_WBXML, "RFC822: ". $rfc822line);
 
         $sendMailProps = MAPIMapping::GetSendMailProperties();
-        $sendMailProps = getPropIdsFromStrings($this->store, $sendMailProps);
+        $sendMailProps = getPropIdsFromStrings($this->defaultstore, $sendMailProps);
 
         // Open the outbox and create the message there
-        $storeprops = mapi_getprops($this->store, array($sendMailProps["outboxentryid"], $sendMailProps["ipmsentmailentryid"]));
+        $storeprops = mapi_getprops($this->defaultstore, array($sendMailProps["outboxentryid"], $sendMailProps["ipmsentmailentryid"]));
         if(isset($storeprops[$sendMailProps["outboxentryid"]]))
-            $outbox = mapi_msgstore_openentry($this->store, $storeprops[$sendMailProps["outboxentryid"]]);
+            $outbox = mapi_msgstore_openentry($this->defaultstore, $storeprops[$sendMailProps["outboxentryid"]]);
 
-        if(!$outbox)
+        if(!isset($outbox))
             throw new StatusException(sprintf("ZarafaBackend->SendMail(): No Outbox found or unable to create message: 0x%X", mapi_last_hresult()), SYNC_COMMONSTATUS_SERVERERROR);
 
         $mapimessage = mapi_folder_createmessage($outbox);
@@ -447,12 +448,12 @@ class BackendZarafa implements IBackend, ISearchProvider {
 
         ZLog::Write(LOGLEVEL_DEBUG, "Use the mapi_inetmapi_imtomapi function");
         $ab = mapi_openaddressbook($this->session);
-        mapi_inetmapi_imtomapi($this->session, $this->store, $ab, $mapimessage, $sm->mime, array());
+        mapi_inetmapi_imtomapi($this->session, $this->defaultstore, $ab, $mapimessage, $sm->mime, array());
 
         // Set the appSeqNr so that tracking tab can be updated for meeting request updates
         // @see http://jira.zarafa.com/browse/ZP-68
         $meetingRequestProps = MAPIMapping::GetMeetingRequestProperties();
-        $meetingRequestProps = getPropIdsFromStrings($this->store, $meetingRequestProps);
+        $meetingRequestProps = getPropIdsFromStrings($this->defaultstore, $meetingRequestProps);
         $props = mapi_getprops($mapimessage, array(PR_MESSAGE_CLASS, $meetingRequestProps["goidtag"], $sendMailProps["internetcpid"], $sendMailProps["body"], $sendMailProps["html"], $sendMailProps["rtf"], $sendMailProps["rtfinsync"]));
 
         // Convert sent message's body to UTF-8 if it was a HTML message.
@@ -469,10 +470,10 @@ class BackendZarafa implements IBackend, ISearchProvider {
         }
         if (stripos($props[PR_MESSAGE_CLASS], "IPM.Schedule.Meeting.Resp.") === 0) {
             // search for calendar items using goid
-            $mr = new Meetingrequest($this->store, $mapimessage);
+            $mr = new Meetingrequest($this->defaultstore, $mapimessage);
             $appointments = $mr->findCalendarItems($props[$meetingRequestProps["goidtag"]]);
             if (is_array($appointments) && !empty($appointments)) {
-                $app = mapi_msgstore_openentry($this->store, $appointments[0]);
+                $app = mapi_msgstore_openentry($this->defaultstore, $appointments[0]);
                 $appprops = mapi_getprops($app, array($meetingRequestProps["appSeqNr"]));
                 if (isset($appprops[$meetingRequestProps["appSeqNr"]]) && $appprops[$meetingRequestProps["appSeqNr"]]) {
                     $mapiprops[$meetingRequestProps["appSeqNr"]] = $appprops[$meetingRequestProps["appSeqNr"]];
@@ -1379,6 +1380,12 @@ class BackendZarafa implements IBackend, ISearchProvider {
             $user = $this->mainUser;
         }
 
+        // if there is a ReplyBackImExporter, the exporter needs to run!
+        $wrapper = KopanoChangesWrapper::GetWrapper($user, false, null, $folderid, null);
+        if ($wrapper && $wrapper->HasReplyBackExporter()) {
+            return "replyback-". time();
+        }
+
         if (!isset($this->folderStatCache[$user])) {
             $this->folderStatCache[$user] = array();
         }
@@ -1535,7 +1542,16 @@ class BackendZarafa implements IBackend, ISearchProvider {
         }
     }
 
-    private function hasSecretaryACLs($store, $folderid) {
+    /**
+     * Checks if the logged in user has secretary permissions on a folder.
+     *
+     * @param ressource $store
+     * @param string $folderid
+     *
+     * @access public
+     * @return boolean
+     */
+    public function HasSecretaryACLs($store, $folderid) {
         $entryid = mapi_msgstore_entryidfromsourcekey($store, hex2bin($folderid));
         if (!$entryid)  return false;
 
@@ -1554,6 +1570,30 @@ class BackendZarafa implements IBackend, ISearchProvider {
             return true;
         }
         return false;
+    }
+
+    /**
+     * Checks if the logged in user has read permissions on a folder.
+     *
+     * @param ressource $store
+     * @param string $folderid
+     *
+     * @access public
+     * @return boolean
+     */
+    public function HasReadACLs($store, $folderid) {
+        $entryid = mapi_msgstore_entryidfromsourcekey($store, hex2bin($folderid));
+        if (!$entryid)  return false;
+
+        $folder = mapi_msgstore_openentry($store, $entryid);
+        if (!$folder) return false;
+
+        $props = mapi_getprops($folder, array(PR_RIGHTS));
+        if (isset($props[PR_RIGHTS]) &&
+                ($props[PR_RIGHTS] & ecRightsReadAny) ) {
+                    return true;
+                }
+                return false;
     }
 
     /**

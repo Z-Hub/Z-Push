@@ -632,7 +632,7 @@ class ZPushAdminCLI {
         $folders = array();
         foreach ($device->GetAllFolderIds() as $folderid) {
             // if  submitting a folderid as type to resync a specific folder.
-            if ($folderid == $type) {
+            if ($folderid == $type || $device->GetFolderBackendId($folderid) === $type) {
                 printf("Found and resynching requested folderid '%s' on device '%s' of user '%s'\n", $folderid, $deviceId, $user);
                 $folders[] = $folderid;
                 break;

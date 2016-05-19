@@ -491,7 +491,7 @@ class DeviceManager {
     public function GetAdditionalUserSyncFolders() {
         $folders = array();
         foreach($this->device->GetAdditionalFolders() as $df) {
-            $folder = $this->getAdditionalSyncFolder($df['store'], $df['folderid'], $df['name'], $df['type']);
+            $folder = $this->getAdditionalSyncFolder($df['store'], $df['folderid'], $df['name'], $df['type'], $df['readonly'], DeviceManager::FLD_ORIGIN_SHARED);
             $folders[$folder->BackendId] = $folder;
         }
 
@@ -499,7 +499,7 @@ class DeviceManager {
         if (KOE_CAPABILITY_GAB && $this->IsKoe() && KOE_GAB_STORE != "" && KOE_GAB_NAME != "") {
             // if KOE_GAB_FOLDERID is set, use it
             if (KOE_GAB_FOLDERID != "") {
-                $folder = $this->getAdditionalSyncFolder(KOE_GAB_STORE, KOE_GAB_FOLDERID, KOE_GAB_NAME, SYNC_FOLDER_TYPE_USER_APPOINTMENT);
+                $folder = $this->getAdditionalSyncFolder(KOE_GAB_STORE, KOE_GAB_FOLDERID, KOE_GAB_NAME, SYNC_FOLDER_TYPE_USER_APPOINTMENT, true, DeviceManager::FLD_ORIGIN_GAB);
                 $folders[$folder->BackendId] = $folder;
             }
             else {
@@ -515,7 +515,7 @@ class DeviceManager {
                         $this->device->SetKoeGabBackendFolderId($backendGabId);
                     }
 
-                    $folders[$backendGabId] = $this->getAdditionalSyncFolder(KOE_GAB_STORE, $backendGabId, KOE_GAB_NAME, SYNC_FOLDER_TYPE_USER_APPOINTMENT);
+                    $folders[$backendGabId] = $this->getAdditionalSyncFolder(KOE_GAB_STORE, $backendGabId, KOE_GAB_NAME, SYNC_FOLDER_TYPE_USER_APPOINTMENT, true, DeviceManager::FLD_ORIGIN_GAB);
                 }
             }
         }
@@ -1132,20 +1132,23 @@ class DeviceManager {
      * @param string    $folderid
      * @param string    $name
      * @param int       $type
+     * @param boolean   $readonly
+     * @param string    $folderOrigin
      *
      * @access private
      * @returns SyncFolder
      */
-    private function getAdditionalSyncFolder($store, $folderid, $name, $type) {
+    private function getAdditionalSyncFolder($store, $folderid, $name, $type, $readonly, $folderOrigin) {
         $folder = new SyncFolder();
         $folder->BackendId = $folderid;
-        $folder->serverid = $this->GetFolderIdForBackendId($folder->BackendId, true, DeviceManager::FLD_ORIGIN_SHARED, $name);
+        $folder->serverid = $this->GetFolderIdForBackendId($folder->BackendId, true, $folderOrigin, $name);
         $folder->parentid = 0;                  // only top folders are supported
         $folder->displayname = $name;
         $folder->type = $type;
         // save store as custom property which is not streamed directly to the device
         $folder->NoBackendFolder = true;
         $folder->Store = $store;
+        $folder->ReadOnly = $readonly;
 
         return $folder;
     }
