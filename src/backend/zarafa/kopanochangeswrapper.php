@@ -237,7 +237,7 @@ class KopanoChangesWrapper implements IImportChanges, IExportChanges {
      */
 
     /**
-     * Initializes the state and flags
+     * Initializes the state and flags.
      *
      * @param string        $state
      * @param int           $flags
@@ -263,7 +263,7 @@ class KopanoChangesWrapper implements IImportChanges, IExportChanges {
     }
 
     /**
-     * Configures additional parameters used for content synchronization
+     * Configures additional parameters used for content synchronization.
      *
      * @param ContentParameters         $contentparameters
      *
@@ -277,7 +277,7 @@ class KopanoChangesWrapper implements IImportChanges, IExportChanges {
     }
 
     /**
-     * Reads and returns the current state
+     * Reads and returns the current state.
      *
      * @access public
      * @return string
@@ -324,8 +324,8 @@ class KopanoChangesWrapper implements IImportChanges, IExportChanges {
      */
 
     /**
-     * Loads objects which are expected to be exported with the state
-     * Before importing/saving the actual message from the mobile, a conflict detection should be done
+     * Loads objects which are expected to be exported with the state.
+     * Before importing/saving the actual message from the mobile, a conflict detection should be done.
      *
      * @param ContentParameters         $contentparameters
      * @param string                    $state
@@ -340,7 +340,7 @@ class KopanoChangesWrapper implements IImportChanges, IExportChanges {
 
 
     /**
-     * Imports a single message
+     * Imports a single message.
      *
      * @param string        $id
      * @param SyncObject    $message
@@ -354,7 +354,7 @@ class KopanoChangesWrapper implements IImportChanges, IExportChanges {
     }
 
     /**
-     * Imports a deletion. This may conflict if the local object has been modified
+     * Imports a deletion. This may conflict if the local object has been modified.
      *
      * @param string        $id
      *
@@ -367,8 +367,8 @@ class KopanoChangesWrapper implements IImportChanges, IExportChanges {
     }
 
     /**
-     * Imports a change in 'read' flag
-     * This can never conflict
+     * Imports a change in 'read' flag.
+     * This can never conflict.
      *
      * @param string        $id
      * @param int           $flags
@@ -382,7 +382,7 @@ class KopanoChangesWrapper implements IImportChanges, IExportChanges {
     }
 
     /**
-     * Imports a move of a message. This occurs when a user moves an item to another folder
+     * Imports a move of a message. This occurs when a user moves an item to another folder.
      *
      * @param string        $id
      * @param string        $newfolder      destination folder
@@ -393,8 +393,8 @@ class KopanoChangesWrapper implements IImportChanges, IExportChanges {
      */
     public function ImportMessageMove($id, $newfolder) {
         $this->didMove = true;
-        // Wwhen we setup the $current importer, we didn't know what we needed to do, so we look only at the src folder.
-        // Now the $newfolder could be read only as well. So we need to check it's permissions and then switch to a ReplyBackImExporter if its r/o.
+        // When we setup the $current importer, we didn't know what we needed to do, so we look only at the src folder for permissions.
+        // Now the $newfolder could be read only as well. So we need to check it's permissions and then switch to a ReplyBackImExporter if it's r/o.
         if (!$this->isReplyBackExporter()) {
             if (!self::$backend->HasSecretaryACLs($this->store, $newfolder)) {
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoChangesWrapper->ImportMessageMove(): destination folderid '%s' is missing permissions. Switching to ReplyBackImExporter.", Utils::PrintAsString($newfolder)));
@@ -412,11 +412,11 @@ class KopanoChangesWrapper implements IImportChanges, IExportChanges {
     }
 
     /**
-     * Implement interfaces which are never used
+     * Implement interfaces which are never used.
      */
 
     /**
-     * Imports a change on a folder
+     * Imports a change on a folder.
      *
      * @param object        $folder         SyncFolder
      *
@@ -429,7 +429,7 @@ class KopanoChangesWrapper implements IImportChanges, IExportChanges {
     }
 
     /**
-     * Imports a folder deletion
+     * Imports a folder deletion.
      *
      * @param SyncFolder    $folder         at least "serverid" needs to be set
      *
@@ -447,7 +447,7 @@ class KopanoChangesWrapper implements IImportChanges, IExportChanges {
      */
 
     /**
-     * Initializes the Exporter where changes are synchronized to
+     * Initializes the Exporter where changes are synchronized to.
      *
      * @param IImportChanges    $importer
      *
@@ -459,7 +459,7 @@ class KopanoChangesWrapper implements IImportChanges, IExportChanges {
     }
 
     /**
-     * Returns the amount of changes to be exported
+     * Returns the amount of changes to be exported.
      *
      * @access public
      * @return int
@@ -469,7 +469,7 @@ class KopanoChangesWrapper implements IImportChanges, IExportChanges {
     }
 
     /**
-     * Synchronizes a change. The previously imported messages are now retrieved from the backend
+     * Synchronizes a change. The previously imported messages are now retrieved from the backend.
      * and sent back to the mobile.
      *
      * @access public

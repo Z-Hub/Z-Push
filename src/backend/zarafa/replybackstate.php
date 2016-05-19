@@ -48,6 +48,12 @@ class ReplyBackState extends StateObject {
             'icsstate' => "",
     );
 
+    /**
+     * Returns a ReplyBackState from a state.
+     *
+     * @param mixed $state
+     * @return ReplyBackState
+     */
     static public function FromState($state) {
         if (strpos($state, 'ReplyBackState') !== false) {
             return unserialize($state);
@@ -60,6 +66,11 @@ class ReplyBackState extends StateObject {
         }
     }
 
+    /**
+     * Gets the state from a ReplyBackState object.
+     *
+     * @param mixed $state
+     */
     static public function ToState($state) {
         if (!empty($state->GetReplyBackState())) {
             return serialize($state);

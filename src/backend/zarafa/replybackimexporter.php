@@ -92,7 +92,7 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
     }
 
     /**
-     * Initializes the state and flags
+     * Initializes the state and flags.
      *
      * @param string        $state
      * @param int           $flags
@@ -110,7 +110,7 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
     }
 
     /**
-     * Configures additional parameters used for content synchronization
+     * Configures additional parameters used for content synchronization.
      *
      * @param ContentParameters         $contentparameters
      *
@@ -124,7 +124,7 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
     }
 
     /**
-     * Reads and returns the current state
+     * Reads and returns the current state.
      *
      * @access public
      * @return string
@@ -177,12 +177,12 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
 
 
     /**
-     * Implement interfaces which are never used
+     * Implement interfaces which are never used.
      */
 
     /**
-     * Loads objects which are expected to be exported with the state
-     * Before importing/saving the actual message from the mobile, a conflict detection should be done
+     * Loads objects which are expected to be exported with the state.
+     * Before importing/saving the actual message from the mobile, a conflict detection should be done.
      *
      * @param ContentParameters         $contentparameters
      * @param string                    $state
@@ -196,7 +196,7 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
     }
 
     /**
-     * Imports a move of a message. This occurs when a user moves an item to another folder
+     * Imports a move of a message. This occurs when a user moves an item to another folder.
      *
      * @param string        $id
      * @param string        $newfolder      destination folder
@@ -230,7 +230,7 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
     }
 
     /**
-     * Imports a change on a folder
+     * Imports a change on a folder.
      *
      * @param object        $folder         SyncFolder
      *
@@ -243,7 +243,7 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
     }
 
     /**
-     * Imports a folder deletion
+     * Imports a folder deletion.
      *
      * @param SyncFolder    $folder         at least "serverid" needs to be set
      *
@@ -261,7 +261,7 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
      */
 
     /**
-     * Imports a message change, which is imported into memory
+     * Imports a message change, which is imported into memory.
      *
      * @param string        $id         id of message which is changed
      * @param SyncObject    $message    message to be changed
@@ -303,7 +303,7 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
     }
 
     /**
-     * Imports a message deletion, which is imported into memory
+     * Imports a message deletion, which is imported into memory.
      *
      * @param string        $id     id of message which is deleted
      *
@@ -316,8 +316,8 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
     }
 
     /**
-     * Imports a change in 'read' flag
-     * This can never conflict
+     * Imports a change in 'read' flag.
+     * This can never conflict.
      *
      * @param string        $id
      * @param int           $flags
@@ -338,7 +338,7 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
      */
 
     /**
-     * Initializes the Exporter where changes are synchronized to
+     * Initializes the Exporter where changes are synchronized to.
      *
      * @param IImportChanges    $importer
      *
@@ -352,7 +352,7 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
     }
 
     /**
-     * Returns the amount of changes to be exported
+     * Returns the amount of changes to be exported.
      *
      * @access public
      * @return int
@@ -362,7 +362,7 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
     }
 
     /**
-     * Synchronizes a change. The previously imported messages are now retrieved from the backend
+     * Synchronizes a change. The previously imported messages are now retrieved from the backend.
      * and sent back to the mobile.
      *
      * @access public
