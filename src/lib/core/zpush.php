@@ -397,7 +397,7 @@ class ZPush {
                 $folder = new SyncFolder();
 
                 $folder->BackendId = $af['folderid'];
-                $folder->serverid = ZPush::GetDeviceManager(true)->GetFolderIdForBackendId($folder->BackendId, true);
+                $folder->serverid = ZPush::GetDeviceManager(true)->GetFolderIdForBackendId($folder->BackendId, true, DeviceManager::FLD_ORIGIN_CONFIG, $af['name']);
                 $folder->parentid = 0;                  // only top folders are supported
                 $folder->displayname = $af['name'];
                 $folder->type = $af['type'];

@@ -453,6 +453,11 @@ class ImportChangesICS implements IImportChanges {
     public function ImportMessageReadFlag($id, $flags) {
         list($fsk,$sk) = MAPIUtils::SplitMessageId($id);
 
+        // if $fsk is set, we convert it into a backend id.
+        if ($fsk) {
+            $fsk = ZPush::GetDeviceManager()->GetBackendIdForFolderId($fsk);
+        }
+
         // read flag change for our current folder
         if ($this->folderidHex == $fsk || empty($fsk)) {
 
@@ -479,8 +484,8 @@ class ImportChangesICS implements IImportChanges {
         }
         // yeah OL sucks - ZP-779
         else {
-            if (ctype_digit($fsk)) {
-                $fsk = ZPush::GetDeviceManager()->GetBackendIdForFolderId($fsk);
+            if (!$fsk) {
+                throw new StatusException(sprintf("ImportChangesICS->ImportMessageReadFlag('%s','%d'): Error setting read state. The message is in another folder but id is unknown as no short folder id is available. Please remove your device states to fully resync your device. Operation ignored.", $id, $flags), SYNC_STATUS_OBJECTNOTFOUND);
             }
             $store = ZPush::GetBackend()->GetMAPIStoreForFolderId(ZPush::GetAdditionalSyncFolderStore($fsk), $fsk);
             $entryid = mapi_msgstore_entryidfromsourcekey($store, hex2bin($fsk), hex2bin($sk));
@@ -634,7 +639,7 @@ class ImportChangesICS implements IImportChanges {
             $props =  mapi_getprops($newfolder, array(PR_SOURCE_KEY));
             if (isset($props[PR_SOURCE_KEY])) {
                 $folder->BackendId = bin2hex($props[PR_SOURCE_KEY]);
-                $folder->serverid = ZPush::GetDeviceManager()->GetFolderIdForBackendId($folder->BackendId, true);
+                $folder->serverid = ZPush::GetDeviceManager()->GetFolderIdForBackendId($folder->BackendId, true, DeviceManager::FLD_ORIGIN_USER, $folder->displayname);
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("ImportChangesICS->ImportFolderChange(): Created folder '%s' with id: '%s' backendid: '%s'", $displayname, $folder->serverid, $folder->BackendId));
                 return $folder;
             }

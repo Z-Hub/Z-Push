@@ -888,7 +888,7 @@ class MAPIProvider {
         }
 
         $folder->BackendId = bin2hex($folderprops[PR_SOURCE_KEY]);
-        $folder->serverid = ZPush::GetDeviceManager()->GetFolderIdForBackendId($folder->BackendId, true);
+        $folder->serverid = ZPush::GetDeviceManager()->GetFolderIdForBackendId($folder->BackendId, true, DeviceManager::FLD_ORIGIN_USER, $folderprops[PR_DISPLAY_NAME]);
         if($folderprops[PR_PARENT_ENTRYID] == $storeprops[PR_IPM_SUBTREE_ENTRYID]) {
             $folder->parentid = "0";
         }
