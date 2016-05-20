@@ -476,9 +476,12 @@ class SyncCollections implements Iterator {
             if ($onlyPingable && $spa->GetPingableFlag() !== true || ! $folderid)
                 continue;
 
-            if (!isset($classes[$spa->GetContentClass()]))
-                $classes[$spa->GetContentClass()] = 0;
-            $classes[$spa->GetContentClass()] += 1;
+            // the class name will be overwritten for KOE-GAB
+            $class = $this->getPingClass($spa);
+
+            if (!isset($classes[$class]))
+                $classes[$class] = 0;
+            $classes[$class] += 1;
         }
         if (empty($classes))
             $checkClasses = "policies only";
@@ -806,6 +809,22 @@ class SyncCollections implements Iterator {
     public function WaitedForChanges() {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->WaitedForChanges: waited for %d seconds", $this->waitingTime));
         return ($this->waitingTime > 0);
+    }
+
+    /**
+     * Returns how the current folder should be called in the PING comment.
+     *
+     * @param SyncParameters $spa
+     *
+     * @access public
+     * @return string
+     */
+    private function getPingClass($spa) {
+        $class = $spa->GetContentClass();
+        if ($class == "Calendar" && strpos($spa->GetFolderId(), DeviceManager::FLD_ORIGIN_GAB) === 0) {
+            $class = "GAB";
+        }
+        return $class;
     }
 
     /**
