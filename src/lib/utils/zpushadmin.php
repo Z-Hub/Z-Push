@@ -485,21 +485,23 @@ class ZPushAdmin {
             // unify the lists saved for the user/device and the staticly configured one
             $new_list = array();
             foreach ($device->GetAdditionalFolders() as $folder) {
-                $folder['source'] = 'user';
-                $folder['syncfolderid'] = $device->GetFolderIdForBackendId($folder['folderid'], false, false, null);
+                $syncfolderid = $device->GetFolderIdForBackendId($folder['folderid'], false, false, null);
+                $folder['syncfolderid'] = $syncfolderid;
+                $folder['origin'] = Utils::GetFolderOriginFromId($syncfolderid);
                 $new_list[$folder['folderid']] = $folder;
             }
             foreach (ZPush::GetAdditionalSyncFolders() as $fid => $so) {
                 // if this is not part of the device list
                 if (!isset($new_list[$fid])) {
+                    $syncfolderid = $device->GetFolderIdForBackendId($fid, false, false, null);
                     $new_list[$fid] = array(
                                         'store' => $so->Store,
                                         'folderid' => $fid,
-                                        'syncfolderid' => $device->GetFolderIdForBackendId($fid, false, false, null),
+                                        'syncfolderid' => $syncfolderid,
                                         'name' => $so->displayname,
                                         'type' => $so->type,
                                         'readonly' => $so->ReadOnly,
-                                        'source' => 'static'
+                                        'origin' => Utils::GetFolderOriginFromId($syncfolderid),
                                     );
                 }
             }
