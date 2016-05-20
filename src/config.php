@@ -89,7 +89,7 @@
  *  When another implementation should be used, the class can be set here explicitly.
  *  If empty Z-Push will try to use available providers.
  */
-    define('IPC_PROVIDER', 'IpcSharedMemoryProvider');
+    define('IPC_PROVIDER', '');
 
 /**********************************************************************************
  *  Logging settings
@@ -117,7 +117,7 @@
  *  LOGAUTHFAIL is logged to the LOGBACKEND.
  */
     define('LOGBACKEND', 'filelog');
-    define('LOGLEVEL', LOGLEVEL_WBXML);
+    define('LOGLEVEL', LOGLEVEL_INFO);
     define('LOGAUTHFAIL', false);
 
     // To save e.g. WBXML data only for selected users, add the usernames to the array

@@ -41,12 +41,4 @@
 * Consult LICENSE file for details
 ************************************************/
 
-if (!defined("ZPUSH_VERSION")) {
-	$commit = exec("type git && git log --date=short --pretty=format:'%h/%ad' -1");
-	if(preg_match("/^[\da-f]+\/\d{4}-\d{2}-\d{2}$/i", $commit)) {
-        define("ZPUSH_VERSION", "GIT " . $commit);
-    }
-    else {
-        define("ZPUSH_VERSION", "GIT");
-    }
-}
+define("ZPUSH_VERSION", "2.3.0alpha1");
