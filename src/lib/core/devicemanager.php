@@ -515,7 +515,9 @@ class DeviceManager {
                         $this->device->SetKoeGabBackendFolderId($backendGabId);
                     }
 
-                    $folders[$backendGabId] = $this->getAdditionalSyncFolder(KOE_GAB_STORE, $backendGabId, KOE_GAB_NAME, SYNC_FOLDER_TYPE_USER_APPOINTMENT, true, DeviceManager::FLD_ORIGIN_GAB);
+                    if ($backendGabId) {
+                        $folders[$backendGabId] = $this->getAdditionalSyncFolder(KOE_GAB_STORE, $backendGabId, KOE_GAB_NAME, SYNC_FOLDER_TYPE_USER_APPOINTMENT, true, DeviceManager::FLD_ORIGIN_GAB);
+                    }
                 }
             }
         }
