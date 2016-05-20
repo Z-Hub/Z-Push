@@ -1085,6 +1085,30 @@ class Utils {
                 'ArmSCII8',
         );
     }
+
+    /**
+     * Returns folder origin from its id.
+     *
+     * @param string $fid
+     *
+     * @access public
+     * @return string
+     */
+    public static function GetFolderOriginFromId($fid) {
+        $origin = substr($fid, 0, 1);
+        switch ($origin) {
+            case DeviceManager::FLD_ORIGIN_CONFIG:
+                return 'configured';
+            case DeviceManager::FLD_ORIGIN_GAB:
+                return 'GAB';
+            case DeviceManager::FLD_ORIGIN_SHARED:
+                return 'shared';
+            case DeviceManager::FLD_ORIGIN_USER:
+                return 'user';
+        }
+        ZLog::Write(LOGLEVEL_WARN, sprintf("Utils->GetFolderOriginFromId(): Unknown folder origin for folder with id '%s'", $fid));
+        return 'unknown';
+    }
 }
 
 
