@@ -393,11 +393,9 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
             else if ($change[0] === self::CREATION || $this->isTmpId($id)) {
                 $this->exportImporter->ImportMessageDeletion($id);
             }
-            elseif ($change[0] === self::READFLAG) {
-                // TODO do it right - get the read flag from the message!
-                $this->exportImporter->ImportMessageReadFlag($id, ($change[2] == 0) ? 1 : 0);
-            }
             else {
+                // This block also handles the read flags,
+                // so that the todo flags are exported properly as well.
                 // get the server side message
                 $message = $this->getMessage($id);
                 if (! $message instanceOf SyncObject) {
