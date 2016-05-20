@@ -103,8 +103,7 @@ class Kopano extends SyncWorker {
         if (mapi_last_hresult())
             $this->Terminate(sprintf("Kopano->CreateHiddenFolder(): Error, mapi_folder_createfolder() failed: 0x%08X", mapi_last_hresult()));
 
-        // TODO: set PR_HIDDEN
-        mapi_setprops($newfolder, array(PR_CONTAINER_CLASS => "IPF.Appointment"));
+        mapi_setprops($newfolder, array(PR_CONTAINER_CLASS => "IPF.Appointment", PR_ATTR_HIDDEN => true));
 
         $props =  mapi_getprops($newfolder, array(PR_SOURCE_KEY));
         if (isset($props[PR_SOURCE_KEY])) {
