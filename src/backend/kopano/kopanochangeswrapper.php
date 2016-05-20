@@ -201,7 +201,8 @@ class KopanoChangesWrapper implements IImportChanges, IExportChanges {
         else if ($this->preparedAs == self::EXPORTER){
             if (!($this->current instanceof ExportChangesICS)) {
                 // if there was something imported on a read-only folder, we need to reply back the changes
-                if ($this->replyback || !empty($this->state->GetReplyBackState()) || !empty($this->moveSrcState)) {
+                $states = isset($this->state) ? $this->state->GetReplyBackState() : false;
+                if ($this->replyback || !empty($states) || !empty($this->moveSrcState)) {
                     ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoChangesWrapper->init(): Exporter: read-only folder with folderid: '%s'. Working with ReplyBackImExporter.", Utils::PrintAsString($this->folderid)));
                     if (!$this->replyback) {
                         $this->replyback = $this->getReplyBackImExporter();
