@@ -609,8 +609,15 @@ class ImportChangesICS implements IImportChanges {
             throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Error, delete of source message failed: 0x%X. Possible duplicates.", $sk, $newfolder, mapi_last_hresult()), SYNC_MOVEITEMSSTATUS_SOURCEORDESTLOCKED);
 
         $sourcekeyprops = mapi_getprops($newmessage, array (PR_SOURCE_KEY));
-        if (isset($sourcekeyprops[PR_SOURCE_KEY]) && $sourcekeyprops[PR_SOURCE_KEY])
-            return $this->prefix . bin2hex($sourcekeyprops[PR_SOURCE_KEY]);
+        if (isset($sourcekeyprops[PR_SOURCE_KEY]) && $sourcekeyprops[PR_SOURCE_KEY]) {
+            $prefix = "";
+            // prepend the destination short folderid, if it exists
+            $destShortId = ZPush::GetDeviceManager()->GetFolderIdForBackendId($newfolder);
+            if ($destShortId !== $newfolder) {
+                $prefix = $destShortId .":";
+            }
+            return $prefix . bin2hex($sourcekeyprops[PR_SOURCE_KEY]);
+        }
 
         return false;
     }
