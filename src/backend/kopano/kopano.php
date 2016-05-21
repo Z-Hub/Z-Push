@@ -491,6 +491,7 @@ class BackendKopano implements IBackend, ISearchProvider {
 
         if(isset($sm->source->itemid) && $sm->source->itemid) {
             // answering an email in a public/shared folder
+            // TODO as the store is setup, we should actually user $this->store instead of $this->defaultstore - nevertheless we need to make sure this store is able to send mail (has an outbox)
             if (!$this->Setup(ZPush::GetAdditionalSyncFolderStore($sm->source->folderid)))
                 throw new StatusException(sprintf("KopanoBackend->SendMail() could not Setup() the backend for folder id '%s'", $sm->source->folderid), SYNC_COMMONSTATUS_SERVERERROR);
 
