@@ -79,10 +79,10 @@ class PHPWrapper {
         $this->store = $store;
         $this->mapiprovider = new MAPIProvider($session, $this->store);
         $this->folderid = $folderid;
+        $this->prefix = '';
 
         if ($folderid) {
             $folderidHex = bin2hex($folderid);
-            $this->prefix = '';
             $folderid = ZPush::GetDeviceManager()->GetFolderIdForBackendId($folderidHex);
             if ($folderid != $folderidHex) {
                 $this->prefix = $folderid . ':';
