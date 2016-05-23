@@ -707,8 +707,11 @@ class ASDevice extends StateObject {
             }
             $newHash = $this->generateFolderHash($backendid, $folderOrigin, $folderName);
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("ASDevice->GetFolderIdForBackendId(): generated new folderid '%s' for backend-folderid '%s'", $newHash, $backendid));
+            // temporarily save the new hash also in the cache (new folders will only be saved at the end of request and could be requested before that
+            $this->backend2folderidCache[$backendid] = $newHash;
             return $newHash;
         }
+        ZLog::Write(LOGLEVEL_WARN, sprintf("ASDevice->GetFolderIdForBackendId(): no valid condition found for determining folderid for backendid '%s'. Returning as is!", Utils::PrintAsString($backendid)));
         return $backendid;
     }
 
