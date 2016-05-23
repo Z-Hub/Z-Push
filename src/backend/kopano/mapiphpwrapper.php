@@ -80,11 +80,13 @@ class PHPWrapper {
         $this->mapiprovider = new MAPIProvider($session, $this->store);
         $this->folderid = $folderid;
 
-        $folderidHex = bin2hex($folderid);
-        $this->prefix = '';
-        $folderid = ZPush::GetDeviceManager()->GetFolderIdForBackendId($folderidHex);
-        if ($folderid != $folderidHex) {
-            $this->prefix = $folderid . ':';
+        if ($folderid) {
+            $folderidHex = bin2hex($folderid);
+            $this->prefix = '';
+            $folderid = ZPush::GetDeviceManager()->GetFolderIdForBackendId($folderidHex);
+            if ($folderid != $folderidHex) {
+                $this->prefix = $folderid . ':';
+            }
         }
         // TODO remove this log output in 2.3.X
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("PHPWrapper: prefix:'%s'", $this->prefix));
