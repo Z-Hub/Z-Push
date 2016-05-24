@@ -1127,6 +1127,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
                 }
 
                 $output->asbody->data = StringStreamWrapper::Open($data);
+                $output->asbody->estimatedDataSize = strlen($data);
                 unset($data);
                 $output->asbody->type = $bpReturnType;
                 if ($bpReturnType == SYNC_BODYPREFERENCE_MIME) {
@@ -1136,7 +1137,6 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
                 else {
                     $output->nativebodytype = $bpReturnType;
                 }
-                $output->asbody->estimatedDataSize = strlen($output->asbody->data);
 
                 $bpo = $contentparameters->BodyPreference($output->asbody->type);
                 if (Request::GetProtocolVersion() >= 14.0 && $bpo->GetPreview()) {
