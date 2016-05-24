@@ -79,11 +79,25 @@
  *  ones, e.g. setting to LOGLEVEL_DEBUG will also output LOGLEVEL_FATAL, LOGLEVEL_ERROR,
  *  LOGLEVEL_WARN and LOGLEVEL_INFO level entries.
  */
+
+    define('LOGBACKEND', 'filelog');
+
     define('LOGFILEDIR', '/var/log/z-push/');
     define('LOGFILE', LOGFILEDIR . 'autodiscover.log');
     define('LOGERRORFILE', LOGFILEDIR . 'autodiscover-error.log');
     define('LOGLEVEL', LOGLEVEL_INFO);
     define('LOGUSERLEVEL', LOGLEVEL);
+    $specialLogUsers = array();
+
+    // Syslog settings
+    // false will log to local syslog, otherwise put the remote syslog IP here
+    define('LOG_SYSLOG_HOST', false);
+    // Syslog port
+    define('LOG_SYSLOG_PORT', 514);
+    // Program showed in the syslog. Useful if you have more than one instance login to the same syslog
+    define('LOG_SYSLOG_PROGRAM', 'z-push-autodiscover');
+    // Syslog facility - use LOG_USER when running on Windows
+    define('LOG_SYSLOG_FACILITY', LOG_LOCAL0);
 /**********************************************************************************
  *  Backend settings
  */
