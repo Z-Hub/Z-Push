@@ -127,7 +127,7 @@ abstract class Log {
      * @access public
      * @return bool
      */
-    public function IsAuthUserInSpecialLogUsers(){
+    public function IsAuthUserInSpecialLogUsers() {
         if ($this->isAuthUserInSpecialLogUsers) {
             return true;
         }
