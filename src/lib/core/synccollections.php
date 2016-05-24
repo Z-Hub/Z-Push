@@ -183,8 +183,14 @@ class SyncCollections implements Iterator {
 
             // TODO remove resync of folders for < Z-Push 2 beta4 users
             // this forces a resync of all states previous to Z-Push 2 beta4
-            if (! $spa instanceof SyncParameters)
+            if (! $spa instanceof SyncParameters) {
                 throw new StateInvalidException("Saved state are not of type SyncParameters");
+            }
+
+            if ($spa->GetUuidCounter() == 0) {
+                ZLog::Write(LOGLEVEL_DEBUG, "SyncCollections->LoadCollection(): Found collection with move state only, ignoring.");
+                return true;
+            }
         }
         catch (StateInvalidException $sive) {
             // in case there is something wrong with the state, just stop here
