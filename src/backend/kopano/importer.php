@@ -12,7 +12,7 @@
 *
 * Created   :   14.02.2011
 *
-* Copyright 2007 - 2015 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -59,6 +59,7 @@
 
 class ImportChangesICS implements IImportChanges {
     private $folderid;
+    private $folderidHex;
     private $store;
     private $session;
     private $flags;
@@ -71,6 +72,9 @@ class ImportChangesICS implements IImportChanges {
     private $conflictsState;
     private $cutoffdate;
     private $contentClass;
+    private $prefix;
+    private $moveSrcState;
+    private $moveDstState;
 
     /**
      * Constructor
@@ -86,12 +90,19 @@ class ImportChangesICS implements IImportChanges {
         $this->session = $session;
         $this->store = $store;
         $this->folderid = $folderid;
+        $this->folderidHex = bin2hex($folderid);
         $this->conflictsLoaded = false;
         $this->cutoffdate = false;
         $this->contentClass = false;
+        $this->prefix = '';
 
         if ($folderid) {
             $entryid = mapi_msgstore_entryidfromsourcekey($store, $folderid);
+            $folderidForBackendId = ZPush::GetDeviceManager()->GetFolderIdForBackendId($this->folderidHex);
+            // Only append backend id if the mapping backendid<->folderid is available.
+            if ($folderidForBackendId != $this->folderidHex) {
+                $this->prefix = $folderidForBackendId . ':';
+            }
         }
         else {
             $storeprops = mapi_getprops($store, array(PR_IPM_SUBTREE_ENTRYID));
@@ -107,7 +118,7 @@ class ImportChangesICS implements IImportChanges {
 
             // We throw an general error SYNC_FSSTATUS_CODEUNKNOWN (12) which is also SYNC_STATUS_FOLDERHIERARCHYCHANGED (12)
             // if this happened while doing content sync, the mobile will try to resync the folderhierarchy
-            throw new StatusException(sprintf("ImportChangesICS('%s','%s','%s'): Error, unable to open folder: 0x%X", $session, $store, Utils::PrintAsString($folderid), mapi_last_hresult()), SYNC_FSSTATUS_CODEUNKNOWN);
+            throw new StatusException(sprintf("ImportChangesICS('%s','%s'): Error, unable to open folder: 0x%X", $session, bin2hex($folderid), mapi_last_hresult()), SYNC_FSSTATUS_CODEUNKNOWN);
         }
 
         $this->mapiprovider = new MAPIProvider($this->session, $this->store);
@@ -116,6 +127,9 @@ class ImportChangesICS implements IImportChanges {
             $this->importer = mapi_openproperty($folder, PR_COLLECTOR, IID_IExchangeImportContentsChanges, 0 , 0);
         else
             $this->importer = mapi_openproperty($folder, PR_COLLECTOR, IID_IExchangeImportHierarchyChanges, 0 , 0);
+
+        // TODO remove this log output in 2.3.X
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ImportChangesICS: prefix:'%s'", $this->prefix));
     }
 
     /**
@@ -219,6 +233,32 @@ class ImportChangesICS implements IImportChanges {
     }
 
     /**
+     * Sets the states from move operations.
+     * When src and dst state are set, a MOVE operation is being executed.
+     *
+     * @param mixed         $srcState
+     * @param mixed         (opt) $dstState, default: null
+     *
+     * @access public
+     * @return boolean
+     */
+    public function SetMoveStates($srcState, $dstState = null) {
+        $this->moveSrcState = $srcState;
+        $this->moveDstState = $dstState;
+        return true;
+    }
+
+    /**
+     * Gets the states of special move operations.
+     *
+     * @access public
+     * @return array(0 => $srcState, 1 => $dstState)
+     */
+    public function GetMoveStates() {
+        return array($this->moveSrcState, $this->moveDstState);
+    }
+
+    /**
      * Checks if a message is in the synchronization interval (window)
      * if a filter (e.g. Sync items two weeks back) or limits this synchronization.
      * These checks only apply to Emails and Appointments only, Contacts, Tasks and Notes do not have time restrictions.
@@ -309,6 +349,11 @@ class ImportChangesICS implements IImportChanges {
             // monitor how long it takes to export potential conflicts
             // if this takes "too long" we cancel this operation!
             $potConflicts = $exporter->GetChangeCount();
+            if ($potConflicts > 100) {
+                ZLog::Write(LOGLEVEL_WARN, sprintf("ImportChangesICS->lazyLoadConflicts(): conflict detection abandoned as there are too many (%d) changes to be exported.", $potConflicts));
+                $this->conflictsLoaded = true;
+                return;
+            }
             $started = time();
             $exported = 0;
             try {
@@ -343,20 +388,17 @@ class ImportChangesICS implements IImportChanges {
      * @throws StatusException
      */
     public function ImportMessageChange($id, $message) {
-        $parentsourcekey = $this->folderid;
-        if($id)
-            $sourcekey = hex2bin($id);
-
         $flags = 0;
         $props = array();
-        $props[PR_PARENT_SOURCE_KEY] = $parentsourcekey;
+        $props[PR_PARENT_SOURCE_KEY] = $this->folderid;
 
         // set the PR_SOURCE_KEY if available or mark it as new message
         if($id) {
-            $props[PR_SOURCE_KEY] = $sourcekey;
+            list(, $sk) = MAPIUtils::SplitMessageId($id);
+            $props[PR_SOURCE_KEY] = hex2bin($sk);
 
             // on editing an existing message, check if it is in the synchronization interval
-            if (!$this->isMessageInSyncInterval($id))
+            if (!$this->isMessageInSyncInterval($sk))
                 throw new StatusException(sprintf("ImportChangesICS->ImportMessageChange('%s','%s'): Message is outside the sync interval. Data not saved.", $id, get_class($message)), SYNC_STATUS_SYNCCANNOTBECOMPLETED);
 
             // check for conflicts
@@ -386,24 +428,26 @@ class ImportChangesICS implements IImportChanges {
                 throw new StatusException(sprintf("ImportChangesICS->ImportMessageChange('%s','%s'): Error, mapi_message_savechanges() failed: 0x%X", $id, get_class($message), mapi_last_hresult()), SYNC_STATUS_SYNCCANNOTBECOMPLETED);
 
             $sourcekeyprops = mapi_getprops($mapimessage, array (PR_SOURCE_KEY));
-            return bin2hex($sourcekeyprops[PR_SOURCE_KEY]);
+
+            return $this->prefix . bin2hex($sourcekeyprops[PR_SOURCE_KEY]);
         }
         else
             throw new StatusException(sprintf("ImportChangesICS->ImportMessageChange('%s','%s'): Error updating object: 0x%X", $id, get_class($message), mapi_last_hresult()), SYNC_STATUS_OBJECTNOTFOUND);
     }
 
     /**
-     * Imports a deletion. This may conflict if the local object has been modified
+     * Imports a deletion. This may conflict if the local object has been modified.
      *
      * @param string        $id
+     * @param boolean       $asSoftDelete   (opt) if true, the deletion is exported as "SoftDelete", else as "Remove" - default: false
      *
      * @access public
      * @return boolean
-     * @throws StatusException
      */
-    public function ImportMessageDeletion($id) {
+    public function ImportMessageDeletion($id, $asSoftDelete = false) {
+        list(,$sk) = MAPIUtils::SplitMessageId($id);
         // check if the message is in the current syncinterval
-        if (!$this->isMessageInSyncInterval($id))
+        if (!$this->isMessageInSyncInterval($sk))
             throw new StatusException(sprintf("ImportChangesICS->ImportMessageDeletion('%s'): Message is outside the sync interval and so far not deleted.", $id), SYNC_STATUS_OBJECTNOTFOUND);
 
         // check for conflicts
@@ -417,8 +461,8 @@ class ImportChangesICS implements IImportChanges {
         }
 
         // do a 'soft' delete so people can un-delete if necessary
-        if(mapi_importcontentschanges_importmessagedeletion($this->importer, 1, array(hex2bin($id))))
-            throw new StatusException(sprintf("ImportChangesICS->ImportMessageDeletion('%s'): Error updating object: 0x%X", $id, mapi_last_hresult()), SYNC_STATUS_OBJECTNOTFOUND);
+        if(mapi_importcontentschanges_importmessagedeletion($this->importer, 1, array(hex2bin($sk))))
+            throw new StatusException(sprintf("ImportChangesICS->ImportMessageDeletion('%s'): Error updating object: 0x%X", $sk, mapi_last_hresult()), SYNC_STATUS_OBJECTNOTFOUND);
 
         return true;
     }
@@ -435,27 +479,51 @@ class ImportChangesICS implements IImportChanges {
      * @throws StatusException
      */
     public function ImportMessageReadFlag($id, $flags) {
-        // check if the message is in the current syncinterval
-        if (!$this->isMessageInSyncInterval($id))
-            throw new StatusException(sprintf("ImportChangesICS->ImportMessageReadFlag('%s','%d'): Message is outside the sync interval. Flags not updated.", $id, $flags), SYNC_STATUS_OBJECTNOTFOUND);
+        list($fsk,$sk) = MAPIUtils::SplitMessageId($id);
 
-        // check for conflicts
-        /*
-         * Checking for conflicts is correct at this point, but is a very expensive operation.
-         * If the message was deleted, only an error will be shown.
-         *
-        $this->lazyLoadConflicts();
-        if($this->memChanges->IsDeleted($id)) {
-            ZLog::Write(LOGLEVEL_INFO, sprintf("ImportChangesICS->ImportMessageReadFlag('%s'): Conflict detected. Data is already deleted. Request will be ignored.", $id));
-            return true;
+        // if $fsk is set, we convert it into a backend id.
+        if ($fsk) {
+            $fsk = ZPush::GetDeviceManager()->GetBackendIdForFolderId($fsk);
         }
-         */
 
-        $readstate = array ( "sourcekey" => hex2bin($id), "flags" => $flags);
+        // read flag change for our current folder
+        if ($this->folderidHex == $fsk || empty($fsk)) {
 
-        if(!mapi_importcontentschanges_importperuserreadstatechange($this->importer, array($readstate) ))
-            throw new StatusException(sprintf("ImportChangesICS->ImportMessageReadFlag('%s','%d'): Error setting read state: 0x%X", $id, $flags, mapi_last_hresult()), SYNC_STATUS_OBJECTNOTFOUND);
+            // check if the message is in the current syncinterval
+            if (!$this->isMessageInSyncInterval($sk))
+                throw new StatusException(sprintf("ImportChangesICS->ImportMessageReadFlag('%s','%d'): Message is outside the sync interval. Flags not updated.", $id, $flags), SYNC_STATUS_OBJECTNOTFOUND);
 
+            // check for conflicts
+            /*
+             * Checking for conflicts is correct at this point, but is a very expensive operation.
+             * If the message was deleted, only an error will be shown.
+             *
+            $this->lazyLoadConflicts();
+            if($this->memChanges->IsDeleted($id)) {
+                ZLog::Write(LOGLEVEL_INFO, sprintf("ImportChangesICS->ImportMessageReadFlag('%s'): Conflict detected. Data is already deleted. Request will be ignored.", $id));
+                return true;
+            }
+             */
+
+            $readstate = array ( "sourcekey" => hex2bin($sk), "flags" => $flags);
+
+            if(!mapi_importcontentschanges_importperuserreadstatechange($this->importer, array($readstate) ))
+                throw new StatusException(sprintf("ImportChangesICS->ImportMessageReadFlag('%s','%d'): Error setting read state: 0x%X", $id, $flags, mapi_last_hresult()), SYNC_STATUS_OBJECTNOTFOUND);
+        }
+        // yeah OL sucks - ZP-779
+        else {
+            if (!$fsk) {
+                throw new StatusException(sprintf("ImportChangesICS->ImportMessageReadFlag('%s','%d'): Error setting read state. The message is in another folder but id is unknown as no short folder id is available. Please remove your device states to fully resync your device. Operation ignored.", $id, $flags), SYNC_STATUS_OBJECTNOTFOUND);
+            }
+            $store = ZPush::GetBackend()->GetMAPIStoreForFolderId(ZPush::GetAdditionalSyncFolderStore($fsk), $fsk);
+            $entryid = mapi_msgstore_entryidfromsourcekey($store, hex2bin($fsk), hex2bin($sk));
+            $realMessage = mapi_msgstore_openentry($store, $entryid);
+            $flag = 0;
+            if ($flags == 0)
+                $flag |= CLEAR_READ_FLAG;
+            $p = mapi_message_setreadflag($realMessage, $flag);
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ImportChangesICS->ImportMessageReadFlag('%s','%d'): setting readflag on message: 0x%X", $id, $flags, mapi_last_hresult()));
+        }
         return true;
     }
 
@@ -463,7 +531,7 @@ class ImportChangesICS implements IImportChanges {
      * Imports a move of a message. This occurs when a user moves an item to another folder
      *
      * Normally, we would implement this via the 'offical' importmessagemove() function on the ICS importer,
-     * but the Zarafa importer does not support this. Therefore we currently implement it via a standard mapi
+     * but the Zarafa/Kopano importer does not support this. Therefore we currently implement it via a standard mapi
      * call. This causes a mirror 'add/delete' to be sent to the PDA at the next sync.
      * Manfred, 2010-10-21. For some mobiles import was causing duplicate messages in the destination folder
      * (Mantis #202). Therefore we will create a new message in the destination folder, copy properties
@@ -477,13 +545,14 @@ class ImportChangesICS implements IImportChanges {
      * @throws StatusException
      */
     public function ImportMessageMove($id, $newfolder) {
+        list(,$sk) = MAPIUtils::SplitMessageId($id);
         if (strtolower($newfolder) == strtolower(bin2hex($this->folderid)) )
             throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Error, source and destination are equal", $id, $newfolder), SYNC_MOVEITEMSSTATUS_SAMESOURCEANDDEST);
 
         // Get the entryid of the message we're moving
-        $entryid = mapi_msgstore_entryidfromsourcekey($this->store, $this->folderid, hex2bin($id));
+        $entryid = mapi_msgstore_entryidfromsourcekey($this->store, $this->folderid, hex2bin($sk));
         if(!$entryid)
-            throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Error, unable to resolve source message id", $id, $newfolder), SYNC_MOVEITEMSSTATUS_INVALIDSOURCEID);
+            throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Error, unable to resolve source message id", $sk, $newfolder), SYNC_MOVEITEMSSTATUS_INVALIDSOURCEID);
 
         //open the source message
         $srcmessage = mapi_msgstore_openentry($this->store, $entryid);
@@ -493,55 +562,62 @@ class ImportChangesICS implements IImportChanges {
             if ($newfolder == ZPush::GetBackend()->GetWasteBasket()) {
                 $code = SYNC_MOVEITEMSSTATUS_SUCCESS;
             }
-            throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Error, unable to open source message: 0x%X", $id, $newfolder, mapi_last_hresult()), $code);
+            throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Error, unable to open source message: 0x%X", $sk, $newfolder, mapi_last_hresult()), $code);
         }
 
         // check if the source message is in the current syncinterval
-        if (!$this->isMessageInSyncInterval($id))
-            throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Source message is outside the sync interval. Move not performed.", $id, $newfolder), SYNC_MOVEITEMSSTATUS_INVALIDSOURCEID);
+        if (!$this->isMessageInSyncInterval($sk))
+            throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Source message is outside the sync interval. Move not performed.", $sk, $newfolder), SYNC_MOVEITEMSSTATUS_INVALIDSOURCEID);
 
         // get correct mapi store for the destination folder
         $dststore = ZPush::GetBackend()->GetMAPIStoreForFolderId(ZPush::GetAdditionalSyncFolderStore($newfolder), $newfolder);
         if ($dststore === false)
-            throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Error, unable to open store of destination folder", $id, $newfolder), SYNC_MOVEITEMSSTATUS_INVALIDDESTID);
+            throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Error, unable to open store of destination folder", $sk, $newfolder), SYNC_MOVEITEMSSTATUS_INVALIDDESTID);
 
         $dstentryid = mapi_msgstore_entryidfromsourcekey($dststore, hex2bin($newfolder));
         if(!$dstentryid)
-            throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Error, unable to resolve destination folder", $id, $newfolder), SYNC_MOVEITEMSSTATUS_INVALIDDESTID);
+            throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Error, unable to resolve destination folder", $sk, $newfolder), SYNC_MOVEITEMSSTATUS_INVALIDDESTID);
 
         $dstfolder = mapi_msgstore_openentry($dststore, $dstentryid);
         if(!$dstfolder)
-            throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Error, unable to open destination folder", $id, $newfolder), SYNC_MOVEITEMSSTATUS_INVALIDDESTID);
+            throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Error, unable to open destination folder", $sk, $newfolder), SYNC_MOVEITEMSSTATUS_INVALIDDESTID);
 
         $newmessage = mapi_folder_createmessage($dstfolder);
         if (!$newmessage)
-            throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Error, unable to create message in destination folder: 0x%X", $id, $newfolder, mapi_last_hresult()), SYNC_MOVEITEMSSTATUS_INVALIDDESTID);
+            throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Error, unable to create message in destination folder: 0x%X", $sk, $newfolder, mapi_last_hresult()), SYNC_MOVEITEMSSTATUS_INVALIDDESTID);
 
         // Copy message
         mapi_copyto($srcmessage, array(), array(), $newmessage);
         if (mapi_last_hresult())
-            throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Error, copy to destination message failed: 0x%X", $id, $newfolder, mapi_last_hresult()), SYNC_MOVEITEMSSTATUS_CANNOTMOVE);
+            throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Error, copy to destination message failed: 0x%X", $sk, $newfolder, mapi_last_hresult()), SYNC_MOVEITEMSSTATUS_CANNOTMOVE);
 
         $srcfolderentryid = mapi_msgstore_entryidfromsourcekey($this->store, $this->folderid);
         if(!$srcfolderentryid)
-            throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Error, unable to resolve source folder", $id, $newfolder), SYNC_MOVEITEMSSTATUS_INVALIDSOURCEID);
+            throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Error, unable to resolve source folder", $sk, $newfolder), SYNC_MOVEITEMSSTATUS_INVALIDSOURCEID);
 
         $srcfolder = mapi_msgstore_openentry($this->store, $srcfolderentryid);
         if (!$srcfolder)
-            throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Error, unable to open source folder: 0x%X", $id, $newfolder, mapi_last_hresult()), SYNC_MOVEITEMSSTATUS_INVALIDSOURCEID);
+            throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Error, unable to open source folder: 0x%X", $sk, $newfolder, mapi_last_hresult()), SYNC_MOVEITEMSSTATUS_INVALIDSOURCEID);
 
         // Save changes
         mapi_savechanges($newmessage);
         if (mapi_last_hresult())
-            throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Error, mapi_savechanges() failed: 0x%X", $id, $newfolder, mapi_last_hresult()), SYNC_MOVEITEMSSTATUS_CANNOTMOVE);
+            throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Error, mapi_savechanges() failed: 0x%X", $sk, $newfolder, mapi_last_hresult()), SYNC_MOVEITEMSSTATUS_CANNOTMOVE);
 
         // Delete the old message
         if (!mapi_folder_deletemessages($srcfolder, array($entryid)))
-            throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Error, delete of source message failed: 0x%X. Possible duplicates.", $id, $newfolder, mapi_last_hresult()), SYNC_MOVEITEMSSTATUS_SOURCEORDESTLOCKED);
+            throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Error, delete of source message failed: 0x%X. Possible duplicates.", $sk, $newfolder, mapi_last_hresult()), SYNC_MOVEITEMSSTATUS_SOURCEORDESTLOCKED);
 
         $sourcekeyprops = mapi_getprops($newmessage, array (PR_SOURCE_KEY));
-        if (isset($sourcekeyprops[PR_SOURCE_KEY]) && $sourcekeyprops[PR_SOURCE_KEY])
-            return  bin2hex($sourcekeyprops[PR_SOURCE_KEY]);
+        if (isset($sourcekeyprops[PR_SOURCE_KEY]) && $sourcekeyprops[PR_SOURCE_KEY]) {
+            $prefix = "";
+            // prepend the destination short folderid, if it exists
+            $destShortId = ZPush::GetDeviceManager()->GetFolderIdForBackendId($newfolder);
+            if ($destShortId !== $newfolder) {
+                $prefix = $destShortId .":";
+            }
+            return $prefix . bin2hex($sourcekeyprops[PR_SOURCE_KEY]);
+        }
 
         return false;
     }
@@ -557,12 +633,13 @@ class ImportChangesICS implements IImportChanges {
      * @param object        $folder     SyncFolder
      *
      * @access public
-     * @return string       id of the folder
+     * @return boolean|SyncFolder       false on error or a SyncFolder object with serverid and BackendId set (if available)
      * @throws StatusException
      */
     public function ImportFolderChange($folder) {
-        $id = isset($folder->serverid)?$folder->serverid:false;
+        $id = isset($folder->BackendId)?$folder->BackendId : false;
         $parent = $folder->parentid;
+        $parent_org = $folder->parentid;
         $displayname = u2wi($folder->displayname);
         $type = $folder->type;
 
@@ -596,13 +673,13 @@ class ImportChangesICS implements IImportChanges {
 
             $props =  mapi_getprops($newfolder, array(PR_SOURCE_KEY));
             if (isset($props[PR_SOURCE_KEY])) {
-                $sourcekey = bin2hex($props[PR_SOURCE_KEY]);
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("Created folder '%s' with id: '%s'", $displayname, $sourcekey));
-                return $sourcekey;
+                $folder->BackendId = bin2hex($props[PR_SOURCE_KEY]);
+                $folder->serverid = ZPush::GetDeviceManager()->GetFolderIdForBackendId($folder->BackendId, true, DeviceManager::FLD_ORIGIN_USER, $folder->displayname);
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("ImportChangesICS->ImportFolderChange(): Created folder '%s' with id: '%s' backendid: '%s'", $displayname, $folder->serverid, $folder->BackendId));
+                return $folder;
             }
             else
                 throw new StatusException(sprintf("ImportChangesICS->ImportFolderChange('%s','%s','%s'): Error, folder created but PR_SOURCE_KEY not available: 0x%X", Utils::PrintAsString($folder->serverid), $folder->parentid, $displayname, mapi_last_hresult()), SYNC_FSSTATUS_SERVERERROR);
-            return false;
         }
 
         // open folder for update
@@ -655,8 +732,13 @@ class ImportChangesICS implements IImportChanges {
             if(! mapi_folder_copyfolder($sourceparentfolder, $entryid, $destfolder, $displayname, FOLDER_MOVE))
                 throw new StatusException(sprintf("ImportChangesICS->ImportFolderChange('%s','%s','%s'): Error, unable to move folder: 0x%X", Utils::PrintAsString($folder->serverid), $folder->parentid, $displayname, mapi_last_hresult()), SYNC_FSSTATUS_FOLDEREXISTS);
 
-            $folderProps = mapi_getprops($mfolder, array(PR_SOURCE_KEY));
-            return $folderProps[PR_SOURCE_KEY];
+            // the parent changed, but we got a backendID as parent and have to return an AS folderid - the parent-backendId must be mapped at this point already
+            if ($folder->parentid != 0) {
+                $folder->parentid = ZPush::GetDeviceManager()->GetFolderIdForBackendId($parent);
+            }
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ImportChangesICS->ImportFolderChange(): Moved folder '%s' with id: %s/%s from: %s to: %s/%s", $displayname, $folder->serverid, $folder->BackendId, bin2hex($props[PR_PARENT_SOURCE_KEY]), $folder->parentid, $parent_org));
+
+            return $folder;
         }
 
         // update the display name
@@ -667,20 +749,21 @@ class ImportChangesICS implements IImportChanges {
             throw new StatusException(sprintf("ImportChangesICS->ImportFolderChange('%s','%s','%s'): Error, mapi_savechanges() failed: 0x%X", Utils::PrintAsString($folder->serverid), $folder->parentid, $displayname, mapi_last_hresult()), SYNC_FSSTATUS_SERVERERROR);
 
         ZLog::Write(LOGLEVEL_DEBUG, "Imported changes for folder: $id");
-        return $id;
+        return true;
     }
 
     /**
      * Imports a folder deletion
      *
-     * @param string        $id
-     * @param string        $parent id is ignored in ICS
+     * @param SyncFolder    $folder         at least "serverid" needs to be set
      *
      * @access public
      * @return int          SYNC_FOLDERHIERARCHY_STATUS
      * @throws StatusException
      */
-    public function ImportFolderDeletion($id, $parent = false) {
+    public function ImportFolderDeletion($folder) {
+        $id = $folder->BackendId;
+        $parent = isset($folder->parentid) ? $folder->parentid : false;
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("ImportChangesICS->ImportFolderDeletion('%s','%s'): importing folder deletetion", $id, $parent));
 
         $folderentryid = mapi_msgstore_entryidfromsourcekey($this->store, hex2bin($id));

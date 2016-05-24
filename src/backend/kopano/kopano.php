@@ -1,16 +1,15 @@
 <?php
 /***********************************************
-* File      :   zarafa.php
+* File      :   kopano.php
 * Project   :   Z-Push
-* Descr     :   This is backend for the
-*               Zarafa Collaboration Platform (ZCP).
+* Descr     :   This is backend for the Kopano Core (KC).
 *               It is an implementation of IBackend
 *               and also implements the ISearchProvider
-*               to search in the Zarafa system.
+*               to search in the Kopano system.
 *
 * Created   :   01.10.2011
 *
-* Copyright 2007 - 2015 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -46,36 +45,20 @@
 *************************************************/
 
 // config file
-require_once("backend/zarafa/config.php");
+require_once("backend/kopano/config.php");
 
 // include PHP-MAPI classes
-include_once('backend/zarafa/mapi/mapi.util.php');
-include_once('backend/zarafa/mapi/mapidefs.php');
-include_once('backend/zarafa/mapi/mapitags.php');
-include_once('backend/zarafa/mapi/mapicode.php');
-include_once('backend/zarafa/mapi/mapiguid.php');
-include_once('backend/zarafa/mapi/class.baseexception.php');
-include_once('backend/zarafa/mapi/class.mapiexception.php');
-include_once('backend/zarafa/mapi/class.baserecurrence.php');
-include_once('backend/zarafa/mapi/class.taskrecurrence.php');
-include_once('backend/zarafa/mapi/class.recurrence.php');
-include_once('backend/zarafa/mapi/class.meetingrequest.php');
-include_once('backend/zarafa/mapi/class.freebusypublish.php');
-
-// processing of RFC822 messages
-require_once('include/z_RFC822.php');
-
-// components of Zarafa backend
-include_once('backend/zarafa/mapiutils.php');
-include_once('backend/zarafa/mapimapping.php');
-include_once('backend/zarafa/mapiprovider.php');
-include_once('backend/zarafa/mapiphpwrapper.php');
-include_once('backend/zarafa/mapistreamwrapper.php');
-include_once('backend/zarafa/importer.php');
-include_once('backend/zarafa/exporter.php');
+include_once('backend/kopano/mapi/mapi.util.php');
+include_once('backend/kopano/mapi/mapidefs.php');
+include_once('backend/kopano/mapi/mapitags.php');
+include_once('backend/kopano/mapi/mapicode.php');
+include_once('backend/kopano/mapi/mapiguid.php');
 
 
-class BackendZarafa implements IBackend, ISearchProvider {
+//setlocale to UTF-8 in order to support properties containing Unicode characters
+setlocale(LC_CTYPE, "en_US.UTF-8");
+
+class BackendKopano implements IBackend, ISearchProvider {
     private $mainUser;
     private $session;
     private $defaultstore;
@@ -89,8 +72,9 @@ class BackendZarafa implements IBackend, ISearchProvider {
     private $changesSinkStores;
     private $wastebasket;
     private $addressbook;
+    private $folderStatCache;
 
-    // ZCP config parameter for PR_EC_ENABLED_FEATURES / PR_EC_DISABLED_FEATURES
+    // KC config parameter for PR_EC_ENABLED_FEATURES / PR_EC_DISABLED_FEATURES
     const ZPUSH_ENABLED = 'mobile';
 
     const MAXAMBIGUOUSRECIPIENTS = 9999;
@@ -99,11 +83,11 @@ class BackendZarafa implements IBackend, ISearchProvider {
     const HALFHOURSECONDS = 1800;
 
     /**
-     * Constructor of the Zarafa Backend
+     * Constructor of the Kopano Backend
      *
      * @access public
      */
-    public function BackendZarafa() {
+    public function BackendKopano() {
         $this->session = false;
         $this->store = false;
         $this->storeName = false;
@@ -113,24 +97,27 @@ class BackendZarafa implements IBackend, ISearchProvider {
         $this->changesSink = false;
         $this->changesSinkFolders = array();
         $this->changesSinkStores = array();
+        $this->changesSinkHierarchyHash = false;
         $this->wastebasket = false;
         $this->session = false;
+        $this->folderStatCache = array();
 
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendZarafa using PHP-MAPI version: %s", phpversion("mapi")));
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendKopano using PHP-MAPI version: %s - PHP version: %s", phpversion("mapi"), phpversion()));
+        KopanoChangesWrapper::SetBackend($this);
     }
 
     /**
      * Indicates which StateMachine should be used
      *
      * @access public
-     * @return boolean      ZarafaBackend uses the default FileStateMachine
+     * @return boolean      KopanoBackend uses the default FileStateMachine
      */
     public function GetStateMachine() {
         return false;
     }
 
     /**
-     * Returns the ZarafaBackend as it implements the ISearchProvider interface
+     * Returns the KopanoBackend as it implements the ISearchProvider interface
      * This could be overwritten by the global configuration
      *
      * @access public
@@ -151,7 +138,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
     }
 
     /**
-     * Authenticates the user with the configured Zarafa server
+     * Authenticates the user with the configured Kopano server
      *
      * @param string        $username
      * @param string        $domain
@@ -162,7 +149,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
      * @throws AuthenticationRequiredException
      */
     public function Logon($user, $domain, $pass) {
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->Logon(): Trying to authenticate user '%s'..", $user));
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->Logon(): Trying to authenticate user '%s'..", $user));
         $this->mainUser = strtolower($user);
 
         try {
@@ -186,9 +173,9 @@ class BackendZarafa implements IBackend, ISearchProvider {
             }
 
             if (mapi_last_hresult()) {
-                ZLog::Write(LOGLEVEL_ERROR, sprintf("ZarafaBackend->Logon(): login failed with error code: 0x%X", mapi_last_hresult()));
+                ZLog::Write(LOGLEVEL_ERROR, sprintf("KopanoBackend->Logon(): login failed with error code: 0x%X", mapi_last_hresult()));
                 if (mapi_last_hresult() == MAPI_E_NETWORK_ERROR)
-                    throw new HTTPReturnCodeException("Error connecting to ZCP (login)", 503, null, LOGLEVEL_INFO);
+                    throw new HTTPReturnCodeException("Error connecting to KC (login)", 503, null, LOGLEVEL_INFO);
             }
         }
         catch (MAPIException $ex) {
@@ -196,7 +183,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
         }
 
         if(!$this->session) {
-            ZLog::Write(LOGLEVEL_WARN, sprintf("ZarafaBackend->Logon(): logon failed for user '%s'", $user));
+            ZLog::Write(LOGLEVEL_WARN, sprintf("KopanoBackend->Logon(): logon failed for user '%s'", $user));
             $this->defaultstore = false;
             return false;
         }
@@ -205,15 +192,15 @@ class BackendZarafa implements IBackend, ISearchProvider {
         $this->defaultstore = $this->openMessageStore($this->mainUser);
 
         if (mapi_last_hresult() == MAPI_E_FAILONEPROVIDER)
-            throw new HTTPReturnCodeException("Error connecting to ZCP (open store)", 503, null, LOGLEVEL_INFO);
+            throw new HTTPReturnCodeException("Error connecting to KC (open store)", 503, null, LOGLEVEL_INFO);
 
         if($this->defaultstore === false)
-            throw new AuthenticationRequiredException(sprintf("ZarafaBackend->Logon(): User '%s' has no default store", $user));
+            throw new AuthenticationRequiredException(sprintf("KopanoBackend->Logon(): User '%s' has no default store", $user));
 
         $this->store = $this->defaultstore;
         $this->storeName = $this->mainUser;
 
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->Logon(): User '%s' is authenticated",$user));
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->Logon(): User '%s' is authenticated",$user));
 
         $this->isZPushEnabled();
 
@@ -237,11 +224,12 @@ class BackendZarafa implements IBackend, ISearchProvider {
      * @param string        $store              target store, could contain a "domain\user" value
      * @param boolean       $checkACLonly       if set to true, Setup() should just check ACLs
      * @param string        $folderid           if set, only ACLs on this folderid are relevant
+     * @param boolean       $readonly           if set, the folder needs at least read permissions
      *
      * @access public
      * @return boolean
      */
-    public function Setup($store, $checkACLonly = false, $folderid = false) {
+    public function Setup($store, $checkACLonly = false, $folderid = false, $readonly = false) {
         list($user, $domain) = Utils::SplitDomainUser($store);
 
         if (!isset($this->mainUser))
@@ -254,7 +242,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
         // The ACL check is executed when an additional folder is going to be sent to the mobile.
         // Configured that way the user could receive the same folderid twice, with two different names.
         if ($this->mainUser == $user && $checkACLonly && $folderid) {
-            ZLog::Write(LOGLEVEL_DEBUG, "ZarafaBackend->Setup(): Checking ACLs for folder of the users defaultstore. Fail is forced to avoid folder duplications on mobile.");
+            ZLog::Write(LOGLEVEL_DEBUG, "KopanoBackend->Setup(): Checking ACLs for folder of the users defaultstore. Fail is forced to avoid folder duplications on mobile.");
             return false;
         }
 
@@ -275,13 +263,18 @@ class BackendZarafa implements IBackend, ISearchProvider {
                     else
                         $admin = true;
 
-                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->Setup(): Checking for admin ACLs on store '%s': '%s'", $user, Utils::PrintAsString($admin)));
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->Setup(): Checking for admin ACLs on store '%s': '%s'", $user, Utils::PrintAsString($admin)));
                     return $admin;
                 }
-                // check 'secretary' permissions on this folder
+                // check permissions on this folder
                 else {
-                    $rights = $this->hasSecretaryACLs($userstore, $folderid);
-                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->Setup(): Checking for secretary ACLs on '%s' of store '%s': '%s'", $folderid, $user, Utils::PrintAsString($rights)));
+                    if (! $readonly) {
+                        $rights = $this->HasSecretaryACLs($userstore, $folderid);
+                    }
+                    else {
+                        $rights = $this->HasReadACLs($userstore, $folderid);
+                    }
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->Setup(): Checking for '%s' ACLs on '%s' of store '%s': '%s'", ($readonly?'read':'secretary'), $folderid, $user, Utils::PrintAsString($rights)));
                     return $rights;
                 }
             }
@@ -322,7 +315,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
 
             // only publish free busy for the main calendar
             if(isset($rootprops[PR_IPM_APPOINTMENT_ENTRYID]) && $rootprops[PR_IPM_APPOINTMENT_ENTRYID] == $entryid) {
-                ZLog::Write(LOGLEVEL_INFO, sprintf("ZarafaBackend->Logoff(): Updating freebusy information on folder id '%s'", $folderid));
+                ZLog::Write(LOGLEVEL_INFO, sprintf("KopanoBackend->Logoff(): Updating freebusy information on folder id '%s'", $folderid));
                 $calendar = mapi_msgstore_openentry($store, $entryid);
 
                 $pub = new FreeBusyPublish($this->session, $store, $calendar, $storeprops[PR_USER_ENTRYID]);
@@ -375,15 +368,12 @@ class BackendZarafa implements IBackend, ISearchProvider {
      * @return object(ImportChanges)
      */
     public function GetImporter($folderid = false) {
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendZarafa->GetImporter() folderid: '%s'", Utils::PrintAsString($folderid)));
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendKopano->GetImporter() folderid: '%s'", Utils::PrintAsString($folderid)));
         if($folderid !== false) {
-            // check if the user of the current store has permissions to import to this folderid
-            if ($this->storeName != $this->mainUser && !$this->hasSecretaryACLs($this->store, $folderid)) {
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendZarafa->GetImporter(): missing permissions on folderid: '%s'.", Utils::PrintAsString($folderid)));
-                return false;
-            }
             $this->importedFolders[$folderid] = $this->store;
-            return new ImportChangesICS($this->session, $this->store, hex2bin($folderid));
+            $wrapper = KopanoChangesWrapper::GetWrapper($this->storeName, $this->session, $this->store, $folderid, $this->storeName == $this->mainUser);
+            $wrapper->Prepare(KopanoChangesWrapper::IMPORTER);
+            return $wrapper;
         }
         else
             return new ImportChangesICS($this->session, $this->store);
@@ -401,12 +391,9 @@ class BackendZarafa implements IBackend, ISearchProvider {
      */
     public function GetExporter($folderid = false) {
         if($folderid !== false) {
-            // check if the user of the current store has permissions to export from this folderid
-            if ($this->storeName != $this->mainUser && !$this->hasSecretaryACLs($this->store, $folderid)) {
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendZarafa->GetExporter(): missing permissions on folderid: '%s'.", Utils::PrintAsString($folderid)));
-                return false;
-            }
-            return new ExportChangesICS($this->session, $this->store, hex2bin($folderid));
+            $wrapper = KopanoChangesWrapper::GetWrapper($this->storeName, $this->session, $this->store, $folderid, $this->storeName == $this->mainUser);
+            $wrapper->Prepare(KopanoChangesWrapper::EXPORTER);
+            return $wrapper;
         }
         else
             return new ExportChangesICS($this->session, $this->store);
@@ -427,10 +414,10 @@ class BackendZarafa implements IBackend, ISearchProvider {
         // It is available since ZCP 7.0.6
         // @see http://jira.zarafa.com/browse/ZCP-9508
         if (!(function_exists('mapi_feature') && mapi_feature('INETMAPI_IMTOMAPI'))) {
-            throw new StatusException("ZarafaBackend->SendMail(): ZCP version is too old, INETMAPI_IMTOMAPI is not available. Install at least ZCP version 7.0.6 or later.", SYNC_COMMONSTATUS_MAILSUBMISSIONFAILED, null, LOGLEVEL_FATAL);
+            throw new StatusException("KopanoBackend->SendMail(): ZCP/KC version is too old, INETMAPI_IMTOMAPI is not available. Install at least ZCP version 7.0.6 or later.", SYNC_COMMONSTATUS_MAILSUBMISSIONFAILED, null, LOGLEVEL_FATAL);
             return false;
         }
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->SendMail(): RFC822: %d bytes  forward-id: '%s' reply-id: '%s' parent-id: '%s' SaveInSent: '%s' ReplaceMIME: '%s'",
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->SendMail(): RFC822: %d bytes  forward-id: '%s' reply-id: '%s' parent-id: '%s' SaveInSent: '%s' ReplaceMIME: '%s'",
                                             strlen($sm->mime), Utils::PrintAsString($sm->forwardflag), Utils::PrintAsString($sm->replyflag),
                                             Utils::PrintAsString((isset($sm->source->folderid) ? $sm->source->folderid : false)),
                                             Utils::PrintAsString(($sm->saveinsent)), Utils::PrintAsString(isset($sm->replacemime)) ));
@@ -440,15 +427,15 @@ class BackendZarafa implements IBackend, ISearchProvider {
             ZLog::Write(LOGLEVEL_WBXML, "RFC822: ". $rfc822line);
 
         $sendMailProps = MAPIMapping::GetSendMailProperties();
-        $sendMailProps = getPropIdsFromStrings($this->store, $sendMailProps);
+        $sendMailProps = getPropIdsFromStrings($this->defaultstore, $sendMailProps);
 
         // Open the outbox and create the message there
-        $storeprops = mapi_getprops($this->store, array($sendMailProps["outboxentryid"], $sendMailProps["ipmsentmailentryid"]));
+        $storeprops = mapi_getprops($this->defaultstore, array($sendMailProps["outboxentryid"], $sendMailProps["ipmsentmailentryid"]));
         if(isset($storeprops[$sendMailProps["outboxentryid"]]))
-            $outbox = mapi_msgstore_openentry($this->store, $storeprops[$sendMailProps["outboxentryid"]]);
+            $outbox = mapi_msgstore_openentry($this->defaultstore, $storeprops[$sendMailProps["outboxentryid"]]);
 
         if(!$outbox)
-            throw new StatusException(sprintf("ZarafaBackend->SendMail(): No Outbox found or unable to create message: 0x%X", mapi_last_hresult()), SYNC_COMMONSTATUS_SERVERERROR);
+            throw new StatusException(sprintf("KopanoBackend->SendMail(): No Outbox found or unable to create message: 0x%X", mapi_last_hresult()), SYNC_COMMONSTATUS_SERVERERROR);
 
         $mapimessage = mapi_folder_createmessage($outbox);
 
@@ -459,12 +446,12 @@ class BackendZarafa implements IBackend, ISearchProvider {
 
         ZLog::Write(LOGLEVEL_DEBUG, "Use the mapi_inetmapi_imtomapi function");
         $ab = mapi_openaddressbook($this->session);
-        mapi_inetmapi_imtomapi($this->session, $this->store, $ab, $mapimessage, $sm->mime, array());
+        mapi_inetmapi_imtomapi($this->session, $this->defaultstore, $ab, $mapimessage, $sm->mime, array());
 
         // Set the appSeqNr so that tracking tab can be updated for meeting request updates
         // @see http://jira.zarafa.com/browse/ZP-68
         $meetingRequestProps = MAPIMapping::GetMeetingRequestProperties();
-        $meetingRequestProps = getPropIdsFromStrings($this->store, $meetingRequestProps);
+        $meetingRequestProps = getPropIdsFromStrings($this->defaultstore, $meetingRequestProps);
         $props = mapi_getprops($mapimessage, array(PR_MESSAGE_CLASS, $meetingRequestProps["goidtag"], $sendMailProps["internetcpid"], $sendMailProps["body"], $sendMailProps["html"], $sendMailProps["rtf"], $sendMailProps["rtfinsync"]));
 
         // Convert sent message's body to UTF-8 if it was a HTML message.
@@ -481,10 +468,10 @@ class BackendZarafa implements IBackend, ISearchProvider {
         }
         if (stripos($props[PR_MESSAGE_CLASS], "IPM.Schedule.Meeting.Resp.") === 0) {
             // search for calendar items using goid
-            $mr = new Meetingrequest($this->store, $mapimessage);
+            $mr = new Meetingrequest($this->defaultstore, $mapimessage);
             $appointments = $mr->findCalendarItems($props[$meetingRequestProps["goidtag"]]);
             if (is_array($appointments) && !empty($appointments)) {
-                $app = mapi_msgstore_openentry($this->store, $appointments[0]);
+                $app = mapi_msgstore_openentry($this->defaultstore, $appointments[0]);
                 $appprops = mapi_getprops($app, array($meetingRequestProps["appSeqNr"]));
                 if (isset($appprops[$meetingRequestProps["appSeqNr"]]) && $appprops[$meetingRequestProps["appSeqNr"]]) {
                     $mapiprops[$meetingRequestProps["appSeqNr"]] = $appprops[$meetingRequestProps["appSeqNr"]];
@@ -504,82 +491,88 @@ class BackendZarafa implements IBackend, ISearchProvider {
 
         if(isset($sm->source->itemid) && $sm->source->itemid) {
             // answering an email in a public/shared folder
+            // TODO as the store is setup, we should actually user $this->store instead of $this->defaultstore - nevertheless we need to make sure this store is able to send mail (has an outbox)
             if (!$this->Setup(ZPush::GetAdditionalSyncFolderStore($sm->source->folderid)))
-                throw new StatusException(sprintf("ZarafaBackend->SendMail() could not Setup() the backend for folder id '%s'", $sm->source->folderid), SYNC_COMMONSTATUS_SERVERERROR);
+                throw new StatusException(sprintf("KopanoBackend->SendMail() could not Setup() the backend for folder id '%s'", $sm->source->folderid), SYNC_COMMONSTATUS_SERVERERROR);
 
             $entryid = mapi_msgstore_entryidfromsourcekey($this->store, hex2bin($sm->source->folderid), hex2bin($sm->source->itemid));
             if ($entryid)
                 $fwmessage = mapi_msgstore_openentry($this->store, $entryid);
 
-            if(!isset($fwmessage) || !$fwmessage)
-                throw new StatusException(sprintf("ZarafaBackend->SendMail(): Could not open message id '%s' in folder id '%s' to be replied/forwarded: 0x%X", $sm->source->itemid, $sm->source->folderid, mapi_last_hresult()), SYNC_COMMONSTATUS_ITEMNOTFOUND);
+            if (isset($fwmessage) && $fwmessage) {
+                // update icon and last_verb when forwarding or replying message
+                // reply-all (verb 103) is not supported, as we cannot really detect this case
+                if ($sm->forwardflag) {
+                    $updateProps = array(
+                            PR_ICON_INDEX           => 262,
+                            PR_LAST_VERB_EXECUTED   => 104,
+                    );
+                }
+                elseif ($sm->replyflag) {
+                    $updateProps = array(
+                            PR_ICON_INDEX           => 261,
+                            PR_LAST_VERB_EXECUTED   => 102,
+                    );
+                }
+                if (isset($updateProps)) {
+                    $updateProps[PR_LAST_VERB_EXECUTION_TIME] = time();
+                    mapi_setprops($fwmessage, $updateProps);
+                    mapi_savechanges($fwmessage);
+                }
 
-            // update icon and last_verb when forwarding or replying message
-            // reply-all (verb 103) is not supported, as we cannot really detect this case
-            if ($sm->forwardflag) {
-                $updateProps = array(
-                    PR_ICON_INDEX           => 262,
-                    PR_LAST_VERB_EXECUTED   => 104,
-                );
+                // only attach the original message if the mobile does not send it itself
+                if (!isset($sm->replacemime)) {
+                    // get message's body in order to append forward or reply text
+                    if (!isset($body)) {
+                        $body = MAPIUtils::readPropStream($mapimessage, PR_BODY);
+                    }
+                    if (!isset($bodyHtml)) {
+                        $bodyHtml = MAPIUtils::readPropStream($mapimessage, PR_HTML);
+                    }
+                    $cpid = mapi_getprops($fwmessage, array($sendMailProps["internetcpid"]));
+                    if($sm->forwardflag) {
+                        // attach the original attachments to the outgoing message
+                        $this->copyAttachments($mapimessage, $fwmessage);
+                    }
+
+                    // regarding the conversion @see ZP-470
+                    if (strlen($body) > 0) {
+                        $fwbody = MAPIUtils::readPropStream($fwmessage, PR_BODY);
+                        // if only the old message's cpid is set, convert from old charset to utf-8
+                        if (isset($cpid[$sendMailProps["internetcpid"]]) && $cpid[$sendMailProps["internetcpid"]] != INTERNET_CPID_UTF8) {
+                            ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->SendMail(): convert plain forwarded message charset (only fw set) from '%s' to '65001'", $cpid[$sendMailProps["internetcpid"]]));
+                            $fwbody = Utils::ConvertCodepageStringToUtf8($cpid[$sendMailProps["internetcpid"]], $fwbody);
+                        }
+                        // otherwise to the general conversion
+                        else {
+                            ZLog::Write(LOGLEVEL_DEBUG, "KopanoBackend->SendMail(): no charset conversion done for plain forwarded message");
+                            $fwbody = w2u($fwbody);
+                        }
+
+                        $mapiprops[$sendMailProps["body"]] = $body."\r\n\r\n".$fwbody;
+                    }
+
+                    if (strlen($bodyHtml) > 0) {
+                        $fwbodyHtml = MAPIUtils::readPropStream($fwmessage, PR_HTML);
+                        // if only new message's cpid is set, convert to UTF-8
+                        if (isset($cpid[$sendMailProps["internetcpid"]]) && $cpid[$sendMailProps["internetcpid"]] != INTERNET_CPID_UTF8) {
+                            ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->SendMail(): convert html forwarded message charset (only fw set) from '%s' to '65001'", $cpid[$sendMailProps["internetcpid"]]));
+                            $fwbodyHtml = Utils::ConvertCodepageStringToUtf8($cpid[$sendMailProps["internetcpid"]], $fwbodyHtml);
+                        }
+                        // otherwise to the general conversion
+                        else {
+                            ZLog::Write(LOGLEVEL_DEBUG, "KopanoBackend->SendMail(): no charset conversion done for html forwarded message");
+                            $fwbodyHtml = w2u($fwbodyHtml);
+                        }
+
+                        $mapiprops[$sendMailProps["html"]] = $bodyHtml."<br><br>".$fwbodyHtml;
+                    }
+                }
             }
-            elseif ($sm->replyflag) {
-                $updateProps = array(
-                    PR_ICON_INDEX           => 261,
-                    PR_LAST_VERB_EXECUTED   => 102,
-                );
-            }
-            if (isset($updateProps)) {
-                $updateProps[PR_LAST_VERB_EXECUTION_TIME] = time();
-                mapi_setprops($fwmessage, $updateProps);
-                mapi_savechanges($fwmessage);
-            }
-
-            // only attach the original message if the mobile does not send it itself
-            if (!isset($sm->replacemime)) {
-                // get message's body in order to append forward or reply text
-                if (!isset($body)) {
-                    $body = MAPIUtils::readPropStream($mapimessage, PR_BODY);
-                }
-                if (!isset($bodyHtml)) {
-                    $bodyHtml = MAPIUtils::readPropStream($mapimessage, PR_HTML);
-                }
-                $cpid = mapi_getprops($fwmessage, array($sendMailProps["internetcpid"]));
-                if($sm->forwardflag) {
-                    // attach the original attachments to the outgoing message
-                    $this->copyAttachments($mapimessage, $fwmessage);
-                }
-
-                // regarding the conversion @see ZP-470
-                if (strlen($body) > 0) {
-                    $fwbody = MAPIUtils::readPropStream($fwmessage, PR_BODY);
-                    // if only the old message's cpid is set, convert from old charset to utf-8
-                    if (isset($cpid[$sendMailProps["internetcpid"]]) && $cpid[$sendMailProps["internetcpid"]] != INTERNET_CPID_UTF8) {
-                        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->SendMail(): convert plain forwarded message charset (only fw set) from '%s' to '65001'", $cpid[$sendMailProps["internetcpid"]]));
-                        $fwbody = Utils::ConvertCodepageStringToUtf8($cpid[$sendMailProps["internetcpid"]], $fwbody);
-                    }
-                    // otherwise to the general conversion
-                    else {
-                        ZLog::Write(LOGLEVEL_DEBUG, "ZarafaBackend->SendMail(): no charset conversion done for plain forwarded message");
-                        $fwbody = w2u($fwbody);
-                    }
-
-                    $mapiprops[$sendMailProps["body"]] = $body."\r\n\r\n".$fwbody;
-                }
-
-                if (strlen($bodyHtml) > 0) {
-                    $fwbodyHtml = MAPIUtils::readPropStream($fwmessage, PR_HTML);
-                    // if only new message's cpid is set, convert to UTF-8
-                    if (isset($cpid[$sendMailProps["internetcpid"]]) && $cpid[$sendMailProps["internetcpid"]] != INTERNET_CPID_UTF8) {
-                        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->SendMail(): convert html forwarded message charset (only fw set) from '%s' to '65001'", $cpid[$sendMailProps["internetcpid"]]));
-                        $fwbodyHtml = Utils::ConvertCodepageStringToUtf8($cpid[$sendMailProps["internetcpid"]], $fwbodyHtml);
-                    }
-                    // otherwise to the general conversion
-                    else {
-                        ZLog::Write(LOGLEVEL_DEBUG, "ZarafaBackend->SendMail(): no charset conversion done for html forwarded message");
-                        $fwbodyHtml = w2u($fwbodyHtml);
-                    }
-
-                    $mapiprops[$sendMailProps["html"]] = $bodyHtml."<br><br>".$fwbodyHtml;
+            else {
+                // no fwmessage could be opened and we need it because we do not replace mime
+                if (!isset($sm->replacemime) || $sm->replacemime == false) {
+                    throw new StatusException(sprintf("KopanoBackend->SendMail(): Could not open message id '%s' in folder id '%s' to be replied/forwarded: 0x%X", $sm->source->itemid, $sm->source->folderid, mapi_last_hresult()), SYNC_COMMONSTATUS_ITEMNOTFOUND);
                 }
             }
         }
@@ -590,9 +583,9 @@ class BackendZarafa implements IBackend, ISearchProvider {
         $hr = mapi_last_hresult();
 
         if ($hr)
-            throw new StatusException(sprintf("ZarafaBackend->SendMail(): Error saving/submitting the message to the Outbox: 0x%X", mapi_last_hresult()), SYNC_COMMONSTATUS_MAILSUBMISSIONFAILED);
+            throw new StatusException(sprintf("KopanoBackend->SendMail(): Error saving/submitting the message to the Outbox: 0x%X", mapi_last_hresult()), SYNC_COMMONSTATUS_MAILSUBMISSIONFAILED);
 
-        ZLog::Write(LOGLEVEL_DEBUG, "ZarafaBackend->SendMail(): email submitted");
+        ZLog::Write(LOGLEVEL_DEBUG, "KopanoBackend->SendMail(): email submitted");
         return true;
     }
 
@@ -608,15 +601,17 @@ class BackendZarafa implements IBackend, ISearchProvider {
      * @throws StatusException
      */
     public function Fetch($folderid, $id, $contentparameters) {
+        // id might be in the new longid format, so we have to split it here
+        list($fsk, $sk) = MAPIUtils::SplitMessageId($id);
         // get the entry id of the message
-        $entryid = mapi_msgstore_entryidfromsourcekey($this->store, hex2bin($folderid), hex2bin($id));
+        $entryid = mapi_msgstore_entryidfromsourcekey($this->store, hex2bin($folderid), hex2bin($sk));
         if(!$entryid)
-            throw new StatusException(sprintf("BackendZarafa->Fetch('%s','%s'): Error getting entryid: 0x%X", $folderid, $id, mapi_last_hresult()), SYNC_STATUS_OBJECTNOTFOUND);
+            throw new StatusException(sprintf("BackendKopano->Fetch('%s','%s'): Error getting entryid: 0x%X", $folderid, $sk, mapi_last_hresult()), SYNC_STATUS_OBJECTNOTFOUND);
 
         // open the message
         $message = mapi_msgstore_openentry($this->store, $entryid);
         if(!$message)
-            throw new StatusException(sprintf("BackendZarafa->Fetch('%s','%s'): Error, unable to open message: 0x%X", $folderid, $id, mapi_last_hresult()), SYNC_STATUS_OBJECTNOTFOUND);
+            throw new StatusException(sprintf("BackendKopano->Fetch('%s','%s'): Error, unable to open message: 0x%X", $folderid, $sk, mapi_last_hresult()), SYNC_STATUS_OBJECTNOTFOUND);
 
         // convert the mapi message into a SyncObject and return it
         $mapiprovider = new MAPIProvider($this->session, $this->store);
@@ -660,10 +655,10 @@ class BackendZarafa implements IBackend, ISearchProvider {
      * @throws StatusException
      */
     public function GetAttachmentData($attname) {
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->GetAttachmentData('%s')", $attname));
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->GetAttachmentData('%s')", $attname));
 
         if(!strpos($attname, ":"))
-            throw new StatusException(sprintf("ZarafaBackend->GetAttachmentData('%s'): Error, attachment requested for non-existing item", $attname), SYNC_ITEMOPERATIONSSTATUS_INVALIDATT);
+            throw new StatusException(sprintf("KopanoBackend->GetAttachmentData('%s'): Error, attachment requested for non-existing item", $attname), SYNC_ITEMOPERATIONSSTATUS_INVALIDATT);
 
         list($id, $attachnum, $parentEntryid) = explode(":", $attname);
         if (isset($parentEntryid)) {
@@ -673,12 +668,12 @@ class BackendZarafa implements IBackend, ISearchProvider {
         $entryid = hex2bin($id);
         $message = mapi_msgstore_openentry($this->store, $entryid);
         if(!$message)
-            throw new StatusException(sprintf("ZarafaBackend->GetAttachmentData('%s'): Error, unable to open item for attachment data for id '%s' with: 0x%X", $attname, $id, mapi_last_hresult()), SYNC_ITEMOPERATIONSSTATUS_INVALIDATT);
+            throw new StatusException(sprintf("KopanoBackend->GetAttachmentData('%s'): Error, unable to open item for attachment data for id '%s' with: 0x%X", $attname, $id, mapi_last_hresult()), SYNC_ITEMOPERATIONSSTATUS_INVALIDATT);
 
         MAPIUtils::ParseSmime($this->session, $this->defaultstore, $this->getAddressbook(), $message);
         $attach = mapi_message_openattach($message, $attachnum);
         if(!$attach)
-            throw new StatusException(sprintf("ZarafaBackend->GetAttachmentData('%s'): Error, unable to open attachment number '%s' with: 0x%X", $attname, $attachnum, mapi_last_hresult()), SYNC_ITEMOPERATIONSSTATUS_INVALIDATT);
+            throw new StatusException(sprintf("KopanoBackend->GetAttachmentData('%s'): Error, unable to open attachment number '%s' with: 0x%X", $attname, $attachnum, mapi_last_hresult()), SYNC_ITEMOPERATIONSSTATUS_INVALIDATT);
 
         // get necessary attachment props
         $attprops = mapi_getprops($attach, array(PR_ATTACH_MIME_TAG, PR_ATTACH_MIME_TAG_W, PR_ATTACH_METHOD));
@@ -695,10 +690,10 @@ class BackendZarafa implements IBackend, ISearchProvider {
             $stream = mapi_openpropertytostream($attach, PR_ATTACH_DATA_BIN);
 
         if(!$stream)
-            throw new StatusException(sprintf("ZarafaBackend->GetAttachmentData('%s'): Error, unable to open attachment data stream: 0x%X", $attname, mapi_last_hresult()), SYNC_ITEMOPERATIONSSTATUS_INVALIDATT);
+            throw new StatusException(sprintf("KopanoBackend->GetAttachmentData('%s'): Error, unable to open attachment data stream: 0x%X", $attname, mapi_last_hresult()), SYNC_ITEMOPERATIONSSTATUS_INVALIDATT);
 
         // put the mapi stream into a wrapper to get a standard stream
-        $attachment->data = MapiStreamWrapper::Open($stream);
+        $attachment->data = MAPIStreamWrapper::Open($stream);
         if (isset($attprops[PR_ATTACH_MIME_TAG]))
             $attachment->contenttype = $attprops[PR_ATTACH_MIME_TAG];
         elseif (isset($attprops[PR_ATTACH_MIME_TAG_W]))
@@ -723,22 +718,22 @@ class BackendZarafa implements IBackend, ISearchProvider {
     public function EmptyFolder($folderid, $includeSubfolders = true) {
         $folderentryid = mapi_msgstore_entryidfromsourcekey($this->store, hex2bin($folderid));
         if (!$folderentryid)
-            throw new StatusException(sprintf("BackendZarafa->EmptyFolder('%s','%s'): Error, unable to open folder (no entry id)", $folderid, Utils::PrintAsString($includeSubfolders)), SYNC_ITEMOPERATIONSSTATUS_SERVERERROR);
+            throw new StatusException(sprintf("BackendKopano->EmptyFolder('%s','%s'): Error, unable to open folder (no entry id)", $folderid, Utils::PrintAsString($includeSubfolders)), SYNC_ITEMOPERATIONSSTATUS_SERVERERROR);
         $folder = mapi_msgstore_openentry($this->store, $folderentryid);
 
         if (!$folder)
-            throw new StatusException(sprintf("BackendZarafa->EmptyFolder('%s','%s'): Error, unable to open parent folder (open entry)", $folderid, Utils::PrintAsString($includeSubfolders)), SYNC_ITEMOPERATIONSSTATUS_SERVERERROR);
+            throw new StatusException(sprintf("BackendKopano->EmptyFolder('%s','%s'): Error, unable to open parent folder (open entry)", $folderid, Utils::PrintAsString($includeSubfolders)), SYNC_ITEMOPERATIONSSTATUS_SERVERERROR);
 
         $flags = 0;
         if ($includeSubfolders)
             $flags = DEL_ASSOCIATED;
 
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendZarafa->EmptyFolder('%s','%s'): emptying folder",$folderid, Utils::PrintAsString($includeSubfolders)));
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendKopano->EmptyFolder('%s','%s'): emptying folder",$folderid, Utils::PrintAsString($includeSubfolders)));
 
         // empty folder!
         mapi_folder_emptyfolder($folder, $flags);
         if (mapi_last_hresult())
-            throw new StatusException(sprintf("BackendZarafa->EmptyFolder('%s','%s'): Error, mapi_folder_emptyfolder() failed: 0x%X", $folderid, Utils::PrintAsString($includeSubfolders), mapi_last_hresult()), SYNC_ITEMOPERATIONSSTATUS_SERVERERROR);
+            throw new StatusException(sprintf("BackendKopano->EmptyFolder('%s','%s'): Error, mapi_folder_emptyfolder() failed: 0x%X", $folderid, Utils::PrintAsString($includeSubfolders), mapi_last_hresult()), SYNC_ITEMOPERATIONSSTATUS_SERVERERROR);
 
         return true;
     }
@@ -759,19 +754,19 @@ class BackendZarafa implements IBackend, ISearchProvider {
         // Use standard meeting response code to process meeting request
         $reqentryid = mapi_msgstore_entryidfromsourcekey($this->store, hex2bin($folderid), hex2bin($requestid));
         if (!$reqentryid)
-            throw new StatusException(sprintf("BackendZarafa->MeetingResponse('%s', '%s', '%s'): Error, unable to entryid of the message 0x%X", $requestid, $folderid, $response, mapi_last_hresult()), SYNC_MEETRESPSTATUS_INVALIDMEETREQ);
+            throw new StatusException(sprintf("BackendKopano->MeetingResponse('%s', '%s', '%s'): Error, unable to entryid of the message 0x%X", $requestid, $folderid, $response, mapi_last_hresult()), SYNC_MEETRESPSTATUS_INVALIDMEETREQ);
 
         $mapimessage = mapi_msgstore_openentry($this->store, $reqentryid);
         if(!$mapimessage)
-            throw new StatusException(sprintf("BackendZarafa->MeetingResponse('%s','%s', '%s'): Error, unable to open request message for response 0x%X", $requestid, $folderid, $response, mapi_last_hresult()), SYNC_MEETRESPSTATUS_INVALIDMEETREQ);
+            throw new StatusException(sprintf("BackendKopano->MeetingResponse('%s','%s', '%s'): Error, unable to open request message for response 0x%X", $requestid, $folderid, $response, mapi_last_hresult()), SYNC_MEETRESPSTATUS_INVALIDMEETREQ);
 
         $meetingrequest = new Meetingrequest($this->store, $mapimessage, $this->session);
 
         if(!$meetingrequest->isMeetingRequest())
-            throw new StatusException(sprintf("BackendZarafa->MeetingResponse('%s','%s', '%s'): Error, attempt to respond to non-meeting request", $requestid, $folderid, $response), SYNC_MEETRESPSTATUS_INVALIDMEETREQ);
+            throw new StatusException(sprintf("BackendKopano->MeetingResponse('%s','%s', '%s'): Error, attempt to respond to non-meeting request", $requestid, $folderid, $response), SYNC_MEETRESPSTATUS_INVALIDMEETREQ);
 
         if($meetingrequest->isLocalOrganiser())
-            throw new StatusException(sprintf("BackendZarafa->MeetingResponse('%s','%s', '%s'): Error, attempt to response to meeting request that we organized", $requestid, $folderid, $response), SYNC_MEETRESPSTATUS_INVALIDMEETREQ);
+            throw new StatusException(sprintf("BackendKopano->MeetingResponse('%s','%s', '%s'): Error, attempt to response to meeting request that we organized", $requestid, $folderid, $response), SYNC_MEETRESPSTATUS_INVALIDMEETREQ);
 
         // Process the meeting response. We don't have to send the actual meeting response
         // e-mail, because the device will send it itself.
@@ -796,7 +791,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
             $newitem = mapi_msgstore_openentry($this->store, $entryid);
             // new item might be in a delegator's store. ActiveSync does not support accepting them.
             if (!$newitem) {
-                throw new StatusException(sprintf("BackendZarafa->MeetingResponse('%s','%s', '%s'): Object with entryid '%s' was not found in user's store (0x%X). It might be in a delegator's store.", $requestid, $folderid, $response, bin2hex($entryid), mapi_last_hresult()), SYNC_MEETRESPSTATUS_SERVERERROR, null, LOGLEVEL_WARN);
+                throw new StatusException(sprintf("BackendKopano->MeetingResponse('%s','%s', '%s'): Object with entryid '%s' was not found in user's store (0x%X). It might be in a delegator's store.", $requestid, $folderid, $response, bin2hex($entryid), mapi_last_hresult()), SYNC_MEETRESPSTATUS_SERVERERROR, null, LOGLEVEL_WARN);
             }
 
             $newprops = mapi_getprops($newitem, array(PR_SOURCE_KEY));
@@ -805,7 +800,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
 
         // on recurring items, the MeetingRequest class responds with a wrong entryid
         if ($requestid == $calendarid) {
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendZarafa->MeetingResponse('%s','%s', '%s'): returned calender id is the same as the requestid - re-searching", $requestid, $folderid, $response));
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendKopano->MeetingResponse('%s','%s', '%s'): returned calender id is the same as the requestid - re-searching", $requestid, $folderid, $response));
 
             $props = MAPIMapping::GetMeetingRequestProperties();
             $props = getPropIdsFromStrings($this->store, $props);
@@ -819,11 +814,11 @@ class BackendZarafa implements IBackend, ISearchProvider {
                $newitem = mapi_msgstore_openentry($this->store, $items[0]);
                $newprops = mapi_getprops($newitem, array(PR_SOURCE_KEY));
                $calendarid = bin2hex($newprops[PR_SOURCE_KEY]);
-               ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendZarafa->MeetingResponse('%s','%s', '%s'): found other calendar entryid", $requestid, $folderid, $response));
+               ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendKopano->MeetingResponse('%s','%s', '%s'): found other calendar entryid", $requestid, $folderid, $response));
             }
 
             if ($requestid == $calendarid)
-                throw new StatusException(sprintf("BackendZarafa->MeetingResponse('%s','%s', '%s'): Error finding the accepted meeting response in the calendar", $requestid, $folderid, $response), SYNC_MEETRESPSTATUS_INVALIDMEETREQ);
+                throw new StatusException(sprintf("BackendKopano->MeetingResponse('%s','%s', '%s'): Error finding the accepted meeting response in the calendar", $requestid, $folderid, $response), SYNC_MEETRESPSTATUS_INVALIDMEETREQ);
         }
 
         // delete meeting request from Inbox
@@ -838,25 +833,26 @@ class BackendZarafa implements IBackend, ISearchProvider {
      * Indicates if the backend has a ChangesSink.
      * A sink is an active notification mechanism which does not need polling.
      * Since Zarafa 7.0.5 such a sink is available.
-     * The Zarafa backend uses this method to initialize the sink with mapi.
+     * The Kopano backend uses this method to initialize the sink with mapi.
      *
      * @access public
      * @return boolean
      */
     public function HasChangesSink() {
         if (!$this->notifications) {
-            ZLog::Write(LOGLEVEL_DEBUG, "ZarafaBackend->HasChangesSink(): sink is not available");
+            ZLog::Write(LOGLEVEL_DEBUG, "KopanoBackend->HasChangesSink(): sink is not available");
             return false;
         }
 
         $this->changesSink = @mapi_sink_create();
 
         if (! $this->changesSink || mapi_last_hresult()) {
-            ZLog::Write(LOGLEVEL_WARN, sprintf("ZarafaBackend->HasChangesSink(): sink could not be created with  0x%X", mapi_last_hresult()));
+            ZLog::Write(LOGLEVEL_WARN, sprintf("KopanoBackend->HasChangesSink(): sink could not be created with  0x%X", mapi_last_hresult()));
             return false;
         }
 
-        ZLog::Write(LOGLEVEL_DEBUG, "ZarafaBackend->HasChangesSink(): created");
+        $this->changesSinkHierarchyHash = $this->getHierarchyHash();
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->HasChangesSink(): created - HierarchyHash: %s", $this->changesSinkHierarchyHash));
 
         // advise the main store and also to check if the connection supports it
         return $this->adviseStoreToSink($this->defaultstore);
@@ -873,7 +869,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
      * @return boolean      false if entryid can not be found for that folder
      */
     public function ChangesSinkInitialize($folderid) {
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->ChangesSinkInitialize(): folderid '%s'", $folderid));
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->ChangesSinkInitialize(): folderid '%s'", $folderid));
 
         $entryid = mapi_msgstore_entryidfromsourcekey($this->store, hex2bin($folderid));
         if (!$entryid)
@@ -898,9 +894,26 @@ class BackendZarafa implements IBackend, ISearchProvider {
      * @return array
      */
     public function ChangesSink($timeout = 30) {
+        // clear the folder stats cache
+        unset($this->folderStatCache);
+
         $notifications = array();
+        $hierarchyNotifications = array();
         $sinkresult = @mapi_sink_timedwait($this->changesSink, $timeout * 1000);
+        // reverse array so that the changes on folders are before changes on messages and
+        // it's possible to filter such notifications
+        $sinkresult = array_reverse($sinkresult, true);
         foreach ($sinkresult as $sinknotif) {
+            // add a notification on a folder
+            if ($sinknotif['objtype'] == MAPI_FOLDER) {
+                $hierarchyNotifications[$sinknotif['entryid']] = IBackend::HIERARCHYNOTIFICATION;
+            }
+            // change on a message, remove hierarchy notification
+            if (isset($sinknotif['parentid']) && $sinknotif['objtype'] == MAPI_MESSAGE && isset($notifications[$sinknotif['parentid']])) {
+                unset($hierarchyNotifications[$sinknotif['parentid']]);
+            }
+
+            // TODO check if adding $sinknotif['objtype'] = MAPI_MESSAGE wouldn't break anything
             // check if something in the monitored folders changed
             if (isset($sinknotif['parentid']) && array_key_exists($sinknotif['parentid'], $this->changesSinkFolders)) {
                 $notifications[] = $this->changesSinkFolders[$sinknotif['parentid']];
@@ -908,6 +921,16 @@ class BackendZarafa implements IBackend, ISearchProvider {
             // deletes and moves
             if (isset($sinknotif['oldparentid']) && array_key_exists($sinknotif['oldparentid'], $this->changesSinkFolders)) {
                 $notifications[] = $this->changesSinkFolders[$sinknotif['oldparentid']];
+            }
+        }
+
+        // validate hierarchy notifications by comparing the hierarchy hashes (too many false positives otherwise)
+        if (!empty($hierarchyNotifications)) {
+            $hash = $this->getHierarchyHash();
+            if ($hash !== $this->changesSinkHierarchyHash) {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendKopano->ChangesSink() Hierarchy notification, pending validation. New hierarchyHash: %s", $hash));
+                $notifications[] = IBackend::HIERARCHYNOTIFICATION;
+                $this->changesSinkHierarchyHash = $hash;
             }
         }
         return $notifications;
@@ -1005,6 +1028,44 @@ class BackendZarafa implements IBackend, ISearchProvider {
         return $r;
     }
 
+    /**
+     * Returns the policy name for the user.
+     * If the backend returns false, the 'default' policy is used.
+     * If the backend returns any other name than 'default' the policygroup with
+     * that name (defined in the policies.ini file) will be applied for this user.
+     *
+     * @access public
+     * @return string|boolean
+     */
+    public function GetUserPolicyName() {
+        // TODO: get the user's policy from the users' directory
+        return false;
+    }
+
+    /**
+     * Returns the backend ID of the folder of the KOE GAB.
+     *
+     * @param string $foldername
+     *
+     * @access public
+     * @return string|boolean
+     */
+    public function GetKoeGabBackendFolderId($foldername) {
+        $rootfolder = mapi_msgstore_openentry($this->store);
+        $table = mapi_folder_gethierarchytable($rootfolder, CONVENIENT_DEPTH);
+
+        $restriction = array(RES_PROPERTY, array(RELOP => RELOP_EQ, ULPROPTAG => PR_DISPLAY_NAME, VALUE => $foldername));
+        mapi_table_restrict($table, $restriction);
+        $querycnt = mapi_table_getrowcount($table);
+        if ($querycnt == 1) {
+            $entry = mapi_table_queryallrows($table, array(PR_SOURCE_KEY));
+            if (isset($entry[0]) && isset($entry[0][PR_SOURCE_KEY])) {
+                return bin2hex($entry[0][PR_SOURCE_KEY]);
+            }
+        }
+        ZLog::Write(LOGLEVEL_WARN, sprintf("KopanoBackend->GetKoeGabBackendFolderId() Found %d entries in the store '%s' matching the name '%s'.", $querycnt, $this->storeName, $foldername));
+        return false;
+    }
 
     /**----------------------------------------------------------------------------------------------------------
      * Implementation of the ISearchProvider interface
@@ -1024,7 +1085,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
     }
 
     /**
-     * Searches the GAB of Zarafa
+     * Searches the GAB of Kopano
      * Can be overwitten globally by configuring a SearchBackend
      *
      * @param string        $searchquery
@@ -1047,14 +1108,14 @@ class BackendZarafa implements IBackend, ISearchProvider {
             $table = mapi_folder_getcontentstable($ab_dir);
 
         if (!$table)
-            throw new StatusException(sprintf("ZarafaBackend->GetGALSearchResults(): could not open addressbook: 0x%X", mapi_last_hresult()), SYNC_SEARCHSTATUS_STORE_CONNECTIONFAILED);
+            throw new StatusException(sprintf("KopanoBackend->GetGALSearchResults(): could not open addressbook: 0x%X", mapi_last_hresult()), SYNC_SEARCHSTATUS_STORE_CONNECTIONFAILED);
 
         $restriction = MAPIUtils::GetSearchRestriction(u2w($searchquery));
         mapi_table_restrict($table, $restriction);
         mapi_table_sort($table, array(PR_DISPLAY_NAME => TABLE_SORT_ASCEND));
 
         if (mapi_last_hresult())
-            throw new StatusException(sprintf("ZarafaBackend->GetGALSearchResults(): could not apply restriction: 0x%X", mapi_last_hresult()), SYNC_SEARCHSTATUS_STORE_TOOCOMPLEX);
+            throw new StatusException(sprintf("KopanoBackend->GetGALSearchResults(): could not apply restriction: 0x%X", mapi_last_hresult()), SYNC_SEARCHSTATUS_STORE_TOOCOMPLEX);
 
         //range for the search results, default symbian range end is 50, wm 99,
         //so we'll use that of nokia
@@ -1177,7 +1238,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
         $items["range"] = $cpo->GetSearchRange();
         for ($i = 0; $i < $cnt; $i++) {
             $items[$i]['class'] = 'Email';
-            $items[$i]['longid'] = bin2hex($rows[$i][PR_PARENT_SOURCE_KEY]) . ":" . bin2hex($rows[$i][PR_SOURCE_KEY]);
+            $items[$i]['longid'] = ZPush::GetDeviceManager()->GetFolderIdForBackendId(bin2hex($rows[$i][PR_PARENT_SOURCE_KEY])) . ":" . bin2hex($rows[$i][PR_SOURCE_KEY]);
             $items[$i]['folderid'] = bin2hex($rows[$i][PR_PARENT_SOURCE_KEY]);
         }
         return $items;
@@ -1191,7 +1252,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
     * @return boolean
     */
     public function TerminateSearch($pid) {
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->TerminateSearch(): terminating search for pid %d", $pid));
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->TerminateSearch(): terminating search for pid %d", $pid));
         if (!isset($this->store) || $this->store === false) {
             ZLog::Write(LOGLEVEL_WARN, sprintf("The store is not available. It is not possible to remove search folder with pid %d", $pid));
             return false;
@@ -1251,7 +1312,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
      */
     public function GetMAPIStoreForFolderId($store, $folderid) {
         if ($store == false) {
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->GetMAPIStoreForFolderId('%s', '%s'): no store specified, returning default store", $store, $folderid));
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->GetMAPIStoreForFolderId('%s', '%s'): no store specified, returning default store", $store, $folderid));
             return $this->defaultstore;
         }
 
@@ -1260,7 +1321,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
             return $this->store;
         }
         else {
-            ZLog::Write(LOGLEVEL_WARN, sprintf("ZarafaBackend->GetMAPIStoreForFolderId('%s', '%s'): store is not available", $store, $folderid));
+            ZLog::Write(LOGLEVEL_WARN, sprintf("KopanoBackend->GetMAPIStoreForFolderId('%s', '%s'): store is not available", $store, $folderid));
             return false;
         }
     }
@@ -1274,7 +1335,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
      * @return Array
      */
     public function GetUserDetails($username) {
-        ZLog::Write(LOGLEVEL_WBXML, sprintf("ZarafaBackend->GetUserDetails for '%s'.", $username));
+        ZLog::Write(LOGLEVEL_WBXML, sprintf("KopanoBackend->GetUserDetails for '%s'.", $username));
         $zarafauserinfo = @mapi_zarafa_getuser_by_name($this->store, $username);
         $userDetails['emailaddress'] = (isset($zarafauserinfo['emailaddress']) && $zarafauserinfo['emailaddress']) ? $zarafauserinfo['emailaddress'] : false;
         $userDetails['fullname'] = (isset($zarafauserinfo['fullname']) && $zarafauserinfo['fullname']) ? $zarafauserinfo['fullname'] : false;
@@ -1291,9 +1352,103 @@ class BackendZarafa implements IBackend, ISearchProvider {
         return $this->storeName;
     }
 
+    /**
+     * Indicates if the Backend supports folder statistics.
+     *
+     * @access public
+     * @return boolean
+     */
+    public function HasFolderStats() {
+        return true;
+    }
+
+    /**
+     * Returns a status indication of the folder.
+     * If there are changes in the folder, the returned value must change.
+     * The returned values are compared with '===' to determine if a folder needs synchronization or not.
+     *
+     * @param string $store         the store where the folder resides
+     * @param string $folderid      the folder id
+     *
+     * @access public
+     * @return string
+     */
+    public function GetFolderStat($store, $folderid) {
+        list($user, $domain) = Utils::SplitDomainUser($store);
+        if ($user === false) {
+            $user = $this->mainUser;
+        }
+
+        // if there is a ReplyBackImExporter, the exporter needs to run!
+        $wrapper = KopanoChangesWrapper::GetWrapper($user, false, null, $folderid, null);
+        if ($wrapper && $wrapper->HasReplyBackExporter()) {
+            return "replyback-". time();
+        }
+
+        if (!isset($this->folderStatCache[$user])) {
+            $this->folderStatCache[$user] = array();
+        }
+
+        // TODO remove nameCache
+        if (!isset($this->nameCache))
+            $this->nameCache = array();
+
+        // if there is nothing in the cache for a store, load the data for all folders of it
+        if (empty($this->folderStatCache[$user])) {
+            // get the store
+            $userstore = $this->openMessageStore($user);
+            $rootfolder = mapi_msgstore_openentry($userstore);
+            $hierarchy =  mapi_folder_gethierarchytable($rootfolder, CONVENIENT_DEPTH);
+            $rows = mapi_table_queryallrows($hierarchy, array(PR_SOURCE_KEY, PR_LOCAL_COMMIT_TIME_MAX, PR_CONTENT_COUNT, PR_CONTENT_UNREAD, PR_DELETED_MSG_COUNT, PR_DISPLAY_NAME));
+
+            if (count($rows) == 0) {
+                ZLog::Write(LOGLEVEL_INFO, sprintf("KopanoBackend->GetFolderStat(): could not access folder statistics for user '%s'. Probably missing 'read' permissions on the root folder! Folders of this store will be synchronized ONCE per hour only!", $user));
+            }
+
+            foreach($rows as $folder) {
+                $commit_time = isset($folder[PR_LOCAL_COMMIT_TIME_MAX])? $folder[PR_LOCAL_COMMIT_TIME_MAX] : "0000000000";
+                $content_count = isset($folder[PR_CONTENT_COUNT])? $folder[PR_CONTENT_COUNT] : -1;
+                $content_unread = isset($folder[PR_CONTENT_UNREAD])? $folder[PR_CONTENT_UNREAD] : -1;
+                $content_deleted = isset($folder[PR_DELETED_MSG_COUNT])? $folder[PR_DELETED_MSG_COUNT] : -1;
+
+                $this->folderStatCache[$user][bin2hex($folder[PR_SOURCE_KEY])] = $commit_time ."/". $content_count ."/". $content_unread ."/". $content_deleted;
+                $this->nameCache[bin2hex($folder[PR_SOURCE_KEY])] = $folder[PR_DISPLAY_NAME];
+            }
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->GetFolderStat() fetched status information of %d folders for store '%s'", count($this->folderStatCache[$user]), $user));
+            // TODO remove logging
+            foreach($this->folderStatCache[$user] as $fid => $stat) {
+                ZLog::Write(LOGLEVEL_INFO, sprintf("FolderStat: %s %s %s\t%s", $user, $fid, $stat, $this->nameCache[$fid]));
+            }
+        }
+
+        if (isset($this->folderStatCache[$user][$folderid])) {
+            // TODO remove nameCache output
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->GetFolderStat() found stat for '%s': %s", $this->nameCache[$folderid], $this->folderStatCache[$user][$folderid]));
+            return $this->folderStatCache[$user][$folderid];
+        }
+        else {
+            // a timestamp that changes once per hour is returned in case there is no data found for this folder. It will be synchronized only once per hour.
+            return gmdate("Y-m-d-H");
+        }
+    }
+
     /**----------------------------------------------------------------------------------------------------------
      * Private methods
      */
+
+    /**
+     * Returns a hash representing changes in the hierarchy of the main user.
+     * It changes if a folder is added, renamed or deleted.
+     *
+     * @access private
+     * @return string
+     */
+    private function getHierarchyHash() {
+        $rootfolder = mapi_msgstore_openentry($this->defaultstore);
+        $hierarchy =  mapi_folder_gethierarchytable($rootfolder, CONVENIENT_DEPTH);
+        return md5(serialize(mapi_table_queryallrows($hierarchy, array(PR_DISPLAY_NAME, PR_PARENT_ENTRYID))));
+    }
+
 
     /**
      * Advises a store to the changes sink
@@ -1306,15 +1461,16 @@ class BackendZarafa implements IBackend, ISearchProvider {
     private function adviseStoreToSink($store) {
         // check if we already advised the store
         if (!in_array($store, $this->changesSinkStores)) {
-            mapi_msgstore_advise($this->store, null, fnevObjectModified | fnevObjectCreated | fnevObjectMoved | fnevObjectDeleted, $this->changesSink);
-            $this->changesSinkStores[] = $store;
+            mapi_msgstore_advise($store, null, fnevObjectModified | fnevObjectCreated | fnevObjectMoved | fnevObjectDeleted, $this->changesSink);
 
             if (mapi_last_hresult()) {
-                ZLog::Write(LOGLEVEL_WARN, sprintf("ZarafaBackend->adviseStoreToSink(): failed to advised store '%s' with code 0x%X. Polling will be performed.", $this->store, mapi_last_hresult()));
+                ZLog::Write(LOGLEVEL_WARN, sprintf("KopanoBackend->adviseStoreToSink(): failed to advised store '%s' with code 0x%X. Polling will be performed.", $store, mapi_last_hresult()));
                 return false;
             }
-            else
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->adviseStoreToSink(): advised store '%s'", $this->store));
+            else {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->adviseStoreToSink(): advised store '%s'", $store));
+                $this->changesSinkStores[] = $store;
+            }
         }
         return true;
     }
@@ -1368,7 +1524,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
             $store = @mapi_openmsgstore($this->session, $entryid);
 
             if (!$store) {
-                ZLog::Write(LOGLEVEL_WARN, sprintf("ZarafaBackend->openMessageStore('%s'): Could not open store", $user));
+                ZLog::Write(LOGLEVEL_WARN, sprintf("KopanoBackend->openMessageStore('%s'): Could not open store", $user));
                 return false;
             }
 
@@ -1376,16 +1532,25 @@ class BackendZarafa implements IBackend, ISearchProvider {
             if (!isset($this->storeCache[$user]))
                 $this->storeCache[$user] = $store;
 
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->openMessageStore('%s'): Found '%s' store: '%s'", $user, (($return_public)?'PUBLIC':'DEFAULT'),$store));
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->openMessageStore('%s'): Found '%s' store: '%s'", $user, (($return_public)?'PUBLIC':'DEFAULT'),$store));
             return $store;
         }
         else {
-            ZLog::Write(LOGLEVEL_WARN, sprintf("ZarafaBackend->openMessageStore('%s'): No store found for this user", $user));
+            ZLog::Write(LOGLEVEL_WARN, sprintf("KopanoBackend->openMessageStore('%s'): No store found for this user", $user));
             return false;
         }
     }
 
-    private function hasSecretaryACLs($store, $folderid) {
+    /**
+     * Checks if the logged in user has secretary permissions on a folder.
+     *
+     * @param ressource $store
+     * @param string $folderid
+     *
+     * @access public
+     * @return boolean
+     */
+    public function HasSecretaryACLs($store, $folderid) {
         $entryid = mapi_msgstore_entryidfromsourcekey($store, hex2bin($folderid));
         if (!$entryid)  return false;
 
@@ -1407,6 +1572,30 @@ class BackendZarafa implements IBackend, ISearchProvider {
     }
 
     /**
+     * Checks if the logged in user has read permissions on a folder.
+     *
+     * @param ressource $store
+     * @param string $folderid
+     *
+     * @access public
+     * @return boolean
+     */
+    public function HasReadACLs($store, $folderid) {
+        $entryid = mapi_msgstore_entryidfromsourcekey($store, hex2bin($folderid));
+        if (!$entryid)  return false;
+
+        $folder = mapi_msgstore_openentry($store, $entryid);
+        if (!$folder) return false;
+
+        $props = mapi_getprops($folder, array(PR_RIGHTS));
+        if (isset($props[PR_RIGHTS]) &&
+                ($props[PR_RIGHTS] & ecRightsReadAny) ) {
+                    return true;
+                }
+                return false;
+    }
+
+    /**
      * The meta function for out of office settings.
      *
      * @param SyncObject $oof
@@ -1417,10 +1606,10 @@ class BackendZarafa implements IBackend, ISearchProvider {
     private function settingsOOF(&$oof) {
         //if oof state is set it must be set of oof and get otherwise
         if (isset($oof->oofstate)) {
-            $this->settingsOOFSEt($oof);
+            $this->settingsOofSet($oof);
         }
         else {
-            $this->settingsOOFGEt($oof);
+            $this->settingsOofGet($oof);
         }
     }
 
@@ -1432,8 +1621,8 @@ class BackendZarafa implements IBackend, ISearchProvider {
      * @access private
      * @return void
      */
-    private function settingsOOFGEt(&$oof) {
-        $oofprops = mapi_getprops($this->defaultstore, array(PR_EC_OUTOFOFFICE, PR_EC_OUTOFOFFICE_MSG, PR_EC_OUTOFOFFICE_SUBJECT));
+    private function settingsOofGet(&$oof) {
+        $oofprops = mapi_getprops($this->defaultstore, array(PR_EC_OUTOFOFFICE, PR_EC_OUTOFOFFICE_MSG, PR_EC_OUTOFOFFICE_SUBJECT, PR_EC_OUTOFOFFICE_FROM, PR_EC_OUTOFOFFICE_UNTIL));
         $oof->oofstate = SYNC_SETTINGSOOF_DISABLED;
         $oof->Status = SYNC_SETTINGSSTATUS_SUCCESS;
         if ($oofprops != false) {
@@ -1446,6 +1635,26 @@ class BackendZarafa implements IBackend, ISearchProvider {
             $oofmessage->bodytype = $oof->bodytype;
             unset($oofmessage->appliesToExternal, $oofmessage->appliesToExternalUnknown);
             $oof->oofmessage[] = $oofmessage;
+
+            // check whether time based out of office is set
+            if ($oof->oofstate == SYNC_SETTINGSOOF_GLOBAL && isset($oofprops[PR_EC_OUTOFOFFICE_FROM]) && isset($oofprops[PR_EC_OUTOFOFFICE_UNTIL])) {
+                if ($oofprops[PR_EC_OUTOFOFFICE_FROM] < $oofprops[PR_EC_OUTOFOFFICE_UNTIL]) {
+                    $oof->oofstate = SYNC_SETTINGSOOF_TIMEBASED;
+                    $oof->starttime = $oofprops[PR_EC_OUTOFOFFICE_FROM];
+                    $oof->endtime = $oofprops[PR_EC_OUTOFOFFICE_UNTIL];
+                }
+                else {
+                    ZLog::Write(LOGLEVEL_WARN, sprintf("BackendKopano->settingsOofGet(): Time based out of office set but end time ('%s') is before startime ('%s').",
+                        date("Y-m-d H:i:s", $oofprops[PR_EC_OUTOFOFFICE_FROM]), date("Y-m-d H:i:s", $oofprops[PR_EC_OUTOFOFFICE_UNTIL])));
+                    $oof->Status = SYNC_SETTINGSSTATUS_PROTOCOLLERROR;
+                }
+            }
+            elseif ($oof->oofstate == SYNC_SETTINGSOOF_GLOBAL && (isset($oofprops[PR_EC_OUTOFOFFICE_FROM]) || isset($oofprops[PR_EC_OUTOFOFFICE_UNTIL]))) {
+                ZLog::Write(LOGLEVEL_WARN, sprintf("Kopano->settingsOofGet(): Time based out of office set but either start time ('%s') or end time ('%s') is missing.",
+                    (isset($oofprops[PR_EC_OUTOFOFFICE_FROM]) ? date("Y-m-d H:i:s", $oofprops[PR_EC_OUTOFOFFICE_FROM]) : 'empty'),
+                    (isset($oofprops[PR_EC_OUTOFOFFICE_UNTIL]) ? date("Y-m-d H:i:s", $oofprops[PR_EC_OUTOFOFFICE_UNTIL]) : 'empty')));
+                $oof->Status = SYNC_SETTINGSSTATUS_PROTOCOLLERROR;
+            }
         }
         else {
             ZLog::Write(LOGLEVEL_WARN, "Unable to get out of office information");
@@ -1463,7 +1672,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
      * @access private
      * @return void
      */
-    private function settingsOOFSEt(&$oof) {
+    private function settingsOofSet(&$oof) {
         $oof->Status = SYNC_SETTINGSSTATUS_SUCCESS;
         $props = array();
         if ($oof->oofstate == SYNC_SETTINGSOOF_GLOBAL || $oof->oofstate == SYNC_SETTINGSOOF_TIMEBASED) {
@@ -1474,9 +1683,22 @@ class BackendZarafa implements IBackend, ISearchProvider {
                     $props[PR_EC_OUTOFOFFICE_SUBJECT] = "Out of office";
                 }
             }
+            if ($oof->oofstate == SYNC_SETTINGSOOF_TIMEBASED) {
+                if(isset($oof->starttime) && isset($oof->endtime)) {
+                    $props[PR_EC_OUTOFOFFICE_FROM] = $oof->starttime;
+                    $props[PR_EC_OUTOFOFFICE_UNTIL] = $oof->endtime;
+                }
+                elseif (isset($oof->starttime) || isset($oof->endtime)) {
+                    $oof->Status = SYNC_SETTINGSSTATUS_PROTOCOLLERROR;
+                }
+            }
+            else {
+                $deleteProps = array(PR_EC_OUTOFOFFICE_FROM, PR_EC_OUTOFOFFICE_UNTIL);
+            }
         }
         elseif($oof->oofstate == SYNC_SETTINGSOOF_DISABLED) {
             $props[PR_EC_OUTOFOFFICE] = false;
+            $deleteProps = array(PR_EC_OUTOFOFFICE_FROM, PR_EC_OUTOFOFFICE_UNTIL);
         }
 
         if (!empty($props)) {
@@ -1486,6 +1708,10 @@ class BackendZarafa implements IBackend, ISearchProvider {
                 ZLog::Write(LOGLEVEL_ERROR, sprintf("Setting oof information failed (%X)", $result));
                 return false;
             }
+        }
+
+        if (!empty($deleteProps)) {
+            @mapi_deleteprops($this->defaultstore, $deleteProps);
         }
 
         return true;
@@ -1965,14 +2191,19 @@ class BackendZarafa implements IBackend, ISearchProvider {
         $timeslots = intval(ceil(($end - $start) / self::HALFHOURSECONDS));
 
         if ($timeslots > self::MAXFREEBUSYSLOTS) {
-            throw new StatusException("ZarafaBackend->getAvailability(): the requested free busy range is too large.", SYNC_RESOLVERECIPSSTATUS_PROTOCOLERROR);
+            throw new StatusException("KopanoBackend->getAvailability(): the requested free busy range is too large.", SYNC_RESOLVERECIPSSTATUS_PROTOCOLERROR);
         }
+        $mergedFreeBusy = str_pad(fbNoData, $timeslots, fbNoData);
 
         if(is_array($fbDataArray) && !empty($fbDataArray)) {
             foreach($fbDataArray as $fbDataUser) {
+                if ($fbDataUser == null) {
+                    ZLog::Write(LOGLEVEL_INFO, sprintf("KopanoBackend->getAvailability(): freebusy user is null for '%s'. Unable to retrieve his availability.", $resolveRecipient->displayname));
+                    continue;
+                }
                 $rangeuser = mapi_freebusydata_getpublishrange($fbDataUser);
                 if($rangeuser == null) {
-                    ZLog::Write(LOGLEVEL_INFO, sprintf("Unable to retrieve mapi_freebusydata_getpublishrange (0x%X) for '%s'", mapi_last_hresult(), $resolveRecipient->displayname));
+                    ZLog::Write(LOGLEVEL_INFO, sprintf("KopanoBackend->getAvailability(): Unable to retrieve mapi_freebusydata_getpublishrange (0x%X) for '%s'", mapi_last_hresult(), $resolveRecipient->displayname));
                     $availability->status = SYNC_RESOLVERECIPSSTATUS_AVAILABILITY_FAILED;
                     return $availability;
                 }
@@ -1981,6 +2212,10 @@ class BackendZarafa implements IBackend, ISearchProvider {
                 // assume that the user is free for the requested range.
                 if ($rangeuser['start'] <= $start && $rangeuser['end'] >= $end) {
                     $mergedFreeBusy = str_pad(fbFree, $timeslots, fbFree);
+                }
+                // available free busy information is outside of the requested data
+                elseif ($rangeuser['end'] <= $start || $rangeuser['start'] >= $end) {
+                    $mergedFreeBusy = str_pad(fbNoData, $timeslots, fbNoData);
                 }
                 // free busy information is not available at the begin of the requested period
                 elseif ($rangeuser['start'] > $start && $rangeuser['end'] >= $end) {
@@ -2004,7 +2239,6 @@ class BackendZarafa implements IBackend, ISearchProvider {
                 $enumblock = mapi_freebusydata_enumblocks($fbDataUser, $start, $end);
                 mapi_freebusyenumblock_reset($enumblock);
 
-                // FIXME: use WBXMLDecoder::ResetInWhile("freebusyEnumblock"); after merging back into develop branch
                 while(true) {
                     $blocks = mapi_freebusyenumblock_next($enumblock, self::FREEBUSYENUMBLOCKS);
                     if(!$blocks) {
@@ -2097,6 +2331,7 @@ class BackendZarafa implements IBackend, ISearchProvider {
 }
 
 /**
- * DEPRECATED legacy class
+ * DEPRECATED legacy classes
  */
-class BackendICS extends BackendZarafa {}
+class BackendICS extends BackendKopano {}
+class BackendZarafa extends BackendKopano {}

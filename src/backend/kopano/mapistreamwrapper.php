@@ -75,8 +75,13 @@ class MAPIStreamWrapper {
         $this->mapistream = $contextOptions[self::PROTOCOL]['stream'];
 
         // get the data length from mapi
-        $stat = mapi_stream_stat($this->mapistream);
-        $this->streamlength = $stat["cb"];
+        if ($this->mapistream) {
+            $stat = mapi_stream_stat($this->mapistream);
+            $this->streamlength = $stat["cb"];
+        }
+        else {
+            $this->streamlength = 0;
+        }
 
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("MAPIStreamWrapper::stream_open(): initialized mapistream: %s streamlength: %d", $this->mapistream, $this->streamlength));
 
@@ -97,7 +102,12 @@ class MAPIStreamWrapper {
         // read 4 additional bytes from the stream so we can always truncate correctly
         if ($this->toTruncate)
             $len += 4;
-        $data = mapi_stream_read($this->mapistream, $len);
+        if ($this->mapistream) {
+            $data = mapi_stream_read($this->mapistream, $len);
+        }
+        else {
+            $data = "";
+        }
         $this->position += strlen($data);
 
         // we need to truncate UTF8 compatible if ftruncate() was called

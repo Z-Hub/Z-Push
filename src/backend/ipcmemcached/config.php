@@ -1,12 +1,13 @@
 <?php
 /***********************************************
-* File      :   config.php
+* File      :   ipcmemcached/config.php
 * Project   :   Z-Push
-* Descr     :   VCardDir backend configuration file
+* Descr     :   Configuration file for the
+*               memcache IPC provider.
 *
-* Created   :   27.11.2012
+* Created   :   02.05.2016
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007-2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -41,9 +42,24 @@
 * Consult LICENSE file for details
 ************************************************/
 
-// ************************
-//  BackendZarafa settings
-// ************************
+// Comma separated list of available memcache servers.
+// Servers can be added as 'hostname:port,otherhost:port'
+define('MEMCACHED_SERVERS','localhost:11211');
 
-// Defines the server to which we want to connect
-define('MAPI_SERVER', 'file:///var/run/zarafa');
+// Memcached down indicator
+// In case memcached is not available, a lock file will be written to disk
+define('MEMCACHED_DOWN_LOCK_FILE', '/tmp/z-push-memcache-down');
+// indicates how long the lock file will be maintained (in seconds)
+define('MEMCACHED_DOWN_LOCK_EXPIRATION', 30);
+
+// Prefix to used for keys
+define('MEMCACHED_PREFIX', 'z-push-ipc');
+
+// Connection timeout in ms
+define('MEMCACHED_TIMEOUT', 100);
+
+// Mutex timeout (in seconds)
+define('MEMCACHED_MUTEX_TIMEOUT', 5);
+
+// Waiting time before re-trying to aquire mutex (in ms), must be higher than 0
+define('MEMCACHED_BLOCK_WAIT', 10);

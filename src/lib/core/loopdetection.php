@@ -305,7 +305,7 @@ class LoopDetection extends InterProcessData {
      */
     private function updateProcessStack() {
         // initialize params
-        $this->InitializeParams();
+        $this->initializeParams();
         if ($this->blockMutex()) {
             $loopdata = ($this->hasData()) ? $this->getData() : array();
 
@@ -354,7 +354,7 @@ class LoopDetection extends InterProcessData {
      */
     private function getProcessStack() {
         // initialize params
-        $this->InitializeParams();
+        $this->initializeParams();
         $stack = array();
 
         if ($this->blockMutex()) {
@@ -401,7 +401,7 @@ class LoopDetection extends InterProcessData {
         $brokenkey = self::BROKENMSGS ."-". $folderid;
 
         // initialize params
-        $this->InitializeParams();
+        $this->initializeParams();
         if ($this->blockMutex()) {
             $loopdata = ($this->hasData()) ? $this->getData() : array();
 
@@ -443,7 +443,7 @@ class LoopDetection extends InterProcessData {
         $okIds = array();
 
         // initialize params
-        $this->InitializeParams();
+        $this->initializeParams();
         if ($this->blockMutex()) {
             $loopdata = ($this->hasData()) ? $this->getData() : array();
 
@@ -504,7 +504,7 @@ class LoopDetection extends InterProcessData {
      */
     public function SetSyncStateUsage($folderid, $uuid, $counter) {
         // initialize params
-        $this->InitializeParams();
+        $this->initializeParams();
 
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("LoopDetection->SetSyncStateUsage(): uuid: %s  counter: %d", $uuid, $counter));
 
@@ -551,7 +551,7 @@ class LoopDetection extends InterProcessData {
      */
     public function IsSyncStateObsolete($folderid, $uuid, $counter) {
         // initialize params
-        $this->InitializeParams();
+        $this->initializeParams();
 
         $obsolete = false;
 
@@ -616,7 +616,6 @@ class LoopDetection extends InterProcessData {
      *      3.3.1) item identified, loopcount >= 3                      -> ignore item, set ignoredata flag
      *
      * @param string $folderid          the current folder id to be worked on
-     * @param string $type              the type of that folder (Email, Calendar, Contact, Task)
      * @param string $uuid              the synkkey
      * @param string $counter           the synckey counter
      * @param string $maxItems          the current amount of items to be sent to the mobile
@@ -625,8 +624,8 @@ class LoopDetection extends InterProcessData {
      * @access public
      * @return boolean      when returning true if a loop has been identified
      */
-    public function Detect($folderid, $type, $uuid, $counter, $maxItems, $queuedMessages) {
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("LoopDetection->Detect(): folderid:'%s' type:'%s' uuid:'%s' counter:'%s' max:'%s' queued:'%s'", $folderid, $type, $uuid, $counter, $maxItems, $queuedMessages));
+    public function Detect($folderid, $uuid, $counter, $maxItems, $queuedMessages) {
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("LoopDetection->Detect(): folderid:'%s' uuid:'%s' counter:'%s' max:'%s' queued:'%s'", $folderid, $uuid, $counter, $maxItems, $queuedMessages));
         $this->broken_message_uuid = $uuid;
         $this->broken_message_counter = $counter;
 
@@ -637,7 +636,7 @@ class LoopDetection extends InterProcessData {
         }
 
         // initialize params
-        $this->InitializeParams();
+        $this->initializeParams();
 
         $loop = false;
 
@@ -652,16 +651,10 @@ class LoopDetection extends InterProcessData {
 
             // completely new/unknown UUID
             if (empty($current))
-                $current = array("type" => $type, "uuid" => $uuid, "count" => $counter-1, "queued" => $queuedMessages);
-
-            // if data was created by SetSyncStateUsage(), we need to set the type
-            // TODO ZP-741: type is not used anywhere and could be removed from the loop data
-            if (isset($current['uuid']) && $current['uuid'] == $uuid && !isset($current['type'])) {
-                $current['type'] = $type;
-            }
+                $current = array("uuid" => $uuid, "count" => $counter-1, "queued" => $queuedMessages);
 
             // old UUID in cache - the device requested a new state!!
-            if (isset($current['type']) && $current['type'] == $type && isset($current['uuid']) && $current['uuid'] != $uuid ) {
+            if (isset($current['uuid']) && $current['uuid'] != $uuid ) {
                 ZLog::Write(LOGLEVEL_DEBUG, "LoopDetection->Detect(): UUID changed for folder");
 
                 // some devices (iPhones) may request new UUIDs after broken items were sent several times
@@ -687,7 +680,6 @@ class LoopDetection extends InterProcessData {
 
             // see if there are values
             if (isset($current['uuid']) && $current['uuid'] == $uuid &&
-                isset($current['type']) && $current['type'] == $type &&
                 isset($current['count'])) {
 
                 // case 1 - standard, during loop-resolving & resolving

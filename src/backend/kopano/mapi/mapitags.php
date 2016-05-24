@@ -1135,6 +1135,8 @@ define('PR_EC_BASE'                                   ,  0x6700);
 define('PR_EC_OUTOFOFFICE'                            ,mapi_prop_tag(PT_BOOLEAN,     PR_EC_BASE+0x60));
 define('PR_EC_OUTOFOFFICE_MSG'                        ,mapi_prop_tag(PT_STRING8,     PR_EC_BASE+0x61));
 define('PR_EC_OUTOFOFFICE_SUBJECT'                    ,mapi_prop_tag(PT_STRING8,     PR_EC_BASE+0x62));
+define('PR_EC_OUTOFOFFICE_FROM',                       mapi_prop_tag(PT_SYSTIME,     PR_EC_BASE+0x63));
+define('PR_EC_OUTOFOFFICE_UNTIL',                      mapi_prop_tag(PT_SYSTIME,     PR_EC_BASE+0x64));
 
 /* quota support */
 define('PR_QUOTA_WARNING_THRESHOLD'                   ,mapi_prop_tag(PT_LONG,        PR_EC_BASE+0x21));
@@ -1252,3 +1254,6 @@ define('PR_ZC_CONTACT_FOLDER_NAMES'                   ,mapi_prop_tag(PT_MV_TSTRI
 
 //Properties defined for Z-Push
 define('PR_TODO_ITEM_FLAGS'                           ,mapi_prop_tag(PT_LONG,        0x0E2B));
+define('PR_LOCAL_COMMIT_TIME_MAX'                     ,mapi_prop_tag(PT_SYSTIME,     0x670A));
+define('PR_DELETED_MSG_COUNT'                         ,mapi_prop_tag(PT_LONG,        0x6640));
+

@@ -65,16 +65,31 @@
      * (e.g. user@company.com) or the username only (user).
      * This is required for Z-Push to work properly after autodiscover.
      * Possible values:
-     * false - use the username only (default).
-     * true - use the complete email address.
+     *   false - use the username only.
+     *   true  - string the mobile sends as username, e.g. full email address (default).
      */
-    define('USE_FULLEMAIL_FOR_LOGIN', false);
+    define('USE_FULLEMAIL_FOR_LOGIN', true);
 
 /**********************************************************************************
- *  Default FileStateMachine settings
+ * StateMachine setting
+ *
+ * These StateMachines can be used:
+ *   FILE  - FileStateMachine (default). Needs STATE_DIR set as well.
+ *   SQL   - SqlStateMachine has own configuration file. STATE_DIR is ignored.
+ *           State migration script is available, more informations: https://wiki.z-hub.io/x/xIAa
  */
+    define('STATE_MACHINE', 'FILE');
     define('STATE_DIR', '/var/lib/z-push/');
 
+/**********************************************************************************
+ *  IPC - InterProcessCommunication
+ *
+ *  Is either provided by using shared memory on a single host or
+ *  using the memcache provider for multi-host environments.
+ *  When another implementation should be used, the class can be set here explicitly.
+ *  If empty Z-Push will try to use available providers.
+ */
+    define('IPC_PROVIDER', 'IpcSharedMemoryProvider');
 
 /**********************************************************************************
  *  Logging settings
@@ -143,6 +158,10 @@
     // true - allow older devices, but enforce policies on devices which support it
     define('LOOSE_PROVISIONING', false);
 
+    // The file containing the policies' settings.
+    // Set a full path or relative to the z-push main directory
+    define('PROVISIONING_POLICYFILE', 'policies.ini');
+
     // Default conflict preference
     // Some devices allow to set if the server or PIM (mobile)
     // should win in case of a synchronization conflict
@@ -165,11 +184,6 @@
     // a higher value if you have a high load on the server.
     define('PING_INTERVAL', 30);
 
-    // Interval in seconds to force a re-check of potentially missed notifications when
-    // using a changes sink. Default are 300 seconds (every 5 min).
-    // This can also be disabled by setting it to false
-    define('SINK_FORCERECHECK', 300);
-
     // Set the fileas (save as) order for contacts in the webaccess/webapp/outlook.
     // It will only affect new/modified contacts on the mobile which then are synced to the server.
     // Possible values are:
@@ -188,12 +202,14 @@
     // SYNC_FILEAS_LASTFIRST will be used
     define('FILEAS_ORDER', SYNC_FILEAS_LASTFIRST);
 
-    // Amount of items to be synchronized per request
+    // Maximum amount of items to be synchronized per request.
     // Normally this value is requested by the mobile. Common values are 5, 25, 50 or 100.
     // Exporting too much items can cause mobile timeout on busy systems.
-    // Z-Push will use the lowest value, either set here or by the mobile.
-    // default: 100 - value used if mobile does not limit amount of items
-    define('SYNC_MAX_ITEMS', 100);
+    // Z-Push will use the lowest provided value, either set here or by the mobile.
+    // MS Outlook 2013+ request up to 512 items to accelerate the sync process.
+    // If you detect high load (also on subsystems) you could try a lower setting.
+    // max: 512 - value used if mobile does not limit amount of items
+    define('SYNC_MAX_ITEMS', 512);
 
     // The devices usually send a list of supported properties for calendar and contact
     // items. If a device does not includes such a supported property in Sync request,
@@ -202,7 +218,7 @@
     // to tell if a property was deleted or it was not set at all if it does not appear in Sync.
     // This parameter defines Z-Push behaviour during Sync if a device does not issue a list with
     // supported properties.
-    // See also https://jira.zarafa.com/browse/ZP-302.
+    // See also https://jira.z-hub.io/browse/ZP-302.
     // Possible values:
     // false - do not unset properties which are not sent during Sync (default)
     // true  - unset properties which are not sent during Sync
@@ -242,6 +258,20 @@
     // The minimum accepted value is 1 second. The maximum accepted value is 3540 seconds (59 minutes).
     define('PING_HIGHER_BOUND_LIFETIME', false);
 
+    // Maximum response time
+    // Mobiles implement different timeouts to their TCP/IP connections. Android devices for example
+    // have a hard timeout of 30 seconds. If the server is not able to answer a request within this timeframe,
+    // the answer will not be recieved and the device will send a new one overloading the server.
+    // There are three categories
+    //   - Short timeout  - server has up within 30 seconds - is automatically applied for not categorized types
+    //   - Medium timeout - server has up to 90 seconds to respond
+    //   - Long timeout   - server has up to 4 minutes to respond
+    // If a timeout is almost reached the server will break and sent the results it has until this
+    // point. You can add DeviceType strings to the categories.
+    // In general longer timeouts are better, because more data can be streamed at once.
+    define('SYNC_TIMEOUT_MEDIUM_DEVICETYPES', "SAMSUNGGTI");
+    define('SYNC_TIMEOUT_LONG_DEVICETYPES',   "iPod, iPad, iPhone, WP, WindowsOutlook");
+
 /**********************************************************************************
  *  Backend settings
  */
@@ -264,6 +294,33 @@
     // might result in timeout. Default is 10.
     define('SEARCH_MAXRESULTS', 10);
 
+/**********************************************************************************
+ *  Kopano Outlook Extension - Settings
+ *
+ *  The Kopano Outlook Extension (KOE) provides MS Outlook 2013 and newer with
+ *  functionality not provided by ActiveSync or not implemented by Outlook.
+ *  For more information, see: https://wiki.z-hub.io/x/z4Aa
+ */
+    // Global Address Book functionality
+    define('KOE_CAPABILITY_GAB', true);
+    // Synchronize mail flags from the server to Outlook/KOE
+    define('KOE_CAPABILITY_RECEIVEFLAGS', true);
+    // Encode flags when sending from Outlook/KOE
+    define('KOE_CAPABILITY_SENDFLAGS', true);
+    // Out-of-office support
+    define('KOE_CAPABILITY_OOF', true);
+    // Out-of-office support with start & end times (superseeds KOE_CAPABILITY_OOF)
+    define('KOE_CAPABILITY_OOFTIMES', true);
+    // Notes support
+    define('KOE_CAPABILITY_NOTES', true);
+
+    // To synchronize the GAB KOE, the GAB store and folderid need to be specified.
+    // Use the gab-sync script to generate this data. The name needs to
+    // match the config of the gab-sync script.
+    // More information here: https://wiki.z-hub.io/x/z4Aa (GAB Sync Script)
+    define('KOE_GAB_STORE', 'SYSTEM');
+    define('KOE_GAB_FOLDERID', '');
+    define('KOE_GAB_NAME', 'Z-Push-KOE-GAB');
 
 /**********************************************************************************
  *  Synchronize additional folders to all mobiles
@@ -277,7 +334,7 @@
  *
  *  To synchronize a folder, add a section setting all parameters as below:
  *      store:      the ressource where the folder is located.
- *                  Zarafa users use 'SYSTEM' for the 'Public Folder'
+ *                  Kopano users use 'SYSTEM' for the 'Public Folder'
  *      folderid:   folder id of the folder to be synchronized
  *      name:       name to be displayed on the mobile device
  *      type:       supported types are:
@@ -285,13 +342,21 @@
  *                      SYNC_FOLDER_TYPE_USER_APPOINTMENT
  *                      SYNC_FOLDER_TYPE_USER_TASK
  *                      SYNC_FOLDER_TYPE_USER_MAIL
+ *                      SYNC_FOLDER_TYPE_USER_NOTE
+ *      readonly:   indicates if the folder should be opened read-only.
+ *                  If set to false, full writing permissions are required.
  *
  *  Additional notes:
- *  - on Zarafa systems use backend/zarafa/listfolders.php script to get a list
+ *  - on Kopano systems use backend/kopano/listfolders.php script to get a list
  *    of available folders
  *
- *  - all Z-Push users must have full writing permissions (secretary rights) so
- *    the configured folders can be synchronized to the mobile
+ *  - all Z-Push users must have at least reading permissions so the configured
+ *    folders can be synchronized to the mobile. Else they are ignored.
+ *
+ *  - if read-only is set to 'false' only users with full permissions (secretary
+ *    rights) are able to change entries. For all others, the changes will be
+ *    discarted and overwritten with data from the server. Check backend
+ *    compatibility and configuration for this feature.
  *
  *  - this feature is only partly suitable for multi-tenancy environments,
  *    as ALL users from ALL tenents need access to the configured store & folder.
@@ -312,6 +377,7 @@
             'folderid'  => "",
             'name'      => "Public Contacts",
             'type'      => SYNC_FOLDER_TYPE_USER_CONTACT,
+            'readonly'  => false,
         ),
 */
     );

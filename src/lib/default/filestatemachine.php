@@ -117,7 +117,7 @@ class FileStateMachine implements IStateMachine {
      *
      * @access public
      * @return mixed
-     * @throws StateNotFoundException, StateInvalidException
+     * @throws StateNotFoundException, StateInvalidException, UnavailableException
      */
     public function GetState($devid, $type, $key = false, $counter = false, $cleanstates = true) {
         if ($counter && $cleanstates)
@@ -148,7 +148,7 @@ class FileStateMachine implements IStateMachine {
      *
      * @access public
      * @return boolean
-     * @throws StateInvalidException
+     * @throws StateInvalidException, UnavailableException
      */
     public function SetState($state, $devid, $type, $key = false, $counter = false) {
         $state = serialize($state);
@@ -176,9 +176,15 @@ class FileStateMachine implements IStateMachine {
      * @throws StateInvalidException
      */
     public function CleanStates($devid, $type, $key, $counter = false) {
-        // Don't remove permanent backend storage files, unless we explicitily want that
-        if ($key === false && $type === IStateMachine::BACKENDSTORAGE && $counter != IStateMachine::HIGHEST_COUNTER) {
-            return;
+        // Remove permanent backend storage files
+        // TODO remove this block and implement it as described in ZP-835
+        if ($key === false && $type === IStateMachine::BACKENDSTORAGE) {
+            $file = $this->getFullFilePath($devid, $type, $key, $counter);
+            if (file_exists($file)) {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("FileStateMachine->CleanStates(): Deleting 'bs' file: '%s'", $file));
+                unlink($file);
+                return;
+            }
         }
 
         $matching_files = glob($this->getFullFilePath($devid, $type, $key). "*", GLOB_NOSORT);
@@ -374,7 +380,6 @@ class FileStateMachine implements IStateMachine {
         $settings[self::VERSION] = $version;
         ZLog::Write(LOGLEVEL_INFO, sprintf("FileStateMachine->SetStateVersion() saving supported state version, value '%d'", $version));
         $status = Utils::SafePutContents($this->settingsfilename, serialize($settings));
-        Utils::FixFileOwner($this->settingsfilename);
         return $status;
     }
 

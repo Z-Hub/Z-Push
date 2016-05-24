@@ -887,11 +887,14 @@ class MAPIProvider {
             }
         }
 
-        $folder->serverid = bin2hex($folderprops[PR_SOURCE_KEY]);
-        if($folderprops[PR_PARENT_ENTRYID] == $storeprops[PR_IPM_SUBTREE_ENTRYID])
+        $folder->BackendId = bin2hex($folderprops[PR_SOURCE_KEY]);
+        $folder->serverid = ZPush::GetDeviceManager()->GetFolderIdForBackendId($folder->BackendId, true, DeviceManager::FLD_ORIGIN_USER, $folderprops[PR_DISPLAY_NAME]);
+        if($folderprops[PR_PARENT_ENTRYID] == $storeprops[PR_IPM_SUBTREE_ENTRYID]) {
             $folder->parentid = "0";
-        else
-            $folder->parentid = bin2hex($folderprops[PR_PARENT_SOURCE_KEY]);
+        }
+        else {
+            $folder->parentid = ZPush::GetDeviceManager()->GetFolderIdForBackendId(bin2hex($folderprops[PR_PARENT_SOURCE_KEY]));
+        }
         $folder->displayname = w2u($folderprops[PR_DISPLAY_NAME]);
         $folder->type = $this->GetFolderType($folderprops[PR_ENTRYID], isset($folderprops[PR_CONTAINER_CLASS])?$folderprops[PR_CONTAINER_CLASS]:false);
 
@@ -1629,8 +1632,13 @@ class MAPIProvider {
     */
     private function setNote($mapimessage, $note) {
         // Touchdown does not send categories if all are unset or there is none.
-        // Setting it to an empty array will unset the property in Zarafa as well
+        // Setting it to an empty array will unset the property in KC as well
         if (!isset($note->categories)) $note->categories = array();
+
+        // update icon index to correspond to the color
+        if (isset($note->Color) && $note->Color > -1 && $note->Color < 5) {
+            $note->Iconindex = 768 + $note->Color;
+        }
 
         $this->setPropsInMAPI($mapimessage, $note, MAPIMapping::GetNoteMapping());
 
@@ -1641,7 +1649,9 @@ class MAPIProvider {
         $props = array();
         $props[$noteprops["messageclass"]] = "IPM.StickyNote";
         // set body otherwise the note will be "broken" when editing it in outlook
-        $this->setASbody($note->asbody, $props, $noteprops);
+        if (isset($note->asbody)) {
+            $this->setASbody($note->asbody, $props, $noteprops);
+        }
 
         $props[$noteprops["internetcpid"]] = INTERNET_CPID_UTF8;
         mapi_setprops($mapimessage, $props);
@@ -2378,15 +2388,20 @@ class MAPIProvider {
         }
 
         $stream = mapi_openproperty($mapimessage, $property, IID_IStream, 0, 0);
-        $stat = mapi_stream_stat($stream);
-        $streamsize = $stat['cb'];
+        if ($stream) {
+            $stat = mapi_stream_stat($stream);
+            $streamsize = $stat['cb'];
+        }
+        else {
+            $streamsize = 0;
+        }
 
         //set the properties according to supported AS version
         if (Request::GetProtocolVersion() >= 12.0) {
             $message->asbody = new SyncBaseBody();
             $message->asbody->type = $bpReturnType;
             if ($bpReturnType == SYNC_BODYPREFERENCE_RTF) {
-                $body = mapi_stream_read($stream, $streamsize);
+                $body = $this->mapiReadStream($stream, $streamsize);
                 $message->asbody->data = StringStreamWrapper::Open(base64_encode($body));
             }
             elseif (isset($message->internetcpid) && $bpReturnType == SYNC_BODYPREFERENCE_HTML) {
@@ -2395,7 +2410,7 @@ class MAPIProvider {
                     $message->asbody->data = MAPIStreamWrapper::Open($stream);
                 }
                 else {
-                    $body = mapi_stream_read($stream, $streamsize);
+                    $body = $this->mapiReadStream($stream, $streamsize);
                     $message->asbody->data = StringStreamWrapper::Open(Utils::ConvertCodepageStringToUtf8($message->internetcpid, $body));
                 }
             }
@@ -2405,13 +2420,29 @@ class MAPIProvider {
             $message->asbody->estimatedDataSize = $streamsize;
         }
         else {
-            $body = mapi_stream_read($stream, $streamsize);
+            $body = $this->mapiReadStream($stream, $streamsize);
             $message->body = str_replace("\n","\r\n", w2u(str_replace("\r", "", $body)));
             $message->bodysize = $streamsize;
             $message->bodytruncated = 0;
         }
 
         return true;
+    }
+
+    /**
+     * Reads from a mapi stream, if it's set. If not, returns an empty string.
+     *
+     * @param resource $stream
+     * @param int $size
+     *
+     * @access private
+     * @return string
+     */
+    private function mapiReadStream($stream, $size) {
+        if (!$stream || $size == 0) {
+            return "";
+        }
+        return mapi_stream_read($stream, $size);
     }
 
     /**
@@ -2427,28 +2458,28 @@ class MAPIProvider {
         if (function_exists("mapi_inetmapi_imtoinet")) {
             $addrbook = $this->getAddressbook();
             $stream = mapi_inetmapi_imtoinet($this->session, $addrbook, $mapimessage, array('use_tnef' => -1));
-            $mstreamstat = mapi_stream_stat($stream);
-            $streamsize = $mstreamstat["cb"];
 
-            if (isset($stream) && isset($streamsize)) {
-                if (Request::GetProtocolVersion() >= 12.0) {
-                    if (!isset($message->asbody))
-                        $message->asbody = new SyncBaseBody();
-                    $message->asbody->data = MapiStreamWrapper::Open($stream);
-                    $message->asbody->estimatedDataSize = $streamsize;
-                    $message->asbody->truncated = 0;
+            if (isset($stream)) {
+                $mstreamstat = mapi_stream_stat($stream);
+                $streamsize = $mstreamstat["cb"];
+                if (isset($streamsize)) {
+                    if (Request::GetProtocolVersion() >= 12.0) {
+                        if (!isset($message->asbody))
+                            $message->asbody = new SyncBaseBody();
+                        $message->asbody->data = MAPIStreamWrapper::Open($stream);
+                        $message->asbody->estimatedDataSize = $streamsize;
+                        $message->asbody->truncated = 0;
+                    }
+                    else {
+                        $message->mimedata = MAPIStreamWrapper::Open($stream);
+                        $message->mimesize = $streamsize;
+                        $message->mimetruncated = 0;
+                    }
+                    unset($message->body, $message->bodytruncated);
+                    return true;
                 }
-                else {
-                    $message->mimedata = MapiStreamWrapper::Open($stream);
-                    $message->mimesize = $streamsize;
-                    $message->mimetruncated = 0;
-                }
-                unset($message->body, $message->bodytruncated);
-                return true;
             }
-            else {
-                ZLog::Write(LOGLEVEL_ERROR, sprintf("MAPIProvider->imtoinet(): got no stream or content from mapi_inetmapi_imtoinet()"));
-            }
+            ZLog::Write(LOGLEVEL_ERROR, sprintf("MAPIProvider->imtoinet(): got no stream or content from mapi_inetmapi_imtoinet()"));
         }
 
         return false;
@@ -2694,6 +2725,16 @@ class MAPIProvider {
         if (!isset($this->storeProps) || empty($this->storeProps)) {
             ZLog::Write(LOGLEVEL_DEBUG, "MAPIProvider->getStoreProps(): Getting store properties.");
             $this->storeProps = mapi_getprops($this->store, array(PR_IPM_SUBTREE_ENTRYID, PR_IPM_OUTBOX_ENTRYID, PR_IPM_WASTEBASKET_ENTRYID, PR_IPM_SENTMAIL_ENTRYID, PR_ENTRYID, PR_IPM_PUBLIC_FOLDERS_ENTRYID, PR_IPM_FAVORITES_ENTRYID, PR_MAILBOX_OWNER_ENTRYID));
+            // make sure all properties are set
+            if(!isset($this->storeProps[PR_IPM_WASTEBASKET_ENTRYID])) {
+                $this->storeProps[PR_IPM_WASTEBASKET_ENTRYID] = false;
+            }
+            if(!isset($this->storeProps[PR_IPM_SENTMAIL_ENTRYID])) {
+                $this->storeProps[PR_IPM_SENTMAIL_ENTRYID] = false;
+            }
+            if(!isset($this->storeProps[PR_IPM_OUTBOX_ENTRYID])) {
+                $this->storeProps[PR_IPM_OUTBOX_ENTRYID] = false;
+            }
         }
         return $this->storeProps;
     }
@@ -2707,8 +2748,33 @@ class MAPIProvider {
     private function getInboxProps() {
         if (!isset($this->inboxProps) || empty($this->inboxProps)) {
             ZLog::Write(LOGLEVEL_DEBUG, "MAPIProvider->getInboxProps(): Getting inbox properties.");
+            $this->inboxProps = array();
             $inbox = mapi_msgstore_getreceivefolder($this->store);
-            $this->inboxProps = mapi_getprops($inbox, array(PR_ENTRYID, PR_IPM_DRAFTS_ENTRYID, PR_IPM_TASK_ENTRYID, PR_IPM_APPOINTMENT_ENTRYID, PR_IPM_CONTACT_ENTRYID, PR_IPM_NOTE_ENTRYID, PR_IPM_JOURNAL_ENTRYID));
+            if ($inbox) {
+                $this->inboxProps = mapi_getprops($inbox, array(PR_ENTRYID, PR_IPM_DRAFTS_ENTRYID, PR_IPM_TASK_ENTRYID, PR_IPM_APPOINTMENT_ENTRYID, PR_IPM_CONTACT_ENTRYID, PR_IPM_NOTE_ENTRYID, PR_IPM_JOURNAL_ENTRYID));
+                // make sure all properties are set
+                if(!isset($this->inboxProps[PR_ENTRYID])) {
+                    $this->inboxProps[PR_ENTRYID] = false;
+                }
+                if(!isset($this->inboxProps[PR_IPM_DRAFTS_ENTRYID])) {
+                    $this->inboxProps[PR_IPM_DRAFTS_ENTRYID] = false;
+                }
+                if(!isset($this->inboxProps[PR_IPM_TASK_ENTRYID])) {
+                    $this->inboxProps[PR_IPM_TASK_ENTRYID] = false;
+                }
+                if(!isset($this->inboxProps[PR_IPM_APPOINTMENT_ENTRYID])) {
+                    $this->inboxProps[PR_IPM_APPOINTMENT_ENTRYID] = false;
+                }
+                if(!isset($this->inboxProps[PR_IPM_CONTACT_ENTRYID])) {
+                    $this->inboxProps[PR_IPM_CONTACT_ENTRYID] = false;
+                }
+                if(!isset($this->inboxProps[PR_IPM_NOTE_ENTRYID])) {
+                    $this->inboxProps[PR_IPM_NOTE_ENTRYID] = false;
+                }
+                if(!isset($this->inboxProps[PR_IPM_JOURNAL_ENTRYID])) {
+                    $this->inboxProps[PR_IPM_JOURNAL_ENTRYID] = false;
+                }
+            }
         }
         return $this->inboxProps;
     }

@@ -6,7 +6,7 @@
 *
 * Created   :   12.04.2011
 *
-* Copyright 2007 - 2015 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -102,7 +102,7 @@ class ZPush {
     const STATE_VERSION = IStateMachine::STATEVERSION_02;
 
     static private $autoloadBackendPreference = array(
-                    "BackendZarafa",
+                    "BackendKopano",
                     "BackendCombined",
                     "BackendIMAP",
                     "BackendVCardDir",
@@ -191,6 +191,7 @@ class ZPush {
     static private $topCollector;
     static private $backend;
     static private $addSyncFolders;
+    static private $policies;
 
 
     /**
@@ -285,6 +286,19 @@ class ZPush {
             date_default_timezone_set('Europe/Amsterdam');
         }
 
+        // check if Provisioning is enabled and the default policies are available
+        if (PROVISIONING) {
+            if (file_exists(REAL_BASE_PATH . PROVISIONING_POLICYFILE)) {
+                $policyfile = REAL_BASE_PATH . PROVISIONING_POLICYFILE;
+            }
+            else {
+                $policyfile = PROVISIONING_POLICYFILE;
+            }
+            ZPush::$policies = parse_ini_file($policyfile, true);
+            if (!isset(ZPush::$policies['default'])) {
+                throw new FatalMisconfigurationException(sprintf("Your policies' configuration file doesn't contain the required [default] section. Please check the '%s' file.", $policyfile));
+            }
+        }
         return true;
     }
 
@@ -300,12 +314,6 @@ class ZPush {
 
         if (!is_array($specialLogUsers))
             throw new FatalMisconfigurationException("The WBXML log users is not an array.");
-
-        if (!defined('SINK_FORCERECHECK')) {
-            define('SINK_FORCERECHECK', 300);
-        }
-        else if (SINK_FORCERECHECK !== false && (!is_int(SINK_FORCERECHECK) || SINK_FORCERECHECK < 1))
-            throw new FatalMisconfigurationException("The SINK_FORCERECHECK value must be 'false' or a number higher than 0.");
 
         if (!defined('SYNC_CONTACTS_MAXPICTURESIZE')) {
             define('SYNC_CONTACTS_MAXPICTURESIZE', 49152);
@@ -333,6 +341,35 @@ class ZPush {
             throw new FatalMisconfigurationException("The PING_HIGHER_BOUND_LIFETIME value must be greater or equal to PING_LOWER_BOUND_LIFETIME.");
         }
 
+        // Check KOE flags
+        if (!defined('KOE_CAPABILITY_GAB')) {
+            define('KOE_CAPABILITY_GAB', false);
+        }
+        if (!defined('KOE_CAPABILITY_RECEIVEFLAGS')) {
+            define('KOE_CAPABILITY_RECEIVEFLAGS', false);
+        }
+        if (!defined('KOE_CAPABILITY_SENDFLAGS')) {
+            define('KOE_CAPABILITY_SENDFLAGS', false);
+        }
+        if (!defined('KOE_CAPABILITY_OOF')) {
+            define('KOE_CAPABILITY_OOF', false);
+        }
+        if (!defined('KOE_CAPABILITY_OOFTIMES')) {
+            define('KOE_CAPABILITY_OOFTIMES', false);
+        }
+        if (!defined('KOE_CAPABILITY_NOTES')) {
+            define('KOE_CAPABILITY_NOTES', false);
+        }
+        if (!defined('KOE_GAB_FOLDERID')) {
+            define('KOE_GAB_FOLDERID', '');
+        }
+        if (!defined('KOE_GAB_STORE')) {
+            define('KOE_GAB_STORE', '');
+        }
+        if (!defined('KOE_GAB_NAME')) {
+            define('KOE_GAB_NAME', false);
+        }
+
         // the check on additional folders will not throw hard errors, as this is probably changed on live systems
         if (isset($additionalFolders) && !is_array($additionalFolders))
             ZLog::Write(LOGLEVEL_ERROR, "ZPush::CheckConfig() : The additional folders synchronization not available as array.");
@@ -352,20 +389,24 @@ class ZPush {
                     continue;
                 }
 
-                if (!in_array($af['type'], array(SYNC_FOLDER_TYPE_USER_CONTACT, SYNC_FOLDER_TYPE_USER_APPOINTMENT, SYNC_FOLDER_TYPE_USER_TASK, SYNC_FOLDER_TYPE_USER_MAIL))) {
+                if (!in_array($af['type'], array(SYNC_FOLDER_TYPE_USER_NOTE, SYNC_FOLDER_TYPE_USER_CONTACT, SYNC_FOLDER_TYPE_USER_APPOINTMENT, SYNC_FOLDER_TYPE_USER_TASK, SYNC_FOLDER_TYPE_USER_MAIL))) {
                     ZLog::Write(LOGLEVEL_ERROR, sprintf("ZPush::CheckConfig() : the type of the additional synchronization folder '%s is not permitted.", $af['name']));
                     continue;
                 }
 
                 $folder = new SyncFolder();
-                $folder->serverid = $af['folderid'];
+
+                $folder->BackendId = $af['folderid'];
+                $folder->serverid = ZPush::GetDeviceManager(true)->GetFolderIdForBackendId($folder->BackendId, true, DeviceManager::FLD_ORIGIN_CONFIG, $af['name']);
                 $folder->parentid = 0;                  // only top folders are supported
                 $folder->displayname = $af['name'];
                 $folder->type = $af['type'];
                 // save store as custom property which is not streamed directly to the device
                 $folder->NoBackendFolder = true;
                 $folder->Store = $af['store'];
-                self::$addSyncFolders[$folder->serverid] = $folder;
+                $folder->ReadOnly = $af['readonly'];
+
+                self::$addSyncFolders[$folder->BackendId] = $folder;
             }
 
         }
@@ -400,7 +441,12 @@ class ZPush {
             }
             else {
                 // Initialize the default StateMachine
-                ZPush::$stateMachine = new FileStateMachine();
+                if (defined('STATE_MACHINE') && STATE_MACHINE == 'SQL') {
+                    ZPush::$stateMachine = new SqlStateMachine();
+                }
+                else {
+                    ZPush::$stateMachine = new FileStateMachine();
+                }
             }
 
             if (ZPush::$stateMachine->GetStateVersion() !== ZPush::GetLatestStateVersion()) {
@@ -478,8 +524,7 @@ class ZPush {
             return false;
 
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("Including backend file: '%s'", $toLoad));
-        include_once($toLoad);
-        return true;
+        return include_once($toLoad);
     }
 
     /**
@@ -531,20 +576,19 @@ class ZPush {
 
             // if no backend provider is defined, try to include automatically
             if ($ourBackend == false || $ourBackend == "") {
-                $loaded = false;
                 foreach (self::$autoloadBackendPreference as $autoloadBackend) {
                     ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPush::GetBackend(): trying autoload backend '%s'", $autoloadBackend));
-                    $loaded = class_exists($autoloadBackend) || self::IncludeBackend($autoloadBackend);
-                    if ($loaded) {
+                    if (class_exists($autoloadBackend)) {
                         $ourBackend = $autoloadBackend;
                         break;
                     }
                 }
-                if (!$ourBackend || !$loaded)
-                    throw new FatalMisconfigurationException("No Backend provider can not be loaded. Check your installation and configuration!");
+                if (!$ourBackend)
+                    throw new FatalMisconfigurationException("No Backend provider can be found. Check your installation and/or configuration!");
             }
-            elseif (!class_exists($ourBackend))
-                self::IncludeBackend($ourBackend);
+            elseif (!class_exists($ourBackend)) {
+                spl_autoload_register('\ZPush::IncludeBackend');
+            }
 
             if (class_exists($ourBackend))
                 ZPush::$backend = new $ourBackend();
@@ -557,34 +601,48 @@ class ZPush {
     /**
      * Returns additional folder objects which should be synchronized to the device
      *
+     * @param boolean $backendIdsAsKeys     if true the keys are backendids else folderids, default: true
+     *
      * @access public
      * @return array
      */
-    static public function GetAdditionalSyncFolders() {
+    static public function GetAdditionalSyncFolders($backendIdsAsKeys = true) {
         // get user based folders which should be synchronized
         $userFolder = self::GetDeviceManager()->GetAdditionalUserSyncFolders();
-        return array_merge(self::$addSyncFolders, $userFolder);
+        $addfolders = self::$addSyncFolders + $userFolder;
+        // if requested, we rewrite the backendids to folderids here
+        if ($backendIdsAsKeys === false && !empty($addfolders)) {
+            ZLog::Write(LOGLEVEL_DEBUG, "ZPush::GetAdditionalSyncFolders(): Requested AS folderids as keys for additional folders array, converting");
+            $faddfolders = array();
+            foreach ($addfolders as $backendId => $addFolder) {
+                $fid = self::GetDeviceManager()->GetFolderIdForBackendId($backendId);
+                $faddfolders[$fid] = $addFolder;
+            }
+            $addfolders = $faddfolders;
+        }
+
+        return $addfolders;
     }
 
     /**
      * Returns additional folder objects which should be synchronized to the device
      *
-     * @param string        $folderid
+     * @param string        $backendid
      * @param boolean       $noDebug        (opt) by default, debug message is shown
      *
      * @access public
      * @return string
      */
-    static public function GetAdditionalSyncFolderStore($folderid, $noDebug = false) {
-        if(isset(self::$addSyncFolders[$folderid]->Store)) {
-            $val = self::$addSyncFolders[$folderid]->Store;
+    static public function GetAdditionalSyncFolderStore($backendid, $noDebug = false) {
+        if(isset(self::$addSyncFolders[$backendid]->Store)) {
+            $val = self::$addSyncFolders[$backendid]->Store;
         }
         else {
-            $val = self::GetDeviceManager()->GetAdditionalUserSyncFolderStore($folderid);
+            $val = self::GetDeviceManager()->GetAdditionalUserSyncFolderStore($backendid);
         }
 
         if (!$noDebug)
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPush::GetAdditionalSyncFolderStore('%s'): '%s'", $folderid, Utils::PrintAsString($val)));
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPush::GetAdditionalSyncFolderStore('%s'): '%s'", $backendid, Utils::PrintAsString($val)));
         return $val;
     }
 
@@ -876,4 +934,13 @@ END;
         return $defcapa;
     }
 
+    /**
+     * Returns the available provisioning policies.
+     *
+     * @return array
+     */
+    static public function GetPolicies() {
+        // TODO another policy providers might be available, e.g. for sqlstatemachine
+        return ZPush::$policies;
+    }
 }

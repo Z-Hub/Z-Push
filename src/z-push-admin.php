@@ -5,7 +5,7 @@
 * Project   :   Z-Push
 * Descr     :   This is a small command line
 *               client to see and modify the
-*               wipe status of Zarafa users.
+*               wipe status of Kopano users.
 *
 * Created   :   14.05.2010
 *
@@ -632,7 +632,7 @@ class ZPushAdminCLI {
         $folders = array();
         foreach ($device->GetAllFolderIds() as $folderid) {
             // if  submitting a folderid as type to resync a specific folder.
-            if ($folderid == $type) {
+            if ($folderid == $type || $device->GetFolderBackendId($folderid) === $type) {
                 printf("Found and resynching requested folderid '%s' on device '%s' of user '%s'\n", $folderid, $deviceId, $user);
                 $folders[] = $folderid;
                 break;
@@ -712,6 +712,12 @@ class ZPushAdminCLI {
         echo "\tChecking for unreferenced (obsolete) state files: ";
         if (($stat = ZPushAdmin::FixStatesUserToStatesLinking()) !== false)
             printf("Processed: %d - Deleted: %d\n",  $stat[0], $stat[1]);
+        else
+            echo ZLog::GetLastMessage(LOGLEVEL_ERROR) . "\n";
+
+        echo "\tChecking for hierarchy folder data state: ";
+        if (($stat = ZPushAdmin::FixStatesHierarchyFolderData()) !== false)
+            printf("Devices: %d - Processed: %d - Fixed: %d - Device+User without hierarchy: %d\n",  $stat[0], $stat[1], $stat[2], $stat[3]);
         else
             echo ZLog::GetLastMessage(LOGLEVEL_ERROR) . "\n";
     }
@@ -854,6 +860,14 @@ class ZPushAdminCLI {
         echo "WipeRequest on:\t\t". ($device->GetWipeRequestedOn() ? strftime("%Y-%m-%d %H:%M", $device->GetWipeRequestedOn()) : "not set")."\n";
         echo "WipeRequest by:\t\t". ($device->GetWipeRequestedBy() ? $device->GetWipeRequestedBy() : "not set")."\n";
         echo "Wiped on:\t\t". ($device->GetWipeActionOn() ? strftime("%Y-%m-%d %H:%M", $device->GetWipeActionOn()) : "not set")."\n";
+        echo "Policy name:\t\t". ($device->GetPolicyName() ? $device->GetPolicyName() : ASDevice::DEFAULTPOLICYNAME)."\n";
+
+        if ($device->GetKoeVersion()) {
+            echo "Kopano Outlook Extension:\n";
+            echo "\tVersion:\t". $device->GetKoeVersion() ."\n";
+            echo "\tBuild:\t\t". $device->GetKoeBuild() ."\n";
+            echo "\tBuild Date:\t". strftime("%Y-%m-%d %H:%M",$device->GetKoeBuildDate()) ."\n";
+        }
 
         echo "Attention needed:\t";
 

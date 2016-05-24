@@ -6,7 +6,7 @@
 *
 * Created   :   16.02.2012
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -55,6 +55,22 @@ class Settings extends RequestProcessor {
         if (!self::$decoder->getElementStartTag(SYNC_SETTINGS_SETTINGS))
             return false;
 
+        // add capability header for KOE
+        if(self::$deviceManager->IsKoe()) {
+            // define the supported capabilites
+            $cap = array();
+            if(KOE_CAPABILITY_GAB)           $cap[] = "gab";
+            if(KOE_CAPABILITY_RECEIVEFLAGS)  $cap[] = "receiveflags";
+            if(KOE_CAPABILITY_SENDFLAGS)     $cap[] = "sendflags";
+            if(KOE_CAPABILITY_OOFTIMES)      $cap[] = "ooftime";
+            else if(KOE_CAPABILITY_OOF)      $cap[] = "oof";        // 'ooftime' superseeds 'oof'. If 'ooftime' is set, 'oof' should not be defined.
+            if(KOE_CAPABILITY_NOTES)         $cap[] = "notes";
+
+            self::$specialHeaders = array();
+            self::$specialHeaders[] = "X-Push-Capabilities: ". implode(",",$cap);
+            self::$specialHeaders[] = "X-Push-GAB-Name: ". bin2hex(KOE_GAB_NAME);
+        }
+
         //save the request parameters
         $request = array();
 
@@ -64,7 +80,8 @@ class Settings extends RequestProcessor {
         // - DeviceInformation
         // - UserInformation
         // Each of them should only be once per request. Each property must be processed in order.
-        while (1) {
+        WBXMLDecoder::ResetInWhile("settingsMain");
+        while(WBXMLDecoder::InWhile("settingsMain")) {
             $propertyName = "";
             if (self::$decoder->getElementStartTag(SYNC_SETTINGS_OOF)) {
                 $propertyName = SYNC_SETTINGS_OOF;

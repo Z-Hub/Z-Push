@@ -74,7 +74,7 @@ class Provisioning extends RequestProcessor {
         // - Remote Wipe
         // - DeviceInformation
         // - Policies
-        // Each of them should only be once per request. 
+        // Each of them should only be once per request.
         WBXMLDecoder::ResetInWhile("provisioningMain");
         while(WBXMLDecoder::InWhile("provisioningMain")) {
             $requestName = "";
@@ -88,7 +88,7 @@ class Provisioning extends RequestProcessor {
                 $requestName = SYNC_SETTINGS_DEVICEINFORMATION;
             }
 
-            if (!$requestName) 
+            if (!$requestName)
                 break;
 
                 //set is available for OOF, device password and device information
@@ -150,7 +150,7 @@ class Provisioning extends RequestProcessor {
 
                 case SYNC_SETTINGS_DEVICEINFORMATION:
                     // AS14.1 and later clients pass Device Information on the initial Provision request
-                    if (!self::$decoder->getElementStartTag(SYNC_SETTINGS_SET)) 
+                    if (!self::$decoder->getElementStartTag(SYNC_SETTINGS_SET))
                         return false;
                     $deviceInfoSet = true;
                     $deviceinformation = new SyncDeviceInformation();
@@ -236,6 +236,7 @@ class Provisioning extends RequestProcessor {
                             if (!$prov->Check())
                                 throw new FatalException("Invalid policies!");
 
+                            self::$deviceManager->SavePolicyHashAndName($prov);
                             $prov->Encode(self::$encoder);
                         self::$encoder->endTag();
                     }
