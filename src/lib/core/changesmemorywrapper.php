@@ -258,7 +258,7 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
                 }
 
                 // check if the parent ID is known on the device
-                if (!isset($folder->parentid) || $folder->parentid != "0" &&  !$this->GetFolder($folder->parentid)) {
+                if (!isset($folder->parentid) || ($folder->parentid != "0" && !$this->GetFolder($folder->parentid))) {
                     ZLog::Write(LOGLEVEL_DEBUG, sprintf("ChangesMemoryWrapper->ImportFolderChange(): Change for folder '%s' will not be sent as parent folder is not set or not known on mobile.", $folder->displayname));
                     return false;
                 }

@@ -508,12 +508,12 @@ class Kopano extends SyncWorker {
             $entryid = @mapi_msgstore_createentryid($this->defaultstore, $user);
 
         if(!$entryid) {
-            $this->Terminate(sprintf("Kopano->openMessageStore(): No store found for user '%s': 0x%08X - Aborting.", $user, mapi_last_hresult));
+            $this->Terminate(sprintf("Kopano->openMessageStore(): No store found for user '%s': 0x%08X - Aborting.", $user, mapi_last_hresult()));
         }
 
         $store = @mapi_openmsgstore($this->session, $entryid);
         if (!$store) {
-            $this->Terminate(sprintf("Kopano->openMessageStore(): Could not open store for '%s': 0x%08X - Aborting.", $user, mapi_last_hresult));
+            $this->Terminate(sprintf("Kopano->openMessageStore(): Could not open store for '%s': 0x%08X - Aborting.", $user, mapi_last_hresult()));
         }
 
         $this->Log(sprintf("Kopano->openMessageStore(): Found '%s' store of user '%s': '%s'", (($return_public)?'PUBLIC':'DEFAULT'), $user, $store));

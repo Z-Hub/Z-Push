@@ -72,7 +72,8 @@ class ReplyBackState extends StateObject {
      * @param mixed $state
      */
     static public function ToState($state) {
-        if (!empty($state->GetReplyBackState())) {
+        $rbs = $state->GetReplyBackState();
+        if (!empty($rbs)) {
             return serialize($state);
         }
         else {
