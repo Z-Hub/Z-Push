@@ -54,7 +54,7 @@ include_once(ZPUSH_CONFIG);
  */
     declare(ticks = 1);
     define('BASE_PATH_CLI',  dirname(__FILE__) ."/");
-
+    set_include_path(get_include_path() . PATH_SEPARATOR . BASE_PATH_CLI);
     try {
         ZPush::CheckConfig();
         if (!function_exists("pcntl_signal"))
