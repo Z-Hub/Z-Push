@@ -1,3 +1,4 @@
+#!/usr/bin/php
 <?php
 /***********************************************
 * File      :   gab-sync.php
@@ -119,16 +120,10 @@ class GabSyncCLI {
     static public function SetupSyncWorker() {
         $file = "lib/" .strtolower(SYNCWORKER).".php";
 
-        if (!file_exists($file)) {
-            self::$errormessage = "SyncWorker file '".$file."' can not be found. Check your configuration.";
-            return false;
-        }
-        else {
-            include_once($file);
-        }
+        @include_once($file);
 
         if (!class_exists(SYNCWORKER)) {
-            self::$errormessage = "SyncWorker file loaded, but class '".SYNCWORKER."' can not be found. Check your implementation.";
+            self::$errormessage = "SyncWorker file loaded, but class '".SYNCWORKER."' can not be found. Check your configuration or implementation.";
         }
         else {
             $s = @constant('SYNCWORKER');
