@@ -282,7 +282,7 @@ class ZPushAdmin {
             StateManager::UnLinkState($device, false);
 
             // remove backend storage permanent data
-            ZPush::GetStateMachine()->CleanStates($device->GetDeviceId(), IStateMachine::BACKENDSTORAGE, false, $device->GetFirstSyncTime());
+            ZPush::GetStateMachine()->CleanStates($device->GetDeviceId(), IStateMachine::BACKENDSTORAGE, false, $device->GetFirstSyncTime(), true);
 
             // remove devicedata and unlink user from device
             unset($devices[$user]);
