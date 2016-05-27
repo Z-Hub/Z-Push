@@ -127,11 +127,10 @@ class SyncNote extends SyncObject {
         // is a color other than yellow set
         if (isset($this->Color) && $this->Color != 3 && $this->Color > -1 && $this->Color < 5) {
             // check existing categories - do not rewrite category if the category is already a supported or unsupported color
-            if (!empty($this->categories) &&
-                    (!empty(array_intersect($this->categories, array_values(self::$unsupportedColors))) ||
-                     !empty(array_intersect($this->categories, array_values(self::$colors))) )) {
-
-                    return false;
+            $insecUnsupp = array_intersect($this->categories, array_values(self::$unsupportedColors));
+            $insecColors = array_intersect($this->categories, array_values(self::$colors));
+            if (!empty($this->categories) && (!empty($insecUnsupp) || !empty($insecColors))) {
+                return false;
             }
             if(!isset($this->categories)) {
                 $this->categories = array();
