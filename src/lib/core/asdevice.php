@@ -716,6 +716,24 @@ class ASDevice extends StateObject {
     }
 
     /**
+     * Indicates if the device has a folderid mapping (short ids).
+     *
+     * @access public
+     * @return boolean
+     */
+    public function HasFolderIdMapping() {
+        if (is_array($this->backend2folderidCache)) {
+            return true;
+        }
+        foreach ($this->contentData as $folderid => $data) {
+            if (isset($data[self::FOLDERBACKENDID])) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * Gets the supported fields transmitted previousely by the device
      * for a certain folder
      *

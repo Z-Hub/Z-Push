@@ -438,7 +438,7 @@ class ZPushAdminCLI {
             echo "\tno devices found\n";
         else {
             echo "All known devices and users and their last synchronization time\n\n";
-            echo str_pad("Device id", 36). str_pad("Synchronized user", 31)."Last sync time\n";
+            echo str_pad("Device id", 36) . str_pad("Synchronized user", 31) . str_pad("Last sync time", 20) . "Short Ids\n";
             echo "-----------------------------------------------------------------------------------------------------\n";
         }
 
@@ -446,7 +446,9 @@ class ZPushAdminCLI {
             $users = ZPushAdmin::ListUsers($deviceId);
             foreach ($users as $user) {
                 $device = ZPushAdmin::GetDeviceDetails($deviceId, $user);
-                echo str_pad($deviceId, 36) . str_pad($user, 30) . " " . ($device->GetLastSyncTime() ? strftime("%Y-%m-%d %H:%M", $device->GetLastSyncTime()) : "never") . "\n";
+                $lastsync = $device->GetLastSyncTime() ? strftime("%Y-%m-%d %H:%M", $device->GetLastSyncTime()) : "never";
+                $hasShortFolderIds = $device->HasFolderIdMapping() ? "Yes":"No";
+                echo str_pad($deviceId, 36) . str_pad($user, 30) . " " . str_pad($lastsync, 20) . $hasShortFolderIds . "\n";
             }
         }
     }
@@ -819,6 +821,7 @@ class ZPushAdminCLI {
         echo "First sync:\t\t". strftime("%Y-%m-%d %H:%M", $device->GetFirstSyncTime()) ."\n";
         echo "Last sync:\t\t". ($device->GetLastSyncTime() ? strftime("%Y-%m-%d %H:%M", $device->GetLastSyncTime()) : "never")."\n";
         echo "Total folders:\t\t". count($folders). "\n";
+        echo "Short folder Ids:\t". ($device->HasFolderIdMapping() ? "Yes":"No") ."\n";
         echo "Synchronized folders:\t". $synchedFolders;
         if ($syncedFoldersInProgress > 0)
             echo " (". $syncedFoldersInProgress. " in progress)";
