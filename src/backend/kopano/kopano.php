@@ -1417,7 +1417,7 @@ class BackendKopano implements IBackend, ISearchProvider {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->GetFolderStat() fetched status information of %d folders for store '%s'", count($this->folderStatCache[$user]), $user));
             // TODO remove logging
             foreach($this->folderStatCache[$user] as $fid => $stat) {
-                ZLog::Write(LOGLEVEL_INFO, sprintf("FolderStat: %s %s %s\t%s", $user, $fid, $stat, $this->nameCache[$fid]));
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("FolderStat: %s %s %s\t%s", $user, $fid, $stat, $this->nameCache[$fid]));
             }
         }
 
