@@ -549,7 +549,7 @@ class Kopano extends SyncWorker {
 
             $parentfolder = mapi_msgstore_openentry($this->store, $parentfentryid);
             if (!$parentfolder)
-                $this->Terminate(sprintf("Kopano->CreateHiddenPublicFolder(): Error, unable to open parent folder (open entry): 0x%08X", mapi_last_hresult()));
+                $this->Terminate(sprintf("Kopano->getRootFolder(): Error, unable to open parent folder (open entry): 0x%08X", mapi_last_hresult()));
 
             $this->folderCache[$rootId] = $parentfolder;
         }
