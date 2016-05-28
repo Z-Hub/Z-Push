@@ -772,10 +772,16 @@ class ZPushAdminCLI {
             if ($device->GetFolderUUID($folderid)) {
                 $synchedFolders++;
                 $type = $device->GetFolderType($folderid);
+                $name = $device->GetHierarchyCache()->GetFolder($folderid)->displayname;
                 switch($type) {
                     case SYNC_FOLDER_TYPE_APPOINTMENT:
                     case SYNC_FOLDER_TYPE_USER_APPOINTMENT:
-                        $gentype = "Calendars";
+                        if (KOE_GAB_NAME != "" && $name == KOE_GAB_NAME) {
+                            $gentype = "GAB";
+                        }
+                        else {
+                            $gentype = "Calendars";
+                        }
                         break;
                     case SYNC_FOLDER_TYPE_CONTACT:
                     case SYNC_FOLDER_TYPE_USER_CONTACT:
@@ -800,8 +806,7 @@ class ZPushAdminCLI {
                 // set the folder name for all folders which are not fully synchronized yet
                 $fstatus = $device->GetFolderSyncStatus($folderid);
                 if ($fstatus !== false && is_array($fstatus)) {
-                    // TODO would be nice if we could see the real name of the folder, right now we use the folder type as name
-                    $fstatus['name'] = $gentype;
+                    $fstatus['name'] = $name ? $name : $gentype;
                     $device->SetFolderSyncStatus($folderid, $fstatus);
                     $syncedFoldersInProgress++;
                 }
@@ -859,7 +864,10 @@ class ZPushAdminCLI {
                         $percent = round($d['done']*100/$d['total']);
                         $status = sprintf("Status: %s%d%% (%d/%d)", ($percent < 10)?" ":"", $percent, $d['done'], $d['total']);
                     }
-                    printf("\tFolder: %s%s Sync: %s    %s\n", $d['name'], str_repeat(" ", 12-strlen($d['name'])), $d['status'], $status);
+                    if (strlen($d['name']) > 20) {
+                        $d['name'] = substr($d['name'], 0, 18) . "..";
+                    }
+                    printf("\tFolder: %s Sync: %s %s\n", str_pad($d['name'], 20), str_pad($d['status'], 13), $status);
                 }
             }
         }
