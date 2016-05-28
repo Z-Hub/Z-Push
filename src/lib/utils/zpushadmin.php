@@ -326,7 +326,7 @@ class ZPushAdmin {
             }
 
             if (!$folderid || (is_array($folderid) && empty($folderid))) {
-                ZLog::Write(LOGLEVEL_ERROR, sprintf("ZPushAdmin::ResyncFolder(): no folders synchronized for user '%s' on device '%s'. Aborting.",$user, $devid));
+                ZLog::Write(LOGLEVEL_ERROR, sprintf("ZPushAdmin::ResyncFolder(): no folders requested for user '%s' on device '%s'. Aborting.",$user, $devid));
                 return false;
             }
 
