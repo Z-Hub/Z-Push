@@ -2459,7 +2459,7 @@ class MAPIProvider {
             $addrbook = $this->getAddressbook();
             $stream = mapi_inetmapi_imtoinet($this->session, $addrbook, $mapimessage, array('use_tnef' => -1));
 
-            if (isset($stream)) {
+            if (is_resource($stream)) {
                 $mstreamstat = mapi_stream_stat($stream);
                 $streamsize = $mstreamstat["cb"];
                 if (isset($streamsize)) {
