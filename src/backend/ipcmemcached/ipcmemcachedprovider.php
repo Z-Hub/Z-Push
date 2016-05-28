@@ -193,7 +193,7 @@ class IpcMemcachedProvider implements IIpcProvider {
                 return false;
             }
         }
-        if ($n) {
+        if ($n*MEMCACHED_BLOCK_WAIT > 50) {
             ZLog::Write(LOGLEVEL_WARN, sprintf("IpcMemcachedProvider->BlockMutex() mutex aquired after waiting for %sms for type: %s", ($n*MEMCACHED_BLOCK_WAIT), $this->type));
         }
         return true;

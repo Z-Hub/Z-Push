@@ -101,6 +101,7 @@ class ZPushAdminCLI {
     const TYPE_OPTION_TASK = "task";
     const TYPE_OPTION_NOTE = "note";
     const TYPE_OPTION_HIERARCHY = "hierarchy";
+    const TYPE_OPTION_GAB = "gab";
 
     static private $command;
     static private $user = false;
@@ -115,7 +116,6 @@ class ZPushAdminCLI {
      * @access public
      */
     static public function UsageInstructions() {
-        $types = "'".self::TYPE_OPTION_EMAIL."', '".self::TYPE_OPTION_CALENDAR."', '".self::TYPE_OPTION_CONTACT."', '".self::TYPE_OPTION_TASK."' or '".self::TYPE_OPTION_NOTE."'";
         return  "Usage:\n\tz-push-admin.php -a ACTION [options]\n\n" .
                 "Parameters:\n\t-a list/wipe/remove/resync/clearloop\n\t[-u] username\n\t[-d] deviceid\n\n" .
                 "Actions:\n" .
@@ -130,14 +130,16 @@ class ZPushAdminCLI {
                 "\tremove -d DEVICE\t\t\t Removes all state data of all users synchronized on device DEVICE\n" .
                 "\tremove -u USER -d DEVICE\t\t Removes all related state data of device DEVICE of user USER\n" .
                 "\tresync -u USER -d DEVICE\t\t Resynchronizes all data of device DEVICE of user USER\n" .
-                "\tresync -t TYPE \t\t\t\t Resynchronizes all folders of type $types for all devices and users.\n" .
-                "\tresync -t TYPE -u USER \t\t\t Resynchronizes all folders of type $types for the user USER.\n" .
-                "\tresync -t TYPE -u USER -d DEVICE\t Resynchronizes all folders of type $types for a specified device and user.\n" .
+                "\tresync -t TYPE \t\t\t\t Resynchronizes all folders of type (possible values below) for all devices and users.\n" .
+                "\tresync -t TYPE -u USER \t\t\t Resynchronizes all folders of type (possible values below) for the user USER.\n" .
+                "\tresync -t TYPE -u USER -d DEVICE\t Resynchronizes all folders of type (possible values below) for a specified device and user.\n" .
                 "\tresync -t FOLDERID -u USER\t\t Resynchronize the specified folder id only. The USER should be specified for better performance.\n" .
                 "\tresync -t hierarchy -u USER -d DEVICE\t Resynchronize the folder hierarchy data for an optional USER and optional DEVICE.\n" .
                 "\tclearloop\t\t\t\t Clears system wide loop detection data\n" .
                 "\tclearloop -d DEVICE -u USER\t\t Clears all loop detection data of a device DEVICE and an optional user USER\n" .
                 "\tfixstates\t\t\t\t Checks the states for integrity and fixes potential issues\n" .
+                "\n" .
+                "\tPossible values for type:\n\t  '".self::TYPE_OPTION_EMAIL."', '".self::TYPE_OPTION_CALENDAR."', '".self::TYPE_OPTION_CONTACT."', '".self::TYPE_OPTION_TASK."', '".self::TYPE_OPTION_NOTE."', '".self::TYPE_OPTION_HIERARCHY."' of '".self::TYPE_OPTION_GAB."' (for KOE)\n" .
                 "\n";
     }
 
@@ -200,11 +202,13 @@ class ZPushAdminCLI {
                 self::$type !== self::TYPE_OPTION_TASK &&
                 self::$type !== self::TYPE_OPTION_NOTE &&
                 self::$type !== self::TYPE_OPTION_HIERARCHY &&
+                self::$type !== self::TYPE_OPTION_GAB &&
+                strlen(self::$type) !== 6 &&       // like U1f38d
                 strlen(self::$type) !== 44 &&
                 strlen(self::$type) !== 48) {
                     self::$errormessage = "Wrong 'type'. Possible values are: ".
-                        "'".self::TYPE_OPTION_EMAIL."', '".self::TYPE_OPTION_CALENDAR."', '".self::TYPE_OPTION_CONTACT."', '".self::TYPE_OPTION_TASK."', '".self::TYPE_OPTION_NOTE."', ".self::TYPE_OPTION_HIERARCHY."' ".
-                        "or a 44 or 48 byte long folder id (as hex).";
+                        "'".self::TYPE_OPTION_EMAIL."', '".self::TYPE_OPTION_CALENDAR."', '".self::TYPE_OPTION_CONTACT."', '".self::TYPE_OPTION_TASK."', '".self::TYPE_OPTION_NOTE."', '".self::TYPE_OPTION_HIERARCHY."', '".self::TYPE_OPTION_GAB."' ".
+                        "or a 6, 44 or 48 byte long folder id (as hex).";
                     return;
                 }
         }
@@ -632,9 +636,27 @@ class ZPushAdminCLI {
         }
 
         $folders = array();
+        $searchFor = $type;
+        // get the KOE gab folderid
+        if ($type == self::TYPE_OPTION_GAB) {
+            if (@constant('KOE_GAB_FOLDERID') !== '') {
+                $gab = KOE_GAB_FOLDERID;
+            }
+            else {
+                $gab = $device->GetKoeGabBackendFolderId();
+            }
+            if (!$gab) {
+                printf("Could not find KOE GAB folderid for device '%s' of user '%s'\n", $deviceId, $user);
+                return false;
+            }
+            $searchFor = $gab;
+        }
+        // potential long ids are converted to folderids here, incl. the gab id
+        $searchFor = strtolower($device->GetFolderIdForBackendId($searchFor, false, false, null));
+
         foreach ($device->GetAllFolderIds() as $folderid) {
             // if  submitting a folderid as type to resync a specific folder.
-            if ($folderid == $type || $device->GetFolderBackendId($folderid) === $type) {
+            if (strtolower($folderid) === $searchFor) {
                 printf("Found and resynching requested folderid '%s' on device '%s' of user '%s'\n", $folderid, $deviceId, $user);
                 $folders[] = $folderid;
                 break;
@@ -645,26 +667,26 @@ class ZPushAdminCLI {
                 switch($foldertype) {
                     case SYNC_FOLDER_TYPE_APPOINTMENT:
                     case SYNC_FOLDER_TYPE_USER_APPOINTMENT:
-                        if ($type == "calendar")
+                        if ($searchFor == "calendar")
                             $folders[] = $folderid;
                         break;
                     case SYNC_FOLDER_TYPE_CONTACT:
                     case SYNC_FOLDER_TYPE_USER_CONTACT:
-                        if ($type == "contact")
+                        if ($searchFor == "contact")
                             $folders[] = $folderid;
                         break;
                     case SYNC_FOLDER_TYPE_TASK:
                     case SYNC_FOLDER_TYPE_USER_TASK:
-                        if ($type == "task")
+                        if ($searchFor == "task")
                             $folders[] = $folderid;
                         break;
                     case SYNC_FOLDER_TYPE_NOTE:
                     case SYNC_FOLDER_TYPE_USER_NOTE:
-                        if ($type == "note")
+                        if ($searchFor == "note")
                             $folders[] = $folderid;
                         break;
                     default:
-                        if ($type == "email")
+                        if ($searchFor == "email")
                             $folders[] = $folderid;
                         break;
                 }
@@ -672,7 +694,7 @@ class ZPushAdminCLI {
         }
 
         $stat = ZPushAdmin::ResyncFolder($user, $deviceId, $folders);
-        echo sprintf("Resync of %d folders of type %s on device '%s' of user '%s': %s\n", count($folders), $type, $deviceId, $user, ($stat)?'Requested':ZLog::GetLastMessage(LOGLEVEL_ERROR));
+        echo sprintf("Resync of %d folders of type '%s' on device '%s' of user '%s': %s\n", count($folders), $type, $deviceId, $user, ($stat)?'Requested':ZLog::GetLastMessage(LOGLEVEL_ERROR));
     }
 
     /**
@@ -750,10 +772,16 @@ class ZPushAdminCLI {
             if ($device->GetFolderUUID($folderid)) {
                 $synchedFolders++;
                 $type = $device->GetFolderType($folderid);
+                $name = $device->GetHierarchyCache()->GetFolder($folderid)->displayname;
                 switch($type) {
                     case SYNC_FOLDER_TYPE_APPOINTMENT:
                     case SYNC_FOLDER_TYPE_USER_APPOINTMENT:
-                        $gentype = "Calendars";
+                        if (KOE_GAB_NAME != "" && $name == KOE_GAB_NAME) {
+                            $gentype = "GAB";
+                        }
+                        else {
+                            $gentype = "Calendars";
+                        }
                         break;
                     case SYNC_FOLDER_TYPE_CONTACT:
                     case SYNC_FOLDER_TYPE_USER_CONTACT:
@@ -778,8 +806,7 @@ class ZPushAdminCLI {
                 // set the folder name for all folders which are not fully synchronized yet
                 $fstatus = $device->GetFolderSyncStatus($folderid);
                 if ($fstatus !== false && is_array($fstatus)) {
-                    // TODO would be nice if we could see the real name of the folder, right now we use the folder type as name
-                    $fstatus['name'] = $gentype;
+                    $fstatus['name'] = $name ? $name : $gentype;
                     $device->SetFolderSyncStatus($folderid, $fstatus);
                     $syncedFoldersInProgress++;
                 }
@@ -837,7 +864,10 @@ class ZPushAdminCLI {
                         $percent = round($d['done']*100/$d['total']);
                         $status = sprintf("Status: %s%d%% (%d/%d)", ($percent < 10)?" ":"", $percent, $d['done'], $d['total']);
                     }
-                    printf("\tFolder: %s%s Sync: %s    %s\n", $d['name'], str_repeat(" ", 12-strlen($d['name'])), $d['status'], $status);
+                    if (strlen($d['name']) > 20) {
+                        $d['name'] = substr($d['name'], 0, 18) . "..";
+                    }
+                    printf("\tFolder: %s Sync: %s %s\n", str_pad($d['name'], 20), str_pad($d['status'], 13), $status);
                 }
             }
         }

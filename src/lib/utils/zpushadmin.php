@@ -106,8 +106,8 @@ class ZPushAdmin {
                 $sc = new SyncCollections();
                 $sc->SetStateManager($stateManager);
 
-                // load all collections of device without loading states, checking permissions or loading the hierarchy
-                $sc->LoadAllCollections(true, false, false, false);
+                // load all collections of device also loading states and loading hierarchy, but not checking permissions
+                $sc->LoadAllCollections(true, true, false, true);
 
                 if ($sc->GetLastSyncTime())
                     $device->SetLastSyncTime($sc->GetLastSyncTime());
@@ -326,7 +326,7 @@ class ZPushAdmin {
             }
 
             if (!$folderid || (is_array($folderid) && empty($folderid))) {
-                ZLog::Write(LOGLEVEL_ERROR, sprintf("ZPushAdmin::ResyncFolder(): no folders synchronized for user '%s' on device '%s'. Aborting.",$user, $devid));
+                ZLog::Write(LOGLEVEL_ERROR, sprintf("ZPushAdmin::ResyncFolder(): no folders requested for user '%s' on device '%s'. Aborting.",$user, $devid));
                 return false;
             }
 
@@ -342,6 +342,10 @@ class ZPushAdmin {
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::ResyncFolder(): folder '%s' on device '%s' of user '%s' marked to be re-synchronized.", $folderid, $devid, $user));
             }
 
+            if ($device->GetData() === false) {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::ResyncFolder(): nothing changed for device '%s' of user '%s'", $devid, $user));
+                return false;
+            }
             ZPush::GetStateMachine()->SetState($device->GetData(), $devid, IStateMachine::DEVICEDATA);
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::ResyncFolder(): saved updated device data of device '%s' of user '%s'", $devid, $user));
         }

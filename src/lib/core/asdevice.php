@@ -204,7 +204,6 @@ class ASDevice extends StateObject {
         unset($this->forceSave);
         unset($this->newdevice);
         unset($this->ignoredMessageIds);
-        unset($this->backend2folderidCache);
 
         if (isset($this->ignoredmessages) && is_array($this->ignoredmessages)) {
             $imessages = $this->ignoredmessages;

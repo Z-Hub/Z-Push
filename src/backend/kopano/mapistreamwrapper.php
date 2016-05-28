@@ -100,8 +100,9 @@ class MAPIStreamWrapper {
         $len = ($this->position + $len > $this->streamlength) ? ($this->streamlength - $this->position) : $len;
 
         // read 4 additional bytes from the stream so we can always truncate correctly
-        if ($this->toTruncate)
+        if ($this->toTruncate && $this->position+$len >= $this->streamlength) {
             $len += 4;
+        }
         if ($this->mapistream) {
             $data = mapi_stream_read($this->mapistream, $len);
         }
@@ -165,7 +166,7 @@ class MAPIStreamWrapper {
      * @param int $new_size
      * @return boolean
      */
-    public function stream_truncate ($new_size) {
+    public function stream_truncate($new_size) {
         $this->streamlength = $new_size;
         $this->toTruncate = true;
 
