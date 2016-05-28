@@ -645,14 +645,14 @@ class ZPushAdminCLI {
             else {
                 $gab = $device->GetKoeGabBackendFolderId();
             }
-            if (false && $gab === false) {
+            if (!$gab) {
                 printf("Could not find KOE GAB folderid for device '%s' of user '%s'\n", $deviceId, $user);
                 return false;
             }
             $searchFor = $gab;
         }
         // potential long ids are converted to folderids here, incl. the gab id
-        $searchFor = $device->GetFolderIdForBackendId($searchFor, false, false, null);
+        $searchFor = strtolower($device->GetFolderIdForBackendId($searchFor, false, false, null));
 
         foreach ($device->GetAllFolderIds() as $folderid) {
             // if  submitting a folderid as type to resync a specific folder.
