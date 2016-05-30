@@ -63,10 +63,11 @@ To install Z-Push, simply untar the z-push archive, e.g. with:
 The tar contains a folder which has the following structure:
     z-push-[version]
 
-This is analog to the directories you get if you take a GIT checkout.
-The only difference is, that in GIT there "src" and "tools" directories.
-The contents of the src are directly under z-push-[version].
-The tools directory is a subdirectory in the tarball. 
+The contents of the archive are similar to the content of a GIT checkout. 
+The only difference is that in GIT you will find three directories "src", "tools" and "config". 
+Contents of the "src" directory are located directly in the z-push-[version] folder, 
+"tools" is a subdirectory of it.
+The "config" directory of GIT is not being distributed in the tarball. 
  
 2. Directories
 The contents of this folder should be copied to /usr/share/z-push.
@@ -96,9 +97,8 @@ For the default webserver user please refer to your distribution's manual.
 
 3. Z-Push configuration
 Edit the config.php file in the Z-Push directory to fit your needs.
-There you can define the location of the states if using the file statemachine or
-also setup the configuration of the sql state machine (file state directories are not 
-required in this case).
+Here you can define the location of the states (if using the file statemachine) or 
+alternatively configure the sql statemachine (file states are not required in this case).
  
 If you intend to use Z-Push with Kopano backend and Kopano is installed
 on the same server, it should work out of the box without changing anything.
@@ -106,10 +106,10 @@ Please also set your timezone in the config.php file.
 
 The parameters and their roles are also explained in the config.php file.
 
-By default, the IPC_PROVIDER (InterProcessCommunication) parameter is empty
-in the configuration. This will cause Z-Push to use the provider installed.
-There are two provider available
-- Shared memory provider (requires additional packages - same used in Z-Push 2.2.x)
+By default the parameter IPC_PROVIDER (InterProcessCommunication) is empty
+in the configuration. This will lead to Z-Push using the first available provider.
+Two providers are currently available:
+- Shared memory provider (might require additional shared memory packages - same used in Z-Push 2.2.x)
 - Memcache provider (requires php-memcached and a memcache server installed and configured) 
 
 The shared memory provider is the preferred IPC provider. If the IPC_Provider is not configured,
