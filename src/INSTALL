@@ -112,10 +112,11 @@ There are two provider available
 - Shared memory provider (requires additional packages - same used in Z-Push 2.2.x)
 - Memcache provider (requires php-memcached and a memcache server installed and configured) 
 
-The memcache provider is the preferred IPC provider, and as in the src distribution memcache and shared memory 
-are available, the memcache provider has preference.
-To use shared memory (as in Z-Push 2.2.x), set the IPC_PROVIDER parameter in the config to:
-    define('IPC_PROVIDER', 'IpcSharedMemoryProvider'); 
+The shared memory provider is the preferred IPC provider. If the IPC_Provider is not configured,
+the code will try to use shared memory (if available), the same as in Z-Push 2.2.x. 
+
+To force the usage of the memcached provider, set the IPC_PROVIDER parameter in the config to:
+    define('IPC_PROVIDER', 'IpcMemcachedProvider'); 
 
 4. Webserver configuration
 You must configure Apache to redirect the URL
