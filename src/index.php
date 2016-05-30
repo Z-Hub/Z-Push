@@ -65,10 +65,9 @@ include_once(ZPUSH_CONFIG);
         ZLog::Initialize();
 
         ZLog::Write(LOGLEVEL_DEBUG,"-------- Start");
-        ZLog::Write(LOGLEVEL_INFO,
-                    sprintf("Version='%s' method='%s' from='%s' cmd='%s' getUser='%s' devId='%s' devType='%s'",
-                                    @constant('ZPUSH_VERSION'), Request::GetMethod(), Request::GetRemoteAddr(),
-                                    Request::GetCommand(), Request::GetGETUser(), Request::GetDeviceID(), Request::GetDeviceType()));
+        ZLog::Write(LOGLEVEL_DEBUG,
+                sprintf("cmd='%s' devType='%s' devId='%s' getUser='%s' from='%s' version='%s' method='%s'",
+                        Request::GetCommand(), Request::GetDeviceType(), Request::GetDeviceID(), Request::GetGETUser(), Request::GetRemoteAddr(), @constant('ZPUSH_VERSION'), Request::GetMethod() ));
 
         // Stop here if this is an OPTIONS request
         if (Request::IsMethodOPTIONS())
@@ -230,4 +229,11 @@ include_once(ZPUSH_CONFIG);
         ZPush::GetDeviceManager()->Save();
 
     // end gracefully
-    ZLog::WriteEnd();
+    ZLog::Write(LOGLEVEL_INFO,
+            sprintf("cmd='%s' memory='%s/%s' time='%ss' devType='%s' devId='%s' getUser='%s' from='%s' version='%s' method='%s' httpcode='%s'",
+                    Request::GetCommand(), Utils::FormatBytes(memory_get_peak_usage(false)), Utils::FormatBytes(memory_get_peak_usage(true)),
+                    number_format(microtime(true) - $_SERVER["REQUEST_TIME_FLOAT"], 2, ',', '.'),
+                    Request::GetDeviceType(), Request::GetDeviceID(), Request::GetGETUser(), Request::GetRemoteAddr(), @constant('ZPUSH_VERSION'), Request::GetMethod(), http_response_code() ));
+
+    ZLog::Write(LOGLEVEL_DEBUG, "-------- End");
+
