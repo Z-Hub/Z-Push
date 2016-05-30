@@ -215,15 +215,15 @@ class ExportChangesCombined implements IExportChanges {
      * @return array(0 => $srcState, 1 => $dstState)
     */
     public function GetMoveStates() {
-        ZLog::Write(LOGLEVEL_DEBUG, "ExportChangesCombined->GetState()");
+        ZLog::Write(LOGLEVEL_DEBUG, "ExportChangesCombined->GetMoveStates()");
         foreach($this->exporters as $i => $e){
             list($srcState, $dstState) = $this->exporters[$i]->GetMoveStates();
             if ($srcState != $this->movestateSrc || $dstState != $this->movestateDst) {
-                ZLog::Write(LOGLEVEL_DEBUG, "ExportChangesCombined->GetState() success (returned states from exporter $i)");
+                ZLog::Write(LOGLEVEL_DEBUG, "ExportChangesCombined->GetMoveStates() success (returned states from exporter $i)");
                 return array($srcState, $dstState);
             }
         }
-        ZLog::Write(LOGLEVEL_DEBUG, "ExportChangesCombined->GetState() success (no movestate)");
+        ZLog::Write(LOGLEVEL_DEBUG, "ExportChangesCombined->GetMoveStates() success (no movestate)");
         return false;
     }
 }
