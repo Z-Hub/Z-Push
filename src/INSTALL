@@ -233,7 +233,7 @@ More recommendations on upgrading here:
 https://wiki.z-hub.io/display/ZP/Upgrade+to+Z-Push+2.3
 
 *Important*
-When running Z-Push seperately from your Kopano installation you had in
+When running Z-Push separately from your Kopano installation you had in
 the past to configure MAPI_SERVER directly in the config.php of Z-Push.
 This setting has now moved to the config.php file of the Kopano backend
 (backend/kopano/config.php).
