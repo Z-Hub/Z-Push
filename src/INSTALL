@@ -22,7 +22,7 @@ SLES        12
 If your distribution is not listed here, you can check which PHP version
 is default for it at http://distrowatch.com/.
 
-For other relevant information related to distributions supported by Kopano/Zarafa plese check the according admin manual.
+For other relevant information related to distributions supported by Kopano/Zarafa please check the according admin manual.
 
 Additional php packages
 ----------------------
