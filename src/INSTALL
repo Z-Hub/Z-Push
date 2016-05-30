@@ -1,78 +1,124 @@
 Installing Z-Push
 ======================
 
+The information contained in this file is also available at: 
+https://wiki.z-hub.io/display/ZP/Installation+from+source
+
 Requirements
 ------------
 
-Z-Push 2 runs only on PHP 5.1 or later
+Z-Push 2.3 runs only on PHP 5.4 or later
 A PEAR dependency as in previous versions does not exist in Z-Push 2.
 
 The PHP version requirement is met in these distributions and versions (or later).
 
-Debian      4.0 (etch)
-Ubuntu      8.04 (hardy heron)
-RHEL/CentOS 5.5
-Fedora      5 (bordeaux)
-OpenSuse    10.1
-Slackware   12.0
-Gentoo      2006.1
-FreeBSD     6.1
-OpenBSD     4.0
-Mandriva    2007
+Debian      7.0
+Ubuntu      14.04
+RHEL/CentOS 6
+Fedora      23
+OpenSuse    13.2
+SLES        12
 
 If your distribution is not listed here, you can check which PHP version
 is default for it at http://distrowatch.com/.
 
-Additional informations can be found in the Kopano Core Administrator Manual:
-https://documentation.kopano.io/kopanocore_administrator_manual/
+For other relevant information related to distributions supported by Kopano/Zarafa plese check the according admin manual.
 
 Additional php packages
 ----------------------
-To use the full featureset of Z-Push 2 and the z-push-top command line utility,
+To use the full featureset of Z-Push 2.3 and the z-push-top command line utility,
 additional php packages are required. These provide SOAP support, access to
 process control and shared memory.
 
+Depending on the features you want to use, different packages are required.
 These packages vary in names between the distributions.
+
+Dependencies for Z-Push are:
 - Generally install the packages:                   php-cli php-soap 
-- On Suse (SLES & OpenSuse) install the packages:   php53 php53-soap php53-pcntl php53-sysvshm php53-sysvsem php53-posix
-- On RHEL based systems install the package:        php-cli php-soap php-process
+- On Suse (SLES & OpenSuse) install the packages:   php php-soap php-pcntl php-posix php-mbstring
+- On RHEL based systems install the package:        php-cli php-soap php-process php-mbstring
   In order to install these packages you need to add an extra channel subscription
   from the RHEL Server Optional channel.
 
+To use the shared memory IPC Provider, install:
+- Debian and Ubuntu:                                no additional packages required
+- On Suse (SLES & OpenSuse):                        php-sysvshm php-sysvsem
+
+To use the memcached IPC Provider, install:
+- Debian, Ubuntu and Suse:                          php-memcached
+- On RHEL based systems:                            php-pecl-memcached
+
+The memcache deamon is also required, normally it's available in the "memcached" package.
+
+Most backends have own requirements, like Kopano/Zarafa depends on php-mapi while the 
+IMAP backend depends on php-imap. See dependencies for each backend you plan to use individually.
 
 How to install
 --------------
 
+1. Extraction / getting sources
 To install Z-Push, simply untar the z-push archive, e.g. with:
    tar -xzvf z-push-[version]-{buildnr}.tar.gz
-   
+
 The tar contains a folder which has the following structure:
     z-push-[version]-{buildnr}
-    
+
+This is analog to the directories you get if you take a GIT checkout.
+The only difference is, that in GIT there "src" and "tools" directories.
+The contents of the src are directly under z-push-[version]-[build].
+The tools directory is a subdirectory in the tarball. 
+ 
+2. Directories
 The contents of this folder should be copied to /usr/share/z-push.
 In a case that /usr/share/z-push does not exist yet, create it with:
     mkdir -p /usr/share/z-push
 
+The directory should be owned by the webuser, e.g. apache or www-data depending on your distribution.
+    chown -R apache: /usr/share/z-push
+
     cp -R z-push-[version]-{buildnr}/* /usr/share/z-push/
 
-Edit the config.php file in the Z-Push directory to fit your needs.
-If you intend to use Z-Push with Kopano backend and Kopano is installed
-on the same server, it should work out of the box without changing anything.
-Please also set your timezone in the config.php file.
-
-The parameters and their roles are also explained in the config.php file.
-
 By default the state directory is /var/lib/z-push, the log directory /var/log/z-push.
-Make sure that these directories exist and are writeable for your webserver
-process, so either change the owner of these directories to the UID of
-your apache process or make the directories world writeable:
+The locations can be changed in the configuration file. See next section on other options.
+
+Make sure that these directories exist and are writeable for your webserver process.
+If you don't want to use the filestatemachine (default) you don't need to create the state
+directory. More information on the different state machines is available here:
+https://wiki.z-hub.io/display/ZP/State+Machines
+
+Either change the owner of these directories to the UID of your apache process or 
+make the directories world writeable:
 
     chmod 755 /var/lib/z-push /var/log/z-push
     chown apache:apache /var/lib/z-push /var/log/z-push
     
 For the default webserver user please refer to your distribution's manual.
 
-Now, you must configure Apache to redirect the URL
+3. Z-Push configuration
+Edit the config.php file in the Z-Push directory to fit your needs.
+There you can define the location of the states if using the file statemachine or
+also setup the configuration of the sql state machine (file state directories are not 
+required in this case).
+ 
+If you intend to use Z-Push with Kopano backend and Kopano is installed
+on the same server, it should work out of the box without changing anything.
+Please also set your timezone in the config.php file.
+
+The parameters and their roles are also explained in the config.php file.
+
+By default, the IPC_PROVIDER (InterProcessCommunication) parameter is empty
+in the configuration. This will cause Z-Push to use the provider installed.
+There are two provider available
+- Shared memory provider (requires additional packages - same used in Z-Push 2.2.x)
+- Memcache provider (requires php-memcached and a memcache server installed and configured) 
+
+The memcache provider is the preferred IPC provider, and as in the src distribution memcache and shared memory 
+are available, the memcache provider has preference.
+To use shared memory (as in Z-Push 2.2.x), set the IPC_PROVIDER parameter in the config to:
+    define('IPC_PROVIDER', 'IpcSharedMemoryProvider'); 
+
+4. Webserver configuration
+You must configure Apache to redirect the URL
 'Microsoft-Server-ActiveSync' to the index.php file in the Z-Push
 directory. This can be done by adding the line:
 
@@ -87,6 +133,9 @@ default it is conf.d inside the /etc/apache2 or /etc/httpd depending on your
 distribution).
 
 You have to reload your webserver after making these configurations.
+
+It's known that other webservers like nginx also work with Z-Push. Please
+feel free to contribute configuration steps and file in our wiki.
 
 *WARNING* You CANNOT simply rename the z-push directory to
 Microsoft-Server-ActiveSync. This will cause Apache to send redirects to the
@@ -114,7 +163,7 @@ z-push directory so these settings are considered only there.
 If you don't set this up correctly, you will not be
 able to login correctly via z-push.
 
-Please also set a memory_limit for php to 128M in php.ini.
+Please also set a memory_limit for php to 128M or higher in your php.ini.
 
 Z-Push writes files to your file system like logs or data from the
 FileStateMachine (which is default). In order to make this possible,
@@ -125,6 +174,8 @@ log and state directories.
 
 After doing this, you should be able to synchronize with your mobile device.
 
+Tools
+-----
 To use the command line tools, access the installation directory
 (usually /usr/share/z-push) and execute:
     ./z-push-top.php        and/or
@@ -137,6 +188,9 @@ To facilitate the access symbolic links can be created, by executing:
 With these symlinks in place the cli tools can be accessed from any
 directory and without the php file extension.
 
+The usage of the tools is explained here:
+https://wiki.z-hub.io/display/ZP/Tools:+z-push-top
+https://wiki.z-hub.io/display/ZP/Tools:+z-push-admin
 
 Upgrade
 -------
@@ -170,6 +224,12 @@ and re-create profiles on every device.
 *Important*
 States of Z-Push 2.0 and Z-Push 2.1 are not compatible. A state migration
 script called migrate-2.0.x-2.1.0.php is available in the tools folder.
+
+*Important*
+When upgrading your states from Z-Push 2.2.x to 2.3 it's required to run 
+"z-push-admin -a fixstates" once to ensure state compatibility.
+More recommendations on upgrading here:
+https://wiki.z-hub.io/display/ZP/Upgrade+to+Z-Push+2.3
 
 *Important*
 When running Z-Push seperately from your Kopano installation you had in
