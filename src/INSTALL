@@ -82,13 +82,13 @@ The directory should be owned by the webuser, e.g. apache or www-data depending 
 By default the state directory is /var/lib/z-push, the log directory /var/log/z-push.
 The locations can be changed in the configuration file. See next section on other options.
 
-Make sure that these directories exist and are writeable for your webserver process.
-If you don't want to use the filestatemachine (default) you don't need to create the state
+Make sure that these directories exist and are writable for your webserver process.
+If you don't want to use the file statemachine (default) you don't need to create the state
 directory. More information on the different state machines is available here:
 https://wiki.z-hub.io/display/ZP/State+Machines
 
 Either change the owner of these directories to the UID of your apache process or 
-make the directories world writeable:
+make the directories world writable:
 
     chmod 755 /var/lib/z-push /var/log/z-push
     chown apache:apache /var/lib/z-push /var/log/z-push
@@ -214,7 +214,7 @@ will break completely.
 *Important*
 Upgrading to Z-Push 2.X from 1.X it is not necessary to copy the state
 directory because states are not compatible. However Z-Push 2 implements
-a fully automatic resynchronizing of devices in the case states are
+a fully automatic re-synchronizing of devices in the case states are
 missing or faulty.
 
 *Important*
@@ -239,7 +239,7 @@ This setting has now moved to the config.php file of the Kopano backend
 (backend/kopano/config.php).
 
 Please also observe the published release notes of the new Z-Push version.
-For some releases it is necessary to e.g. resynchronize the mobile.
+For some releases it is necessary to e.g. re-synchronize the mobile.
 
 
 S/MIME
@@ -264,13 +264,13 @@ Symantec or Comodo or community-driven e.g. CAcert.org.
 
 Both most popular directory services Microsoft Active Directory (MS AD)
 and free open source solution OpenLDAP allow to save certificates. Private
-keys/certificates reside in user’s directory or on a smartcard. Public
+keys/certificates reside in user's directory or on a smartcard. Public
 certificates are saved in directory. MS AD and OpenLDAP both use
-serCertificate attribute to save it.
+userCertificate attribute to save it.
 
 In Active Directory the public key for contacts from GAB is saved in
 PR_EMS_AB_TAGGED_X509_CERT (0x8C6A1102) property and if you save a key
-in a contact it’s PR_USER_X509_CERTIFICATE (0x3A701102).
+in a contact it's PR_USER_X509_CERTIFICATE (0x3A701102).
 
 In LDAP public key for contacts from GAB is saved in userCertificate
 property. It should be mapped to 0x3A220102 in ldap.propmap.cfg
@@ -290,7 +290,7 @@ http://www.zarafa.com/blog/post/2013/05/smime-z-push-signing-and-en-decrypting-e
 Setting up your mobile device
 -----------------------------
 
-This is simply a case of adding an 'exchange server' to your activesync
+This is simply a case of adding an 'exchange server' to your ActiveSync
 server list, specifying the IP address of the Z-Push's apache server,
 disabling SSL, unless you have already setup SSL on your Apache server,
 setting the correct username and password (the domain is ignored, you can
@@ -303,7 +303,7 @@ simply by clicking the 'Sync' button in ActiveSync on your mobile.
 *NOTE* using the synchronisation without SSL is not recommended because
 your private data is transmitted in clear text over the net. Configuring
 SSL on Apache is beyond of the scope of this document. Please refer to
-Apache documention available at http://httpd.apache.org/docs/
+Apache documentation available at http://httpd.apache.org/docs/
 
 
 Troubleshooting
@@ -312,7 +312,7 @@ Troubleshooting
 Most problems will be caused by incorrect Apache settings. To test whether
 your Apache setup is working correctly, you can simply type the Z-Push URL
 in your browser, to see if apache is correctly redirecting your request to
-z-push. You can simply use:
+Z-Push. You can simply use:
 
     http://<serverip>/Microsoft-Server-ActiveSync
 
