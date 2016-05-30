@@ -48,7 +48,7 @@ abstract class InterProcessData {
 
     // Defines which IPC provider to load, first has preference
     // if IPC_PROVIDER in the main config  is set, that class will be loaded
-    static private $providerLoadOrder = array('IpcMemcachedProvider', 'IpcSharedMemoryProvider');
+    static private $providerLoadOrder = array('IpcSharedMemoryProvider', 'IpcMemcachedProvider');
     static protected $devid;
     static protected $pid;
     static protected $user;
