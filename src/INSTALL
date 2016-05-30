@@ -58,14 +58,14 @@ How to install
 
 1. Extraction / getting sources
 To install Z-Push, simply untar the z-push archive, e.g. with:
-   tar -xzvf z-push-[version]-{buildnr}.tar.gz
+   tar -xzvf z-push-[version].tar.gz
 
 The tar contains a folder which has the following structure:
-    z-push-[version]-{buildnr}
+    z-push-[version]
 
 This is analog to the directories you get if you take a GIT checkout.
 The only difference is, that in GIT there "src" and "tools" directories.
-The contents of the src are directly under z-push-[version]-[build].
+The contents of the src are directly under z-push-[version].
 The tools directory is a subdirectory in the tarball. 
  
 2. Directories
@@ -76,7 +76,7 @@ In a case that /usr/share/z-push does not exist yet, create it with:
 The directory should be owned by the webuser, e.g. apache or www-data depending on your distribution.
     chown -R apache: /usr/share/z-push
 
-    cp -R z-push-[version]-{buildnr}/* /usr/share/z-push/
+    cp -R z-push-[version]/* /usr/share/z-push/
 
 By default the state directory is /var/lib/z-push, the log directory /var/log/z-push.
 The locations can be changed in the configuration file. See next section on other options.
