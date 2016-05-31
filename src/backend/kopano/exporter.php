@@ -94,7 +94,9 @@ class ExportChangesICS implements IExportChanges{
             $folder = false;
             if ($entryid) {
                 $folder = mapi_msgstore_openentry($this->store, $entryid);
-                ZLog::Write(LOGLEVEL_WARN, sprintf("ExportChangesICS(): Error, mapi_msgstore_openentry() failed: 0x%08X", mapi_last_hresult()));
+                if (!$folder) {
+                    ZLog::Write(LOGLEVEL_WARN, sprintf("ExportChangesICS(): Error, mapi_msgstore_openentry() failed: 0x%08X", mapi_last_hresult()));
+                }
             }
 
             // Get the actual ICS exporter
