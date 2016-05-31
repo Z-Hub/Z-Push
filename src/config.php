@@ -89,7 +89,7 @@
  *  When another implementation should be used, the class can be set here explicitly.
  *  If empty Z-Push will try to use available providers.
  */
-    define('IPC_PROVIDER', 'IpcSharedMemoryProvider');
+    define('IPC_PROVIDER', '');
 
 /**********************************************************************************
  *  Logging settings
