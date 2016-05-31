@@ -246,8 +246,8 @@ class Request {
         if (defined('USE_X_FORWARDED_FOR_HEADER') && USE_X_FORWARDED_FOR_HEADER == true && isset(self::$headers["x-forwarded-for"])) {
             $forwardedIP = self::filterEvilInput(self::$headers["x-forwarded-for"], self::NUMBERSDOT_ONLY);
             if ($forwardedIP) {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("'X-Forwarded-for' indicates remote IP: %s - connect is coming from IP: %s", $forwardedIP, self::$remoteAddr));
                 self::$remoteAddr = $forwardedIP;
-                ZLog::Write(LOGLEVEL_INFO, sprintf("'X-Forwarded-for' indicates remote IP: %s", self::$remoteAddr));
             }
         }
 
