@@ -1389,17 +1389,13 @@ class BackendKopano implements IBackend, ISearchProvider {
             $this->folderStatCache[$user] = array();
         }
 
-        // TODO remove nameCache
-        if (!isset($this->nameCache))
-            $this->nameCache = array();
-
         // if there is nothing in the cache for a store, load the data for all folders of it
         if (empty($this->folderStatCache[$user])) {
             // get the store
             $userstore = $this->openMessageStore($user);
             $rootfolder = mapi_msgstore_openentry($userstore);
             $hierarchy =  mapi_folder_gethierarchytable($rootfolder, CONVENIENT_DEPTH);
-            $rows = mapi_table_queryallrows($hierarchy, array(PR_SOURCE_KEY, PR_LOCAL_COMMIT_TIME_MAX, PR_CONTENT_COUNT, PR_CONTENT_UNREAD, PR_DELETED_MSG_COUNT, PR_DISPLAY_NAME));
+            $rows = mapi_table_queryallrows($hierarchy, array(PR_SOURCE_KEY, PR_LOCAL_COMMIT_TIME_MAX, PR_CONTENT_COUNT, PR_CONTENT_UNREAD, PR_DELETED_MSG_COUNT));
 
             if (count($rows) == 0) {
                 ZLog::Write(LOGLEVEL_INFO, sprintf("KopanoBackend->GetFolderStat(): could not access folder statistics for user '%s'. Probably missing 'read' permissions on the root folder! Folders of this store will be synchronized ONCE per hour only!", $user));
@@ -1412,18 +1408,11 @@ class BackendKopano implements IBackend, ISearchProvider {
                 $content_deleted = isset($folder[PR_DELETED_MSG_COUNT])? $folder[PR_DELETED_MSG_COUNT] : -1;
 
                 $this->folderStatCache[$user][bin2hex($folder[PR_SOURCE_KEY])] = $commit_time ."/". $content_count ."/". $content_unread ."/". $content_deleted;
-                $this->nameCache[bin2hex($folder[PR_SOURCE_KEY])] = $folder[PR_DISPLAY_NAME];
             }
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->GetFolderStat() fetched status information of %d folders for store '%s'", count($this->folderStatCache[$user]), $user));
-            // TODO remove logging
-            foreach($this->folderStatCache[$user] as $fid => $stat) {
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("FolderStat: %s %s %s\t%s", $user, $fid, $stat, $this->nameCache[$fid]));
-            }
         }
 
         if (isset($this->folderStatCache[$user][$folderid])) {
-            // TODO remove nameCache output
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->GetFolderStat() found stat for '%s': %s", $this->nameCache[$folderid], $this->folderStatCache[$user][$folderid]));
             return $this->folderStatCache[$user][$folderid];
         }
         else {

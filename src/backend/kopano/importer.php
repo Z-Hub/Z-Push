@@ -123,13 +123,12 @@ class ImportChangesICS implements IImportChanges {
 
         $this->mapiprovider = new MAPIProvider($this->session, $this->store);
 
-        if ($folderid)
+        if ($folderid) {
             $this->importer = mapi_openproperty($folder, PR_COLLECTOR, IID_IExchangeImportContentsChanges, 0 , 0);
-        else
+        }
+        else {
             $this->importer = mapi_openproperty($folder, PR_COLLECTOR, IID_IExchangeImportHierarchyChanges, 0 , 0);
-
-        // TODO remove this log output in 2.3.X
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ImportChangesICS: prefix:'%s'", $this->prefix));
+        }
     }
 
     /**

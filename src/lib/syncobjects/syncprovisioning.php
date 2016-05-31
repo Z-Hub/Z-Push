@@ -245,12 +245,13 @@ class SyncProvisioning extends SyncObject {
     /**
      * Loads provisioning policies into a SyncProvisioning object.
      *
-     * @param array     $policies - array with policies' names and values
+     * @param array     $policies     array with policies' names and values
+     * @param boolean   $logPolicies  optional, determines if the policies and values should be logged. Default: false
      *
      * @access public
      * @return void
      */
-    public function Load($policies = array()) {
+    public function Load($policies = array(), $logPolicies = false) {
         $this->LoadDefaultPolicies();
 
         $streamerVars = $this->GetStreamerVars();
@@ -259,7 +260,9 @@ class SyncProvisioning extends SyncObject {
                 ZLog::Write(LOGLEVEL_INFO, sprintf("Policy '%s' not supported by the device, ignoring", $p));
                 continue;
             }
-            ZLog::Write(LOGLEVEL_WBXML, sprintf("Policy '%s' enforced with: %s (%s)", $p, (is_array($v)) ? Utils::PrintAsString(implode(',', $v)) : Utils::PrintAsString($v), gettype($v)));
+            if ($logPolicies) {
+                ZLog::Write(LOGLEVEL_WBXML, sprintf("Policy '%s' enforced with: %s (%s)", $p, (is_array($v)) ? Utils::PrintAsString(implode(',', $v)) : Utils::PrintAsString($v), gettype($v)));
+            }
             $this->$p = (is_array($v) && empty($v)) ? array() : $v;
         }
     }
@@ -332,12 +335,15 @@ class SyncProvisioning extends SyncObject {
     /**
      * Returns the SyncProvisioning instance.
      *
+     * @param array     $policies     array with policies' names and values
+     * @param boolean   $logPolicies  optional, determines if the policies and values should be logged. Default: false
+     *
      * @access public
      * @return SyncProvisioning
      */
-    public static function GetObjectWithPolicies($policies = array()) {
+    public static function GetObjectWithPolicies($policies = array(), $logPolicies = false) {
         $p = new SyncProvisioning();
-        $p->Load($policies);
+        $p->Load($policies, $logPolicies);
         return $p;
     }
 }
