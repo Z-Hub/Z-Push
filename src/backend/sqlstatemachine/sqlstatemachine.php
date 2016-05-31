@@ -178,12 +178,13 @@ class SqlStateMachine implements IStateMachine {
      * @return mixed
      * @throws StateNotFoundException, StateInvalidException, UnavailableException
      */
-    public function GetState($devid, $type, $key = null, $counter = false, $cleanstates = true) {
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("SqlStateMachine->GetState(): devid:'%s' type:'%s' key:'%s' counter:'%s'", $devid, $type, ($key == null ? 'null' : $key), Utils::PrintAsString($counter), Utils::PrintAsString($cleanstates)));
+    public function GetState($devid, $type, $key = false, $counter = false, $cleanstates = true) {
+        $key = $this->returnNullified($key);
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("SqlStateMachine->GetState(): devid:'%s' type:'%s' key:'%s' counter:'%s'", $devid, $type, Utils::PrintAsString($key), Utils::PrintAsString($counter), Utils::PrintAsString($cleanstates)));
         if ($counter && $cleanstates)
             $this->CleanStates($devid, $type, $key, $counter);
 
-        $sql = "SELECT state_data FROM states WHERE device_id = :devid AND state_type = :type AND uuid ". (($key == null) ? " IS " : " = ") . ":key AND counter = :counter";
+        $sql = "SELECT state_data FROM states WHERE device_id = :devid AND state_type = :type AND uuid". $this->getSQLOp($key) .":key AND counter = :counter";
         $params = $this->getParams($devid, $type, $key, $counter);
 
         $data = null;
@@ -232,10 +233,11 @@ class SqlStateMachine implements IStateMachine {
      * @return boolean
      * @throws StateInvalidException, UnavailableException
      */
-    public function SetState($state, $devid, $type, $key = null, $counter = false) {
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("SqlStateMachine->SetState(): devid:'%s' type:'%s' key:'%s' counter:'%s'", $devid, $type, ($key == null ? 'null' : $key), Utils::PrintAsString($counter)));
+    public function SetState($state, $devid, $type, $key = false, $counter = false) {
+        $key = $this->returnNullified($key);
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("SqlStateMachine->SetState(): devid:'%s' type:'%s' key:'%s' counter:'%s'", $devid, $type, Utils::PrintAsString($key), Utils::PrintAsString($counter)));
 
-        $sql = "SELECT device_id FROM states WHERE device_id = :devid AND state_type = :type AND uuid ". (($key == null) ? " IS " : " = ") . ":key AND counter = :counter";
+        $sql = "SELECT device_id FROM states WHERE device_id = :devid AND state_type = :type AND uuid". $this->getSQLOp($key) .":key AND counter = :counter";
         $params = $this->getParams($devid, $type, $key, $counter);
 
         $sth = null;
@@ -256,7 +258,7 @@ class SqlStateMachine implements IStateMachine {
             }
             else {
                 // Existing record, we update it
-                $sql = "UPDATE states SET state_data = :data, updated_at = :updated_at WHERE device_id = :devid AND state_type = :type AND uuid " . (($key == null) ? " IS " : " = ") .":key AND counter = :counter";
+                $sql = "UPDATE states SET state_data = :data, updated_at = :updated_at WHERE device_id = :devid AND state_type = :type AND uuid ". $this->getSQLOp($key) .":key AND counter = :counter";
 
                 $sth = $this->getDbh()->prepare($sql);
             }
@@ -288,27 +290,32 @@ class SqlStateMachine implements IStateMachine {
     /**
      * Cleans up all older states.
      * If called with a $counter, all states previous state counter can be removed.
+     * If additionally the $thisCounterOnly flag is true, only that specific counter will be removed.
      * If called without $counter, all keys (independently from the counter) can be removed.
      *
      * @param string    $devid              the device id
      * @param string    $type               the state type
      * @param string    $key
      * @param string    $counter            (opt)
+     * @param string    $thisCounterOnly    (opt) if provided, the exact counter only will be removed
      *
      * @access public
      * @return
      * @throws StateInvalidException
      */
-    public function CleanStates($devid, $type, $key = null, $counter = false) {
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("SqlStateMachine->CleanStates(): devid:'%s' type:'%s' key:'%s' counter:'%s'", $devid, $type, ($key == null ? 'null' : $key), Utils::PrintAsString($counter)));
-
+    public function CleanStates($devid, $type, $key, $counter = false, $thisCounterOnly = false) {
+        $key = $this->returnNullified($key);
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("SqlStateMachine->CleanStates(): devid:'%s' type:'%s' key:'%s' counter:'%s' thisCounterOnly:'%s'", $devid, $type, Utils::PrintAsString($key), Utils::PrintAsString($counter), Utils::PrintAsString($thisCounterOnly)));
 
         if ($counter === false) {
-            // Remove all the states. Counter are -1 or > 0, then deleting >= -1 deletes all
-            $sql = "DELETE FROM states WHERE device_id = :devid AND state_type = :type AND uuid = :key AND counter >= :counter";
+            // Remove all the states. Counter are 0 or >0, then deleting >= 0 deletes all
+            $sql = "DELETE FROM states WHERE device_id = :devid AND state_type = :type AND uuid". $this->getSQLOp($key) .":key AND counter >= :counter";
+        }
+        else if ($counter !== false && $thisCounterOnly === true) {
+            $sql = "DELETE FROM states WHERE device_id = :devid AND state_type = :type AND uuid". $this->getSQLOp($key).":key AND counter = :counter";
         }
         else {
-            $sql = "DELETE FROM states WHERE device_id = :devid AND state_type = :type AND uuid = :key AND counter < :counter";
+            $sql = "DELETE FROM states WHERE device_id = :devid AND state_type = :type AND uuid". $this->getSQLOp($key) .":key AND counter < :counter";
         }
         $params = $this->getParams($devid, $type, $key, $counter);
 
@@ -634,6 +641,35 @@ class SqlStateMachine implements IStateMachine {
      */
     private function getParams($devid, $type, $key, $counter) {
         return array(":devid" => $devid, ":type" => $type, ":key" => $key, ":counter" => ($counter === false ? 0 : $counter) );
+    }
+
+    /**
+     * Returns the SQL operator for the parameter.
+     * If the parameter is null then " IS " is returned, else " = ".
+     *
+     * @param mixed $param
+     *
+     * @access private
+     * @return string
+     */
+    private function getSQLOp($param) {
+        if ($param == null) {
+            return " IS ";
+        }
+        return " = ";
+    }
+
+    /**
+     * Returns "null" if the parameter is false, else the parameter.
+     *
+     * @param mixed $param
+     * @return NULL|mixed
+     */
+    private function returnNullified($param) {
+        if ($param === false) {
+            return null;
+        }
+        return $param;
     }
 
     /**
