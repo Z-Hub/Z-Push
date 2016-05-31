@@ -148,6 +148,7 @@ class StateMigratorFileToDB {
                 printf("Processing device: %s with %s states\t", str_pad($devid,35), str_pad(count($allStates), 4, ' ',STR_PAD_LEFT));
                 $migrated = 0;
                 foreach ($allStates as $stateInfo) {
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("StateMigratorFileToDB->DoMigration(): Migrating state type:'%s' uuid:'%s' counter:'%s'", Utils::PrintAsString($stateInfo['type']), Utils::PrintAsString($stateInfo['uuid']), Utils::PrintAsString($stateInfo['counter'])));
                     $state = $this->fsm->GetState($lowerDevid, $stateInfo['type'], $stateInfo['uuid'], (int) $stateInfo['counter'], false);
                     $this->dbsm->SetState($state, $lowerDevid, $stateInfo['type'], (empty($stateInfo['uuid']) ? NULL : $stateInfo['uuid']), (int) $stateInfo['counter']);
                     $migrated++;
