@@ -1395,7 +1395,7 @@ class BackendKopano implements IBackend, ISearchProvider {
             $userstore = $this->openMessageStore($user);
             $rootfolder = mapi_msgstore_openentry($userstore);
             $hierarchy =  mapi_folder_gethierarchytable($rootfolder, CONVENIENT_DEPTH);
-            $rows = mapi_table_queryallrows($hierarchy, array(PR_SOURCE_KEY, PR_LOCAL_COMMIT_TIME_MAX, PR_CONTENT_COUNT, PR_CONTENT_UNREAD, PR_DELETED_MSG_COUNT, PR_DISPLAY_NAME));
+            $rows = mapi_table_queryallrows($hierarchy, array(PR_SOURCE_KEY, PR_LOCAL_COMMIT_TIME_MAX, PR_CONTENT_COUNT, PR_CONTENT_UNREAD, PR_DELETED_MSG_COUNT));
 
             if (count($rows) == 0) {
                 ZLog::Write(LOGLEVEL_INFO, sprintf("KopanoBackend->GetFolderStat(): could not access folder statistics for user '%s'. Probably missing 'read' permissions on the root folder! Folders of this store will be synchronized ONCE per hour only!", $user));
