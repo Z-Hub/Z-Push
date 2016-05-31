@@ -457,8 +457,9 @@ class SqlStateMachine implements IStateMachine {
         $record = null;
         $out = array();
         try {
-            if  ($username === false) {
-                $sql = "SELECT DISTINCT(device_id) FROM users ORDER BY device_id";
+            if ($username === false) {
+                // we also need to find potentially obsolete states that have no link to the users table anymore
+                $sql = "SELECT DISTINCT(device_id) FROM states ORDER BY device_id";
                 $params = array();
             }
             else {

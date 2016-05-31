@@ -724,6 +724,9 @@ class ASDevice extends StateObject {
         if (is_array($this->backend2folderidCache)) {
             return true;
         }
+        if (!is_array($this->contentData)) {
+            return false;
+        }
         foreach ($this->contentData as $folderid => $data) {
             if (isset($data[self::FOLDERBACKENDID])) {
                 return true;
