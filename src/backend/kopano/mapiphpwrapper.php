@@ -88,8 +88,6 @@ class PHPWrapper {
                 $this->prefix = $folderid . ':';
             }
         }
-        // TODO remove this log output in 2.3.X
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("PHPWrapper: prefix:'%s'", $this->prefix));
     }
 
     /**

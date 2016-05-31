@@ -796,7 +796,6 @@ class Sync extends RequestProcessor {
                     if ($newFolderStat !== false && ! $spa->IsExporterRunRequired($newFolderStat, true)) {
                         $changecount = 0;
                         $setupExporter = false;
-                        ZLog::Write(LOGLEVEL_DEBUG, "Sync(): Folder stat from the backend indicates that the folder did not change. Exporter will not run.");
                     }
                 }
 

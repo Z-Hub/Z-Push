@@ -307,12 +307,14 @@ class DeviceManager {
     /**
      * Builds a Provisioning SyncObject with policies
      *
+     * @param boolean   $logPolcies   optional, determines if the policies and values should be logged. Default: false
+     *
      * @access public
      * @return SyncProvisioning
      */
-    public function GetProvisioningObject() {
+    public function GetProvisioningObject($logPolicies = false) {
         $policyName = $this->getPolicyName();
-        $p = SyncProvisioning::GetObjectWithPolicies($this->getProvisioningPolicies($policyName));
+        $p = SyncProvisioning::GetObjectWithPolicies($this->getProvisioningPolicies($policyName), $logPolicies);
         $p->PolicyName = $policyName;
         return $p;
     }
