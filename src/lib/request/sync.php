@@ -886,7 +886,7 @@ class Sync extends RequestProcessor {
                 continue;
             }
 
-            // if there are no other responses sent, we should add with a global status
+            // if there are no other responses sent, we should end with a global status
             if ($status == SYNC_STATUS_FOLDERHIERARCHYCHANGED && $this->startTagsSent === false) {
                 $this->sendStartTags();
                 self::$encoder->startTag(SYNC_STATUS);
