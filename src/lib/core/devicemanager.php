@@ -307,7 +307,7 @@ class DeviceManager {
     /**
      * Builds a Provisioning SyncObject with policies
      *
-     * @param boolean   $logPolcies   optional, determines if the policies and values should be logged. Default: false
+     * @param boolean   $logPolicies  optional, determines if the policies and values should be logged. Default: false
      *
      * @access public
      * @return SyncProvisioning
