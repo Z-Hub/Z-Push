@@ -117,7 +117,8 @@ class ZPushAdminCLI {
      */
     static public function UsageInstructions() {
         return  "Usage:\n\tz-push-admin.php -a ACTION [options]\n\n" .
-                "Parameters:\n\t-a list/wipe/remove/resync/clearloop\n\t[-u] username\n\t[-d] deviceid\n\n" .
+                "Parameters:\n\t-a list/lastsync/wipe/remove/resync/clearloop/fixstates\n\t[-u] username\n\t[-d] deviceid\n" .
+                "\t[-t] type\tthe following types are available: '".self::TYPE_OPTION_EMAIL."', '".self::TYPE_OPTION_CALENDAR."', '".self::TYPE_OPTION_CONTACT."', '".self::TYPE_OPTION_TASK."', '".self::TYPE_OPTION_NOTE."', '".self::TYPE_OPTION_HIERARCHY."' of '".self::TYPE_OPTION_GAB."' (for KOE) or a folder id.\n\n" .
                 "Actions:\n" .
                 "\tlist\t\t\t\t\t Lists all devices and synchronized users\n" .
                 "\tlist -u USER\t\t\t\t Lists all devices of user USER\n" .
@@ -130,16 +131,14 @@ class ZPushAdminCLI {
                 "\tremove -d DEVICE\t\t\t Removes all state data of all users synchronized on device DEVICE\n" .
                 "\tremove -u USER -d DEVICE\t\t Removes all related state data of device DEVICE of user USER\n" .
                 "\tresync -u USER -d DEVICE\t\t Resynchronizes all data of device DEVICE of user USER\n" .
-                "\tresync -t TYPE \t\t\t\t Resynchronizes all folders of type (possible values below) for all devices and users.\n" .
-                "\tresync -t TYPE -u USER \t\t\t Resynchronizes all folders of type (possible values below) for the user USER.\n" .
-                "\tresync -t TYPE -u USER -d DEVICE\t Resynchronizes all folders of type (possible values below) for a specified device and user.\n" .
+                "\tresync -t TYPE \t\t\t\t Resynchronizes all folders of type (possible values above) for all devices and users.\n" .
+                "\tresync -t TYPE -u USER \t\t\t Resynchronizes all folders of type (possible values above) for the user USER.\n" .
+                "\tresync -t TYPE -u USER -d DEVICE\t Resynchronizes all folders of type (possible values above) for a specified device and user.\n" .
                 "\tresync -t FOLDERID -u USER\t\t Resynchronize the specified folder id only. The USER should be specified for better performance.\n" .
                 "\tresync -t hierarchy -u USER -d DEVICE\t Resynchronize the folder hierarchy data for an optional USER and optional DEVICE.\n" .
                 "\tclearloop\t\t\t\t Clears system wide loop detection data\n" .
                 "\tclearloop -d DEVICE -u USER\t\t Clears all loop detection data of a device DEVICE and an optional user USER\n" .
                 "\tfixstates\t\t\t\t Checks the states for integrity and fixes potential issues\n" .
-                "\n" .
-                "\tPossible values for type:\n\t  '".self::TYPE_OPTION_EMAIL."', '".self::TYPE_OPTION_CALENDAR."', '".self::TYPE_OPTION_CONTACT."', '".self::TYPE_OPTION_TASK."', '".self::TYPE_OPTION_NOTE."', '".self::TYPE_OPTION_HIERARCHY."' of '".self::TYPE_OPTION_GAB."' (for KOE)\n" .
                 "\n";
     }
 
@@ -772,7 +771,8 @@ class ZPushAdminCLI {
             if ($device->GetFolderUUID($folderid)) {
                 $synchedFolders++;
                 $type = $device->GetFolderType($folderid);
-                $name = $device->GetHierarchyCache()->GetFolder($folderid)->displayname;
+                $folder = $device->GetHierarchyCache()->GetFolder($folderid);
+                $name = $folder ? $folder->displayname : "unknown";
                 switch($type) {
                     case SYNC_FOLDER_TYPE_APPOINTMENT:
                     case SYNC_FOLDER_TYPE_USER_APPOINTMENT:

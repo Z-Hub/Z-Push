@@ -796,7 +796,6 @@ class Sync extends RequestProcessor {
                     if ($newFolderStat !== false && ! $spa->IsExporterRunRequired($newFolderStat, true)) {
                         $changecount = 0;
                         $setupExporter = false;
-                        ZLog::Write(LOGLEVEL_DEBUG, "Sync(): Folder stat from the backend indicates that the folder did not change. Exporter will not run.");
                     }
                 }
 
@@ -884,6 +883,15 @@ class Sync extends RequestProcessor {
                     ($newFolderStat === false || ! $spa->IsExporterRunRequired($newFolderStat))) {
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleSync: No changes found for %s folder id '%s'. Omitting output.", $spa->GetContentClass(), $spa->GetFolderId()));
                 continue;
+            }
+
+            // if there are no other responses sent, we should end with a global status
+            if ($status == SYNC_STATUS_FOLDERHIERARCHYCHANGED && $this->startTagsSent === false) {
+                $this->sendStartTags();
+                self::$encoder->startTag(SYNC_STATUS);
+                self::$encoder->content($status);
+                self::$encoder->endTag();
+                return true;
             }
 
             // there is something to send here, sync folder to output

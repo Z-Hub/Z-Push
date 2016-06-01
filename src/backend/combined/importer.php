@@ -290,6 +290,40 @@ class ImportChangesCombined implements IImportChanges {
         }
         return $this->icc->GetState();
     }
+
+    /**
+     * Sets the states from move operations.
+     * When src and dst state are set, a MOVE operation is being executed.
+     *
+     * @param mixed         $srcState
+     * @param mixed         (opt) $dstState, default: null
+     *
+     * @access public
+     * @return boolean
+     */
+    public function SetMoveStates($srcState, $dstState = null) {
+        ZLog::Write(LOGLEVEL_DEBUG, "ImportChangesCombined->SetMoveStates()");
+        if (!$this->icc) {
+            ZLog::Write(LOGLEVEL_ERROR, "ImportChangesCombined->SetMoveStates() icc not configured");
+            return false;
+        }
+        $this->icc->SetMoveStates($srcState, $dstState);
+        ZLog::Write(LOGLEVEL_DEBUG, "ImportChangesCombined->SetMoveStates() success");
+    }
+
+    /**
+     * Gets the states of special move operations.
+     *
+     * @access public
+     * @return array(0 => $srcState, 1 => $dstState)
+     */
+    public function GetMoveStates() {
+        if (!$this->icc) {
+            ZLog::Write(LOGLEVEL_ERROR, "ImportChangesCombined->GetMoveStates() icc not configured");
+            return false;
+        }
+        return $this->icc->GetMoveStates();
+    }
 }
 
 

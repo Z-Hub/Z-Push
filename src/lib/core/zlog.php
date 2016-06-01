@@ -130,30 +130,6 @@ class ZLog {
         return (isset(self::$lastLogs[$loglevel]))?self::$lastLogs[$loglevel]:false;
     }
 
-
-    /**
-     * Writes info at the end of the request but only if the LOGLEVEL is DEBUG or more verbose
-     *
-     * @access public
-     * @return
-     */
-    static public function WriteEnd() {
-        if (LOGLEVEL_DEBUG <= LOGLEVEL || (LOGLEVEL_DEBUG <= LOGUSERLEVEL && self::getLogger()->IsAuthUserInSpecialLogUsers())) {
-            if (version_compare(phpversion(), '5.4.0') < 0) {
-                $time_used = number_format(time() - $_SERVER["REQUEST_TIME"], 2, ',', '.');
-            }
-            else {
-                $time_used = number_format(microtime(true) - $_SERVER["REQUEST_TIME_FLOAT"], 2, ',', '.');
-            }
-            $peakUsage = memory_get_peak_usage(false);
-            $truePeakUsage = memory_get_peak_usage(true);
-
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("Memory usage information: %s/%s (%s B/%s B) - Execution time: %ss - HTTP responde code: %s",
-                    Utils::FormatBytes($peakUsage), Utils::FormatBytes($truePeakUsage), $peakUsage, $truePeakUsage, $time_used, http_response_code()));
-            ZLog::Write(LOGLEVEL_DEBUG, "-------- End");
-        }
-    }
-
     /**
      * Returns the logger object. If no logger has been initialized, FileLog will be initialized and returned.
      *

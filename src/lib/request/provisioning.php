@@ -232,7 +232,8 @@ class Provisioning extends RequestProcessor {
                     elseif ($policytype == 'MS-EAS-Provisioning-WBXML') {
                         self::$encoder->startTag(SYNC_PROVISION_EASPROVISIONDOC);
 
-                            $prov = self::$deviceManager->GetProvisioningObject();
+                            // get the provisioning object and log the loaded policy values
+                            $prov = self::$deviceManager->GetProvisioningObject(true);
                             if (!$prov->Check())
                                 throw new FatalException("Invalid policies!");
 
