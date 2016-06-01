@@ -77,7 +77,7 @@ abstract class InterProcessData {
         $this->provider_class = defined('IPC_PROVIDER') ? IPC_PROVIDER : false;
         if (!$this->provider_class) {
             foreach(self::$providerLoadOrder as $provider => $file) {
-                if (file_exists($file) && class_exists($provider)) {
+                if (file_exists(REAL_BASE_PATH . $file) && class_exists($provider)) {
                     $this->provider_class = $provider;
                     break;
                 }
