@@ -884,7 +884,7 @@ class SyncCollections implements Iterator {
      * @return boolean
      */
     public function valid() {
-        return (key($this->collections) !== null && key($this->collections) !== false);
+        return (key($this->collections) != null && key($this->collections) != false);
     }
 
     /**
