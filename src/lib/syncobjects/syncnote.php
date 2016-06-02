@@ -10,7 +10,7 @@
 *
 * Created   :   16.01.2012
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -72,17 +72,22 @@ class SyncNote extends SyncObject {
     function SyncNote() {
         $mapping = array(
                     SYNC_AIRSYNCBASE_BODY                               => array (  self::STREAMER_VAR      => "asbody",
-                                                                                    self::STREAMER_TYPE     => "SyncBaseBody"),
+                                                                                    self::STREAMER_TYPE     => "SyncBaseBody",
+                                                                                    self::STREAMER_RONOTIFY => true),
 
                     SYNC_NOTES_CATEGORIES                               => array (  self::STREAMER_VAR      => "categories",
-                                                                                    self::STREAMER_ARRAY    => SYNC_NOTES_CATEGORY),
+                                                                                    self::STREAMER_ARRAY    => SYNC_NOTES_CATEGORY,
+                                                                                    self::STREAMER_RONOTIFY => true),
 
                     SYNC_NOTES_LASTMODIFIEDDATE                         => array (  self::STREAMER_VAR      => "lastmodified",
-                                                                                    self::STREAMER_TYPE     => self::STREAMER_TYPE_DATE),
+                                                                                    self::STREAMER_TYPE     => self::STREAMER_TYPE_DATE,
+                                                                                    self::STREAMER_RONOTIFY => true),
 
-                    SYNC_NOTES_MESSAGECLASS                             => array (  self::STREAMER_VAR      => "messageclass"),
+                    SYNC_NOTES_MESSAGECLASS                             => array (  self::STREAMER_VAR      => "messageclass",
+                                                                                    self::STREAMER_RONOTIFY => true),
 
-                    SYNC_NOTES_SUBJECT                                  => array (  self::STREAMER_VAR      => "subject"),
+                    SYNC_NOTES_SUBJECT                                  => array (  self::STREAMER_VAR      => "subject",
+                                                                                    self::STREAMER_RONOTIFY => true),
 
                     SYNC_NOTES_IGNORE_COLOR                             => array (  self::STREAMER_VAR      => "Color",
                                                                                     self::STREAMER_TYPE     => self::STREAMER_TYPE_IGNORE),

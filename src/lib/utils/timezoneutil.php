@@ -1237,7 +1237,7 @@ class TimezoneUtil {
         // That's ugly and needs a proper fix. But for now this method can convert
         // - Europe/Berlin
         // - W Europe Standard Time
-        // to "(GMT+01:00) Amsterdam, Berlin, Bern, Rome, Stockholm, Vienna" 
+        // to "(GMT+01:00) Amsterdam, Berlin, Bern, Rome, Stockholm, Vienna"
         // which is more correct than the hardcoded default of (GMT+00:00...)
         $tzName = '';
         foreach (self::$phptimezones as $tzn => $phptzs) {
@@ -1296,11 +1296,11 @@ class TimezoneUtil {
     }
 
     /**
-     * Pack timezone info for Sync
+     * Pack timezone info for Sync.
      *
      * @param array     $tz
      *
-     * @access private
+     * @access public
      * @return string
      */
     static public function GetSyncBlobFromTZ($tz) {

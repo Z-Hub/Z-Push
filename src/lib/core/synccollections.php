@@ -594,25 +594,28 @@ class SyncCollections implements Iterator {
 
                 $validNotifications = false;
                 foreach ($notifications as $backendFolderId) {
-                    // the backend will notify on the backend folderid
-                    $folderid = ZPush::GetDeviceManager()->GetFolderIdForBackendId($backendFolderId);
-
                     // Check hierarchy notifications
-                    if ($folderid === IBackend::HIERARCHYNOTIFICATION) {
+                    if ($backendFolderId === IBackend::HIERARCHYNOTIFICATION) {
                         // wait two seconds before validating this notification, because it could potentially be made by the mobile and we need some time to update the states.
                         sleep(2);
                         // check received hierarchy notifications by exporting
-                        if ($this->countHierarchyChange(true))
+                        if ($this->countHierarchyChange(true)) {
                             throw new StatusException("SyncCollections->CheckForChanges(): HierarchySync required.", self::HIERARCHY_CHANGED);
-                    }
-                    // check if the notification on the folder is within our filter
-                    else if ($this->CountChange($folderid)) {
-                        ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->CheckForChanges(): Notification received on folder '%s'", $folderid));
-                        $validNotifications = true;
-                        $this->waitingTime = time()-$started;
+                        }
                     }
                     else {
-                        ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->CheckForChanges(): Notification received on folder '%s', but it is not relevant", $folderid));
+                        // the backend will notify on the backend folderid
+                        $folderid = ZPush::GetDeviceManager()->GetFolderIdForBackendId($backendFolderId);
+
+                        // check if the notification on the folder is within our filter
+                        if ($this->CountChange($folderid)) {
+                            ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->CheckForChanges(): Notification received on folder '%s'", $folderid));
+                            $validNotifications = true;
+                            $this->waitingTime = time()-$started;
+                        }
+                        else {
+                            ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->CheckForChanges(): Notification received on folder '%s', but it is not relevant", $folderid));
+                        }
                     }
                 }
                 if ($validNotifications)
@@ -884,7 +887,7 @@ class SyncCollections implements Iterator {
      * @return boolean
      */
     public function valid() {
-        return (key($this->collections) !== null && key($this->collections) !== false);
+        return (key($this->collections) != null && key($this->collections) != false);
     }
 
     /**

@@ -9,7 +9,7 @@
 *
 * Created   :   09.09.2011
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -57,7 +57,8 @@ class SyncBaseBody extends SyncObject {
                     SYNC_AIRSYNCBASE_ESTIMATEDDATASIZE                  => array (self::STREAMER_VAR        => "estimatedDataSize"),
                     SYNC_AIRSYNCBASE_TRUNCATED                          => array (self::STREAMER_VAR        => "truncated"),
                     SYNC_AIRSYNCBASE_DATA                               => array (self::STREAMER_VAR        => "data",
-                                                                                  self::STREAMER_TYPE       => self::STREAMER_TYPE_STREAM_ASPLAIN),
+                                                                                  self::STREAMER_TYPE       => self::STREAMER_TYPE_STREAM_ASPLAIN,
+                                                                                  self::STREAMER_RONOTIFY => true),
         );
         if(Request::GetProtocolVersion() >= 14.0) {
             $mapping[SYNC_AIRSYNCBASE_PREVIEW]                          =  array (self::STREAMER_VAR        => "preview");
