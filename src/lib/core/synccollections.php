@@ -595,7 +595,7 @@ class SyncCollections implements Iterator {
                 $validNotifications = false;
                 foreach ($notifications as $backendFolderId) {
                     // Check hierarchy notifications
-                    if ($folderid === IBackend::HIERARCHYNOTIFICATION) {
+                    if ($backendFolderId === IBackend::HIERARCHYNOTIFICATION) {
                         // wait two seconds before validating this notification, because it could potentially be made by the mobile and we need some time to update the states.
                         sleep(2);
                         // check received hierarchy notifications by exporting
