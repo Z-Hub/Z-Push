@@ -122,7 +122,8 @@ class SyncAppointment extends SyncObject {
                     // 2 = Private
                     // 3 = Confident
                     SYNC_POOMCAL_SENSITIVITY                            => array (  self::STREAMER_VAR      => "sensitivity",
-                                                                                    self::STREAMER_CHECKS   => array(   self::STREAMER_CHECK_ONEVALUEOF => array(0,1,2,3) )),
+                                                                                    self::STREAMER_CHECKS   => array(   self::STREAMER_CHECK_ONEVALUEOF => array(0,1,2,3) ),
+                                                                                    self::STREAMER_RONOTIFY => true),
 
                     // Busystatus values
                     // 0 = Free

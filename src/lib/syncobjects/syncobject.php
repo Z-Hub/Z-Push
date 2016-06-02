@@ -231,10 +231,13 @@ abstract class SyncObject extends Streamer {
                         $t = str_replace("\r", "", stream_get_contents($this->$val));
                         $o = str_replace("\r", "", stream_get_contents($odo->$val));
                         if ($this instanceof SyncBaseBody) {
-                            $out["Body/Description"] = (trim($t) == trim($o)) ? "No changes made" : "Body/description changed";
+                            $out["Body/Description"] = (trim($t) == trim($o)) ? "No changes made" : $t." - ". $odoName .": ".$o;
+                        }
+                        else if($v[self::STREAMER_TYPE] == self::STREAMER_TYPE_STREAM_ASPLAIN) {
+                            $out[$keyprefix.$val] = (trim($t) == trim($o)) ? $t : $t." - ". $odoName .": ".$o;
                         }
                         else {
-                            $out[$keyprefix.$val] = (trim($t) == trim($o)) ? $t : $t." - ". $odoName .": ".$o;
+                            $out[$keyprefix.$val] = "Binary data changed";
                         }
                     }
                     // do the nice date formatting
