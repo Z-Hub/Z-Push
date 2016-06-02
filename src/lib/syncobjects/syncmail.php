@@ -10,7 +10,7 @@
 *
 * Created   :   05.09.2011
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -102,12 +102,16 @@ class SyncMail extends SyncObject {
 
                     SYNC_POOMMAIL_FROM                                  => array (  self::STREAMER_VAR      => "from",
                                                                                     self::STREAMER_CHECKS   => array(   self::STREAMER_CHECK_LENGTHMAX      => 32768,
-                                                                                                                        self::STREAMER_CHECK_EMAIL        => "" )),
+                                                                                                                        self::STREAMER_CHECK_EMAIL        => "" ),
+                                                                                    self::STREAMER_RONOTIFY => true),
 
-                    SYNC_POOMMAIL_SUBJECT                               => array (  self::STREAMER_VAR      => "subject"),
-                    SYNC_POOMMAIL_THREADTOPIC                           => array (  self::STREAMER_VAR      => "threadtopic"),
+                    SYNC_POOMMAIL_SUBJECT                               => array (  self::STREAMER_VAR      => "subject",
+                                                                                    self::STREAMER_RONOTIFY => true),
+                    SYNC_POOMMAIL_THREADTOPIC                           => array (  self::STREAMER_VAR      => "threadtopic",
+                                                                                    self::STREAMER_RONOTIFY => true),
                     SYNC_POOMMAIL_DATERECEIVED                          => array (  self::STREAMER_VAR      => "datereceived",
-                                                                                    self::STREAMER_TYPE     => self::STREAMER_TYPE_DATE_DASHES),
+                                                                                    self::STREAMER_TYPE     => self::STREAMER_TYPE_DATE_DASHES,
+                                                                                    self::STREAMER_RONOTIFY => true),
 
                     SYNC_POOMMAIL_DISPLAYTO                             => array (  self::STREAMER_VAR      => "displayto"),
 
@@ -121,7 +125,8 @@ class SyncMail extends SyncObject {
                                                                                                                         self::STREAMER_CHECK_ONEVALUEOF     => array(0,1,2) )),
 
                     SYNC_POOMMAIL_READ                                  => array (  self::STREAMER_VAR      => "read",
-                                                                                    self::STREAMER_CHECKS   => array(   self::STREAMER_CHECK_ONEVALUEOF     => array(0,1) )),
+                                                                                    self::STREAMER_CHECKS   => array(   self::STREAMER_CHECK_ONEVALUEOF     => array(0,1) ),
+                                                                                    self::STREAMER_RONOTIFY => true),
 
                     SYNC_POOMMAIL_ATTACHMENTS                           => array (  self::STREAMER_VAR      => "attachments",
                                                                                     self::STREAMER_TYPE     => "SyncAttachment",
@@ -170,7 +175,8 @@ class SyncMail extends SyncObject {
 
             $mapping[SYNC_POOMMAIL_FLAG]                                = array (   self::STREAMER_VAR      => "flag",
                                                                                     self::STREAMER_TYPE     => "SyncMailFlags",
-                                                                                    self::STREAMER_PROP     => self::STREAMER_TYPE_SEND_EMPTY);
+                                                                                    self::STREAMER_PROP     => self::STREAMER_TYPE_SEND_EMPTY,
+                                                                                    self::STREAMER_RONOTIFY => true);
 
             $mapping[SYNC_AIRSYNCBASE_NATIVEBODYTYPE]                   = array (   self::STREAMER_VAR      => "nativebodytype");
 
@@ -191,7 +197,8 @@ class SyncMail extends SyncObject {
             $mapping[SYNC_POOMMAIL2_RECEIVEDASBCC]                      = array (   self::STREAMER_VAR      => "receivedasbcc");
             $mapping[SYNC_POOMMAIL2_SENDER]                             = array (   self::STREAMER_VAR      => "sender");
             $mapping[SYNC_POOMMAIL_CATEGORIES]                          = array (   self::STREAMER_VAR      => "categories",
-                                                                                    self::STREAMER_ARRAY    => SYNC_POOMMAIL_CATEGORY);
+                                                                                    self::STREAMER_ARRAY    => SYNC_POOMMAIL_CATEGORY,
+                                                                                    self::STREAMER_RONOTIFY => true);
             //TODO bodypart, accountid, rightsmanagementlicense
         }
 
