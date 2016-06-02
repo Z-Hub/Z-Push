@@ -81,7 +81,7 @@ on **DATE** at **TIME** you've tried to save a data in the folder '**FOLDERNAME*
 This operation was not successful, as you lack write access to this folder.
 Your data has been dropped and replaced with the original data on your device to ensure data integrity.
 
-Below is a copy of the data you tried to save. If you want your changes to be stored permanently you should forward this email to a person with write access to this folder asking to perform these changes again."
+Below is a copy of the data you tried to save. If you want your changes to be stored permanently you should forward this email to a person with write access to this folder asking to perform these changes again.
 **DIFFERENCES**
 
 If you have questions about this email, please contact your e-mail administrator.

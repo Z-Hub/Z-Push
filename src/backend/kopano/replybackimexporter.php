@@ -512,7 +512,10 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
 
         // get the differences between the two objects
         $data = substr(get_class($oldmessage), 4) . "\r\n";
-        $dataarray = $message->EvaluateAndCompare($oldmessage, @constant('READ_ONLY_NOTIFY_YOURDATA'));
+        // get the suppported fields as we need them to determine the ghosted properties
+        $supportedFields = ZPush::GetDeviceManager()->GetSupportedFields(ZPush::GetDeviceManager()->GetFolderIdForBackendId($folderid));
+        $dataarray = $oldmessage->EvaluateAndCompare($message, @constant('READ_ONLY_NOTIFY_YOURDATA'), $supportedFields);
+
         foreach($dataarray as $key => $value) {
             $value = str_replace("\r", "", $value);
             $value = str_replace("\n", str_pad("\r\n",25), $value);
