@@ -189,7 +189,14 @@ class DiffState implements IChanges {
                     $changes[] = $change;
                 }
 
-                if ($old_item['mod'] != $item['mod']) {
+                // @see https://jira.z-hub.io/browse/ZP-955
+                if (isset($old_item['mod']) && isset($item['mod'])) {
+                    if ($old_item['mod'] != $item['mod']) {
+                        $change["type"] = "change";
+                        $changes[] = $change;
+                    }
+                }
+                else if (isset($old_item['mod']) || isset($item['mod'])) {
                     $change["type"] = "change";
                     $changes[] = $change;
                 }
