@@ -119,6 +119,8 @@
     define('LOGBACKEND', 'filelog');
     define('LOGLEVEL', LOGLEVEL_WBXML);
     define('LOGAUTHFAIL', false);
+    // uncomment to NOT log certain error-levels eg. E_NOTICE or E_STRICT
+    //define('LOG_ERROR_MASK', ~(E_NOTICE|E_STRICT));
 
     // To save e.g. WBXML data only for selected users, add the usernames to the array
     // The data will be saved into a dedicated file per user in the LOGFILEDIR
