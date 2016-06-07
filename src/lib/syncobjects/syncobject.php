@@ -599,7 +599,7 @@ abstract class SyncObject extends Streamer {
      * @param array $v
      * @param mixed $val
      *
-     * @access private
+     * @access public
      * @return mixed
      */
     public function GetNameFromPropertyValue($v, $val) {
