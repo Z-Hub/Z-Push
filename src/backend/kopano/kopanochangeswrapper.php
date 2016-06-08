@@ -122,7 +122,7 @@ class KopanoChangesWrapper implements IImportChanges, IExportChanges {
      * @access public
      * @throws StatusException
      */
-    public function KopanoChangesWrapper($session, $store, $folderid, $ownFolder) {
+    public function __construct($session, $store, $folderid, $ownFolder) {
         $this->preparedAs = null;
         $this->session = $session;
         $this->store = $store;

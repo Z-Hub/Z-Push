@@ -67,7 +67,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
     private static $mimeTypes = false;
 
 
-    public function BackendIMAP() {
+    public function __construct() {
         if (BackendIMAP::$mimeTypes === false) {
             BackendIMAP::$mimeTypes = $this->SystemExtensionMimeTypes();
         }

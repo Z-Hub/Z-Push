@@ -346,8 +346,8 @@ class ImportHierarchyChangesCombinedWrap {
      *
      * @access public
      */
-    public function ImportHierarchyChangesCombinedWrap($backendid, &$backend, &$ihc) {
-        ZLog::Write(LOGLEVEL_DEBUG, "ImportHierarchyChangesCombinedWrap->ImportHierarchyChangesCombinedWrap('$backendid',...)");
+    public function __construct($backendid, &$backend, &$ihc) {
+        ZLog::Write(LOGLEVEL_DEBUG, "ImportHierarchyChangesCombinedWrap->__construct('$backendid',...)");
         $this->backendid = $backendid;
         $this->backend =& $backend;
         $this->ihc = &$ihc;
