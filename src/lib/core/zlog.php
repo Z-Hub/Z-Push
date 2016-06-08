@@ -176,10 +176,10 @@ class ZLog {
     static public function WriteEnd() {
         if (LOGLEVEL_DEBUG <= LOGLEVEL || (LOGLEVEL_DEBUG <= LOGUSERLEVEL && self::$userLog)) {
             if (version_compare(phpversion(), '5.4.0') < 0) {
-                $time_used = number_format(time() - $_SERVER["REQUEST_TIME"], 2, ',', '.');
+                $time_used = number_format(time() - $_SERVER["REQUEST_TIME"], 2);
             }
             else {
-                $time_used = number_format(microtime(true) - $_SERVER["REQUEST_TIME_FLOAT"], 2, ',', '.');
+                $time_used = number_format(microtime(true) - $_SERVER["REQUEST_TIME_FLOAT"], 2);
             }
             $peakUsage = memory_get_peak_usage(false);
             $truePeakUsage = memory_get_peak_usage(true);
