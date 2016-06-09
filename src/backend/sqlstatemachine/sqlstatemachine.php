@@ -58,10 +58,19 @@ class SqlStateMachine implements IStateMachine {
     const CREATETABLE_STATES = "CREATE TABLE IF NOT EXISTS states (id_state INTEGER AUTO_INCREMENT, device_id VARCHAR(50) NOT NULL, uuid VARCHAR(50) NULL, state_type VARCHAR(50), counter INTEGER, state_data MEDIUMBLOB, created_at DATETIME NOT NULL, updated_at DATETIME NOT NULL, PRIMARY KEY (id_state));";
     const CREATEINDEX_STATES = "CREATE UNIQUE INDEX idx_states_unique ON states (device_id, uuid, state_type, counter);";
 
-    private $dbh;
-    private $options;
-    private $dsn;
-    private $stateHashStatement;
+    protected $dbh;
+    protected $options;
+    protected $dsn;
+    protected $stateHashStatement;
+
+    /**
+     * Name of tables, which can be overwritten in extending classes
+     *
+     * @var type
+     */
+    protected $settings_table = 'settings';
+    protected $users_table = 'users';
+    protected $states_table = 'states';
 
     /**
      * Constructor
@@ -184,7 +193,7 @@ class SqlStateMachine implements IStateMachine {
         if ($counter && $cleanstates)
             $this->CleanStates($devid, $type, $key, $counter);
 
-        $sql = "SELECT state_data FROM states WHERE device_id = :devid AND state_type = :type AND uuid". $this->getSQLOp($key) .":key AND counter = :counter";
+        $sql = "SELECT state_data FROM $this->states_table WHERE device_id = :devid AND state_type = :type AND uuid". $this->getSQLOp($key) .":key AND counter = :counter";
         $params = $this->getParams($devid, $type, $key, $counter);
 
         $data = null;
@@ -237,7 +246,7 @@ class SqlStateMachine implements IStateMachine {
         $key = $this->returnNullified($key);
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("SqlStateMachine->SetState(): devid:'%s' type:'%s' key:'%s' counter:'%s'", $devid, $type, Utils::PrintAsString($key), Utils::PrintAsString($counter)));
 
-        $sql = "SELECT device_id FROM states WHERE device_id = :devid AND state_type = :type AND uuid". $this->getSQLOp($key) .":key AND counter = :counter";
+        $sql = "SELECT device_id FROM $this->states_table WHERE device_id = :devid AND state_type = :type AND uuid". $this->getSQLOp($key) .":key AND counter = :counter";
         $params = $this->getParams($devid, $type, $key, $counter);
 
         $sth = null;
@@ -251,14 +260,14 @@ class SqlStateMachine implements IStateMachine {
             $record = $sth->fetch(PDO::FETCH_ASSOC);
             if (!$record) {
                 // New record
-                $sql = "INSERT INTO states (device_id, state_type, uuid, counter, state_data, created_at, updated_at) VALUES (:devid, :type, :key, :counter, :data, :created_at, :updated_at)";
+                $sql = "INSERT INTO $this->states_table (device_id, state_type, uuid, counter, state_data, created_at, updated_at) VALUES (:devid, :type, :key, :counter, :data, :created_at, :updated_at)";
 
                 $sth = $this->getDbh()->prepare($sql);
                 $sth->bindValue(":created_at", $this->getNow(), PDO::PARAM_STR);
             }
             else {
                 // Existing record, we update it
-                $sql = "UPDATE states SET state_data = :data, updated_at = :updated_at WHERE device_id = :devid AND state_type = :type AND uuid ". $this->getSQLOp($key) .":key AND counter = :counter";
+                $sql = "UPDATE $this->states_table SET state_data = :data, updated_at = :updated_at WHERE device_id = :devid AND state_type = :type AND uuid ". $this->getSQLOp($key) .":key AND counter = :counter";
 
                 $sth = $this->getDbh()->prepare($sql);
             }
@@ -309,13 +318,13 @@ class SqlStateMachine implements IStateMachine {
 
         if ($counter === false) {
             // Remove all the states. Counter are 0 or >0, then deleting >= 0 deletes all
-            $sql = "DELETE FROM states WHERE device_id = :devid AND state_type = :type AND uuid". $this->getSQLOp($key) .":key AND counter >= :counter";
+            $sql = "DELETE FROM $this->states_table WHERE device_id = :devid AND state_type = :type AND uuid". $this->getSQLOp($key) .":key AND counter >= :counter";
         }
         else if ($counter !== false && $thisCounterOnly === true) {
-            $sql = "DELETE FROM states WHERE device_id = :devid AND state_type = :type AND uuid". $this->getSQLOp($key).":key AND counter = :counter";
+            $sql = "DELETE FROM $this->states_table WHERE device_id = :devid AND state_type = :type AND uuid". $this->getSQLOp($key).":key AND counter = :counter";
         }
         else {
-            $sql = "DELETE FROM states WHERE device_id = :devid AND state_type = :type AND uuid". $this->getSQLOp($key) .":key AND counter < :counter";
+            $sql = "DELETE FROM $this->states_table WHERE device_id = :devid AND state_type = :type AND uuid". $this->getSQLOp($key) .":key AND counter < :counter";
         }
         $params = $this->getParams($devid, $type, $key, $counter);
 
@@ -346,7 +355,7 @@ class SqlStateMachine implements IStateMachine {
         $record = null;
         $changed = false;
         try {
-            $sql = "SELECT username FROM users WHERE username = :username AND device_id = :devid";
+            $sql = "SELECT username FROM $this->users_table WHERE username = :username AND device_id = :devid";
             $params = array(":username" => $username, ":devid" => $devid);
 
             $sth = $this->getDbh()->prepare($sql);
@@ -358,7 +367,7 @@ class SqlStateMachine implements IStateMachine {
             }
             else {
                 $sth = null;
-                $sql = "INSERT INTO users (username, device_id) VALUES (:username, :devid)";
+                $sql = "INSERT INTO $this->users_table (username, device_id) VALUES (:username, :devid)";
                 $sth = $this->getDbh()->prepare($sql);
                 if ($sth->execute($params)) {
                     ZLog::Write(LOGLEVEL_DEBUG, sprintf("SqlStateMachine->LinkUserDevice(): Linked user-device: '%s' '%s'", $username, $devid));
@@ -391,7 +400,7 @@ class SqlStateMachine implements IStateMachine {
         $sth = null;
         $changed = false;
         try {
-            $sql = "DELETE FROM users WHERE username = :username AND device_id = :devid";
+            $sql = "DELETE FROM $this->users_table WHERE username = :username AND device_id = :devid";
             $params = array(":username" => $username, ":devid" => $devid);
 
             $sth = $this->getDbh()->prepare($sql);
@@ -423,7 +432,7 @@ class SqlStateMachine implements IStateMachine {
         $record = null;
         $out = array();
         try {
-            $sql = "SELECT device_id, username FROM users ORDER BY username";
+            $sql = "SELECT device_id, username FROM $this->users_table ORDER BY username";
             $sth = $this->getDbh()->prepare($sql);
             $sth->execute();
 
@@ -458,12 +467,12 @@ class SqlStateMachine implements IStateMachine {
         $out = array();
         try {
             if ($username === false) {
-                // we also need to find potentially obsolete states that have no link to the users table anymore
-                $sql = "SELECT DISTINCT(device_id) FROM states ORDER BY device_id";
+                // we also need to find potentially obsolete states that have no link to the $this->users_table table anymore
+                $sql = "SELECT DISTINCT(device_id) FROM $this->states_table ORDER BY device_id";
                 $params = array();
             }
             else {
-                $sql = "SELECT device_id FROM users WHERE username = :username ORDER BY device_id";
+                $sql = "SELECT device_id FROM $this->users_table WHERE username = :username ORDER BY device_id";
                 $params = array(":username" => $username);
             }
             $sth = $this->getDbh()->prepare($sql);
@@ -493,7 +502,7 @@ class SqlStateMachine implements IStateMachine {
         $record = null;
         $version = IStateMachine::STATEVERSION_01;
         try {
-            $sql = "SELECT key_value FROM settings WHERE key_name = :key_name";
+            $sql = "SELECT key_value FROM $this->settings_table WHERE key_name = :key_name";
             $params = array(":key_name" => self::VERSION);
 
             $sth = $this->getDbh()->prepare($sql);
@@ -531,7 +540,7 @@ class SqlStateMachine implements IStateMachine {
         $record = null;
         $status = false;
         try {
-            $sql = "SELECT key_value FROM settings WHERE key_name = :key_name";
+            $sql = "SELECT key_value FROM $this->settings_table WHERE key_name = :key_name";
             $params = array(":key_name" => self::VERSION);
 
             $sth = $this->getDbh()->prepare($sql);
@@ -540,7 +549,7 @@ class SqlStateMachine implements IStateMachine {
             $record = $sth->fetch(PDO::FETCH_ASSOC);
             if ($record) {
                 $sth = null;
-                $sql = "UPDATE settings SET key_value = :value, updated_at = :updated_at WHERE key_name = :key_name";
+                $sql = "UPDATE $this->settings_table SET key_value = :value, updated_at = :updated_at WHERE key_name = :key_name";
                 $params[":value"] = $version;
                 $params[":updated_at"] = $this->getNow();
 
@@ -551,7 +560,7 @@ class SqlStateMachine implements IStateMachine {
             }
             else {
                 $sth = null;
-                $sql = "INSERT INTO settings (key_name, key_value, created_at, updated_at) VALUES (:key_name, :value, :created_at, :updated_at)";
+                $sql = "INSERT INTO $this->settings_table (key_name, key_value, created_at, updated_at) VALUES (:key_name, :value, :created_at, :updated_at)";
                 $params[":value"] = $version;
                 $params[":updated_at"] = $params[":created_at"] = $this->getNow();
 
@@ -583,7 +592,7 @@ class SqlStateMachine implements IStateMachine {
         $record = null;
         $out = array();
         try {
-            $sql = "SELECT state_type, uuid, counter FROM states WHERE device_id = :devid ORDER BY id_state";
+            $sql = "SELECT state_type, uuid, counter FROM $this->states_table WHERE device_id = :devid ORDER BY id_state";
             $params = array(":devid" => $devid);
 
             $sth = $this->getDbh()->prepare($sql);
@@ -623,9 +632,9 @@ class SqlStateMachine implements IStateMachine {
      * Return a string with the datetime NOW.
      *
      * @return string
-     * @access private
+     * @access protected
      */
-    private function getNow() {
+    protected function getNow() {
         $now = new DateTime("NOW");
         return $now->format("Y-m-d H:i:s");
     }
@@ -638,9 +647,9 @@ class SqlStateMachine implements IStateMachine {
      * @params string $key
      * @params string $counter
      * @return array
-     * @access private
+     * @access protected
      */
-    private function getParams($devid, $type, $key, $counter) {
+    protected function getParams($devid, $type, $key, $counter) {
         return array(":devid" => $devid, ":type" => $type, ":key" => $key, ":counter" => ($counter === false ? 0 : $counter) );
     }
 
@@ -650,10 +659,10 @@ class SqlStateMachine implements IStateMachine {
      *
      * @param mixed $param
      *
-     * @access private
+     * @access protected
      * @return string
      */
-    private function getSQLOp($param) {
+    protected function getSQLOp($param) {
         if ($param == null) {
             return " IS ";
         }
@@ -666,7 +675,7 @@ class SqlStateMachine implements IStateMachine {
      * @param mixed $param
      * @return NULL|mixed
      */
-    private function returnNullified($param) {
+    protected function returnNullified($param) {
         if ($param === false) {
             return null;
         }
@@ -679,9 +688,9 @@ class SqlStateMachine implements IStateMachine {
      * @params PDOConnection $dbh
      * @params PDOStatement $sth
      * @params PDORecord $record
-     * @access private
+     * @access protected
      */
-    private function clearConnection(&$dbh, &$sth = null, &$record = null) {
+    protected function clearConnection(&$dbh, &$sth = null, &$record = null) {
         if ($record != null) {
             $record = null;
         }
@@ -698,12 +707,12 @@ class SqlStateMachine implements IStateMachine {
      *
      * @param string    $key                state uuid
 
-     * @access private
+     * @access protected
      * @return PDOStatement
      */
-    private function getStateHashStatement($key) {
+    protected function getStateHashStatement($key) {
         if (!isset($this->stateHashStatement) || $this->stateHashStatement == null) {
-            $sql = "SELECT updated_at FROM states WHERE device_id = :devid AND state_type = :type AND uuid ". (($key == null) ? " IS " : " = ") . ":key AND counter = :counter";
+            $sql = "SELECT updated_at FROM $this->states_table WHERE device_id = :devid AND state_type = :type AND uuid ". (($key == null) ? " IS " : " = ") . ":key AND counter = :counter";
             $this->stateHashStatement = $this->getDbh()->prepare($sql);
         }
         return $this->stateHashStatement;
@@ -711,11 +720,11 @@ class SqlStateMachine implements IStateMachine {
     /**
      * Check if the database and necessary tables exist.
      *
-     * @access private
+     * @access protected
      * @return boolean
      * @throws UnavailableException
      */
-    private function checkDbAndTables() {
+    protected function checkDbAndTables() {
         ZLog::Write(LOGLEVEL_DEBUG, "SqlStateMachine->checkDbAndTables(): Checking if database and tables are available.");
         try {
             $sqlStmt = sprintf("SHOW TABLES FROM %s", STATE_SQL_DATABASE);
@@ -745,11 +754,11 @@ class SqlStateMachine implements IStateMachine {
     /**
      * Create the states database.
      *
-     * @access private
+     * @access protected
      * @return boolean
      * @throws UnavailableException
      */
-    private function createDB() {
+    protected function createDB() {
         ZLog::Write(LOGLEVEL_INFO, sprintf("SqlStateMachine->createDB(): database '%s' is not available, trying to create it.", STATE_SQL_DATABASE));
         $dsn = sprintf("%s:host=%s;port=%s", STATE_SQL_ENGINE, STATE_SQL_SERVER, STATE_SQL_PORT);
         try {
@@ -770,14 +779,19 @@ class SqlStateMachine implements IStateMachine {
     /**
      * Create the tables in the database.
      *
-     * @access private
+     * @access protected
      * @return boolean
      * @throws UnavailableException
      */
-    private function createTables() {
+    protected function createTables() {
         ZLog::Write(LOGLEVEL_INFO, "SqlStateMachine->createTables(): tables are not available, trying to create them.");
         try {
-            $sqlStmt = self::CREATETABLE_SETTINGS . self::CREATETABLE_USERS . self::CREATETABLE_STATES . self::CREATEINDEX_STATES;
+            $sqlStmt = strtr(self::CREATETABLE_SETTINGS . self::CREATETABLE_USERS . self::CREATETABLE_STATES . self::CREATEINDEX_STATES,
+                array(
+                    ' users ' => $this->users_table,
+                    ' states ' => $this->states_table,
+                    ' settings' => $this->settings_table,
+                ));
             $sth = $this->getDbh()->prepare($sqlStmt);
             $sth->execute();
             ZLog::Write(LOGLEVEL_DEBUG, "SqlStateMachine->createTables(): tables created succesfully.");
@@ -798,7 +812,7 @@ class SqlStateMachine implements IStateMachine {
     public function DoTablesHaveData() {
         try {
             $dataSettings = $dataStates = $dataUsers = false;
-            $sqlStmt = "SELECT key_name FROM settings LIMIT 1;";
+            $sqlStmt = "SELECT key_name FROM $this->settings_table LIMIT 1;";
             $sth = $this->getDbh()->prepare($sqlStmt);
             $sth->execute();
             if ($sth->rowCount() > 0) {
@@ -809,7 +823,7 @@ class SqlStateMachine implements IStateMachine {
                 print("There is no data in settings table." . PHP_EOL);
             }
 
-            $sqlStmt = "SELECT id_state FROM states LIMIT 1;";
+            $sqlStmt = "SELECT id_state FROM $this->states_table LIMIT 1;";
             $sth = $this->getDbh()->prepare($sqlStmt);
             $sth->execute();
             if ($sth->rowCount() > 0) {
@@ -820,7 +834,7 @@ class SqlStateMachine implements IStateMachine {
                 print("There is no data in states table." . PHP_EOL);
             }
 
-            $sqlStmt = "SELECT username FROM users LIMIT 1;";
+            $sqlStmt = "SELECT username FROM $this->users_table LIMIT 1;";
             $sth = $this->getDbh()->prepare($sqlStmt);
             $sth->execute();
             if ($sth->rowCount() > 0) {
