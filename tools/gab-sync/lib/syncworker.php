@@ -530,7 +530,7 @@ abstract class SyncWorker {
     /**
      * Returns a list of Global Address Books with their name and ids.
      *
-     * @access public
+     * @access protected
      * @return array
      */
     protected abstract function GetGABs();
