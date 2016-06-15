@@ -305,7 +305,7 @@ abstract class SyncWorker {
     }
 
     /**
-     * Clears all data from the hidden folder (without removing it) for a specific gabId and gabName
+     * Clears all data from the hidden folder (without removing it) for a specific gabId and gabName.
      * This will cause a serverside clearing of all user gabs.
      *
      * @param string $gabId         the id of the gab where the hidden folder should be searched. If not set (null) the default gab is used.
