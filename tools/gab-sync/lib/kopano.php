@@ -67,7 +67,14 @@ class Kopano extends SyncWorker {
      */
     public function __construct() {
         parent::__construct();
-        $this->session = mapi_logon_zarafa(USERNAME, PASSWORD, SERVER, CERTIFICATE, CERTIFICATE_PASSWORD, 0, self::VERSION, self::NAME. " ". self::VERSION);
+        // send Z-Push version and user agent to ZCP >7.2.0
+        if ($this->checkMapiExtVersion('7.2.0')) {
+            $this->session = mapi_logon_zarafa(USERNAME, PASSWORD, SERVER, CERTIFICATE, CERTIFICATE_PASSWORD, 0, self::VERSION, self::NAME. " ". self::VERSION);
+        }
+        else {
+            $this->session = mapi_logon_zarafa(USERNAME, PASSWORD, SERVER, CERTIFICATE, CERTIFICATE_PASSWORD, 0);
+        }
+
         if (mapi_last_hresult()) {
             $this->Terminate(sprintf("Kopano: login failed with error code: 0x%08X", mapi_last_hresult()));
         }
@@ -721,5 +728,31 @@ class Kopano extends SyncWorker {
         }
 
         return $string;
+    }
+
+    /**
+     * Checks if the PHP-MAPI extension is available and in a requested version.
+     *
+     * @param string    $version    the version to be checked ("6.30.10-18495", parts or build number)
+     *
+     * @access private
+     * @return boolean installed version is superior to the checked string
+     */
+    private function checkMapiExtVersion($version = "") {
+        // compare build number if requested
+        if (preg_match('/^\d+$/', $version) && strlen($version) > 3) {
+            $vs = preg_split('/-/', phpversion("mapi"));
+            return ($version <= $vs[1]);
+        }
+
+        if (extension_loaded("mapi")){
+            if (version_compare(phpversion("mapi"), $version) == -1){
+                return false;
+            }
+        }
+        else
+            return false;
+
+        return true;
     }
 }
