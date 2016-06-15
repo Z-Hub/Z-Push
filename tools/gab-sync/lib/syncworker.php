@@ -89,7 +89,7 @@ abstract class SyncWorker {
         $gabs = $this->GetGABs();
 
         if (empty($gabs)) {
-            if(!$targetGab) {
+            if($targetGab) {
                 $this->Terminate("Multiple GABs not found, target should not be set. Aborting.");
             }
             // no multi-GABs, just go default
@@ -203,7 +203,7 @@ abstract class SyncWorker {
         $gabs = $this->GetGABs();
 
         if (empty($gabs)) {
-            if(!$targetGab) {
+            if($targetGab) {
                 $this->Terminate("Multiple GABs not found, target should not be set. Aborting.");
             }
             // default case, no multi-GABs, just go default
@@ -289,7 +289,7 @@ abstract class SyncWorker {
         $gabs = $this->GetGABs();
 
         if (empty($gabs)) {
-            if(!$targetGab) {
+            if($targetGab) {
                 $this->Terminate("Multiple GABs not found, target should not be set. Aborting.");
             }
             // no multi-GABs, just go default
@@ -342,7 +342,7 @@ abstract class SyncWorker {
         $gabs = $this->GetGABs();
 
         if (empty($gabs)) {
-            if(!$targetGab) {
+            if($targetGab) {
                 $this->Terminate("Multiple GABs not found, target should not be set. Aborting.");
             }
             // no multi-GABs, just go default

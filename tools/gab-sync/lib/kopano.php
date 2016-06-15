@@ -245,8 +245,10 @@ class Kopano extends SyncWorker {
     protected function GetGABs() {
         $names = array();
         $companies = mapi_zarafa_getcompanylist($this->store);
-        foreach($companies as $c) {
-            $names[$c['companyname']] = bin2hex($c['companyid']);
+        if (is_array($companies)) {
+            foreach($companies as $c) {
+                $names[$c['companyname']] = bin2hex($c['companyid']);
+            }
         }
         return $names;
     }
@@ -417,7 +419,7 @@ class Kopano extends SyncWorker {
         $store = $this->getStore($gabId, $gabName);
         $chunkdata = $this->findChunk($store, $folderid, $chunkName);
 
-        if ($chunkdata[PR_ENTRYID]) {
+        if (isset($chunkdata[PR_ENTRYID])) {
             $message = mapi_msgstore_openentry($store, $chunkdata[PR_ENTRYID]);
             return $this->readPropStream($message, PR_BODY);
         }
