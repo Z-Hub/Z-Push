@@ -57,6 +57,7 @@ class Kopano extends SyncWorker {
     private $session;
     private $store;
     private $mainUser;
+    private $targetStore;
     private $folderCache;
     private $storeCache;
     private $mapiprops;
