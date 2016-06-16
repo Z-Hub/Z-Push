@@ -232,7 +232,7 @@ include_once(ZPUSH_CONFIG);
     ZLog::Write(LOGLEVEL_INFO,
             sprintf("cmd='%s' memory='%s/%s' time='%ss' devType='%s' devId='%s' getUser='%s' from='%s' version='%s' method='%s' httpcode='%s'",
                     Request::GetCommand(), Utils::FormatBytes(memory_get_peak_usage(false)), Utils::FormatBytes(memory_get_peak_usage(true)),
-                    number_format(microtime(true) - $_SERVER["REQUEST_TIME_FLOAT"], 2, ',', '.'),
+                    number_format(microtime(true) - $_SERVER["REQUEST_TIME_FLOAT"], 2),
                     Request::GetDeviceType(), Request::GetDeviceID(), Request::GetGETUser(), Request::GetRemoteAddr(), @constant('ZPUSH_VERSION'), Request::GetMethod(), http_response_code() ));
 
     ZLog::Write(LOGLEVEL_DEBUG, "-------- End");

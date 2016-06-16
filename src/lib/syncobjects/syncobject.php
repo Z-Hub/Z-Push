@@ -246,18 +246,20 @@ abstract class SyncObject extends Streamer {
                             $out[$keyprefix.$val] = Utils::GetFormattedTime($this->$val);
                         }
                         else {
-                            $out[$keyprefix.$val] = (isset($this->$val) && strlen($this->$val) ?
+                            $out[$keyprefix.$val] = (strlen($this->$val) ?
                                     Utils::GetFormattedTime($this->$val):"undefined") ." - ". $odoName .": ".
-                                    (isset($odo->$val) && strlen($odo->$val) ? Utils::GetFormattedTime($odo->$val) : "undefined");
+                                    (strlen($odo->$val) ? Utils::GetFormattedTime($odo->$val) : "undefined");
                         }
                     }
-                    // else just compare their values
+                    // else just compare their values and print human friendly if necessary
                     else {
                         if($this->$val == $odo->$val) {
-                            $out[$keyprefix.$val] = $this->$val;
+                            $out[$keyprefix.$val] = $this->GetNameFromPropertyValue($v, $this->$val);
                         }
                         else {
-                            $out[$keyprefix.$val] = (isset($this->$val) && $this->$val ? $this->$val:"undefined") ." - ". $odoName .": ". (isset($odo->$val) && $odo->$val ? $odo->$val:"undefined");
+                            $out[$keyprefix.$val] = (strlen($this->$val) ? $this->GetNameFromPropertyValue($v, $this->$val) : "undefined") .
+                                    " - ". $odoName .": ".
+                                    (strlen($odo->$val) ? $odo->GetNameFromPropertyValue($v, $odo->$val) : "undefined");
                         }
                     }
                 }
@@ -272,7 +274,7 @@ abstract class SyncObject extends Streamer {
                 else {
                     if($this->$val == $odo->$val) {
                         if (! ($this instanceof SyncRecurrence)) {
-                            $out[$keyprefix.$val] = $this->$val;
+                            $out[$keyprefix.$val] = ($this->GetNameFromPropertyValue($v, $this->$val));
                         }
                     }
                     else {
@@ -280,7 +282,9 @@ abstract class SyncObject extends Streamer {
                             $out["Recurrence"] = "Recurrence changed";
                         }
                         else {
-                            $out[$keyprefix.$val] = (strlen($this->$val) ? $this->$val:"undefined") ." - ". $odoName .": ". (strlen($odo->$val) ? $odo->$val:"undefined");
+                            $out[$keyprefix.$val] = (strlen($this->$val) ? $this->GetNameFromPropertyValue($v, $this->$val) : "undefined") .
+                                    " - ". $odoName .": ".
+                                    (strlen($odo->$val) ? ($odo->GetNameFromPropertyValue($v, $odo->$val)) : "undefined");
                         }
                     }
                 }
@@ -291,7 +295,8 @@ abstract class SyncObject extends Streamer {
                 // Otherwise it's a ghosted property and the device didn't send it, so we don't have to care about that case.
                 if (in_array($k, $supportedFields)) {
                     if ((is_scalar($this->$val) && strlen($this->$val)) || (!is_scalar($this->$val) && !empty($this->$val))) {
-                        $out[$keyprefix.$val] = (is_array($this->$val) ? implode(",", $this->$val) : $this->$val) . " - " . $odoName .": value completely removed";
+                        $out[$keyprefix.$val] = (is_array($this->$val) ? implode(",", $this->$val) : $this->GetNameFromPropertyValue($v, $this->$val)) .
+                        " - " . $odoName .": value completely removed";
                     }
                 }
                 // there is no data sent for SyncMail, so just output its values
@@ -300,7 +305,7 @@ abstract class SyncObject extends Streamer {
                         $out[$keyprefix.$val] = Utils::GetFormattedTime($this->$val);
                     }
                     else {
-                        $out[$keyprefix.$val] = $this->$val;
+                        $out[$keyprefix.$val] = $this->GetNameFromPropertyValue($v, $this->$val);
                     }
                 }
             }
@@ -314,7 +319,7 @@ abstract class SyncObject extends Streamer {
                         $out[$keyprefix.$val] = "Not set - " . $odoName . ": an exception was added";
                     }
                     else {
-                        $out[$keyprefix.$val] = "Not set - " . $odoName . ": " . $odo->$val . " (value added)";
+                        $out[$keyprefix.$val] = "Not set - " . $odoName . ": " . $odo->GetNameFromPropertyValue($v, $odo->$val) . " (value added)";
                     }
                 }
                 else if (isset($v[self::STREAMER_ARRAY])) {
@@ -322,7 +327,7 @@ abstract class SyncObject extends Streamer {
                     $out[$keyprefix.$val] = "Not set - ". $odoName .": ". implode(", ", $odo->$val) . " (value added)";
                 }
                 else {
-                    $out[$keyprefix.$val] = "Not set - " . $odoName . ": " . $odo->$val . " (value added)";
+                    $out[$keyprefix.$val] = "Not set - " . $odoName . ": " . $odo->GetNameFromPropertyValue($v, $odo->$val) . " (value added)";
                 }
             }
         }
@@ -586,5 +591,21 @@ abstract class SyncObject extends Streamer {
         } // foreach mapping
 
         return true;
+    }
+
+    /**
+     * Returns human friendly property name from its value if a mapping is available.
+     *
+     * @param array $v
+     * @param mixed $val
+     *
+     * @access public
+     * @return mixed
+     */
+    public function GetNameFromPropertyValue($v, $val) {
+        if (isset($v[self::STREAMER_VALUEMAP][$val])) {
+            return $v[self::STREAMER_VALUEMAP][$val];
+        }
+        return $val;
     }
 }

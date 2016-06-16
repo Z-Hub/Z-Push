@@ -88,6 +88,7 @@ class GabSyncCLI {
     static private $syncWorker;
     static private $command;
     static private $uniqueId = false;
+    static private $targetGab = false;
     static private $errormessage;
 
     /**
@@ -101,6 +102,7 @@ class GabSyncCLI {
                 "\tgab-sync.php -a ACTION [options]" .PHP_EOL.PHP_EOL.
                 "Parameters:" .PHP_EOL.
                  "\t-a simulate | sync | sync-one | clear-all | delete-all" .PHP_EOL.
+                 "\t[-t] TARGET-GAB\t\t Target GAB to execute the action / unique-id on. Optional, if not set, executed on all or default gab." .PHP_EOL.
                  "\t[-u] UNIQUE-ID" .PHP_EOL.PHP_EOL.
                 "Actions:" .PHP_EOL.
                 "\tsimulate\t\t Simulates the GAB synchronization and prints out statistics and configuration suggestions." .PHP_EOL.
@@ -120,7 +122,7 @@ class GabSyncCLI {
     static public function SetupSyncWorker() {
         $file = "lib/" .strtolower(SYNCWORKER).".php";
 
-        @include_once($file);
+        include_once($file);
 
         if (!class_exists(SYNCWORKER)) {
             self::$errormessage = "SyncWorker file loaded, but class '".SYNCWORKER."' can not be found. Check your configuration or implementation.";
@@ -157,13 +159,19 @@ class GabSyncCLI {
         if (self::$errormessage)
             return;
 
-        $options = getopt("u:a:");
+        $options = getopt("u:a:t:");
 
         // get 'unique-id'
         if (isset($options['u']) && !empty($options['u']))
             self::$uniqueId = strtolower(trim($options['u']));
         else if (isset($options['unique-id']) && !empty($options['unique-id']))
             self::$uniqueId = strtolower(trim($options['unique-id']));
+
+        // get 'target-gab'
+        if (isset($options['t']) && !empty($options['t']))
+            self::$targetGab = strtolower(trim($options['t']));
+        else if (isset($options['target-gab']) && !empty($options['target-gab']))
+            self::$targetGab = strtolower(trim($options['target-gab']));
 
         // get 'action'
         $action = false;
@@ -240,31 +248,31 @@ class GabSyncCLI {
         echo PHP_EOL;
         switch(self::$command) {
             case self::COMMAND_SIMULATE:
-                self::$syncWorker->Simulate();
+                self::$syncWorker->Simulate(self::$targetGab);
                 break;
 
             case self::COMMAND_SYNC:
-                self::$syncWorker->Sync();
+                self::$syncWorker->Sync(self::$targetGab);
                 break;
 
             case self::COMMAND_SYNC_ONE:
-                self::$syncWorker->SyncOne(self::$uniqueId);
+                self::$syncWorker->SyncOne(self::$uniqueId, self::$targetGab);
                 break;
 
             case self::COMMAND_CLEARALL:
-                echo "Are you sure you want to remove all chunks and data from the public folder. ALL GAB data will be removed from ALL KOE instances [y/N]: ";
+                echo "Are you sure you want to remove all chunks and data from the hidden GAB folder. ALL GAB data will be removed from ALL KOE instances [y/N]: ";
                 $confirm  =  strtolower(trim(fgets(STDIN)));
                 if ( $confirm === 'y' || $confirm === 'yes')
-                    self::$syncWorker->ClearAll();
+                    self::$syncWorker->ClearAll(self::$targetGab);
                 else
                     echo "Aborted!".PHP_EOL;
                 break;
 
             case self::COMMAND_DELETEALL:
-                echo "Are you sure you want to remove all chunks and data from the public folder and delete it? ALL GAB data will be removed from ALL KOE instances [y/N]: ";
+                echo "Are you sure you want to remove all chunks and data from the hidden GAB folder and delete it? ALL GAB data will be removed from ALL KOE instances [y/N]: ";
                 $confirm  =  strtolower(trim(fgets(STDIN)));
                 if ( $confirm === 'y' || $confirm === 'yes')
-                    self::$syncWorker->DeleteAll();
+                    self::$syncWorker->DeleteAll(self::$targetGab);
                 else
                     echo "Aborted!".PHP_EOL;
                 break;

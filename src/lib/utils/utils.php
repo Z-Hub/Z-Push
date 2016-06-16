@@ -209,13 +209,14 @@ class Utils {
         ZLog::Write(LOGLEVEL_DEBUG, "FILEAS_ORDER not defined. Add it to your config.php.");
         return null;
     }
+
     /**
-     * Checks if the PHP-MAPI extension is available and in a requested version
+     * Checks if the PHP-MAPI extension is available and in a requested version.
      *
      * @param string    $version    the version to be checked ("6.30.10-18495", parts or build number)
      *
      * @access public
-     * @return boolean installed version is superior to the checked strin
+     * @return boolean installed version is superior to the checked string
      */
     static public function CheckMapiExtVersion($version = "") {
         // compare build number if requested
@@ -236,8 +237,7 @@ class Utils {
     }
 
     /**
-     * Parses and returns an ecoded vCal-Uid from an
-     * OL compatible GlobalObjectID
+     * Parses and returns an ecoded vCal-Uid from an OL compatible GlobalObjectID.
      *
      * @param string    $olUid      an OL compatible GlobalObjectID
      *
