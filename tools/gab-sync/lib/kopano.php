@@ -340,6 +340,10 @@ class Kopano extends SyncWorker {
                                                             PR_DISPLAY_TYPE_EX
                                                     ));
         foreach ($gabentries as $entry) {
+            // do not add SYSTEM user to the GAB
+            if (strtoupper($entry[PR_DISPLAY_NAME]) == "SYSTEM") {
+                continue;
+            }
             $a = new GABEntry();
             $a->type = GABEntry::CONTACT;
             $a->memberOf = array();
@@ -496,8 +500,13 @@ class Kopano extends SyncWorker {
                     PR_BODY => $chunkData,
                     $this->mapiprops['updatetime'] => time(),
             ));
-            mapi_savechanges($message);
-            $log .= "saved";
+            @mapi_savechanges($message);
+            if (mapi_last_hresult()) {
+                $log .= sprintf("error saving: 0x%08X", mapi_last_hresult());
+            }
+            else {
+                $log .= "saved";
+            }
         }
 
         // output log
@@ -629,7 +638,7 @@ class Kopano extends SyncWorker {
             $parentfentryid = false;
 
             // the default store root
-            if ($this->mainUser == HIDDEN_FOLDERSTORE) {
+            if ($this->mainUser == HIDDEN_FOLDERSTORE && strtoupper($this->mainUser) != "SYSTEM") {
                 $parentprops = mapi_getprops($store, array(PR_IPM_SUBTREE_ENTRYID));
                 if (isset($parentprops[PR_IPM_SUBTREE_ENTRYID]))
                     $parentfentryid = $parentprops[PR_IPM_SUBTREE_ENTRYID];
