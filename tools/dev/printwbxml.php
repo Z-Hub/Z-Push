@@ -44,7 +44,8 @@
 if (count($argv) < 2) {
     die("\tUsage: printwbmxl.php WBXML-INPUT-HERE\n\n");
 }
-$wbxml64 = $argv[1];
+$wbxml64 = realpath($argv[1]);
+chdir(__DIR__);
 
 // include the stuff we need
 include_once('../../src/lib/utils/stringstreamwrapper.php');
@@ -71,7 +72,7 @@ class ZLog {
 }
 
 // setup
-$wxbml = StringStreamWrapper::Open($wbxml64);
+$wxbml = file_exists($wbxml64) ? fopen($wbxml64, 'r+') : StringStreamWrapper::Open($wbxml64);
 $base64filter = stream_filter_append($wxbml, 'convert.base64-decode');
 $decoder = new WBXMLDecoder($wxbml);
 if (! $decoder->IsWBXML()) {
