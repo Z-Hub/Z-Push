@@ -710,7 +710,7 @@ class ASDevice extends StateObject {
             $this->backend2folderidCache[$backendid] = $newHash;
             return $newHash;
         }
-        ZLog::Write(LOGLEVEL_WARN, sprintf("ASDevice->GetFolderIdForBackendId(): no valid condition found for determining folderid for backendid '%s'. Returning as is!", Utils::PrintAsString($backendid)));
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ASDevice->GetFolderIdForBackendId(): no valid condition found for determining folderid for backendid '%s'. Returning as is!", Utils::PrintAsString($backendid)));
         return $backendid;
     }
 
