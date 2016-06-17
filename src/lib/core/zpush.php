@@ -601,6 +601,7 @@ class ZPush {
             else
                 throw new FatalMisconfigurationException(sprintf("Backend provider '%s' can not be loaded. Check configuration!", $ourBackend));
         }
+        spl_autoload_unregister('\ZPush::IncludeBackend');
         return ZPush::$backend;
     }
 
