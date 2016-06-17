@@ -575,6 +575,7 @@ class ZPush {
      * @return object     IBackend implementation
      */
     static public function GetBackend() {
+        $isIbar = false;
         // if the backend is not yet loaded, load backend drivers and instantiate it
         if (!isset(ZPush::$backend)) {
             // Initialize our backend
@@ -594,6 +595,8 @@ class ZPush {
             }
             elseif (!class_exists($ourBackend)) {
                 spl_autoload_register('\ZPush::IncludeBackend');
+                $isIbar = true;
+                ZLog::Write(LOGLEVEL_DEBUG, "ZPush::GetBackend(): autoload register ZPush::IncludeBackend");
             }
 
             if (class_exists($ourBackend))
@@ -601,7 +604,10 @@ class ZPush {
             else
                 throw new FatalMisconfigurationException(sprintf("Backend provider '%s' can not be loaded. Check configuration!", $ourBackend));
         }
-        spl_autoload_unregister('\ZPush::IncludeBackend');
+        if ($isIbar) {
+            spl_autoload_unregister('\ZPush::IncludeBackend');
+            ZLog::Write(LOGLEVEL_DEBUG, "ZPush::GetBackend(): autoload unregister ZPush::IncludeBackend");
+        }
         return ZPush::$backend;
     }
 
