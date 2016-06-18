@@ -130,6 +130,43 @@ class ZLog {
         return (isset(self::$lastLogs[$loglevel]))?self::$lastLogs[$loglevel]:false;
     }
 
+	/**
+	 * Set given users, so they get an extra log-file
+	 *
+	 * Depending on when you call that function, insted of defining users in config.php,
+	 * you might not get all log-messages.
+	 * Setting it eg. in Login method of backend misses Start and cmd='***' lines.
+	 *
+	 * @param array $users
+	 */
+	static public function SetSpecialLogUsers($users) {
+		self::getLogger()->SetSpecialLogUsers($users);
+	}
+
+	/**
+	 * Enable device specific logging for a given device to $dev_id.log
+	 *
+	 * If logger does not support setting a specific file, logging will happen
+	 * as if enabled for the user of the device.
+	 *
+	 * @param string $dev_id
+	 */
+	public function EnableDeviceLog($dev_id) {
+        global $specialLogUsers; // This variable comes from the configuration file (config.php)
+
+		if ($dev_id === Request::GetDeviceID())
+		{
+			$logger = self::getLogger();
+			list($user) = Utils::SplitDomainUser(strtolower(Request::GetGETUser()));
+			if (!in_array($user, $specialLogUsers)) $specialLogUsers[] = $user;
+			$logger->SetSpecialLogUsers($specialLogUsers);
+
+			if (method_exists($logger, 'setLogToUserFile')) {
+				$logger->setLogToUserFile(preg_replace('/[^a-z0-9]/', '_', $dev_id).'.log');
+			}
+		}
+	}
+
     /**
      * Returns the logger object. If no logger has been initialized, FileLog will be initialized and returned.
      *

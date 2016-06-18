@@ -61,9 +61,11 @@ class FileLog extends Log {
     }
 
     /**
+     * Set user log-file relative to log directory
+     *
      * @param string $value
      */
-    private function setLogToUserFile($value) {
+    public function setLogToUserFile($value) {
         $this->log_to_user_file = $value;
     }
 
