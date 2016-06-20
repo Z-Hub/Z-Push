@@ -337,23 +337,25 @@ class BackendKopano implements IBackend, ISearchProvider {
      */
     public function GetHierarchy() {
         $folders = array();
-        $importer = false;
         $mapiprovider = new MAPIProvider($this->session, $this->store);
 
         $rootfolder = mapi_msgstore_openentry($this->store);
         $rootfolderprops = mapi_getprops($rootfolder, array(PR_SOURCE_KEY));
-        $rootfoldersourcekey = bin2hex($rootfolderprops[PR_SOURCE_KEY]);
 
         $hierarchy =  mapi_folder_gethierarchytable($rootfolder, CONVENIENT_DEPTH);
-        $rows = mapi_table_queryallrows($hierarchy, array(PR_ENTRYID));
+        $rows = mapi_table_queryallrows($hierarchy, array(PR_DISPLAY_NAME, PR_PARENT_ENTRYID, PR_ENTRYID, PR_SOURCE_KEY, PR_PARENT_SOURCE_KEY, PR_CONTAINER_CLASS, PR_ATTR_HIDDEN, PR_EXTENDED_FOLDER_FLAGS, PR_FOLDER_TYPE));
 
         foreach ($rows as $row) {
-            $mapifolder = mapi_msgstore_openentry($this->store, $row[PR_ENTRYID]);
-            $folderprops = mapi_getprops($mapifolder, array(PR_DISPLAY_NAME, PR_PARENT_ENTRYID, PR_ENTRYID, PR_SOURCE_KEY, PR_PARENT_SOURCE_KEY, PR_CONTAINER_CLASS, PR_ATTR_HIDDEN, PR_EXTENDED_FOLDER_FLAGS));
-            $folder = $mapiprovider->GetFolder($folderprops);
-
-            if (isset($folder->parentid) && $folder->parentid != $rootfoldersourcekey)
+            // do not display hidden and search folders
+            if ((isset($row[PR_ATTR_HIDDEN]) && $row[PR_ATTR_HIDDEN]) ||
+                (isset($row[PR_FOLDER_TYPE]) && $row[PR_FOLDER_TYPE] == FOLDER_SEARCH) ||
+                (isset($row[PR_PARENT_SOURCE_KEY]) && $row[PR_PARENT_SOURCE_KEY] == $rootfolderprops[PR_SOURCE_KEY]) ) {
+                continue;
+            }
+            $folder = $mapiprovider->GetFolder($row);
+            if ($folder) {
                 $folders[] = $folder;
+            }
         }
 
         return $folders;
