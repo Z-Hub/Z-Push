@@ -62,11 +62,7 @@ class WebserviceInfo {
 
         foreach ($folders as $folder) {
             $folder->StripData();
-            unset($folder->Store);
-            unset($folder->flags);
-            unset($folder->content);
-            unset($folder->NoBackendFolder);
-            unset($folder->ReadOnly);
+            unset($folder->Store, $folder->flags, $folder->content, $folder->NoBackendFolder, $folder->ReadOnly);
             $output[] = $folder;
         }
 
