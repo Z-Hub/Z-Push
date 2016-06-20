@@ -382,6 +382,19 @@ abstract class SyncObject extends Streamer {
     }
 
     /**
+     * Removes not necessary data from the object
+     *
+     * @access public
+     * @return boolean
+     */
+    public function StripData() {
+        if (isset($this->unsetVars)) {
+            unset($this->unsetVars);
+        }
+        return parent::StripData();
+    }
+
+    /**
      * Method checks if the object has the minimum of required parameters
      * and fullfills semantic dependencies
      *

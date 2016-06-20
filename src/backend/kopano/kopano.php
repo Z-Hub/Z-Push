@@ -358,6 +358,14 @@ class BackendKopano implements IBackend, ISearchProvider {
             }
         }
 
+        // reloop the folders to make sure all parentids are mapped correctly
+        $dm = ZPush::GetDeviceManager();
+        foreach ($folders as $folder) {
+            if ($folder->parentid !== "0") {
+                $folder->parentid = $dm->GetFolderIdForBackendId($folder->parentid);
+            }
+        }
+
         return $folders;
     }
 

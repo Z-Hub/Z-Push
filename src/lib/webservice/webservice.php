@@ -69,9 +69,13 @@ class Webservice {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("Webservice::HandleWebservice('%s'): executing WebserviceDevice service", $commandCode));
             $this->server->setClass("WebserviceDevice");
         }
-
         // the webservice command is handled by its class
-        if ($commandCode == ZPush::COMMAND_WEBSERVICE_USERS) {
+        else if ($commandCode == ZPush::COMMAND_WEBSERVICE_INFO) {
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("Webservice::HandleWebservice('%s'): executing WebserviceInfo service", $commandCode));
+            $this->server->setClass("WebserviceInfo");
+        }
+        // the webservice command is handled by its class
+        else if ($commandCode == ZPush::COMMAND_WEBSERVICE_USERS) {
             if (!defined("ALLOW_WEBSERVICE_USERS_ACCESS") || ALLOW_WEBSERVICE_USERS_ACCESS !== true)
                 throw new HTTPReturnCodeException("Access to the WebserviceUsers service is disabled in configuration. Enable setting ALLOW_WEBSERVICE_USERS_ACCESS", 403);
 
