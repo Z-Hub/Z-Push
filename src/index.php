@@ -108,6 +108,10 @@ include_once(ZPUSH_CONFIG);
         // Do the actual request
         header(ZPush::GetServerHeader());
 
+        if (RequestProcessor::isUserAuthenticated()) {
+            header("X-Z-Push-Version: ". @constant('ZPUSH_VERSION'));
+        }
+
         // announce the supported AS versions (if not already sent to device)
         if (ZPush::GetDeviceManager()->AnnounceASVersion()) {
             $versions = ZPush::GetSupportedProtocolVersions(true);
