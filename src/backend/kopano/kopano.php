@@ -349,7 +349,8 @@ class BackendKopano implements IBackend, ISearchProvider {
 
         foreach ($rows as $row) {
             $mapifolder = mapi_msgstore_openentry($this->store, $row[PR_ENTRYID]);
-            $folder = $mapiprovider->GetFolder($mapifolder);
+            $folderprops = mapi_getprops($mapifolder, array(PR_DISPLAY_NAME, PR_PARENT_ENTRYID, PR_ENTRYID, PR_SOURCE_KEY, PR_PARENT_SOURCE_KEY, PR_CONTAINER_CLASS, PR_ATTR_HIDDEN, PR_EXTENDED_FOLDER_FLAGS));
+            $folder = $mapiprovider->GetFolder($folderprops);
 
             if (isset($folder->parentid) && $folder->parentid != $rootfoldersourcekey)
                 $folders[] = $folder;
