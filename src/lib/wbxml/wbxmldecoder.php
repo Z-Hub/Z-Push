@@ -104,7 +104,7 @@ class WBXMLDecoder extends WBXMLDefs {
      * @access public
      */
     public function WBXMLDecoder($input) {
-        $this->log = defined('WBXML_DEBUG') && WBXML_DEBUG;
+        $this->log = ZLog::WbxmlDebug();
 
         $this->in = $input;
 

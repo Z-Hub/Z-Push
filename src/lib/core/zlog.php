@@ -57,8 +57,6 @@ class ZLog {
      * @return boolean
      */
     static public function Initialize() {
-        $logger = self::getLogger();
-
         // define some constants for the logging
         if (!defined('LOGUSERLEVEL'))
             define('LOGUSERLEVEL', LOGLEVEL_OFF);
@@ -66,16 +64,17 @@ class ZLog {
         if (!defined('LOGLEVEL'))
             define('LOGLEVEL', LOGLEVEL_OFF);
 
-        if (!defined('WBXML_DEBUG')) {
-            // define the WBXML_DEBUG mode on user basis depending on the configurations
-            if (LOGLEVEL >= LOGLEVEL_WBXML || (LOGUSERLEVEL >= LOGLEVEL_WBXML && $logger->HasSpecialLogUsers()))
-                define('WBXML_DEBUG', true);
-            else
-                define('WBXML_DEBUG', false);
-        }
-
         return true;
     }
+
+	/**
+	 * Check if WBXML logging is enabled in current LOG(USER)LEVEL
+	 *
+	 * @return boolean
+	 */
+	static public function WbxmlDebug() {
+		return LOGLEVEL >= LOGLEVEL_WBXML || (LOGUSERLEVEL >= LOGLEVEL_WBXML && self::getLogger()->HasSpecialLogUsers());
+	}
 
     /**
      * Writes a log line
