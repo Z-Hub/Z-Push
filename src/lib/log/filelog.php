@@ -6,7 +6,7 @@
  *
  * Created   :   13.11.2015
  *
- * Copyright 2007 - 2015 Zarafa Deutschland GmbH
+ * Copyright 2007 - 2016 Zarafa Deutschland GmbH
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License, version 3,
@@ -48,6 +48,12 @@ class FileLog extends Log {
     private $log_to_user_file = false;
 
     /**
+     * Constructor
+     */
+    public function __construct() {
+    }
+
+    /**
      * Get the log user file.
      *
      * @access private
@@ -55,25 +61,25 @@ class FileLog extends Log {
      */
     private function getLogToUserFile() {
         if ($this->log_to_user_file === false) {
-            $this->setLogToUserFile(preg_replace('/[^a-z0-9]/', '_', strtolower($this->GetAuthUser())) . '.log');
+            $this->SetLogToUserFile(preg_replace('/[^a-z0-9]/', '_', strtolower($this->GetAuthUser())) . '.log');
         }
         return $this->log_to_user_file;
     }
 
     /**
-     * Set user log-file relative to log directory
+     * Set user log-file relative to log directory.
      *
      * @param string $value
+     *
+     * @access public
+     * @return void
      */
-    public function setLogToUserFile($value) {
+    public function SetLogToUserFile($value) {
         $this->log_to_user_file = $value;
     }
 
-    public function __construct() {
-    }
-
     /**
-     * Returns the string to be logged
+     * Returns the string to be logged.
      *
      * @param int $loglevel
      * @param string $message

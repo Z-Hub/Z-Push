@@ -6,7 +6,7 @@
 *
 * Created   :   01.10.2007
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -63,7 +63,7 @@ class WBXMLEncoder extends WBXMLDefs {
     private $bodyparts;
 
     public function WBXMLEncoder($output, $multipart = false) {
-        $this->log = ZLog::WbxmlDebug();
+        $this->log = ZLog::IsWbxmlDebugEnabled();
 
         $this->_out = $output;
 

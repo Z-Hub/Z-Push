@@ -6,7 +6,7 @@
  *
  * Created   :   13.11.2015
  *
- * Copyright 2007 - 2015 Zarafa Deutschland GmbH
+ * Copyright 2007 - 2016 Zarafa Deutschland GmbH
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License, version 3,
@@ -83,6 +83,12 @@ abstract class Log {
      * @var array
      */
     private $unauthMessageCache = array();
+
+    /**
+     * Constructor
+     */
+    public function __construct() {
+    }
 
     /**
      * @access public
@@ -183,7 +189,7 @@ abstract class Log {
     /**
      * @param string $user
      *
-     * @acces public
+     * @access public
      * @return bool
      */
     public function IsUserInSpecialLogUsers($user) {
@@ -215,12 +221,15 @@ abstract class Log {
         $this->specialLogUsers = $value;
     }
 
-    public function __construct() {
-    }
-
     /**
+     * Logs a message with a given log level.
+     *
+     *
      * @param int $loglevel
      * @param string $message
+     *
+     * @access public
+     * @return void
      */
     public function Log($loglevel, $message) {
         if ($loglevel <= LOGLEVEL) {
@@ -248,13 +257,30 @@ abstract class Log {
     /**
      * This function is used as an event for log implementer.
      * It happens when the ZLog static class is finished with the initialization of this instance.
+     *
+     * @access public
+     * @return void
      */
     public function AfterInitialize() {
     }
 
     /**
+     * Set user log-file relative to log directory.
+     *
+     * @param string $value
+     *
+     * @access public
+     * @return void
+     */
+    public function SetLogToUserFile($value) {
+    }
+
+    /**
      * This function is used as an event for log implementer.
      * It happens when the a call to the Log function is finished.
+     *
+     * @access protected
+     * @return void
      */
     protected function afterLog($loglevel, $message) {
     }

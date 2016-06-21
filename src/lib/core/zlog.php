@@ -6,7 +6,7 @@
 *
 * Created   :   01.10.2007
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -51,7 +51,7 @@ class ZLog {
     static private $logger = null;
 
     /**
-     * Initializes the logging
+     * Initializes the logging.
      *
      * @access public
      * @return boolean
@@ -67,24 +67,25 @@ class ZLog {
         return true;
     }
 
-	/**
-	 * Check if WBXML logging is enabled in current LOG(USER)LEVEL
-	 *
-	 * @return boolean
-	 */
-	static public function WbxmlDebug() {
-		return LOGLEVEL >= LOGLEVEL_WBXML || (LOGUSERLEVEL >= LOGLEVEL_WBXML && self::getLogger()->HasSpecialLogUsers());
-	}
+    /**
+     * Check if WBXML logging is enabled in current LOG(USER)LEVEL.
+     *
+     * @access public
+     * @return boolean
+     */
+    static public function IsWbxmlDebugEnabled() {
+        return LOGLEVEL >= LOGLEVEL_WBXML || (LOGUSERLEVEL >= LOGLEVEL_WBXML && self::getLogger()->HasSpecialLogUsers());
+    }
 
     /**
-     * Writes a log line
+     * Writes a log line.
      *
      * @param int       $loglevel           one of the defined LOGLEVELS
      * @param string    $message
      * @param boolean   $truncate           indicate if the message should be truncated, default true
      *
      * @access public
-     * @return
+     * @return void
      */
     static public function Write($loglevel, $message, $truncate = true) {
         // truncate messages longer than 10 KB
@@ -108,7 +109,7 @@ class ZLog {
     }
 
     /**
-     * Returns logged information about the WBXML stack
+     * Returns logged information about the WBXML stack.
      *
      * @access public
      * @return string
@@ -118,7 +119,7 @@ class ZLog {
     }
 
     /**
-     * Returns the last message logged for a log level
+     * Returns the last message logged for a log level.
      *
      * @param int       $loglevel           one of the defined LOGLEVELS
      *
@@ -129,42 +130,42 @@ class ZLog {
         return (isset(self::$lastLogs[$loglevel]))?self::$lastLogs[$loglevel]:false;
     }
 
-	/**
-	 * Set given users, so they get an extra log-file
-	 *
-	 * Depending on when you call that function, insted of defining users in config.php,
-	 * you might not get all log-messages.
-	 * Setting it eg. in Login method of backend misses Start and cmd='***' lines.
-	 *
-	 * @param array $users
-	 */
-	static public function SetSpecialLogUsers($users) {
-		self::getLogger()->SetSpecialLogUsers($users);
-	}
+    /**
+     * Set given users, so they get an extra log-file.
+     *
+     * Depending on when you call that function, instead of defining users in config.php,
+     * you might not get all log-messages.
+     * Setting it eg. in Login method of backend misses Start and cmd='***' lines.
+     *
+     * @param array $users
+     */
+    static public function SetSpecialLogUsers($users) {
+        self::getLogger()->SetSpecialLogUsers($users);
+    }
 
-	/**
-	 * Enable device specific logging for a given device to $dev_id.log
-	 *
-	 * If logger does not support setting a specific file, logging will happen
-	 * as if enabled for the user of the device.
-	 *
-	 * @param string $dev_id
-	 */
-	public function EnableDeviceLog($dev_id) {
+    /**
+     * Enable device specific logging for a given device to $devId.log.
+     *
+     * If logger does not support setting a specific file, logging will happen
+     * as if enabled for the user of the device.
+     *
+     * @param string $devId
+     * @access public
+     *
+     * @return void
+     */
+    public function EnableDeviceLog($devId) {
         global $specialLogUsers; // This variable comes from the configuration file (config.php)
 
-		if ($dev_id === Request::GetDeviceID())
-		{
-			$logger = self::getLogger();
-			list($user) = Utils::SplitDomainUser(strtolower(Request::GetGETUser()));
-			if (!in_array($user, $specialLogUsers)) $specialLogUsers[] = $user;
-			$logger->SetSpecialLogUsers($specialLogUsers);
-
-			if (method_exists($logger, 'setLogToUserFile')) {
-				$logger->setLogToUserFile(preg_replace('/[^a-z0-9]/', '_', $dev_id).'.log');
-			}
-		}
-	}
+        $logger = self::getLogger();
+        if (strtolower($devId) === $logger->GetDevid()) {
+            if (!in_array($logger->GetAuthUser(), $specialLogUsers)) {
+                $specialLogUsers[] = $logger->GetAuthUser();
+            }
+            $logger->SetSpecialLogUsers($specialLogUsers);
+            $logger->SetLogToUserFile(preg_replace('/[^a-z0-9]/', '_', $logger->GetDevid()).'.log');
+        }
+    }
 
     /**
      * Returns the logger object. If no logger has been initialized, FileLog will be initialized and returned.
@@ -206,9 +207,6 @@ class ZLog {
 /**----------------------------------------------------------------------------------------------------------
  * Legacy debug stuff
  */
-
-// E_DEPRECATED only available since PHP 5.3.0
-if (!defined('E_DEPRECATED')) define(E_DEPRECATED, 8192);
 
 // TODO review error handler
 function zpush_error_handler($errno, $errstr, $errfile, $errline, $errcontext) {
