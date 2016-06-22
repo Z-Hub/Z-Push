@@ -176,6 +176,7 @@ return array(
     'WBXMLException' => $baseDir . '/lib/exceptions/wbxmlexception.php',
     'Webservice' => $baseDir . '/lib/webservice/webservice.php',
     'WebserviceDevice' => $baseDir . '/lib/webservice/webservicedevice.php',
+    'WebserviceInfo' => $baseDir . '/lib/webservice/webserviceinfo.php',
     'WebserviceUsers' => $baseDir . '/lib/webservice/webserviceusers.php',
     'ZLog' => $baseDir . '/lib/core/zlog.php',
     'ZPush' => $baseDir . '/lib/core/zpush.php',

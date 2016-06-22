@@ -97,6 +97,7 @@ class ZPush {
     // Webservice commands
     const COMMAND_WEBSERVICE_DEVICE = -100;
     const COMMAND_WEBSERVICE_USERS = -101;
+    const COMMAND_WEBSERVICE_INFO = -102;
 
     // Latest supported State version
     const STATE_VERSION = IStateMachine::STATEVERSION_02;
@@ -145,6 +146,7 @@ class ZPush {
 
                     self::COMMAND_WEBSERVICE_DEVICE => array(self::REQUESTHANDLER => "Webservice", self::PLAININPUT, self::NOACTIVESYNCCOMMAND, self::WEBSERVICECOMMAND),
                     self::COMMAND_WEBSERVICE_USERS  => array(self::REQUESTHANDLER => "Webservice", self::PLAININPUT, self::NOACTIVESYNCCOMMAND, self::WEBSERVICECOMMAND),
+                    self::COMMAND_WEBSERVICE_INFO   => array(self::REQUESTHANDLER => "Webservice", self::PLAININPUT, self::NOACTIVESYNCCOMMAND, self::WEBSERVICECOMMAND),
             );
 
 
@@ -366,6 +368,9 @@ class ZPush {
         if (!defined('KOE_CAPABILITY_NOTES')) {
             define('KOE_CAPABILITY_NOTES', false);
         }
+        if (!defined('KOE_CAPABILITY_SHAREDFOLDER')) {
+            define('KOE_CAPABILITY_SHAREDFOLDER', false);
+        }
         if (!defined('KOE_GAB_FOLDERID')) {
             define('KOE_GAB_FOLDERID', '');
         }
@@ -577,6 +582,8 @@ class ZPush {
     static public function GetBackend() {
         // if the backend is not yet loaded, load backend drivers and instantiate it
         if (!isset(ZPush::$backend)) {
+            $isIbar = false;
+
             // Initialize our backend
             $ourBackend = @constant('BACKEND_PROVIDER');
 
@@ -594,12 +601,19 @@ class ZPush {
             }
             elseif (!class_exists($ourBackend)) {
                 spl_autoload_register('\ZPush::IncludeBackend');
+                $isIbar = true;
+                ZLog::Write(LOGLEVEL_DEBUG, "ZPush::GetBackend(): autoload register ZPush::IncludeBackend");
             }
 
             if (class_exists($ourBackend))
                 ZPush::$backend = new $ourBackend();
             else
                 throw new FatalMisconfigurationException(sprintf("Backend provider '%s' can not be loaded. Check configuration!", $ourBackend));
+
+            if ($isIbar) {
+                spl_autoload_unregister('\ZPush::IncludeBackend');
+                ZLog::Write(LOGLEVEL_DEBUG, "ZPush::GetBackend(): autoload unregister ZPush::IncludeBackend");
+            }
         }
         return ZPush::$backend;
     }
