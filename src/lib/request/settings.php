@@ -63,8 +63,9 @@ class Settings extends RequestProcessor {
             if(KOE_CAPABILITY_RECEIVEFLAGS)  $cap[] = "receiveflags";
             if(KOE_CAPABILITY_SENDFLAGS)     $cap[] = "sendflags";
             if(KOE_CAPABILITY_OOFTIMES)      $cap[] = "ooftime";
-            else if(KOE_CAPABILITY_OOF)      $cap[] = "oof";        // 'ooftime' superseeds 'oof'. If 'ooftime' is set, 'oof' should not be defined.
+            elseif(KOE_CAPABILITY_OOF)       $cap[] = "oof";        // 'ooftime' superseeds 'oof'. If 'ooftime' is set, 'oof' should not be defined.
             if(KOE_CAPABILITY_NOTES)         $cap[] = "notes";
+            if(KOE_CAPABILITY_SHAREDFOLDER)  $cap[] = "sharedfolder";
 
             self::$specialHeaders = array();
             self::$specialHeaders[] = "X-Push-Capabilities: ". implode(",",$cap);
