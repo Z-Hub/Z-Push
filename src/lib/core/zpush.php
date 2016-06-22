@@ -368,6 +368,9 @@ class ZPush {
         if (!defined('KOE_CAPABILITY_NOTES')) {
             define('KOE_CAPABILITY_NOTES', false);
         }
+        if (!defined('KOE_CAPABILITY_SHAREDFOLDER')) {
+            define('KOE_CAPABILITY_SHAREDFOLDER', true);
+        }
         if (!defined('KOE_GAB_FOLDERID')) {
             define('KOE_GAB_FOLDERID', '');
         }
