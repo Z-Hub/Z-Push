@@ -64,7 +64,20 @@ class ZLog {
         if (!defined('LOGLEVEL'))
             define('LOGLEVEL', LOGLEVEL_OFF);
 
+        self::RequestHeader();
+
         return true;
+    }
+
+    /**
+     * Write request header to log
+     */
+    static protected function RequestHeader() {
+        self::Write(LOGLEVEL_DEBUG,"-------- Start");
+        self::Write(LOGLEVEL_DEBUG,
+            sprintf("cmd='%s' devType='%s' devId='%s' getUser='%s' from='%s' version='%s' method='%s'",
+                Request::GetCommand(), Request::GetDeviceType(), Request::GetDeviceID(), Request::GetGETUser(),
+                Request::GetRemoteAddr(), @constant('ZPUSH_VERSION'), Request::GetMethod()));
     }
 
     /**
@@ -164,6 +177,8 @@ class ZLog {
             }
             $logger->SetSpecialLogUsers($specialLogUsers);
             $logger->SetLogToUserFile(preg_replace('/[^a-z0-9]/', '_', $logger->GetDevid()).'.log');
+
+            self::RequestHeader();
         }
     }
 

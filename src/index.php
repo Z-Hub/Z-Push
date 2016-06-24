@@ -64,11 +64,6 @@ include_once(ZPUSH_CONFIG);
         Request::Initialize();
         ZLog::Initialize();
 
-        ZLog::Write(LOGLEVEL_DEBUG,"-------- Start");
-        ZLog::Write(LOGLEVEL_DEBUG,
-                sprintf("cmd='%s' devType='%s' devId='%s' getUser='%s' from='%s' version='%s' method='%s'",
-                        Request::GetCommand(), Request::GetDeviceType(), Request::GetDeviceID(), Request::GetGETUser(), Request::GetRemoteAddr(), @constant('ZPUSH_VERSION'), Request::GetMethod() ));
-
         // Stop here if this is an OPTIONS request
         if (Request::IsMethodOPTIONS())
             throw new NoPostRequestException("Options request", NoPostRequestException::OPTIONS_REQUEST);
