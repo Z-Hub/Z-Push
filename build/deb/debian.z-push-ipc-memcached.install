@@ -1,0 +1,2 @@
+conftmp/memcached.conf.php /etc/z-push/
+backend/ipcmemcached            /usr/share/z-push/backend/
