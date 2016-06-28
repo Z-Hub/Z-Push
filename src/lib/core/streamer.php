@@ -53,6 +53,7 @@ class Streamer implements Serializable {
     const STREAMER_TYPE = 3;
     const STREAMER_PROP = 4;
     const STREAMER_RONOTIFY = 5;
+    const STREAMER_VALUEMAP = 20;
     const STREAMER_TYPE_DATE = 1;
     const STREAMER_TYPE_HEX = 2;
     const STREAMER_TYPE_DATE_DASHES = 3;

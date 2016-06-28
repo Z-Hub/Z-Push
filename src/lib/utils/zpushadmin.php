@@ -108,7 +108,13 @@ class ZPushAdmin {
 
                 // load all collections of device also loading states and loading hierarchy, but not checking permissions
                 $sc->LoadAllCollections(true, true, false, true);
+            }
+            catch (StateInvalidException $sive) {
+                ZLog::Write(LOGLEVEL_WARN, sprintf("ZPushAdmin::GetDeviceDetails(): device '%s' of user '%s' has invalid states. Please sync to solve this issue.", $devid, $user));
+                $device->SetDeviceError("Invalid states. Please force synchronization!");
+            }
 
+            if ($sc) {
                 if ($sc->GetLastSyncTime())
                     $device->SetLastSyncTime($sc->GetLastSyncTime());
 
@@ -131,11 +137,6 @@ class ZPushAdmin {
                     }
                 }
             }
-            catch (StateInvalidException $sive) {
-                ZLog::Write(LOGLEVEL_WARN, sprintf("ZPushAdmin::GetDeviceDetails(): device '%s' of user '%s' has invalid states. Please sync to solve this issue.", $devid, $user));
-                $device->SetDeviceError("Invalid states. Please force synchronization!");
-            }
-
             return $device;
         }
         catch (StateNotFoundException $e) {

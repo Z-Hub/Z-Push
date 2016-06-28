@@ -126,7 +126,9 @@ class SyncMail extends SyncObject {
 
                     SYNC_POOMMAIL_READ                                  => array (  self::STREAMER_VAR      => "read",
                                                                                     self::STREAMER_CHECKS   => array(   self::STREAMER_CHECK_ONEVALUEOF     => array(0,1) ),
-                                                                                    self::STREAMER_RONOTIFY => true),
+                                                                                    self::STREAMER_RONOTIFY => true,
+                                                                                    self::STREAMER_VALUEMAP => array(   0 => "No",
+                                                                                                                        1 => "Yes")),
 
                     SYNC_POOMMAIL_ATTACHMENTS                           => array (  self::STREAMER_VAR      => "attachments",
                                                                                     self::STREAMER_TYPE     => "SyncAttachment",

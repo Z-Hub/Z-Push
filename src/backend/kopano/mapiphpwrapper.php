@@ -155,7 +155,7 @@ class PHPWrapper {
         else $message->flags = $flags;
 
         $this->importer->ImportMessageChange($this->prefix.bin2hex($sourcekey), $message);
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("PHPWrapper->ImportMessageChange(): change for :'%s'", $this->prefix.bin2hex($sourcekey)));
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("PHPWrapper->ImportMessageChange(): change for: '%s'", $this->prefix.bin2hex($sourcekey)));
 
         // Tell MAPI it doesn't need to do anything itself, as we've done all the work already.
         return SYNC_E_IGNORE;

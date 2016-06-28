@@ -123,7 +123,11 @@ class SyncAppointment extends SyncObject {
                     // 3 = Confident
                     SYNC_POOMCAL_SENSITIVITY                            => array (  self::STREAMER_VAR      => "sensitivity",
                                                                                     self::STREAMER_CHECKS   => array(   self::STREAMER_CHECK_ONEVALUEOF => array(0,1,2,3) ),
-                                                                                    self::STREAMER_RONOTIFY => true),
+                                                                                    self::STREAMER_RONOTIFY => true,
+                                                                                    self::STREAMER_VALUEMAP => array(   0 => "Normal",
+                                                                                                                        1 => "Personal",
+                                                                                                                        2 => "Private",
+                                                                                                                        3 => "Confident")),
 
                     // Busystatus values
                     // 0 = Free
@@ -134,11 +138,18 @@ class SyncAppointment extends SyncObject {
                     SYNC_POOMCAL_BUSYSTATUS                             => array (  self::STREAMER_VAR      => "busystatus",
                                                                                     self::STREAMER_CHECKS   => array(   self::STREAMER_CHECK_REQUIRED   => self::STREAMER_CHECK_SETTWO,
                                                                                                                         self::STREAMER_CHECK_ONEVALUEOF => array(0,1,2,3,4) ),
-                                                                                    self::STREAMER_RONOTIFY => true),
+                                                                                    self::STREAMER_RONOTIFY => true,
+                                                                                    self::STREAMER_VALUEMAP => array(   0 => "Free",
+                                                                                                                        1 => "Tentative",
+                                                                                                                        2 => "Busy",
+                                                                                                                        3 => "Out of office",
+                                                                                                                        4 => "Working Elsewhere")),
 
                     SYNC_POOMCAL_ALLDAYEVENT                            => array (  self::STREAMER_VAR      => "alldayevent",
                                                                                     self::STREAMER_CHECKS   => array(   self::STREAMER_CHECK_ZEROORONE      => self::STREAMER_CHECK_SETZERO),
-                                                                                    self::STREAMER_RONOTIFY => true),
+                                                                                    self::STREAMER_RONOTIFY => true,
+                                                                                    self::STREAMER_VALUEMAP => array(   0 => "No",
+                                                                                                                        1 => "Yes")),
 
                     SYNC_POOMCAL_REMINDER                               => array (  self::STREAMER_VAR      => "reminder",
                                                                                     self::STREAMER_CHECKS   => array(   self::STREAMER_CHECK_CMPHIGHER      => -1),
@@ -158,7 +169,16 @@ class SyncAppointment extends SyncObject {
                     // 15 = as 7
                     SYNC_POOMCAL_MEETINGSTATUS                          => array (  self::STREAMER_VAR      => "meetingstatus",
                                                                                     self::STREAMER_CHECKS   => array(   self::STREAMER_CHECK_ONEVALUEOF => array(0,1,3,5,7,9,11,13,15) ),
-                                                                                    self::STREAMER_RONOTIFY => true),
+                                                                                    self::STREAMER_RONOTIFY => true,
+                                                                                    self::STREAMER_VALUEMAP => array(   0 => "Not a meeting",
+                                                                                                                        1 => "Meeting",
+                                                                                                                        3 => "Meeting received",
+                                                                                                                        5 => "Meeting canceled",
+                                                                                                                        7 => "Meeting canceled and received",
+                                                                                                                        9 => "Meeting",
+                                                                                                                       11 => "Meeting received",
+                                                                                                                       13 => "Meeting canceled",
+                                                                                                                       15 => "Meeting canceled and received",)),
 
                     SYNC_POOMCAL_ATTENDEES                              => array (  self::STREAMER_VAR      => "attendees",
                                                                                     self::STREAMER_TYPE     => "SyncAttendee",

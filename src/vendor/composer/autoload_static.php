@@ -183,6 +183,7 @@ class ComposerStaticInitd6749fc2fb9944bbe86b2b7d79a7852f
         'WBXMLException' => __DIR__ . '/../..' . '/lib/exceptions/wbxmlexception.php',
         'Webservice' => __DIR__ . '/../..' . '/lib/webservice/webservice.php',
         'WebserviceDevice' => __DIR__ . '/../..' . '/lib/webservice/webservicedevice.php',
+        'WebserviceInfo' => __DIR__ . '/../..' . '/lib/webservice/webserviceinfo.php',
         'WebserviceUsers' => __DIR__ . '/../..' . '/lib/webservice/webserviceusers.php',
         'ZLog' => __DIR__ . '/../..' . '/lib/core/zlog.php',
         'ZPush' => __DIR__ . '/../..' . '/lib/core/zpush.php',

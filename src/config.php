@@ -313,6 +313,8 @@
     define('KOE_CAPABILITY_OOFTIMES', true);
     // Notes support
     define('KOE_CAPABILITY_NOTES', true);
+    // Shared folder support
+    define('KOE_CAPABILITY_SHAREDFOLDER', true);
 
     // To synchronize the GAB KOE, the GAB store and folderid need to be specified.
     // Use the gab-sync script to generate this data. The name needs to
