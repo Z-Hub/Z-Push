@@ -482,6 +482,12 @@ class MAPIProvider {
                 $exception->busystatus = fbTentative;
             }
 
+            // if an exception lasts 24 hours and the series are an allday events, set also the exception to allday event,
+            // otherwise it will be a 24 hour long event on some mobiles.
+            // @see https://jira.z-hub.io/browse/ZP-980
+            if (isset($exception->starttime, $exception->endtime) && ($exception->endtime - $exception->starttime == 86400) && $syncMessage->alldayevent) {
+                $exception->alldayevent = 1;
+            }
             array_push($syncMessage->exceptions, $exception);
         }
 
