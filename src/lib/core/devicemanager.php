@@ -1113,6 +1113,11 @@ class DeviceManager {
             return $policies[ASDevice::DEFAULTPOLICYNAME];
         }
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("DeviceManager->getProvisioningPolicies(): loaded '%s' policy.", $policyName));
+
+        // Always load default policies, so that if a policy extends a default policy it doesn't have to copy all the values
+        if ($policyName != ASDevice::DEFAULTPOLICYNAME) {
+            $policies[$policyName] = array_replace_recursive($policies[ASDevice::DEFAULTPOLICYNAME], $policies[$policyName]);
+        }
         return $policies[$policyName];
     }
 
