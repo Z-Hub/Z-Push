@@ -342,22 +342,25 @@ class BackendZarafa implements IBackend, ISearchProvider {
      */
     public function GetHierarchy() {
         $folders = array();
-        $importer = false;
         $mapiprovider = new MAPIProvider($this->session, $this->store);
 
         $rootfolder = mapi_msgstore_openentry($this->store);
         $rootfolderprops = mapi_getprops($rootfolder, array(PR_SOURCE_KEY));
-        $rootfoldersourcekey = bin2hex($rootfolderprops[PR_SOURCE_KEY]);
 
         $hierarchy =  mapi_folder_gethierarchytable($rootfolder, CONVENIENT_DEPTH);
-        $rows = mapi_table_queryallrows($hierarchy, array(PR_ENTRYID));
+        $rows = mapi_table_queryallrows($hierarchy, array(PR_DISPLAY_NAME, PR_PARENT_ENTRYID, PR_ENTRYID, PR_SOURCE_KEY, PR_PARENT_SOURCE_KEY, PR_CONTAINER_CLASS, PR_ATTR_HIDDEN, PR_EXTENDED_FOLDER_FLAGS, PR_FOLDER_TYPE));
 
         foreach ($rows as $row) {
-            $mapifolder = mapi_msgstore_openentry($this->store, $row[PR_ENTRYID]);
-            $folder = $mapiprovider->GetFolder($mapifolder);
-
-            if (isset($folder->parentid) && $folder->parentid != $rootfoldersourcekey)
+            // do not display hidden and search folders
+            if ((isset($row[PR_ATTR_HIDDEN]) && $row[PR_ATTR_HIDDEN]) ||
+                (isset($row[PR_FOLDER_TYPE]) && $row[PR_FOLDER_TYPE] == FOLDER_SEARCH) ||
+                (isset($row[PR_PARENT_SOURCE_KEY]) && $row[PR_PARENT_SOURCE_KEY] == $rootfolderprops[PR_SOURCE_KEY]) ) {
+                continue;
+            }
+            $folder = $mapiprovider->GetFolder($row);
+            if ($folder) {
                 $folders[] = $folder;
+            }
         }
 
         return $folders;
@@ -1263,15 +1266,16 @@ class BackendZarafa implements IBackend, ISearchProvider {
     private function adviseStoreToSink($store) {
         // check if we already advised the store
         if (!in_array($store, $this->changesSinkStores)) {
-            mapi_msgstore_advise($this->store, null, fnevObjectModified | fnevObjectCreated | fnevObjectMoved | fnevObjectDeleted, $this->changesSink);
-            $this->changesSinkStores[] = $store;
+            mapi_msgstore_advise($store, null, fnevObjectModified | fnevObjectCreated | fnevObjectMoved | fnevObjectDeleted, $this->changesSink);
 
             if (mapi_last_hresult()) {
-                ZLog::Write(LOGLEVEL_WARN, sprintf("ZarafaBackend->adviseStoreToSink(): failed to advised store '%s' with code 0x%X. Polling will be performed.", $this->store, mapi_last_hresult()));
+                ZLog::Write(LOGLEVEL_WARN, sprintf("ZarafaBackend->adviseStoreToSink(): failed to advised store '%s' with code 0x%X. Polling will be performed.", $store, mapi_last_hresult()));
                 return false;
             }
-            else
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->adviseStoreToSink(): advised store '%s'", $this->store));
+            else {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZarafaBackend->adviseStoreToSink(): advised store '%s'", $store));
+                $this->changesSinkStores[] = $store;
+            }
         }
         return true;
     }
