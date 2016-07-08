@@ -202,7 +202,7 @@ abstract class SyncObject extends Streamer {
         foreach ($this->mapping as $k=>$v) {
             // Do not bother with the properties for which notifications aren't required
             // or if they are not set
-            if (!isset($v[self::STREAMER_RONOTIFY]) || !$v[self::STREAMER_RONOTIFY] || (!isset($this->$v[self::STREAMER_VAR]) && !isset($odo->$v[self::STREAMER_VAR]))) {
+            if (!isset($v[self::STREAMER_RONOTIFY]) || !$v[self::STREAMER_RONOTIFY] || (!isset($this->{$v[self::STREAMER_VAR]}) && !isset($odo->{$v[self::STREAMER_VAR]}))) {
                 continue;
             }
             $val = $v[self::STREAMER_VAR];
