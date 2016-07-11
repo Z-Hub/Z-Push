@@ -453,16 +453,15 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
 
         $sourcekey = hex2bin($sk);
         $parentsourcekey = hex2bin(ZPush::GetDeviceManager()->GetBackendIdForFolderId($fsk));
+        // Backwards compatibility for old style folder ids
+        if (empty($parentsourcekey)) {
+            $parentsourcekey = $this->folderid;
+        }
         $entryid = mapi_msgstore_entryidfromsourcekey($this->store, $parentsourcekey, $sourcekey);
 
         if(!$entryid) {
             ZLog::Write(LOGLEVEL_INFO, sprintf("ReplyBackImExporter->getMessage(): Couldn't retrieve message from MAPIProvider, sourcekey: '%s', parentsourcekey: '%s'", bin2hex($sourcekey), bin2hex($parentsourcekey), bin2hex($entryid)));
-            if ($announceErrors) {
-                return $status;
-            }
-            else {
-                return false;
-            }
+            return false;
         }
 
         $mapimessage = mapi_msgstore_openentry($this->store, $entryid);
@@ -484,8 +483,7 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
                     }
                     ZPush::GetDeviceManager()->AnnounceIgnoredMessage(false, $brokenSO->id, $brokenSO);
                 }
-                // tell MAPI to ignore the message
-                return $status;
+                return false;
             }
         }
         return $message;
