@@ -505,7 +505,6 @@ class ZPushAdmin {
                                         'syncfolderid' => $syncfolderid,
                                         'name' => $so->displayname,
                                         'type' => $so->type,
-                                        'readonly' => $so->ReadOnly,
                                         'origin' => Utils::GetFolderOriginFromId($syncfolderid),
                                     );
                 }

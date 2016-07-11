@@ -345,8 +345,6 @@
  *                      SYNC_FOLDER_TYPE_USER_TASK
  *                      SYNC_FOLDER_TYPE_USER_MAIL
  *                      SYNC_FOLDER_TYPE_USER_NOTE
- *      readonly:   indicates if the folder should be opened read-only.
- *                  If set to false, full writing permissions are required.
  *
  *  Additional notes:
  *  - on Kopano systems use backend/kopano/listfolders.php script to get a list
@@ -379,7 +377,6 @@
             'folderid'  => "",
             'name'      => "Public Contacts",
             'type'      => SYNC_FOLDER_TYPE_USER_CONTACT,
-            'readonly'  => false,
         ),
 */
     );
