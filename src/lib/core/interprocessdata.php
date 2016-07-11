@@ -88,8 +88,13 @@ abstract class InterProcessData {
             if (!$this->provider_class) {
                 throw new Exception("No IPC provider available");
             }
+            // ZP-987: use an own mutex + storage key for each device on non-shared-memory IPC
+            // this method is not suitable for the TopCollector atm
+            if (!($this instanceof TopCollector) && $this->provider_class !== 'IpcSharedMemoryProvider') {
+                $this->type = Request::GetDeviceID(). "-". $this->type;
+            }
             $this->ipcProvider = new $this->provider_class($this->type, $this->allocate, get_class($this));
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("%s initialised with IPC provider '%s'", get_class($this), $this->provider_class));
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("%s initialised with IPC provider '%s' with type '%s'", get_class($this), $this->provider_class, $this->type));
 
         }
         catch (Exception $e) {
