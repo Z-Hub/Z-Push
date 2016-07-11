@@ -78,7 +78,7 @@ include_once(ZPUSH_CONFIG);
             system("stty sane");
         }
         else
-            echo "Z-Push shared memory interprocess communication is not available.\n";
+            echo "Z-Push interprocess communication (IPC) is not available or TopCollector is disabled.\n";
     }
     catch (ZPushException $zpe) {
         fwrite(STDERR, get_class($zpe) . ": ". $zpe->getMessage() . "\n");
@@ -219,6 +219,9 @@ class ZPushTop {
      * @return boolean
      */
     public function IsAvailable() {
+        if (defined('TOPCOLLECTOR_DISABLED') && constant('TOPCOLLECTOR_DISABLED') === true) {
+            return false;
+        }
         return $this->topCollector->IsActive();
     }
 
