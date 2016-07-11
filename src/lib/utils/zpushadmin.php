@@ -529,12 +529,11 @@ class ZPushAdmin {
      * @param string    $add_folderid   the folder id of the additional folder.
      * @param string    $add_name       the name of the additional folder (has to be unique for all folders on the device).
      * @param string    $add_type       AS foldertype of SYNC_FOLDER_TYPE_USER_*
-     * @param boolean   $add_readonly   Indicates if the folder should be synched if the user has at least read-only permissions.
      *
      * @access public
      * @return boolean
      */
-    static public function AdditionalFolderAdd($user, $devid, $add_store, $add_folderid, $add_name, $add_type, $add_readonly) {
+    static public function AdditionalFolderAdd($user, $devid, $add_store, $add_folderid, $add_name, $add_type) {
         // load device data
         $device = new ASDevice($devid, ASDevice::UNDEFINED, $user, ASDevice::UNDEFINED);
         try {
@@ -551,7 +550,7 @@ class ZPushAdmin {
                 return false;
             }
 
-            $status = $device->AddAdditionalFolder($add_store, $add_folderid, $add_name, $add_type, $add_readonly);
+            $status = $device->AddAdditionalFolder($add_store, $add_folderid, $add_name, $add_type);
             if ($status)
                 ZPush::GetStateMachine()->SetState($device->GetData(), $devid, IStateMachine::DEVICEDATA);
 
