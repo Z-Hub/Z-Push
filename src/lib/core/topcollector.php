@@ -132,6 +132,10 @@ class TopCollector extends InterProcessData {
      * @return boolean
      */
     public function AnnounceInformation($addinfo, $preserve = false, $terminating = false) {
+        if (defined('TOPCOLLECTOR_DISABLED') && constant('TOPCOLLECTOR_DISABLED') === true) {
+            return true;
+        }
+
         $this->latest["addinfo"] = $addinfo;
         $this->latest["update"] = time();
 
