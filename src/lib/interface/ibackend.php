@@ -102,12 +102,11 @@ interface IBackend {
      * @param string        $store              target store, could contain a "domain\user" value
      * @param boolean       $checkACLonly       if set to true, Setup() should just check ACLs
      * @param string        $folderid           if set, only ACLs on this folderid are relevant
-     * @param boolean       $readonly           if set, the folder needs at least read permissions
      *
      * @access public
      * @return boolean
      */
-    public function Setup($store, $checkACLonly = false, $folderid = false, $readonly = false);
+    public function Setup($store, $checkACLonly = false, $folderid = false);
 
     /**
      * Logs off
