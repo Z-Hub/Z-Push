@@ -1,0 +1,43 @@
+#!/usr/bin/make -f
+# Uncomment this to turn on verbose mode.
+export DH_VERBOSE=1
+
+#include /usr/share/quilt/quilt.make
+
+
+
+DEB_VERSION := $(shell dpkg-parsechangelog | egrep '^Version:' | cut -f 2 -d ' ')
+
+%:
+	dh  $@
+
+override_dh_install:
+	mv src/* .
+	sed -s "s/ZPUSHVERSION/${DEB_VERSION}/" build/version.php.in > version.php
+
+	mv "config.php" "z-push.conf.php";
+
+	mkdir conftmp
+	mv "backend/caldav/config.php" "conftmp/caldav.conf.php";
+	mv "backend/carddav/config.php" "conftmp/carddav.conf.php";
+	mv "backend/combined/config.php" "conftmp/combined.conf.php";
+	mv "backend/imap/config.php" "conftmp/imap.conf.php";
+	mv "backend/ldap/config.php" "conftmp/ldap.conf.php";
+	mv "backend/kopano/config.php" "conftmp/kopano.conf.php";
+	mv "backend/ipcmemcached/config.php" "conftmp/memcached.conf.php";
+	mv "backend/searchldap/config.php" "conftmp/galsearch-ldap.conf.php";
+	mv "backend/sqlstatemachine/config.php" "conftmp/state-sql.conf.php";
+	mv "tools/gab-sync/config.php" "conftmp/gabsync.conf.php";
+	mv "autodiscover/config.php" "conftmp/autodiscover.conf.php";
+
+	dh_install
+	mkdir -p debian/z-push/var/lib/z-push
+	mkdir -p debian/z-push/var/log/z-push
+
+clean:
+	dh_testdir
+	dh_testroot
+	rm -f build-stamp
+	dh_clean
+
+build:
