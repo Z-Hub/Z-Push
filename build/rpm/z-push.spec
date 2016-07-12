@@ -121,7 +121,7 @@ Requires:   php-mapi
 Synchronizes a Kopano global address book
 
 # IPC SHARED MEMORY
-%package -n %name-ipc-shared-memory
+%package -n %name-ipc-sharedmemory
 Summary:    Z-Push ipc shared memory provider
 Group:      Productivity/Networking/Email/Utilities
 Requires:   %name-common = %version
@@ -129,7 +129,7 @@ Requires:   php-sysvshm
 Requires:   php-sysvsem
 Requires:   php-pcntl
 
-%description -n %name-ipc-shared-memory
+%description -n %name-ipc-sharedmemory
 Provider for Z-Push, that adds the ability to use ipc shared memory
 
 # IPC MEMCACHED
@@ -453,7 +453,7 @@ install -Dpm 644 config/apache2/z-push-autodiscover.conf \
 %files -n %name-kopano
 
 # IPC-SHAREDMEMORY
-%files -n %name-ipc-shared-memory
+%files -n %name-ipc-sharedmemory
 %defattr(-, root, root)
 %dir %zpush_dir/backend
 %dir %zpush_dir/backend/ipcsharedmemory/
