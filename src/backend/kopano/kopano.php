@@ -238,7 +238,7 @@ class BackendKopano implements IBackend, ISearchProvider {
         if ($user === false)
             $user = $this->mainUser;
 
-        // This is a special case. A user will get it's entire folder structure by the foldersync by default.
+        // This is a special case. A user will get his entire folder structure by the foldersync by default.
         // The ACL check is executed when an additional folder is going to be sent to the mobile.
         // Configured that way the user could receive the same folderid twice, with two different names.
         if ($this->mainUser == $user && $checkACLonly && $folderid) {
