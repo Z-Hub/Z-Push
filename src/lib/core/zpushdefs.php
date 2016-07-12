@@ -326,7 +326,6 @@ define("SYNC_FOLDERHIERARCHY_VERSION","FolderHierarchy:Version");
 define("SYNC_FOLDERHIERARCHY_IGNORE_STORE","FolderHierarchy:IgnoreStore");
 define("SYNC_FOLDERHIERARCHY_IGNORE_NOBCKENDFLD","FolderHierarchy:IgnoreNoBackendFolder");
 define("SYNC_FOLDERHIERARCHY_IGNORE_BACKENDID","FolderHierarchy:IgnoreBackendId");
-define("SYNC_FOLDERHIERARCHY_IGNORE_READONLY","FolderHierarchy:IgnoreReadOnly");
 
 // MeetingResponse
 define("SYNC_MEETINGRESPONSE_CALENDARID","MeetingResponse:CalendarId");
