@@ -2778,4 +2778,29 @@ class MAPIProvider {
         }
         return $this->inboxProps;
     }
+
+    /**
+     * Returns categories for a message.
+     *
+     * @param binary $parentsourcekey
+     * @param binary $sourcekey
+     *
+     * @access public
+     * @return array or false on failure
+     */
+    public function GetMessageCategories($parentsourcekey, $sourcekey) {
+        $entryid = mapi_msgstore_entryidfromsourcekey($this->store, $parentsourcekey, $sourcekey);
+        if (!$entryid) {
+            ZLog::Write(LOGLEVEL_INFO, sprintf("MAPIProvider->GetMessageCategories(): Couldn't retrieve message, sourcekey: '%s', parentsourcekey: '%s'", bin2hex($sourcekey), bin2hex($parentsourcekey)));
+            return false;
+        }
+        $mapimessage = mapi_msgstore_openentry($this->store, $entryid);
+        $emailMapping = MAPIMapping::GetEmailMapping();
+        $emailMapping = array("categories" => $emailMapping["categories"]);
+        $messageCategories = $this->getProps($mapimessage, $emailMapping);
+        if (isset($messageCategories[$emailMapping["categories"]]) && is_array($messageCategories[$emailMapping["categories"]])) {
+            return $messageCategories[$emailMapping["categories"]];
+        }
+        return false;
+    }
 }

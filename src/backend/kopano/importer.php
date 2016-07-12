@@ -396,15 +396,6 @@ class ImportChangesICS implements IImportChanges {
             list(, $sk) = MAPIUtils::SplitMessageId($id);
             $props[PR_SOURCE_KEY] = hex2bin($sk);
 
-            // KOE ZP-990: OL updates the deleted category which causes a race condition if more than one KOE is connected to that user
-            if(ZPush::GetDeviceManager()->IsKoe() && KOE_CAPABILITY_RECEIVEFLAGS && !isset($message->flag) && isset($message->categories)) {
-                // check if the categories changed
-                if(true) {
-                    ZLog::Write(LOGLEVEL_DEBUG, "ImportChangesICS->ImportMessageChange('%s'): KOE reply back of categories. Ignoreing incoming update.");
-                    return $id;
-                }
-            }
-
             // on editing an existing message, check if it is in the synchronization interval
             if (!$this->isMessageInSyncInterval($sk))
                 throw new StatusException(sprintf("ImportChangesICS->ImportMessageChange('%s','%s'): Message is outside the sync interval. Data not saved.", $id, get_class($message)), SYNC_STATUS_SYNCCANNOTBECOMPLETED);
@@ -424,6 +415,18 @@ class ImportChangesICS implements IImportChanges {
                 ZLog::Write(LOGLEVEL_INFO, sprintf("ImportChangesICS->ImportMessageChange('%s','%s'): Conflict detected. Data from PIM will be dropped! Object was deleted on server.", $id, get_class($message)));
                 return false;
             }
+
+            // KOE ZP-990: OL updates the deleted category which causes a race condition if more than one KOE is connected to that user
+            if(ZPush::GetDeviceManager()->IsKoe() && KOE_CAPABILITY_RECEIVEFLAGS && !isset($message->flag) && isset($message->categories)) {
+                // check if the categories changed
+                $mapiCategories = $this->mapiprovider->GetMessageCategories($props[PR_PARENT_SOURCE_KEY], $props[PR_SOURCE_KEY]);
+                if( (empty($message->categories) && empty($mapiCategories)) ||
+                    (is_array($mapiCategories) && count(array_diff($mapiCategories, $message->categories)) == 0 && count(array_diff($message->categories, $mapiCategories)) == 0)) {
+                    ZLog::Write(LOGLEVEL_DEBUG, "ImportChangesICS->ImportMessageChange(): KOE update of flag categories. Ignoring incoming update.");
+                    return $id;
+                }
+            }
+
         }
         else
             $flags = SYNC_NEW_MESSAGE;
