@@ -224,11 +224,12 @@ class BackendKopano implements IBackend, ISearchProvider {
      * @param string        $store              target store, could contain a "domain\user" value
      * @param boolean       $checkACLonly       if set to true, Setup() should just check ACLs
      * @param string        $folderid           if set, only ACLs on this folderid are relevant
+     * @param boolean       $readonly           if set, the folder needs at least read permissions
      *
      * @access public
      * @return boolean
      */
-    public function Setup($store, $checkACLonly = false, $folderid = false) {
+    public function Setup($store, $checkACLonly = false, $folderid = false, $readonly = false) {
         list($user, $domain) = Utils::SplitDomainUser($store);
 
         if (!isset($this->mainUser))
@@ -237,7 +238,7 @@ class BackendKopano implements IBackend, ISearchProvider {
         if ($user === false)
             $user = $this->mainUser;
 
-        // This is a special case. A user will get his entire folder structure by the foldersync by default.
+        // This is a special case. A user will get it's entire folder structure by the foldersync by default.
         // The ACL check is executed when an additional folder is going to be sent to the mobile.
         // Configured that way the user could receive the same folderid twice, with two different names.
         if ($this->mainUser == $user && $checkACLonly && $folderid) {
@@ -265,11 +266,15 @@ class BackendKopano implements IBackend, ISearchProvider {
                     ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->Setup(): Checking for admin ACLs on store '%s': '%s'", $user, Utils::PrintAsString($admin)));
                     return $admin;
                 }
-                // check for read permission on this folder
-                // check for write permission is not necessary here
+                // check permissions on this folder
                 else {
-                    $rights = $this->HasReadACLs($userstore, $folderid);
-                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->Setup(): Checking for ACLs on '%s' of store '%s': '%s'", $folderid, $user, Utils::PrintAsString($rights)));
+                    if (! $readonly) {
+                        $rights = $this->HasSecretaryACLs($userstore, $folderid);
+                    }
+                    else {
+                        $rights = $this->HasReadACLs($userstore, $folderid);
+                    }
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->Setup(): Checking for '%s' ACLs on '%s' of store '%s': '%s'", ($readonly?'read':'secretary'), $folderid, $user, Utils::PrintAsString($rights)));
                     return $rights;
                 }
             }
