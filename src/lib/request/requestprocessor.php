@@ -83,10 +83,6 @@ abstract class RequestProcessor {
 
         // mark this request as "authenticated"
         self::$userIsAuthenticated = true;
-
-        // check Auth-User's permissions on GETUser's store
-        if($backend->Setup(Request::GetGETUser(), true) == false)
-            throw new AuthenticationRequiredException(sprintf("Not enough privileges of '%s' to setup for user '%s': Permission denied", Request::GetAuthUser(), Request::GetGETUser()));
     }
 
     /**
