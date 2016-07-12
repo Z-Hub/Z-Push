@@ -75,7 +75,8 @@ class BackendKopano implements IBackend, ISearchProvider {
     private $folderStatCache;
 
     // KC config parameter for PR_EC_ENABLED_FEATURES / PR_EC_DISABLED_FEATURES
-    const ZPUSH_ENABLED = 'mobile';
+    const MOBILE_ENABLED = 'mobile';
+    const OUTLOOK_ENABLED = 'outlook';
 
     const MAXAMBIGUOUSRECIPIENTS = 9999;
     const FREEBUSYENUMBLOCKS = 50;
@@ -2323,8 +2324,18 @@ class BackendKopano implements IBackend, ISearchProvider {
         $userEntryid = mapi_getprops($this->store, array(PR_MAILBOX_OWNER_ENTRYID));
         $mailuser = mapi_ab_openentry($addressbook, $userEntryid[PR_MAILBOX_OWNER_ENTRYID]);
         $enabledFeatures = mapi_getprops($mailuser, array(PR_EC_DISABLED_FEATURES));
-        if (isset($enabledFeatures[PR_EC_DISABLED_FEATURES]) && is_array($enabledFeatures[PR_EC_DISABLED_FEATURES]) && in_array(self::ZPUSH_ENABLED, $enabledFeatures[PR_EC_DISABLED_FEATURES])) {
-            throw new FatalException("User is disabled for Z-Push.");
+        if (isset($enabledFeatures[PR_EC_DISABLED_FEATURES]) && is_array($enabledFeatures[PR_EC_DISABLED_FEATURES])) {
+            $mobileDisabled = in_array(self::MOBILE_ENABLED, $enabledFeatures[PR_EC_DISABLED_FEATURES]);
+            $outlookDisabled = in_array(self::OUTLOOK_ENABLED, $enabledFeatures[PR_EC_DISABLED_FEATURES]);
+            if ($mobileDisabled && $outlookDisabled) {
+                throw new FatalException("User is disabled for Z-Push.");
+            }
+            elseif (Request::IsOutlook() && $outlookDisabled) {
+                throw new FatalException("User is disabled for Outlook usage with Z-Push.");
+            }
+            elseif (!Request::IsOutlook() && $mobileDisabled) {
+                throw new FatalException("User is disabled for mobile device usage with Z-Push.");
+            }
         }
         return true;
     }
