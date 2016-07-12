@@ -396,6 +396,15 @@ class ImportChangesICS implements IImportChanges {
             list(, $sk) = MAPIUtils::SplitMessageId($id);
             $props[PR_SOURCE_KEY] = hex2bin($sk);
 
+            // KOE ZP-990: OL updates the deleted category which causes a race condition if more than one KOE is connected to that user
+            if(ZPush::GetDeviceManager()->IsKoe() && KOE_CAPABILITY_RECEIVEFLAGS && !isset($message->flag) && isset($message->categories)) {
+                // check if the categories changed
+                if(true) {
+                    ZLog::Write(LOGLEVEL_DEBUG, "ImportChangesICS->ImportMessageChange('%s'): KOE reply back of categories. Ignoreing incoming update.");
+                    return $id;
+                }
+            }
+
             // on editing an existing message, check if it is in the synchronization interval
             if (!$this->isMessageInSyncInterval($sk))
                 throw new StatusException(sprintf("ImportChangesICS->ImportMessageChange('%s','%s'): Message is outside the sync interval. Data not saved.", $id, get_class($message)), SYNC_STATUS_SYNCCANNOTBECOMPLETED);
