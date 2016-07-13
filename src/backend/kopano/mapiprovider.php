@@ -921,26 +921,31 @@ class MAPIProvider {
         $storeprops = $this->getStoreProps();
         $inboxprops = $this->getInboxProps();
 
-        if($entryid == $inboxprops[PR_ENTRYID])
-            return SYNC_FOLDER_TYPE_INBOX;
-        if($entryid == $inboxprops[PR_IPM_DRAFTS_ENTRYID])
-            return SYNC_FOLDER_TYPE_DRAFTS;
         if($entryid == $storeprops[PR_IPM_WASTEBASKET_ENTRYID])
             return SYNC_FOLDER_TYPE_WASTEBASKET;
         if($entryid == $storeprops[PR_IPM_SENTMAIL_ENTRYID])
             return SYNC_FOLDER_TYPE_SENTMAIL;
         if($entryid == $storeprops[PR_IPM_OUTBOX_ENTRYID])
             return SYNC_FOLDER_TYPE_OUTBOX;
-        if($entryid == $inboxprops[PR_IPM_TASK_ENTRYID])
-            return SYNC_FOLDER_TYPE_TASK;
-        if($entryid == $inboxprops[PR_IPM_APPOINTMENT_ENTRYID])
-            return SYNC_FOLDER_TYPE_APPOINTMENT;
-        if($entryid == $inboxprops[PR_IPM_CONTACT_ENTRYID])
-            return SYNC_FOLDER_TYPE_CONTACT;
-        if($entryid == $inboxprops[PR_IPM_NOTE_ENTRYID])
-            return SYNC_FOLDER_TYPE_NOTE;
-        if($entryid == $inboxprops[PR_IPM_JOURNAL_ENTRYID])
-            return SYNC_FOLDER_TYPE_JOURNAL;
+
+        // Public folders do not have inboxprops
+        // @see https://jira.z-hub.io/browse/ZP-995
+        if (!empty($inboxprops)) {
+            if($entryid == $inboxprops[PR_ENTRYID])
+                return SYNC_FOLDER_TYPE_INBOX;
+            if($entryid == $inboxprops[PR_IPM_DRAFTS_ENTRYID])
+                return SYNC_FOLDER_TYPE_DRAFTS;
+            if($entryid == $inboxprops[PR_IPM_TASK_ENTRYID])
+                return SYNC_FOLDER_TYPE_TASK;
+            if($entryid == $inboxprops[PR_IPM_APPOINTMENT_ENTRYID])
+                return SYNC_FOLDER_TYPE_APPOINTMENT;
+            if($entryid == $inboxprops[PR_IPM_CONTACT_ENTRYID])
+                return SYNC_FOLDER_TYPE_CONTACT;
+            if($entryid == $inboxprops[PR_IPM_NOTE_ENTRYID])
+                return SYNC_FOLDER_TYPE_NOTE;
+            if($entryid == $inboxprops[PR_IPM_JOURNAL_ENTRYID])
+                return SYNC_FOLDER_TYPE_JOURNAL;
+        }
 
         // user created folders
         if ($class == "IPF.Note")
