@@ -1,0 +1,6 @@
+/var/log/z-push/*.log {
+	size 1k
+	create www-data www-data
+	compress
+	rotate 4
+}

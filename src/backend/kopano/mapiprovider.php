@@ -6,7 +6,7 @@
 *
 * Created   :   14.02.2011
 *
-* Copyright 2007 - 2015 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -482,6 +482,12 @@ class MAPIProvider {
                 $exception->busystatus = fbTentative;
             }
 
+            // if an exception lasts 24 hours and the series are an allday events, set also the exception to allday event,
+            // otherwise it will be a 24 hour long event on some mobiles.
+            // @see https://jira.z-hub.io/browse/ZP-980
+            if (isset($exception->starttime, $exception->endtime) && ($exception->endtime - $exception->starttime == 86400) && $syncMessage->alldayevent) {
+                $exception->alldayevent = 1;
+            }
             array_push($syncMessage->exceptions, $exception);
         }
 
@@ -915,26 +921,31 @@ class MAPIProvider {
         $storeprops = $this->getStoreProps();
         $inboxprops = $this->getInboxProps();
 
-        if($entryid == $inboxprops[PR_ENTRYID])
-            return SYNC_FOLDER_TYPE_INBOX;
-        if($entryid == $inboxprops[PR_IPM_DRAFTS_ENTRYID])
-            return SYNC_FOLDER_TYPE_DRAFTS;
         if($entryid == $storeprops[PR_IPM_WASTEBASKET_ENTRYID])
             return SYNC_FOLDER_TYPE_WASTEBASKET;
         if($entryid == $storeprops[PR_IPM_SENTMAIL_ENTRYID])
             return SYNC_FOLDER_TYPE_SENTMAIL;
         if($entryid == $storeprops[PR_IPM_OUTBOX_ENTRYID])
             return SYNC_FOLDER_TYPE_OUTBOX;
-        if($entryid == $inboxprops[PR_IPM_TASK_ENTRYID])
-            return SYNC_FOLDER_TYPE_TASK;
-        if($entryid == $inboxprops[PR_IPM_APPOINTMENT_ENTRYID])
-            return SYNC_FOLDER_TYPE_APPOINTMENT;
-        if($entryid == $inboxprops[PR_IPM_CONTACT_ENTRYID])
-            return SYNC_FOLDER_TYPE_CONTACT;
-        if($entryid == $inboxprops[PR_IPM_NOTE_ENTRYID])
-            return SYNC_FOLDER_TYPE_NOTE;
-        if($entryid == $inboxprops[PR_IPM_JOURNAL_ENTRYID])
-            return SYNC_FOLDER_TYPE_JOURNAL;
+
+        // Public folders do not have inboxprops
+        // @see https://jira.z-hub.io/browse/ZP-995
+        if (!empty($inboxprops)) {
+            if($entryid == $inboxprops[PR_ENTRYID])
+                return SYNC_FOLDER_TYPE_INBOX;
+            if($entryid == $inboxprops[PR_IPM_DRAFTS_ENTRYID])
+                return SYNC_FOLDER_TYPE_DRAFTS;
+            if($entryid == $inboxprops[PR_IPM_TASK_ENTRYID])
+                return SYNC_FOLDER_TYPE_TASK;
+            if($entryid == $inboxprops[PR_IPM_APPOINTMENT_ENTRYID])
+                return SYNC_FOLDER_TYPE_APPOINTMENT;
+            if($entryid == $inboxprops[PR_IPM_CONTACT_ENTRYID])
+                return SYNC_FOLDER_TYPE_CONTACT;
+            if($entryid == $inboxprops[PR_IPM_NOTE_ENTRYID])
+                return SYNC_FOLDER_TYPE_NOTE;
+            if($entryid == $inboxprops[PR_IPM_JOURNAL_ENTRYID])
+                return SYNC_FOLDER_TYPE_JOURNAL;
+        }
 
         // user created folders
         if ($class == "IPF.Note")
@@ -1257,8 +1268,9 @@ class MAPIProvider {
                         if(!isset($recur["deleted_occurences"]))
                             $recur["deleted_occurences"] = array();
 
-                        array_push($recur["deleted_occurences"], $this->getDayStartOfTimestamp($exception->exceptionstarttime));
-                    } else {
+                        array_push($recur["deleted_occurences"], $this->getDayStartOfTimestamp($this->getLocaltimeByTZ($exception->exceptionstarttime, $tz)));
+                    }
+                    else {
                         // Change exception
                         $basedate = $this->getDayStartOfTimestamp($exception->exceptionstarttime);
                         $mapiexception = array("basedate" => $basedate);
@@ -1662,7 +1674,7 @@ class MAPIProvider {
      */
 
     /**
-     * Returns the tiemstamp offset
+     * Returns the timestamp offset.
      *
      * @param string            $ts
      *
@@ -1680,7 +1692,7 @@ class MAPIProvider {
     }
 
     /**
-     * Localtime of the timestamp
+     * Localtime of the timestamp.
      *
      * @param long              $time
      *
@@ -1697,7 +1709,7 @@ class MAPIProvider {
     }
 
     /**
-     * Sets the properties in a MAPI object according to an Sync object and a property mapping
+     * Sets the properties in a MAPI object according to an Sync object and a property mapping.
      *
      * @param mixed             $mapimessage
      * @param SyncObject        $message
@@ -1778,7 +1790,7 @@ class MAPIProvider {
     }
 
     /**
-     * Sets the properties one by one in a MAPI object
+     * Sets the properties one by one in a MAPI object.
      *
      * @param mixed             &$mapimessage
      * @param array             &$propsToSet
@@ -1798,7 +1810,7 @@ class MAPIProvider {
     }
 
     /**
-     * Gets the properties from a MAPI object and sets them in the Sync object according to mapping
+     * Gets the properties from a MAPI object and sets them in the Sync object according to mapping.
      *
      * @param SyncObject        &$message
      * @param mixed             $mapimessage
@@ -1846,7 +1858,7 @@ class MAPIProvider {
     }
 
     /**
-     * Wraps getPropIdsFromStrings() calls
+     * Wraps getPropIdsFromStrings() calls.
      *
      * @param mixed             &$mapiprops
      *
@@ -1858,7 +1870,7 @@ class MAPIProvider {
     }
 
     /**
-     * Wraps mapi_getprops() calls
+     * Wraps mapi_getprops() calls.
      *
      * @param mixed             &$mapiprops
      *
@@ -1871,7 +1883,7 @@ class MAPIProvider {
     }
 
     /**
-     * Returns an GMT timezone array
+     * Returns an GMT timezone array.
      *
      * @access private
      * @return array
@@ -1905,7 +1917,7 @@ class MAPIProvider {
     }
 
     /**
-     * Unpack timezone info from MAPI
+     * Unpack timezone info from MAPI.
      *
      * @param string    $data
      *
@@ -1920,7 +1932,7 @@ class MAPIProvider {
     }
 
     /**
-     * Unpack timezone info from Sync
+     * Unpack timezone info from Sync.
      *
      * @param string    $data
      *
@@ -1940,7 +1952,7 @@ class MAPIProvider {
     }
 
     /**
-     * Pack timezone info for MAPI
+     * Pack timezone info for MAPI.
      *
      * @param array     $tz
      *
@@ -1957,7 +1969,7 @@ class MAPIProvider {
     }
 
     /**
-     * Checks the date to see if it is in DST, and returns correct GMT date accordingly
+     * Checks the date to see if it is in DST, and returns correct GMT date accordingly.
      *
      * @param long      $localtime
      * @param array     $tz
@@ -1976,7 +1988,7 @@ class MAPIProvider {
     }
 
     /**
-     * Returns the local time for the given GMT time, taking account of the given timezone
+     * Returns the local time for the given GMT time, taking account of the given timezone.
      *
      * @param long      $gmttime
      * @param array     $tz
@@ -1995,7 +2007,7 @@ class MAPIProvider {
     }
 
     /**
-     * Returns TRUE if it is the summer and therefore DST is in effect
+     * Returns TRUE if it is the summer and therefore DST is in effect.
      *
      * @param long      $localtime
      * @param array     $tz
@@ -2032,7 +2044,7 @@ class MAPIProvider {
     }
 
     /**
-     * Returns the local timestamp for the $week'th $wday of $month in $year at $hour:$minute:$second
+     * Returns the local timestamp for the $week'th $wday of $month in $year at $hour:$minute:$second.
      *
      * @param int       $year
      * @param int       $month
@@ -2076,7 +2088,7 @@ class MAPIProvider {
     }
 
     /**
-     * Normalize the given timestamp to the start of the day
+     * Normalize the given timestamp to the start of the day.
      *
      * @param long      $timestamp
      *
@@ -2088,7 +2100,7 @@ class MAPIProvider {
     }
 
     /**
-     * Returns an SMTP address from an entry id
+     * Returns an SMTP address from an entry id.
      *
      * @param string    $entryid
      *
@@ -2121,7 +2133,7 @@ class MAPIProvider {
     }
 
     /**
-     * Returns fullname from an entryid
+     * Returns fullname from an entryid.
      *
      * @param binary $entryid
      * @return string fullname or false on error
@@ -2143,7 +2155,7 @@ class MAPIProvider {
     }
 
     /**
-     * Builds a displayname from several separated values
+     * Builds a displayname from several separated values.
      *
      * @param SyncContact       $contact
      *
@@ -2161,7 +2173,7 @@ class MAPIProvider {
     }
 
     /**
-     * Sets all dependent properties for an email address
+     * Sets all dependent properties for an email address.
      *
      * @param string            $emailAddress
      * @param string            $displayName
@@ -2189,7 +2201,7 @@ class MAPIProvider {
     }
 
     /**
-     * Sets the properties for an address string
+     * Sets the properties for an address string.
      *
      * @param string            $type               which address is being set
      * @param string            $city
@@ -2220,7 +2232,7 @@ class MAPIProvider {
     }
 
     /**
-     * Sets the properties for a mailing address
+     * Sets the properties for a mailing address.
      *
      * @param string            $city
      * @param string            $country
@@ -2244,7 +2256,7 @@ class MAPIProvider {
     }
 
     /**
-     * Sets data in a recurrence array
+     * Sets data in a recurrence array.
      *
      * @param SyncObject        $message
      * @param array             &$recur
@@ -2343,7 +2355,7 @@ class MAPIProvider {
 
     /**
      * Extracts the email address (mailbox@host) from an email address because
-     * some devices send email address as "Firstname Lastname" <email@me.com>
+     * some devices send email address as "Firstname Lastname" <email@me.com>.
      *
      *  @link http://developer.berlios.de/mantis/view.php?id=486
      *
@@ -2361,7 +2373,7 @@ class MAPIProvider {
     }
 
     /**
-     * Returns the message body for a required format
+     * Returns the message body for a required format.
      *
      * @param MAPIMessage       $mapimessage
      * @param int               $bpReturnType
@@ -2446,7 +2458,7 @@ class MAPIProvider {
     }
 
     /**
-     * A wrapper for mapi_inetmapi_imtoinet function
+     * A wrapper for mapi_inetmapi_imtoinet function.
      *
      * @param MAPIMessage       $mapimessage
      * @param SyncObject        $message
@@ -2486,7 +2498,7 @@ class MAPIProvider {
     }
 
     /**
-     * Sets the message body
+     * Sets the message body.
      *
      * @param MAPIMessage       $mapimessage
      * @param ContentParameters $contentparameters
@@ -2544,7 +2556,7 @@ class MAPIProvider {
     }
 
     /**
-     * Calculates the native body type of a message using available properties. Refer to oxbbody
+     * Calculates the native body type of a message using available properties. Refer to oxbbody.
      *
      * @param array             $messageprops
      *
@@ -2645,7 +2657,7 @@ class MAPIProvider {
     }
 
     /**
-    * Sets properties for an email message
+    * Sets properties for an email message.
     *
     * @param mixed             $mapimessage
     * @param SyncMail          $message
@@ -2697,7 +2709,7 @@ class MAPIProvider {
     }
 
     /**
-     * Get MAPI addressbook object
+     * Get MAPI addressbook object.
      *
      * @access private
      * @return MAPIAddressbook object to be used with mapi_ab_* or false on failure
@@ -2777,5 +2789,30 @@ class MAPIProvider {
             }
         }
         return $this->inboxProps;
+    }
+
+    /**
+     * Returns categories for a message.
+     *
+     * @param binary $parentsourcekey
+     * @param binary $sourcekey
+     *
+     * @access public
+     * @return array or false on failure
+     */
+    public function GetMessageCategories($parentsourcekey, $sourcekey) {
+        $entryid = mapi_msgstore_entryidfromsourcekey($this->store, $parentsourcekey, $sourcekey);
+        if (!$entryid) {
+            ZLog::Write(LOGLEVEL_INFO, sprintf("MAPIProvider->GetMessageCategories(): Couldn't retrieve message, sourcekey: '%s', parentsourcekey: '%s'", bin2hex($sourcekey), bin2hex($parentsourcekey)));
+            return false;
+        }
+        $mapimessage = mapi_msgstore_openentry($this->store, $entryid);
+        $emailMapping = MAPIMapping::GetEmailMapping();
+        $emailMapping = array("categories" => $emailMapping["categories"]);
+        $messageCategories = $this->getProps($mapimessage, $emailMapping);
+        if (isset($messageCategories[$emailMapping["categories"]]) && is_array($messageCategories[$emailMapping["categories"]])) {
+            return $messageCategories[$emailMapping["categories"]];
+        }
+        return false;
     }
 }

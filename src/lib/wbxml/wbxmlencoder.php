@@ -177,7 +177,7 @@ class WBXMLEncoder extends WBXMLDefs {
     }
 
     /**
-     * Puts content of a stream on the output stack.
+     * Puts content of a stream on the output stack AND closes it.
      *
      * @param resource $stream
      * @param boolean $asBase64     if true, the data will be encoded as base64, default: false
@@ -197,6 +197,8 @@ class WBXMLEncoder extends WBXMLDefs {
         if (!$asBase64) {
             stream_filter_remove($rnc_filter);
         }
+
+        fclose($stream);
     }
 
     /**

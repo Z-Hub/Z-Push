@@ -345,8 +345,6 @@
  *                      SYNC_FOLDER_TYPE_USER_TASK
  *                      SYNC_FOLDER_TYPE_USER_MAIL
  *                      SYNC_FOLDER_TYPE_USER_NOTE
- *      readonly:   indicates if the folder should be opened read-only.
- *                  If set to false, full writing permissions are required.
  *
  *  Additional notes:
  *  - on Kopano systems use backend/kopano/listfolders.php script to get a list
@@ -354,11 +352,6 @@
  *
  *  - all Z-Push users must have at least reading permissions so the configured
  *    folders can be synchronized to the mobile. Else they are ignored.
- *
- *  - if read-only is set to 'false' only users with full permissions (secretary
- *    rights) are able to change entries. For all others, the changes will be
- *    discarted and overwritten with data from the server. Check backend
- *    compatibility and configuration for this feature.
  *
  *  - this feature is only partly suitable for multi-tenancy environments,
  *    as ALL users from ALL tenents need access to the configured store & folder.
@@ -379,7 +372,6 @@
             'folderid'  => "",
             'name'      => "Public Contacts",
             'type'      => SYNC_FOLDER_TYPE_USER_CONTACT,
-            'readonly'  => false,
         ),
 */
     );

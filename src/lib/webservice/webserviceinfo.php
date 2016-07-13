@@ -57,13 +57,15 @@ class WebserviceInfo {
         $hasRights = ZPush::GetBackend()->Setup($user);
         ZLog::Write(LOGLEVEL_INFO, sprintf("WebserviceInfo::ListUserFolders(): permissions to open store '%s': %s", $user, Utils::PrintAsString($hasRights)));
 
-        $folders = ZPush::GetBackend()->GetHierarchy();
-        ZPush::GetTopCollector()->AnnounceInformation(sprintf("Retrieved details of %d folders", count($folders)), true);
+        if ($hasRights) {
+            $folders = ZPush::GetBackend()->GetHierarchy();
+            ZPush::GetTopCollector()->AnnounceInformation(sprintf("Retrieved details of %d folders", count($folders)), true);
 
-        foreach ($folders as $folder) {
-            $folder->StripData();
-            unset($folder->Store, $folder->flags, $folder->content, $folder->NoBackendFolder, $folder->ReadOnly);
-            $output[] = $folder;
+            foreach ($folders as $folder) {
+                $folder->StripData();
+                unset($folder->Store, $folder->flags, $folder->content, $folder->NoBackendFolder);
+                $output[] = $folder;
+            }
         }
 
         return $output;

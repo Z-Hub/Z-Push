@@ -47,6 +47,7 @@ require_once("backend/ipcmemcached/config.php");
 
 class IpcMemcachedProvider implements IIpcProvider {
     protected $type;
+    private $typeMutex;
     private $maxWaitCycles;
     private $logWaitCycles;
     private $isDownUntil;
@@ -70,6 +71,7 @@ class IpcMemcachedProvider implements IIpcProvider {
      */
     public function __construct($type, $allocate, $class) {
         $this->type = $type;
+        $this->typeMutex = $type . "MX";
         $this->maxWaitCycles = round(MEMCACHED_MUTEX_TIMEOUT * 1000 / MEMCACHED_BLOCK_WAIT)+1;
         $this->logWaitCycles = round($this->maxWaitCycles/5);
 
@@ -181,20 +183,20 @@ class IpcMemcachedProvider implements IIpcProvider {
         }
 
         $n = 0;
-        while(!$this->memcached->add($this->type+10, true, MEMCACHED_MUTEX_TIMEOUT)) {
+        while(!$this->memcached->add($this->typeMutex, true, MEMCACHED_MUTEX_TIMEOUT)) {
             if (++$n % $this->logWaitCycles == 0) {
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("IpcMemcachedProvider->BlockMutex() waiting to aquire mutex for type: %s ", $this->type));
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("IpcMemcachedProvider->BlockMutex() waiting to aquire mutex for type: %s ", $this->typeMutex));
             }
             // wait before retrying
             usleep(MEMCACHED_BLOCK_WAIT * 1000);
             if ($n > $this->maxWaitCycles) {
-                ZLog::Write(LOGLEVEL_ERROR, sprintf("IpcMemcachedProvider->BlockMutex() could not aquire mutex for type: %s. Check memcache service!", $this->type));
+                ZLog::Write(LOGLEVEL_ERROR, sprintf("IpcMemcachedProvider->BlockMutex() could not aquire mutex for type: %s. Check memcache service!", $this->typeMutex));
                 $this->markAsDown();
                 return false;
             }
         }
         if ($n*MEMCACHED_BLOCK_WAIT > 50) {
-            ZLog::Write(LOGLEVEL_WARN, sprintf("IpcMemcachedProvider->BlockMutex() mutex aquired after waiting for %sms for type: %s", ($n*MEMCACHED_BLOCK_WAIT), $this->type));
+            ZLog::Write(LOGLEVEL_WARN, sprintf("IpcMemcachedProvider->BlockMutex() mutex aquired after waiting for %sms for type: %s", ($n*MEMCACHED_BLOCK_WAIT), $this->typeMutex));
         }
         return true;
     }
@@ -207,7 +209,7 @@ class IpcMemcachedProvider implements IIpcProvider {
      * @return boolean
      */
     public function ReleaseMutex() {
-        return $this->memcached->delete($this->type+10);
+        return $this->memcached->delete($this->typeMutex);
     }
 
     /**
@@ -265,7 +267,7 @@ class IpcMemcachedProvider implements IIpcProvider {
                 return $timestamp;
             }
             else {
-                unlink(MEMCACHED_DOWN_LOCK_FILE);
+                @unlink(MEMCACHED_DOWN_LOCK_FILE);
             }
         }
         return 0;
