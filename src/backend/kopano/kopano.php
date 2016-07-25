@@ -764,6 +764,7 @@ class BackendKopano implements IBackend, ISearchProvider {
      */
     public function MeetingResponse($requestid, $folderid, $response) {
         // Use standard meeting response code to process meeting request
+        list($fid, $requestid) = MAPIUtils::SplitMessageId($requestid);
         $reqentryid = mapi_msgstore_entryidfromsourcekey($this->store, hex2bin($folderid), hex2bin($requestid));
         if (!$reqentryid)
             throw new StatusException(sprintf("BackendKopano->MeetingResponse('%s', '%s', '%s'): Error, unable to entryid of the message 0x%X", $requestid, $folderid, $response, mapi_last_hresult()), SYNC_MEETRESPSTATUS_INVALIDMEETREQ);
