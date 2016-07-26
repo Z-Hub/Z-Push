@@ -55,6 +55,7 @@ class Kopano extends SyncWorker {
     const NAME = "Z-Push Kopano GAB Sync";
     const VERSION = "1.1";
     private $session;
+    private $defaultstore;
     private $store;
     private $mainUser;
     private $targetStore;
@@ -80,6 +81,7 @@ class Kopano extends SyncWorker {
         }
         $this->mainUser = USERNAME;
         $this->targetStore = HIDDEN_FOLDERSTORE;
+        $this->defaultstore = $this->openMessageStore($this->mainUser);
         $this->store = $this->openMessageStore(HIDDEN_FOLDERSTORE);
         $this->folderCache = array();
         $this->storeCache = array();
@@ -334,6 +336,7 @@ class Kopano extends SyncWorker {
                                                             PR_BUSINESS_ADDRESS_CITY,
                                                             PR_BUSINESS_ADDRESS_POSTAL_CODE,
                                                             PR_BUSINESS_ADDRESS_POST_OFFICE_BOX,
+                                                            PR_BUSINESS_ADDRESS_STATE_OR_PROVINCE,
                                                             PR_INITIALS,
                                                             PR_LANGUAGE,
                                                             PR_EMS_AB_THUMBNAIL_PHOTO,
@@ -583,8 +586,9 @@ class Kopano extends SyncWorker {
                 }
             }
         }
-        else
+        else {
             $entryid = @mapi_msgstore_createentryid($this->defaultstore, $user);
+        }
 
         if(!$entryid) {
             $this->Terminate(sprintf("Kopano->openMessageStore(): No store found for user '%s': 0x%08X - Aborting.", $user, mapi_last_hresult()));
@@ -595,7 +599,6 @@ class Kopano extends SyncWorker {
             $this->Terminate(sprintf("Kopano->openMessageStore(): Could not open store for '%s': 0x%08X - Aborting.", $user, mapi_last_hresult()));
         }
 
-        $this->Log(sprintf("Kopano->openMessageStore(): Found '%s' store of user '%s': '%s'", (($return_public)?'PUBLIC':'DEFAULT'), $user, $store));
         return $store;
     }
 
