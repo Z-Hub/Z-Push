@@ -102,7 +102,7 @@ class Kopano extends ContactWorker {
      * @access protected
      * @return array
      */
-    protected function GetGABs() {
+    protected function getGABs() {
         $names = array();
         $companies = mapi_zarafa_getcompanylist($this->store);
         if (is_array($companies)) {

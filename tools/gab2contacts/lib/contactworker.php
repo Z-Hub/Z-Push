@@ -153,7 +153,7 @@ abstract class ContactWorker {
      * @access protected
      * @return array
      */
-    protected abstract function GetGABs();
+    protected abstract function getGABs();
 
     /**
      * Performs the actual synchronization for a single GAB.
