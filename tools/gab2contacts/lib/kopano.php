@@ -87,7 +87,7 @@ class Kopano extends ContactWorker {
         $this->storeCache = array();
 
         $this->mapiprops = array(
-            "hash"    => "PT_STRING8:PSETID_Appointment:0x6825",      // custom property holding the contact hash
+            "hash"    => "PT_STRING8:PSETID_Address:0x6825",      // custom property holding the contact hash
         );
         $this->mapiprops = getPropIdsFromStrings($this->store, $this->mapiprops);
     }
