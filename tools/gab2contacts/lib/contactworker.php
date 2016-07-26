@@ -125,7 +125,7 @@ abstract class ContactWorker {
      * @access protected
      * @return void
      */
-    protected function Log($msg, $error = false) {
+    protected function Log($msg) {
         echo $msg . PHP_EOL;
     }
 
