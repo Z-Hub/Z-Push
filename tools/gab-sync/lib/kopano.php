@@ -111,14 +111,14 @@ class Kopano extends SyncWorker {
      * @access protected
      * @return string
      */
-    protected function CreateHiddenFolder($gabId = null, $gabName = 'default') {
+    protected function createHiddenFolder($gabId = null, $gabName = 'default') {
         $store = $this->getStore($gabId, $gabName);
         $parentfolder = $this->getRootFolder($store);
 
         // mapi_folder_createfolder() fails if a folder with this name already exists -> MAPI_E_COLLISION
         $newfolder = mapi_folder_createfolder($parentfolder, HIDDEN_FOLDERNAME, "");
         if (mapi_last_hresult())
-            $this->Terminate(sprintf("Kopano->CreateHiddenFolder(): Error, mapi_folder_createfolder() failed: 0x%08X", mapi_last_hresult()));
+            $this->Terminate(sprintf("Kopano->createHiddenFolder(): Error, mapi_folder_createfolder() failed: 0x%08X", mapi_last_hresult()));
 
         mapi_setprops($newfolder, array(PR_CONTAINER_CLASS => "IPF.Appointment", PR_ATTR_HIDDEN => true));
 
@@ -129,7 +129,7 @@ class Kopano extends SyncWorker {
             return $sourcekey;
         }
         else {
-            $this->Terminate(sprintf("Kopano->CreateHiddenFolder(): Error, folder created but PR_SOURCE_KEY not available: 0x%08X", mapi_last_hresult()));
+            $this->Terminate(sprintf("Kopano->createHiddenFolder(): Error, folder created but PR_SOURCE_KEY not available: 0x%08X", mapi_last_hresult()));
         }
     }
 
@@ -143,17 +143,17 @@ class Kopano extends SyncWorker {
      * @access protected
      * @return boolean
      */
-    protected function DeleteHiddenFolder($folderid, $gabId = null, $gabName = 'default') {
+    protected function deleteHiddenFolder($folderid, $gabId = null, $gabName = 'default') {
         $store = $this->getStore($gabId, $gabName);
         $parentfolder = $this->getRootFolder($store);
 
         $folderentryid = mapi_msgstore_entryidfromsourcekey($store, hex2bin($folderid));
         if (mapi_last_hresult())
-            $this->Terminate(sprintf("Kopano->DeleteHiddenFolder(): Error, could not get PR_ENTRYID for hidden folder: 0x%08X", mapi_last_hresult()));
+            $this->Terminate(sprintf("Kopano->deleteHiddenFolder(): Error, could not get PR_ENTRYID for hidden folder: 0x%08X", mapi_last_hresult()));
 
         mapi_folder_deletefolder($parentfolder, $folderentryid);
         if (mapi_last_hresult())
-            $this->Terminate(sprintf("Kopano->DeleteHiddenFolder(): Error, mapi_folder_deletefolder() failed: 0x%08X", mapi_last_hresult()));
+            $this->Terminate(sprintf("Kopano->deleteHiddenFolder(): Error, mapi_folder_deletefolder() failed: 0x%08X", mapi_last_hresult()));
 
         return true;
     }
@@ -167,7 +167,7 @@ class Kopano extends SyncWorker {
      * @access protected
      * @return string|boolean on error
     */
-    protected function GetHiddenFolderId($gabId = null, $gabName = 'default') {
+    protected function getHiddenFolderId($gabId = null, $gabName = 'default') {
         $store = $this->getStore($gabId, $gabName);
         $parentfolder = $this->getRootFolder($store);
         $table = mapi_folder_gethierarchytable($parentfolder);
@@ -195,8 +195,8 @@ class Kopano extends SyncWorker {
      * @access protected
      * @return boolean
      */
-    protected function ClearFolderContents($folderid, $gabId = null, $gabName = 'default') {
-        $this->Log(sprintf("Kopano->ClearFolderContents: emptying folder in GAB '%s': %s", $gabName, $folderid));
+    protected function clearFolderContents($folderid, $gabId = null, $gabName = 'default') {
+        $this->Log(sprintf("Kopano->clearFolderContents: emptying folder in GAB '%s': %s", $gabName, $folderid));
         $store = $this->getStore($gabId, $gabName);
         $folder = $this->getFolder($store, $folderid);
 
@@ -204,7 +204,7 @@ class Kopano extends SyncWorker {
         $flags = 0;
         mapi_folder_emptyfolder($folder, $flags);
         if (mapi_last_hresult())
-            $this->Terminate(sprintf("Kopano->ClearFolderContents: Error, mapi_folder_emptyfolder() failed on '%s': 0x%08X", $gabName, mapi_last_hresult()));
+            $this->Terminate(sprintf("Kopano->clearFolderContents: Error, mapi_folder_emptyfolder() failed on '%s': 0x%08X", $gabName, mapi_last_hresult()));
 
         return true;
     }
@@ -219,40 +219,40 @@ class Kopano extends SyncWorker {
      * @access protected
      * @return boolean
      */
-    protected function ClearAllNotCurrentChunkType($folderid, $gabId = null, $gabName = 'default') {
+    protected function clearAllNotCurrentChunkType($folderid, $gabId = null, $gabName = 'default') {
         $store = $this->getStore($gabId, $gabName);
         $folder = $this->getFolder($store, $folderid);
         $table = mapi_folder_getcontentstable($folder);
         if (!$table)
-            $this->Terminate(sprintf("Kopano->ClearAllNotCurrentChunkType: Error, unable to read contents table on '%s': 0x%08X", $gabName, mapi_last_hresult()));
+            $this->Terminate(sprintf("Kopano->clearAllNotCurrentChunkType: Error, unable to read contents table on '%s': 0x%08X", $gabName, mapi_last_hresult()));
 
         $restriction = array(RES_PROPERTY, array(RELOP => RELOP_NE, ULPROPTAG => $this->mapiprops['chunktype'], VALUE => $this->chunkType));
         mapi_table_restrict($table, $restriction);
         $querycnt = mapi_table_getrowcount($table);
         if ($querycnt == 0) {
-            $this->Log("Kopano->ClearAllNotCurrentChunkType: no invalid items, done!");
+            $this->Log("Kopano->clearAllNotCurrentChunkType: no invalid items, done!");
         }
         else {
-            $this->Log(sprintf("Kopano->ClearAllNotCurrentChunkType: found %d invalid items, deleting", $querycnt));
+            $this->Log(sprintf("Kopano->clearAllNotCurrentChunkType: found %d invalid items, deleting", $querycnt));
             $entries = mapi_table_queryallrows($table, array(PR_ENTRYID, $this->mapiprops['chunktype']));
             $entry_ids = array_reduce($entries, function ($result, $item) {
                                                     $result[] = $item[PR_ENTRYID];
                                                     return $result;
                                                 }, array());
             mapi_folder_deletemessages($folder, array_values($entry_ids));
-            $this->Log("Kopano->ClearAllNotCurrentChunkType: done");
+            $this->Log("Kopano->clearAllNotCurrentChunkType: done");
         }
         $this->Log("");
         return true;
     }
 
     /**
-     * Returns a list of Global Address Books with their name and ids.
+     * Returns a list of Global Address Books with their names and ids.
      *
      * @access protected
      * @return array
      */
-    protected function GetGABs() {
+    protected function getGABs() {
         $names = array();
         $companies = mapi_zarafa_getcompanylist($this->store);
         if (is_array($companies)) {
@@ -277,17 +277,17 @@ class Kopano extends SyncWorker {
      * @access protected
      * @return array of GABEntry
      */
-    protected function GetGAB($uniqueId = false, $gabId = null, $gabName = 'default') {
+    protected function getGAB($uniqueId = false, $gabId = null, $gabName = 'default') {
         $data = array();
 
         $addrbook = mapi_openaddressbook($this->session);
         if (mapi_last_hresult())
-            $this->Terminate(sprintf("Kopano->GetGAB: Error opening addressbook 0x%08X", mapi_last_hresult()));
+            $this->Terminate(sprintf("Kopano->getGAB: Error opening addressbook 0x%08X", mapi_last_hresult()));
 
         if ($gabId == null) {
             $ab_entryid = mapi_ab_getdefaultdir($addrbook);
             if (mapi_last_hresult())
-                $this->Terminate(sprintf("Kopano->GetGAB: Error, could not get '%s' address directory: 0x%08X", $gabName, mapi_last_hresult()));
+                $this->Terminate(sprintf("Kopano->getGAB: Error, could not get '%s' address directory: 0x%08X", $gabName, mapi_last_hresult()));
         }
         else {
             $ab_entryid = hex2bin($gabId);
@@ -295,11 +295,11 @@ class Kopano extends SyncWorker {
 
         $ab_dir = mapi_ab_openentry($addrbook, $ab_entryid);
         if (mapi_last_hresult())
-            $this->Terminate(sprintf("Kopano->GetGAB: Error, could not open '%s' address directory: 0x%08X", $gabName, mapi_last_hresult()));
+            $this->Terminate(sprintf("Kopano->getGAB: Error, could not open '%s' address directory: 0x%08X", $gabName, mapi_last_hresult()));
 
         $table = mapi_folder_getcontentstable($ab_dir);
         if (mapi_last_hresult())
-            $this->Terminate(sprintf("Kopano->GetGAB: error, could not open '%s' addressbook content table: 0x%08X", $gabName, mapi_last_hresult()));
+            $this->Terminate(sprintf("Kopano->getGAB: error, could not open '%s' addressbook content table: 0x%08X", $gabName, mapi_last_hresult()));
 
         // get all the groups
         $groups = mapi_zarafa_getgrouplist($this->store, $ab_entryid);
@@ -311,10 +311,10 @@ class Kopano extends SyncWorker {
             mapi_table_restrict($table, $restriction);
             $querycnt = mapi_table_getrowcount($table);
             if ($querycnt == 0) {
-                $this->Log(sprintf("Kopano->GetGAB(): Single GAB entry '%s' requested but could not be found.", $uniqueId));
+                $this->Log(sprintf("Kopano->getGAB(): Single GAB entry '%s' requested but could not be found.", $uniqueId));
             }
             elseif ($querycnt > 1) {
-                $this->Terminate(sprintf("Kopano->GetGAB(): Single GAB entry '%s' requested but %d entries found. Aborting.", $uniqueId, $querycnt));
+                $this->Terminate(sprintf("Kopano->getGAB(): Single GAB entry '%s' requested but %d entries found. Aborting.", $uniqueId, $querycnt));
             }
         }
 
@@ -429,7 +429,7 @@ class Kopano extends SyncWorker {
      * @access protected
      * @return json string
      */
-    protected function GetChunkData($folderid, $chunkName, $gabId = null, $gabName = 'default') {
+    protected function getChunkData($folderid, $chunkName, $gabId = null, $gabName = 'default') {
         // find the chunk message in the folder
         $store = $this->getStore($gabId, $gabName);
         $chunkdata = $this->findChunk($store, $folderid, $chunkName);
@@ -461,8 +461,8 @@ class Kopano extends SyncWorker {
      * @access protected
      * @return boolean
      */
-    protected function SetChunkData($folderid, $chunkName, $amountEntries, $chunkData, $chunkCRC, $gabId = null, $gabName = 'default') {
-        $log = sprintf("Kopano->SetChunkData: %s\tEntries: %d\t Size: %d B\tCRC: %s  -  ", $chunkName, $amountEntries, strlen($chunkData), $chunkCRC);
+    protected function setChunkData($folderid, $chunkName, $amountEntries, $chunkData, $chunkCRC, $gabId = null, $gabName = 'default') {
+        $log = sprintf("Kopano->setChunkData: %s\tEntries: %d\t Size: %d B\tCRC: %s  -  ", $chunkName, $amountEntries, strlen($chunkData), $chunkCRC);
 
         // find the chunk message in the folder
         $store = $this->getStore($gabId, $gabName);
