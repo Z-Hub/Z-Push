@@ -313,6 +313,7 @@ class MAPIProvider {
                     array_push($message->attendees, $attendee);
                 }
             }
+            $message->responsetype = $messageprops[$appointmentprops["responsestatus"]];
         }
 
         if (!isset($message->nativebodytype)) $message->nativebodytype = $this->getNativeBodyType($messageprops);
