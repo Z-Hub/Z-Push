@@ -222,7 +222,7 @@ class GAB2ContactsCLI {
 
             case self::COMMAND_DELETE:
                 echo "Are you sure you want to remove all contacts of GAB folder in the target folder? [y/N]: ";
-                $confirm  =  strtolower(trim(fgets(STDIN)));
+                $confirm  = strtolower(trim(fgets(STDIN)));
                 if ( $confirm === 'y' || $confirm === 'yes')
                     self::$contactWorker->Delete(self::$sourceGAB);
                 else
