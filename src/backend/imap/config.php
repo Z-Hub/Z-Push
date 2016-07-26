@@ -86,9 +86,10 @@ define('IMAP_AUTOSEEN_ON_DELETE', false);
         // gmail is a special case, where the default folders are under the [gmail] prefix and the folders defined by the user are under INBOX.
         // This configuration seems to work:
         //      define('IMAP_FOLDER_PREFIX', '');
+        //      define('IMAP_FOLDER_PREFIX_IN_INBOX', false);
         //      define('IMAP_FOLDER_INBOX', 'INBOX');
         //      define('IMAP_FOLDER_SENT', '[Gmail]/Sent');
-        //      define('IMAP_FOLDER_DRAFTS', '[Gmail]/Drafts');
+        //      define('IMAP_FOLDER_DRAFT', '[Gmail]/Drafts');
         //      define('IMAP_FOLDER_TRASH', '[Gmail]/Trash');
         //      define('IMAP_FOLDER_SPAM', '[Gmail]/Spam');
         //      define('IMAP_FOLDER_ARCHIVE', '[Gmail]/All Mail');
