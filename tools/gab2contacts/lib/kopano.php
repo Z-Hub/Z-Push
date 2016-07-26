@@ -97,7 +97,7 @@ class Kopano extends ContactWorker {
      */
 
     /**
-     * Returns a list of Global Address Books with their name and ids.
+     * Returns a list of Global Address Books with their names and ids.
      *
      * @access protected
      * @return array
