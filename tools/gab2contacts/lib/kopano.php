@@ -130,7 +130,7 @@ class Kopano extends ContactWorker {
         $mapiprovider = new MAPIProvider($this->session, $store);
 
         // get a list of all contacts in the target folder
-        $existingByAccount = $this->getExistingContacts($store, $folder);
+        $existingByAccount = $this->getExistingContacts($folder);
 
         $addrbook = mapi_openaddressbook($this->session);
         if (mapi_last_hresult()) {
@@ -294,7 +294,7 @@ class Kopano extends ContactWorker {
         $folder = $this->getFolder($store, $targetFolderId);
 
         // get a list of all contacts in the target folder
-        $existingByAccount = $this->getExistingContacts($store, $folder);
+        $existingByAccount = $this->getExistingContacts($folder);
 
         // entries in the $existingByAccount array must be deleted
         $entry_ids = array_reduce($existingByAccount, function ($result, $item) {
@@ -412,13 +412,12 @@ class Kopano extends ContactWorker {
     /**
      * Returns a list of contacts that have a hash (and therefore, were created by this script).
      *
-     * @param ressource $store
      * @param ressource $folder
      *
      * @access private
      * @return array
      */
-    private function getExistingContacts($store, $folder) {
+    private function getExistingContacts($folder) {
         $table = mapi_folder_getcontentstable($folder);
         if (!$table)
             $this->Log(sprintf("Kopano->getExistingContacts: Error, unable to read contents table to find contacts: 0x%08X", mapi_last_hresult()));
