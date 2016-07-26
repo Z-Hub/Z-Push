@@ -92,7 +92,7 @@ abstract class ContactWorker {
      * @access public
      * @return void
      */
-    public function Delete($sourceGAB) {
+    public function Delete($sourceGAB = 'default') {
         $targetFolderId = CONTACT_FOLDERID;
 
         // gets a list of GABs
