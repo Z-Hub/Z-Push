@@ -654,14 +654,14 @@ class SqlStateMachine implements IStateMachine {
      * If the parameter is null then " IS NULL" is returned, else " = $key".
      *
      * @param array& $params $params[$key] will be unset, if is_null($params[$key])
-	 * @param string $key eg. ":key"
+     * @param string $key eg. ":key"
      *
      * @access protected
      * @return string
      */
     protected function getSQLOp(&$params, $key) {
         if (is_null($params[$key])) {
-			unset($params[$key]);
+            unset($params[$key]);
             return " IS NULL";
         }
         return " = $key";
@@ -712,11 +712,11 @@ class SqlStateMachine implements IStateMachine {
     protected function getStateHashStatement(&$params, $key=':key') {
         if (!isset($this->stateHashStatement) || $this->stateHashStatement == null) {
             $sql = "SELECT updated_at FROM {$this->states_table} WHERE device_id = :devid AND state_type = :type AND uuid ". $this->getSQLOp($params, $key) ." AND counter = :counter";
-			$this->stateHashStatement = $this->getDbh()->prepare($sql);
+            $this->stateHashStatement = $this->getDbh()->prepare($sql);
         }
-		else {
-			$this->getSQLOp($params, $key);	// need to unset $params[':key'] for NULL
-		}
+        else {
+            $this->getSQLOp($params, $key);    // need to unset $params[':key'] for NULL
+        }
         return $this->stateHashStatement;
     }
     /**
