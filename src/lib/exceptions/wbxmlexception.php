@@ -42,5 +42,3 @@
 ************************************************/
 
 class WBXMLException extends FatalNotImplementedException {}
-
-?>

@@ -42,5 +42,3 @@
 ************************************************/
 
 class NoHierarchyCacheAvailableException extends StateNotFoundException {}
-
-?>

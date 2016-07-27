@@ -69,5 +69,3 @@ class SyncObjectBrokenException extends ZPushException {
         return true;
     }
 }
-
-?>

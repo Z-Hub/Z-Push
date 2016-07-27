@@ -117,7 +117,7 @@ class FileStateMachine implements IStateMachine {
      *
      * @access public
      * @return mixed
-     * @throws StateNotFoundException, StateInvalidException
+     * @throws StateNotFoundException, StateInvalidException, UnavailableException
      */
     public function GetState($devid, $type, $key = false, $counter = false, $cleanstates = true) {
         if ($counter && $cleanstates)
@@ -148,7 +148,7 @@ class FileStateMachine implements IStateMachine {
      *
      * @access public
      * @return boolean
-     * @throws StateInvalidException
+     * @throws StateInvalidException, UnavailableException
      */
     public function SetState($state, $devid, $type, $key = false, $counter = false) {
         $state = serialize($state);
@@ -162,37 +162,28 @@ class FileStateMachine implements IStateMachine {
     }
 
     /**
-     * Cleans up all older states
-     * If called with a $counter, all states previous state counter can be removed
-     * If called without $counter, all keys (independently from the counter) can be removed
+     * Cleans up all older states.
+     * If called with a $counter, all states previous state counter can be removed.
+     * If additionally the $thisCounterOnly flag is true, only that specific counter will be removed.
+     * If called without $counter, all keys (independently from the counter) can be removed.
      *
      * @param string    $devid              the device id
      * @param string    $type               the state type
      * @param string    $key
      * @param string    $counter            (opt)
+     * @param string    $thisCounterOnly    (opt) if provided, the exact counter only will be removed
      *
      * @access public
      * @return
      * @throws StateInvalidException
      */
-    public function CleanStates($devid, $type, $key, $counter = false) {
-        // Remove permanent backend storage files
-        // TODO remove this block and implement it as described in ZP-835
-        if ($key === false && $type === IStateMachine::BACKENDSTORAGE) {
-            $file = $this->getFullFilePath($devid, $type, $key, $counter);
-            if (file_exists($file)) {
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("FileStateMachine->CleanStates(): Deleting 'bs' file: '%s'", $file));
-                unlink($file);
-                return;
-            }
-        }
-
+    public function CleanStates($devid, $type, $key, $counter = false, $thisCounterOnly = false) {
         $matching_files = glob($this->getFullFilePath($devid, $type, $key). "*", GLOB_NOSORT);
         if (is_array($matching_files)) {
             foreach($matching_files as $state) {
                 $file = false;
                 if($counter !== false && preg_match('/([0-9]+)$/', $state, $matches)) {
-                    if($matches[1] < $counter) {
+                    if(($thisCounterOnly === false && $matches[1] < $counter) || ($thisCounterOnly === true && $matches[1] == $counter)) {
                         $candidate = $this->getFullFilePath($devid, $type, $key, (int)$matches[1]);
 
                         if ($candidate == $state)
@@ -220,7 +211,6 @@ class FileStateMachine implements IStateMachine {
      * @return boolean     indicating if the user was added or not (existed already)
      */
     public function LinkUserDevice($username, $devid) {
-        include_once("simplemutex.php");
         $mutex = new SimpleMutex();
         $changed = false;
 
@@ -265,7 +255,6 @@ class FileStateMachine implements IStateMachine {
      * @return boolean
      */
     public function UnLinkUserDevice($username, $devid) {
-        include_once("simplemutex.php");
         $mutex = new SimpleMutex();
         $changed = false;
 
@@ -412,8 +401,10 @@ class FileStateMachine implements IStateMachine {
                 isset($parts[1]) && strlen($parts[1]) == 4 &&
                 isset($parts[2]) && strlen($parts[2]) == 4 &&
                 isset($parts[3]) && strlen($parts[3]) == 4 &&
-                isset($parts[4]) && strlen($parts[4]) == 12)
+                isset($parts[4]) && strlen($parts[4]) == 12) {
+
                 $state['uuid'] = $parts[0]."-".$parts[1]."-".$parts[2]."-".$parts[3]."-".$parts[4];
+            }
 
             if (isset($parts[5]) && is_numeric($parts[5])) {
                 $state['counter'] = $parts[5];
@@ -421,14 +412,20 @@ class FileStateMachine implements IStateMachine {
             }
 
             if (isset($parts[5])) {
-                if (is_int($parts[5]))
+                if (is_int($parts[5])) {
                     $state['counter'] = $parts[5];
-
-                else if (in_array($parts[5], $types))
+                }
+                else if (in_array($parts[5], $types)) {
                     $state['type'] = $parts[5];
+                }
             }
-            if (isset($parts[6]) && is_numeric($parts[6]))
+            if (isset($parts[6]) && is_numeric($parts[6])) {
                 $state['counter'] = $parts[6];
+            }
+            // Permanent BS are recognized here
+            if($state['counter'] == false && $state['uuid'] == false && isset($parts[1]) && is_numeric($parts[1])) {
+                $state['counter'] = $parts[1];
+            }
 
             $out[] = $state;
         }
@@ -504,4 +501,3 @@ class FileStateMachine implements IStateMachine {
     }
 
 }
-?>

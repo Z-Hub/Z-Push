@@ -1,0 +1,2 @@
+conftmp/imap.conf.php /etc/z-push/
+backend/imap           /usr/share/z-push/backend/

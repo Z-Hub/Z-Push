@@ -66,13 +66,22 @@ class BackendCombinedConfig {
                     'name' => 'BackendIMAP',
                 ),
                 'z' => array(
-                    'name' => 'BackendZarafa',
+                    'name' => 'BackendKopano',
                 ),
                 'm' => array(
                     'name' => 'BackendMaildir',
                 ),
                 'v' => array(
                     'name' => 'BackendVCardDir',
+                ),
+                'l' => array(
+                    'name' => 'BackendLDAP',
+                ),
+                'd' => array(
+                    'name' => 'BackendCardDAV',
+                ),
+                'c' => array(
+                    'name' => 'BackendCalDAV',
                 ),
             ),
             'delimiter' => '/',
@@ -103,4 +112,3 @@ class BackendCombinedConfig {
         );
     }
 }
-?>

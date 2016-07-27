@@ -54,6 +54,8 @@ class DiffState implements IChanges {
     protected $flags;
     protected $contentparameters;
     protected $cutoffdate;
+    protected $moveSrcState;
+    protected $moveDstState;
 
     /**
      * Initializes the state
@@ -118,6 +120,32 @@ class DiffState implements IChanges {
         return $this->syncstate;
     }
 
+    /**
+     * Sets the states from move operations.
+     * When src and dst state are set, a MOVE operation is being executed.
+     *
+     * @param mixed         $srcState
+     * @param mixed         (opt) $dstState, default: null
+     *
+     * @access public
+     * @return boolean
+     */
+    public function SetMoveStates($srcState, $dstState = null) {
+        $this->moveSrcState = $srcState;
+        $this->moveDstState = $dstState;
+        return true;
+    }
+
+    /**
+     * Gets the states of special move operations.
+     *
+     * @access public
+     * @return array(0 => $srcState, 1 => $dstState)
+    */
+    public function GetMoveStates() {
+        return array($this->moveSrcState, $this->moveDstState);
+    }
+
 
     /**----------------------------------------------------------------------------------------------------------
      * DiffState specific stuff
@@ -161,7 +189,14 @@ class DiffState implements IChanges {
                     $changes[] = $change;
                 }
 
-                if ($old_item['mod'] != $item['mod']) {
+                // @see https://jira.z-hub.io/browse/ZP-955
+                if (isset($old_item['mod']) && isset($item['mod'])) {
+                    if ($old_item['mod'] != $item['mod']) {
+                        $change["type"] = "change";
+                        $changes[] = $change;
+                    }
+                }
+                else if (isset($old_item['mod']) || isset($item['mod'])) {
                     $change["type"] = "change";
                     $changes[] = $change;
                 }
@@ -268,5 +303,3 @@ class DiffState implements IChanges {
     }
 
 }
-
-?>

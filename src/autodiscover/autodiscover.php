@@ -41,21 +41,8 @@
 * Consult LICENSE file for details
 ************************************************/
 
-include_once('../lib/core/zpushdefs.php');
-include_once('../lib/exceptions/exceptions.php');
-include_once('../lib/utils/compat.php');
-include_once('../lib/utils/utils.php');
-include_once('../lib/core/zpush.php');
-include_once('../lib/core/zlog.php');
-include_once('../lib/interface/ibackend.php');
-include_once('../lib/interface/ichanges.php');
-include_once('../lib/interface/iexportchanges.php');
-include_once('../lib/interface/iimportchanges.php');
-include_once('../lib/interface/isearchprovider.php');
-include_once('../lib/interface/istatemachine.php');
-include_once('../lib/request/request.php');
-include_once('../version.php');
-include_once('config.php');
+require_once '../vendor/autoload.php';
+require_once 'config.php';
 
 class ZPushAutodiscover {
     const ACCEPTABLERESPONSESCHEMAMOBILESYNC = 'http://schemas.microsoft.com/exchange/autodiscover/mobilesync/responseschema/2006';
@@ -72,6 +59,7 @@ class ZPushAutodiscover {
      * @return void
      */
     public static function DoZPushAutodiscover() {
+        self::CheckConfig();
         ZLog::Write(LOGLEVEL_DEBUG, '-------- Start ZPushAutodiscover');
         ZLog::Write(LOGLEVEL_INFO, sprintf("Z-Push version='%s'", @constant('ZPUSH_VERSION')));
         // TODO use filterevilinput?
@@ -99,10 +87,6 @@ class ZPushAutodiscover {
      * @return void
      */
     public function DoAutodiscover() {
-        if (!defined('REAL_BASE_PATH')) {
-            define('REAL_BASE_PATH', str_replace('autodiscover/', '', BASE_PATH));
-        }
-        set_include_path(get_include_path() . PATH_SEPARATOR . REAL_BASE_PATH);
         $response = "";
 
         try {
@@ -268,17 +252,78 @@ class ZPushAutodiscover {
         ZLog::Write(LOGLEVEL_WARN, sprintf("The backend was not able to find attribute '%s' of the user. Fall back to the default value.", $attrib));
         return false;
     }
+
+    public static function CheckConfig() {
+        if (!defined('REAL_BASE_PATH')) {
+            define('REAL_BASE_PATH', str_replace('autodiscover/', '', BASE_PATH));
+        }
+        set_include_path(get_include_path() . PATH_SEPARATOR . REAL_BASE_PATH);
+
+        // set time zone
+        // code contributed by Robert Scheck (rsc)
+        if(defined('TIMEZONE') ? constant('TIMEZONE') : false) {
+            if (! @date_default_timezone_set(TIMEZONE))
+                throw new FatalMisconfigurationException(sprintf("The configured TIMEZONE '%s' is not valid. Please check supported timezones at http://www.php.net/manual/en/timezones.php", constant('TIMEZONE')));
+        }
+        else if(!ini_get('date.timezone')) {
+            date_default_timezone_set('Europe/Amsterdam');
+        }
+
+        if (!defined('LOGBACKEND')) {
+            define('LOGBACKEND', 'filelog');
+        }
+
+        if (strtolower(LOGBACKEND) == 'syslog') {
+            define('LOGBACKEND_CLASS', 'Syslog');
+            if (!defined('LOG_SYSLOG_FACILITY')) {
+                define('LOG_SYSLOG_FACILITY', LOG_LOCAL0);
+            }
+
+            if (!defined('LOG_SYSLOG_HOST')) {
+                define('LOG_SYSLOG_HOST', false);
+            }
+
+            if (!defined('LOG_SYSLOG_PORT')) {
+                define('LOG_SYSLOG_PORT', 514);
+            }
+
+            if (!defined('LOG_SYSLOG_PROGRAM')) {
+                define('LOG_SYSLOG_PROGRAM', 'z-push-autodiscover');
+            }
+
+            if (!is_numeric(LOG_SYSLOG_PORT)) {
+                throw new FatalMisconfigurationException("The LOG_SYSLOG_PORT must a be a number.");
+            }
+
+            if (LOG_SYSLOG_HOST && LOG_SYSLOG_PORT <= 0) {
+                throw new FatalMisconfigurationException("LOG_SYSLOG_HOST is defined but the LOG_SYSLOG_PORT does not seem to be valid.");
+            }
+        }
+        elseif (strtolower(LOGBACKEND) == 'filelog') {
+            define('LOGBACKEND_CLASS', 'FileLog');
+            if (!defined('LOGFILEDIR'))
+                throw new FatalMisconfigurationException("The LOGFILEDIR is not configured. Check if the config.php file is in place.");
+
+            if (substr(LOGFILEDIR, -1,1) != "/")
+                throw new FatalMisconfigurationException("The LOGFILEDIR should terminate with a '/'");
+
+            if (!file_exists(LOGFILEDIR))
+                throw new FatalMisconfigurationException("The configured LOGFILEDIR does not exist or can not be accessed.");
+
+            if ((!file_exists(LOGFILE) && !touch(LOGFILE)) || !is_writable(LOGFILE))
+                throw new FatalMisconfigurationException("The configured LOGFILE can not be modified.");
+
+            if ((!file_exists(LOGERRORFILE) && !touch(LOGERRORFILE)) || !is_writable(LOGERRORFILE))
+                throw new FatalMisconfigurationException("The configured LOGERRORFILE can not be modified.");
+
+            // check ownership on the (eventually) just created files
+            Utils::FixFileOwner(LOGFILE);
+            Utils::FixFileOwner(LOGERRORFILE);
+        }
+        else {
+            define('LOGBACKEND_CLASS', LOGBACKEND);
+        }
+    }
 }
 
-    // set time zone
-    // code contributed by Robert Scheck (rsc)
-    if(defined('TIMEZONE') ? constant('TIMEZONE') : false) {
-        if (! @date_default_timezone_set(TIMEZONE))
-            throw new FatalMisconfigurationException(sprintf("The configured TIMEZONE '%s' is not valid. Please check supported timezones at http://www.php.net/manual/en/timezones.php", constant('TIMEZONE')));
-    }
-    else if(!ini_get('date.timezone')) {
-        date_default_timezone_set('Europe/Amsterdam');
-    }
-
 ZPushAutodiscover::DoZPushAutodiscover();
-?>

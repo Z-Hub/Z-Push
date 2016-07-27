@@ -6,7 +6,7 @@
 *
 * Created   :   01.10.2007
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -71,6 +71,8 @@ class ImportChangesStream implements IImportChanges {
     public function Config($state, $flags = 0) { return true; }
     public function ConfigContentParameters($contentparameters) { return true; }
     public function GetState() { return false;}
+    public function SetMoveStates($srcState, $dstState = null) { return true; }
+    public function GetMoveStates() { return array(false, false); }
     public function LoadConflicts($contentparameters, $state) { return true; }
 
     /**
@@ -84,8 +86,44 @@ class ImportChangesStream implements IImportChanges {
      */
     public function ImportMessageChange($id, $message) {
         // ignore other SyncObjects
-        if(!($message instanceof $this->classAsString))
+        if(!($message instanceof $this->classAsString)) {
             return false;
+        }
+
+        // KOE ZO-42: to sync Notes to Outlook we sync them as Appointments
+        if ($this->classAsString == "SyncNote") {
+            if (KOE_CAPABILITY_NOTES && ZPush::GetDeviceManager()->IsKoe()) {
+                // update category from SyncNote->Color
+                $message->SetCategoryFromColor();
+
+                $appointment = new SyncAppointment();
+                $appointment->busystatus = 0;
+                $appointment->sensitivity = 0;
+                $appointment->alldayevent = 0;
+                $appointment->reminder = 0;
+                $appointment->meetingstatus = 0;
+                $appointment->responserequested = 0;
+
+                $appointment->flags = $message->flags;
+                if (isset($message->asbody))
+                    $appointment->asbody = $message->asbody;
+                if (isset($message->categories))
+                    $appointment->categories = $message->categories;
+                if (isset($message->subject))
+                    $appointment->subject = $message->subject;
+                if (isset($message->lastmodified))
+                    $appointment->dtstamp = $message->lastmodified;
+
+                $appointment->starttime = time();
+                $appointment->endtime = $appointment->starttime + 1;
+
+                $message = $appointment;
+            }
+            else if (Request::IsOutlook()) {
+                ZLog::Write(LOGLEVEL_WARN, "MS Outlook is synchronizing Notes folder without active KOE settings or extension. Not streaming SyncNote change!");
+                return false;
+            }
+        }
 
         // prevent sending the same object twice in one request
         if (in_array($id, $this->seenObjects)) {
@@ -106,6 +144,22 @@ class ImportChangesStream implements IImportChanges {
             $this->checkForIgnoredMessages = true;
 
             return $stat;
+        }
+
+        // KOE ZO-3: Stream reply/forward flag and time as additional category to KOE
+        if (ZPush::GetDeviceManager()->IsKoe() && KOE_CAPABILITY_RECEIVEFLAGS && isset($message->lastverbexectime) && isset($message->lastverbexecuted) && $message->lastverbexecuted > 0) {
+            ZLog::Write(LOGLEVEL_DEBUG, "ImportChangesStream->ImportMessageChange('%s'): KOE detected. Adding LastVerb information as category.");
+            if (!isset($message->categories)){
+                $message->categories = array();
+            }
+
+            $s = "Push: Email ";
+            if     ($message->lastverbexecuted == 1) $s .= "replied";
+            elseif ($message->lastverbexecuted == 2) $s .= "replied-to-all";
+            elseif ($message->lastverbexecuted == 3) $s .= "forwarded";
+            $s .= " on " . gmdate("d-m-Y H:i:s", $message->lastverbexectime) . " GMT";
+
+            $message->categories[] = $s;
         }
 
         if ($message->flags === false || $message->flags === SYNC_NEWMESSAGE)
@@ -140,20 +194,26 @@ class ImportChangesStream implements IImportChanges {
     }
 
     /**
-     * Imports a deletion
+     * Imports a deletion.
      *
      * @param string        $id
+     * @param boolean       $asSoftDelete   (opt) if true, the deletion is exported as "SoftDelete", else as "Remove" - default: false
      *
      * @access public
      * @return boolean
      */
-    public function ImportMessageDeletion($id) {
+    public function ImportMessageDeletion($id, $asSoftDelete = false) {
         if ($this->checkForIgnoredMessages) {
            ZPush::GetDeviceManager()->RemoveBrokenMessage($id);
         }
 
         $this->importedMsgs++;
-        $this->encoder->startTag(SYNC_REMOVE);
+        if ($asSoftDelete) {
+            $this->encoder->startTag(SYNC_SOFTDELETE);
+        }
+        else {
+            $this->encoder->startTag(SYNC_REMOVE);
+        }
             $this->encoder->startTag(SYNC_SERVERENTRYID);
                 $this->encoder->content($id);
             $this->encoder->endTag();
@@ -211,7 +271,7 @@ class ImportChangesStream implements IImportChanges {
      * @param object        $folder     SyncFolder
      *
      * @access public
-     * @return string       id of the folder
+     * @return boolean/SyncObject           status/object with the ath least the serverid of the folder set
      */
     public function ImportFolderChange($folder) {
         // checks if the next message may cause a loop or is broken
@@ -235,16 +295,15 @@ class ImportChangesStream implements IImportChanges {
     /**
      * Imports a folder deletion
      *
-     * @param string        $id
-     * @param string        $parent id
+     * @param SyncFolder    $folder         at least "serverid" needs to be set
      *
      * @access public
      * @return boolean
      */
-    public function ImportFolderDeletion($id, $parent = false) {
+    public function ImportFolderDeletion($folder) {
         $this->encoder->startTag(SYNC_FOLDERHIERARCHY_REMOVE);
             $this->encoder->startTag(SYNC_FOLDERHIERARCHY_SERVERENTRYID);
-                $this->encoder->content($id);
+                $this->encoder->content($folder->serverid);
             $this->encoder->endTag();
         $this->encoder->endTag();
 
@@ -261,4 +320,3 @@ class ImportChangesStream implements IImportChanges {
         return $this->importedMsgs;
     }
 }
-?>

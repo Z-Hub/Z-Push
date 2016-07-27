@@ -10,7 +10,7 @@
 *
 * Created   :   28.10.2012
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2013, 2015 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -45,14 +45,14 @@
 * Consult LICENSE file for details
 ************************************************/
 
-class SyncRRCertificates extends SyncObject {
+class SyncResolveRecipientsCertificates extends SyncObject {
     public $status;
     public $certificatecount;
     public $recipientcount;
     public $certificate;
     public $minicertificate;
 
-    public function SyncRRCertificates() {
+    public function SyncResolveRecipientsCertificates() {
         $mapping = array (
             SYNC_RESOLVERECIPIENTS_STATUS                   => array (  self::STREAMER_VAR      => "status"),
             SYNC_RESOLVERECIPIENTS_CERTIFICATECOUNT         => array (  self::STREAMER_VAR      => "certificatecount"),
@@ -71,4 +71,3 @@ class SyncRRCertificates extends SyncObject {
     }
 
 }
-?>

@@ -44,18 +44,10 @@
 * Consult LICENSE file for details
 ************************************************/
 
-include('lib/exceptions/exceptions.php');
-include('lib/core/zpushdefs.php');
-include('lib/core/zpush.php');
-include('lib/core/zlog.php');
-include('lib/core/interprocessdata.php');
-include('lib/core/topcollector.php');
-include('lib/utils/utils.php');
-include('lib/request/request.php');
-include('lib/request/requestprocessor.php');
+require_once 'vendor/autoload.php';
+
 if (!defined('ZPUSH_CONFIG')) define('ZPUSH_CONFIG', 'config.php');
 include_once(ZPUSH_CONFIG);
-include('version.php');
 
 /************************************************
  * MAIN
@@ -86,7 +78,7 @@ include('version.php');
             system("stty sane");
         }
         else
-            echo "Z-Push shared memory interprocess communication is not available.\n";
+            echo "Z-Push interprocess communication (IPC) is not available or TopCollector is disabled.\n";
     }
     catch (ZPushException $zpe) {
         fwrite(STDERR, get_class($zpe) . ": ". $zpe->getMessage() . "\n");
@@ -227,6 +219,9 @@ class ZPushTop {
      * @return boolean
      */
     public function IsAvailable() {
+        if (defined('TOPCOLLECTOR_DISABLED') && constant('TOPCOLLECTOR_DISABLED') === true) {
+            return false;
+        }
         return $this->topCollector->IsActive();
     }
 
@@ -488,7 +483,7 @@ class ZPushTop {
                 else if ($cmds[0] == "clear" ) {
                     $this->topCollector->ClearLatest(true);
                     $this->topCollector->CollectData(true);
-                    $this->topCollector->ReInitSharedMem();
+                    $this->topCollector->ReInitIPC();
                 }
                 else if ($cmds[0] == "filter" || $cmds[0] == "f") {
                     if (!isset($cmds[1]) || $cmds[1] == "") {
@@ -792,5 +787,3 @@ class ZPushTop {
     }
 
 }
-
-?>

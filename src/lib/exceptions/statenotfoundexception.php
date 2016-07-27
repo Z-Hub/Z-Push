@@ -43,5 +43,3 @@
 ************************************************/
 
 class StateNotFoundException extends StatusException {}
-
-?>

@@ -10,7 +10,7 @@
 *
 * Created   :   28.10.2012
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2013, 2015 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -49,8 +49,7 @@ class SyncResolveRecipients extends SyncObject {
     public $to = array();
     public $options;
     public $status;
-    public $recipientCount;
-    public $recipient;
+    public $response;
 
     public function SyncResolveRecipients() {
         $mapping = array (
@@ -59,17 +58,16 @@ class SyncResolveRecipients extends SyncObject {
                                                                         self::STREAMER_PROP     => self::STREAMER_TYPE_NO_CONTAINER),
 
             SYNC_RESOLVERECIPIENTS_OPTIONS                  => array (  self::STREAMER_VAR      => "options",
-                                                                        self::STREAMER_TYPE     => "SyncRROptions"),
+                                                                        self::STREAMER_TYPE     => "SyncResolveRecipientsOptions"),
 
             SYNC_RESOLVERECIPIENTS_STATUS                   => array (  self::STREAMER_VAR      => "status"),
-            SYNC_RESOLVERECIPIENTS_RECIPIENTCOUNT           => array (  self::STREAMER_VAR      => "recipientcount"),
 
-            SYNC_RESOLVERECIPIENTS_RECIPIENT                => array (  self::STREAMER_VAR      => "recipient",
-                                                                        self::STREAMER_TYPE     => "SyncResolveRecipient"),
+            SYNC_RESOLVERECIPIENTS_RESPONSE                 => array (  self::STREAMER_VAR      => "response",
+                                                                        self::STREAMER_TYPE     => "SyncResolveRecipientsResponse",
+                                                                        self::STREAMER_ARRAY    => SYNC_RESOLVERECIPIENTS_RESPONSE),
         );
 
         parent::SyncObject($mapping);
     }
 
 }
-?>

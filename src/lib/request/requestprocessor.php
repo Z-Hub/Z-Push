@@ -83,10 +83,6 @@ abstract class RequestProcessor {
 
         // mark this request as "authenticated"
         self::$userIsAuthenticated = true;
-
-        // check Auth-User's permissions on GETUser's store
-        if($backend->Setup(Request::GetGETUser(), true) == false)
-            throw new AuthenticationRequiredException(sprintf("Not enough privileges of '%s' to setup for user '%s': Permission denied", Request::GetAuthUser(), Request::GetGETUser()));
     }
 
     /**
@@ -129,17 +125,12 @@ abstract class RequestProcessor {
 
         // if there is an error decoding wbxml, consume remaining data and include it in the WBXMLException
         if (!$handler->Handle(Request::GetCommandCode())) {
-            $wbxmlLog = "no decoder";
-            if (self::$decoder) {
-                self::$decoder->readRemainingData();
-                $wbxmlLog = self::$decoder->getWBXMLLog();
-            }
-            throw new WBXMLException("Debug data: " . $wbxmlLog);
+            throw new WBXMLException("Debug data: " . Request::GetInputAsBase64());
         }
 
         // also log WBXML in happy case
-        if (self::$decoder && @constant('WBXML_DEBUG') === true) {
-            ZLog::Write(LOGLEVEL_WBXML, "WBXML-IN : ". self::$decoder->getWBXMLLog(), false);
+        if (@constant('WBXML_DEBUG') === true) {
+            ZLog::Write(LOGLEVEL_WBXML, "WBXML-IN : ". Request::GetInputAsBase64(), false);
         }
     }
 
@@ -166,4 +157,3 @@ abstract class RequestProcessor {
      */
     abstract public function Handle($commandCode);
 }
-?>

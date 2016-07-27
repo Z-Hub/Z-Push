@@ -213,5 +213,3 @@ class StateMigrator20xto210 {
         return true;
     }
 }
-
-?>

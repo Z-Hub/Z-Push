@@ -1,0 +1,2 @@
+conftmp/combined.conf.php /etc/z-push/
+backend/combined            /usr/share/z-push/backend/

@@ -95,22 +95,44 @@ class MoveItems extends RequestProcessor {
             $status = SYNC_MOVEITEMSSTATUS_SUCCESS;
             $result = false;
             try {
+                $sourceBackendFolderId = self::$deviceManager->GetBackendIdForFolderId($move["srcfldid"]);
+
                 // if the source folder is an additional folder the backend has to be setup correctly
-                if (!self::$backend->Setup(ZPush::GetAdditionalSyncFolderStore($move["srcfldid"])))
-                    throw new StatusException(sprintf("HandleMoveItems() could not Setup() the backend for folder id '%s'", $move["srcfldid"]), SYNC_MOVEITEMSSTATUS_INVALIDSOURCEID);
+                if (!self::$backend->Setup(ZPush::GetAdditionalSyncFolderStore($sourceBackendFolderId)))
+                    throw new StatusException(sprintf("HandleMoveItems() could not Setup() the backend for folder id %s/%s", $move["srcfldid"], $sourceBackendFolderId), SYNC_MOVEITEMSSTATUS_INVALIDSOURCEID);
 
-                $importer = self::$backend->GetImporter($move["srcfldid"]);
+                $importer = self::$backend->GetImporter($sourceBackendFolderId);
                 if ($importer === false)
-                    throw new StatusException(sprintf("HandleMoveItems() could not get an importer for folder id '%s'", $move["srcfldid"]), SYNC_MOVEITEMSSTATUS_INVALIDSOURCEID);
+                    throw new StatusException(sprintf("HandleMoveItems() could not get an importer for folder id %s/%s", $move["srcfldid"], $sourceBackendFolderId), SYNC_MOVEITEMSSTATUS_INVALIDSOURCEID);
 
-                // get saved SyncParameters for this folder
+                // get saved SyncParameters of the source folder
                 $spa = self::$deviceManager->GetStateManager()->GetSynchedFolderState($move["srcfldid"]);
                 if (!$spa->HasSyncKey())
                     throw new StatusException(sprintf("MoveItems(): Source folder id '%s' is not fully synchronized. Unable to perform operation.", $move["srcfldid"]), SYNC_MOVEITEMSSTATUS_INVALIDSOURCEID);
+
+                // get saved SyncParameters of the destination folder
+                $destSpa = self::$deviceManager->GetStateManager()->GetSynchedFolderState($move["dstfldid"]);
+                if (!$destSpa->HasSyncKey()) {
+                    $destSpa->SetFolderId($move["dstfldid"]);
+                    $destSpa->SetSyncKey(self::$deviceManager->GetStateManager()->GetZeroSyncKey());
+                }
+
+                $importer->SetMoveStates($spa->GetMoveState(), $destSpa->GetMoveState());
                 $importer->ConfigContentParameters($spa->GetCPO());
 
-                $result = $importer->ImportMessageMove($move["srcmsgid"], $move["dstfldid"]);
-                // We discard the importer state for now.
+                $result = $importer->ImportMessageMove($move["srcmsgid"], self::$deviceManager->GetBackendIdForFolderId($move["dstfldid"]));
+                // We discard the standard importer state for now.
+
+                // Get the move states and save them in the SyncParameters of the src and dst folder
+                list($srcMoveState, $dstMoveState) = $importer->GetMoveStates();
+                if ($spa->GetMoveState() !== $srcMoveState) {
+                    $spa->SetMoveState($srcMoveState);
+                    self::$deviceManager->GetStateManager()->SetSynchedFolderState($spa);
+                }
+                if ($destSpa->GetMoveState() !== $dstMoveState) {
+                    $destSpa->SetMoveState($dstMoveState);
+                    self::$deviceManager->GetStateManager()->SetSynchedFolderState($destSpa);
+                }
             }
             catch (StatusException $stex) {
                 if ($stex->getCode() == SYNC_STATUS_FOLDERHIERARCHYCHANGED) // same as SYNC_FSSTATUS_CODEUNKNOWN
@@ -135,4 +157,3 @@ class MoveItems extends RequestProcessor {
         return true;
     }
 }
-?>

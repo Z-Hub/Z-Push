@@ -150,7 +150,7 @@ class ExportChangesDiff extends DiffState implements IExportChanges{
                             $this->updateState("change", $stat);
                         break;
                     case "delete":
-                        if($this->flags & BACKEND_DISCARD_DATA || $this->importer->ImportFolderDeletion($change["id"]))
+                        if($this->flags & BACKEND_DISCARD_DATA || $this->importer->ImportFolderDeletion(SyncFolder::GetObject($change["id"])))
                             $this->updateState("delete", $change);
                         break;
                 }
@@ -214,5 +214,3 @@ class ExportChangesDiff extends DiffState implements IExportChanges{
         }
     }
 }
-
-?>

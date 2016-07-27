@@ -6,7 +6,7 @@
 *
 * Created   :   16.02.2012
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -78,6 +78,9 @@ class FolderSync extends RequestProcessor {
 
             // We will be saving the sync state under 'newsynckey'
             $newsynckey = self::$deviceManager->GetStateManager()->GetNewSyncKey($synckey);
+
+            // there are no SyncParameters for the hierarchy, but we use it to save the latest synckeys
+            $spa = self::$deviceManager->GetStateManager()->GetSynchedFolderState(false);
         }
         catch (StateNotFoundException $snfex) {
                 $status = SYNC_FSSTATUS_SYNCKEYERROR;
@@ -92,7 +95,10 @@ class FolderSync extends RequestProcessor {
         $changesMem = self::$deviceManager->GetHierarchyChangesWrapper();
 
         // the hierarchyCache should now fully be initialized - check for changes in the additional folders
-        $changesMem->Config(ZPush::GetAdditionalSyncFolders());
+        $changesMem->Config(ZPush::GetAdditionalSyncFolders(false));
+
+         // reset to default store in backend
+        self::$backend->Setup(false);
 
         // process incoming changes
         if(self::$decoder->getElementStartTag(SYNC_FOLDERHIERARCHY_CHANGES)) {
@@ -110,10 +116,14 @@ class FolderSync extends RequestProcessor {
                 return false;
 
             $importer = false;
-            while(1) {
+            WBXMLDecoder::ResetInWhile("folderSyncIncomingChange");
+            while(WBXMLDecoder::InWhile("folderSyncIncomingChange")) {
                 $folder = new SyncFolder();
                 if(!$folder->Decode(self::$decoder))
                     break;
+
+                // add the backendId to the SyncFolder object
+                $folder->BackendId = self::$deviceManager->GetBackendIdForFolderId($folder->serverid);
 
                 try {
                     if ($status == SYNC_FSSTATUS_SUCCESS && !$importer) {
@@ -181,9 +191,7 @@ class FolderSync extends RequestProcessor {
                     $exporter->InitializeExporter($changesMem);
 
                     // Stream all changes to the ImportExportChangesMem
-                    $maxExporttime = Request::GetExpectedConnectionTimeout();
                     $totalChanges = $exporter->GetChangeCount();
-                    $started = time();
                     $exported = 0;
                     $partial = false;
                     while(is_array($exporter->Synchronize())) {
@@ -194,8 +202,8 @@ class FolderSync extends RequestProcessor {
                         }
 
                         // if partial sync is allowed, stop if this takes too long
-                        if (USE_PARTIAL_FOLDERSYNC && (time() - $started) > $maxExporttime) {
-                            ZLog::Write(LOGLEVEL_WARN, sprintf("Request->HandleFolderSync(): Exporting folders is too slow. In %d seconds only %d from %d changes were processed.",(time() - $started), $exported, $totalChanges));
+                        if (USE_PARTIAL_FOLDERSYNC && Request::IsRequestTimeoutReached()) {
+                            ZLog::Write(LOGLEVEL_WARN, sprintf("Request->HandleFolderSync(): Exporting folders is too slow. In %d seconds only %d from %d changes were processed.",(time() - $_SERVER["REQUEST_TIME"]), $exported, $totalChanges));
                             self::$topCollector->AnnounceInformation(sprintf("Partial export of %d out of %d folders", $exported, $totalChanges), true);
                             self::$deviceManager->SetFolderSyncComplete(false);
                             $partial = true;
@@ -252,6 +260,11 @@ class FolderSync extends RequestProcessor {
                 if ($synckey == $newsynckey) {
                     self::$deviceManager->GetStateManager()->SetSyncState($newsynckey, $newsyncstate);
 
+                    // update SPA & save it
+                    $spa->SetSyncKey($newsynckey);
+                    $spa->SetFolderId(false);
+                    self::$deviceManager->GetStateManager()->SetSynchedFolderState($spa);
+
                     // invalidate all pingable flags
                     SyncCollections::InvalidatePingableFlags();
                 }
@@ -262,4 +275,3 @@ class FolderSync extends RequestProcessor {
         return true;
     }
 }
-?>

@@ -139,4 +139,3 @@ class SyncMeetingRequest extends SyncObject {
         parent::SyncObject($mapping);
     }
 }
-?>

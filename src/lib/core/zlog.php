@@ -42,14 +42,13 @@
 ************************************************/
 
 class ZLog {
-    static private $devid = '';
-    static private $user = '';
-    static private $authUser = false;
-    static private $pidstr;
     static private $wbxmlDebug = '';
     static private $lastLogs = array();
-    static private $userLog = false;
-    static private $unAuthCache = array();
+
+    /**
+     * @var Log $logger
+     */
+    static private $logger = null;
 
     /**
      * Initializes the logging
@@ -58,7 +57,7 @@ class ZLog {
      * @return boolean
      */
     static public function Initialize() {
-        global $specialLogUsers;
+        $logger = self::getLogger();
 
         // define some constants for the logging
         if (!defined('LOGUSERLEVEL'))
@@ -67,26 +66,13 @@ class ZLog {
         if (!defined('LOGLEVEL'))
             define('LOGLEVEL', LOGLEVEL_OFF);
 
-        list($user,) = Utils::SplitDomainUser(strtolower(Request::GetGETUser()));
-        self::$userLog = in_array($user, $specialLogUsers);
-        if (!defined('WBXML_DEBUG') && $user) {
+        if (!defined('WBXML_DEBUG')) {
             // define the WBXML_DEBUG mode on user basis depending on the configurations
-            if (LOGLEVEL >= LOGLEVEL_WBXML || (LOGUSERLEVEL >= LOGLEVEL_WBXML && self::$userLog))
+            if (LOGLEVEL >= LOGLEVEL_WBXML || (LOGUSERLEVEL >= LOGLEVEL_WBXML && $logger->HasSpecialLogUsers()))
                 define('WBXML_DEBUG', true);
             else
                 define('WBXML_DEBUG', false);
         }
-
-        if ($user)
-            self::$user = '['. $user .'] ';
-        else
-            self::$user = '';
-
-        // log the device id if the global loglevel is set to log devid or the user is in  and has the right log level
-        if (Request::GetDeviceID() != "" && (LOGLEVEL >= LOGLEVEL_DEVICEID || (LOGUSERLEVEL >= LOGLEVEL_DEVICEID && self::$userLog)))
-            self::$devid = '['. Request::GetDeviceID() .'] ';
-        else
-            self::$devid = '';
 
         return true;
     }
@@ -108,39 +94,17 @@ class ZLog {
             $message = substr($message, 0, 10240) . sprintf(" <log message with %d bytes truncated>", $messagesize);
 
         self::$lastLogs[$loglevel] = $message;
-        $data = self::buildLogString($loglevel) . $message . "\n";
 
-        if ($loglevel <= LOGLEVEL) {
-            @file_put_contents(LOGFILE, $data, FILE_APPEND);
+        try {
+            self::getLogger()->Log($loglevel, $message);
         }
-
-        // should we write this into the user log?
-        if ($loglevel <= LOGUSERLEVEL && self::$userLog) {
-            // padd level for better reading
-            $data = str_replace(self::getLogLevelString($loglevel), self::getLogLevelString($loglevel,true), $data);
-
-            // is the user authenticated?
-            if (self::logToUserFile()) {
-                // something was logged before the user was authenticated, write this to the log
-                if (!empty(self::$unAuthCache)) {
-                    @file_put_contents(LOGFILEDIR . self::logToUserFile() . ".log", implode('', self::$unAuthCache), FILE_APPEND);
-                    self::$unAuthCache = array();
-                }
-                // only use plain old a-z characters for the generic log file
-                @file_put_contents(LOGFILEDIR . self::logToUserFile() . ".log", $data, FILE_APPEND);
-            }
-            // the user is not authenticated yet, we save the log into memory for now
-            else {
-                self::$unAuthCache[] = $data;
-            }
-        }
-
-        if (($loglevel & LOGLEVEL_FATAL) || ($loglevel & LOGLEVEL_ERROR)) {
-            @file_put_contents(LOGERRORFILE, $data, FILE_APPEND);
+        catch (\Exception $e) {
+            //@TODO How should we handle logging error ?
+            // Ignore any error.
         }
 
         if ($loglevel & LOGLEVEL_WBXMLSTACK) {
-            self::$wbxmlDebug .= $message. "\n";
+            self::$wbxmlDebug .= $message . PHP_EOL;
         }
     }
 
@@ -166,114 +130,60 @@ class ZLog {
         return (isset(self::$lastLogs[$loglevel]))?self::$lastLogs[$loglevel]:false;
     }
 
-
     /**
-     * Writes info at the end of the request but only if the LOGLEVEL is DEBUG or more verbose
+     * Returns the logger object. If no logger has been initialized, FileLog will be initialized and returned.
      *
-     * @access public
-     * @return
+     * @access private
+     * @return Log
+     * @throws Exception thrown if the logger class cannot be instantiated.
      */
-    static public function WriteEnd() {
-        if (LOGLEVEL_DEBUG <= LOGLEVEL || (LOGLEVEL_DEBUG <= LOGUSERLEVEL && self::$userLog)) {
-            if (version_compare(phpversion(), '5.4.0') < 0) {
-                $time_used = number_format(time() - $_SERVER["REQUEST_TIME"], 2);
-            }
-            else {
-                $time_used = number_format(microtime(true) - $_SERVER["REQUEST_TIME_FLOAT"], 2);
-            }
-            $peakUsage = memory_get_peak_usage(false);
-            $truePeakUsage = memory_get_peak_usage(true);
+    static private function getLogger() {
+        if (!self::$logger) {
+            global $specialLogUsers; // This variable comes from the configuration file (config.php)
 
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("Memory usage information: %s/%s (%s B/%s B) - Execution time: %ss - HTTP responde code: %s",
-                    Utils::FormatBytes($peakUsage), Utils::FormatBytes($truePeakUsage), $peakUsage, $truePeakUsage, $time_used, http_response_code()));
-            ZLog::Write(LOGLEVEL_DEBUG, "-------- End");
+            $logger = LOGBACKEND_CLASS;
+            if (!class_exists($logger)) {
+                $errmsg = 'The configured logging class `'.$logger.'` does not exist. Check your configuration.';
+                error_log($errmsg);
+                throw new \Exception($errmsg);
+            }
+
+            list($user) = Utils::SplitDomainUser(strtolower(Request::GetGETUser()));
+            $user = '['.$user.']';
+
+            self::$logger = new $logger();
+            self::$logger->SetUser($user);
+            self::$logger->SetAuthUser(Request::GetAuthUser());
+            self::$logger->SetSpecialLogUsers($specialLogUsers);
+            self::$logger->SetDevid('['. Request::GetDeviceID() .']');
+            self::$logger->SetPidstr('[' . str_pad(@getmypid(),5," ",STR_PAD_LEFT) . ']');
+            self::$logger->AfterInitialize();
         }
+        return self::$logger;
     }
 
     /**----------------------------------------------------------------------------------------------------------
      * private log stuff
      */
-
-    /**
-     * Returns the filename logs for a WBXML debug log user should be saved to
-     *
-     * @access private
-     * @return string
-     */
-    static private function logToUserFile() {
-        global $specialLogUsers;
-
-        if (self::$authUser === false) {
-            if (RequestProcessor::isUserAuthenticated()) {
-                $authuser = Request::GetAuthUser();
-                if ($authuser && in_array($authuser, $specialLogUsers))
-                    self::$authUser = preg_replace('/[^a-z0-9]/', '_', strtolower($authuser));
-            }
-        }
-        return self::$authUser;
-    }
-
-    /**
-     * Returns the string to be logged
-     *
-     * @access private
-     * @return string
-     */
-    static private function buildLogString($loglevel) {
-        if (!isset(self::$pidstr))
-            self::$pidstr = '[' . str_pad(@getmypid(),5," ",STR_PAD_LEFT) . '] ';
-
-        if (!isset(self::$user))
-            self::$user = '';
-
-        if (!isset(self::$devid))
-            self::$devid = '';
-
-        return Utils::GetFormattedTime() ." ". self::$pidstr . self::getLogLevelString($loglevel, (LOGLEVEL > LOGLEVEL_INFO)) ." ". self::$user . self::$devid;
-    }
-
-    /**
-     * Returns the string representation of the LOGLEVEL.
-     * String can be padded
-     *
-     * @param int       $loglevel           one of the LOGLEVELs
-     * @param boolean   $pad
-     *
-     * @access private
-     * @return string
-     */
-    static private function getLogLevelString($loglevel, $pad = false) {
-        if ($pad) $s = " ";
-        else      $s = "";
-        switch($loglevel) {
-            case LOGLEVEL_OFF:   return ""; break;
-            case LOGLEVEL_FATAL: return "[FATAL]"; break;
-            case LOGLEVEL_ERROR: return "[ERROR]"; break;
-            case LOGLEVEL_WARN:  return "[".$s."WARN]"; break;
-            case LOGLEVEL_INFO:  return "[".$s."INFO]"; break;
-            case LOGLEVEL_DEBUG: return "[DEBUG]"; break;
-            case LOGLEVEL_WBXML: return "[WBXML]"; break;
-            case LOGLEVEL_DEVICEID: return "[DEVICEID]"; break;
-            case LOGLEVEL_WBXMLSTACK: return "[WBXMLSTACK]"; break;
-        }
-    }
 }
 
 /**----------------------------------------------------------------------------------------------------------
  * Legacy debug stuff
  */
 
-// deprecated
-// backwards compatible
-function debugLog($message) {
-    ZLog::Write(LOGLEVEL_DEBUG, $message);
-}
+// E_DEPRECATED only available since PHP 5.3.0
+if (!defined('E_DEPRECATED')) define(E_DEPRECATED, 8192);
 
 // TODO review error handler
-function zarafa_error_handler($errno, $errstr, $errfile, $errline, $errcontext) {
-    $bt = debug_backtrace();
+function zpush_error_handler($errno, $errstr, $errfile, $errline, $errcontext) {
+    if (defined('LOG_ERROR_MASK')) $errno &= LOG_ERROR_MASK;
+
     switch ($errno) {
-        case 8192:      // E_DEPRECATED since PHP 5.3.0
+        case 0:
+            // logging disabled by LOG_ERROR_MASK
+            break;
+
+        case E_DEPRECATED:
             // do not handle this message
             break;
 
@@ -286,6 +196,7 @@ function zarafa_error_handler($errno, $errstr, $errfile, $errline, $errcontext) 
             break;
 
         default:
+            $bt = debug_backtrace();
             ZLog::Write(LOGLEVEL_ERROR, "trace error: $errfile:$errline $errstr ($errno) - backtrace: ". (count($bt)-1) . " steps");
             for($i = 1, $bt_length = count($bt); $i < $bt_length; $i++) {
                 $file = $line = "unknown";
@@ -299,6 +210,27 @@ function zarafa_error_handler($errno, $errstr, $errfile, $errline, $errcontext) 
 }
 
 error_reporting(E_ALL);
-set_error_handler("zarafa_error_handler");
+set_error_handler("zpush_error_handler");
 
-?>
+
+function zpush_fatal_handler() {
+    $errfile = "unknown file";
+    $errstr  = "shutdown";
+    $errno   = E_CORE_ERROR;
+    $errline = 0;
+
+    $error = error_get_last();
+
+    if( $error !== null) {
+        $errno   = $error["type"];
+        $errfile = $error["file"];
+        $errline = $error["line"];
+        $errstr  = $error["message"];
+
+        // do NOT log PHP Notice, Warning, Deprecated or Strict as FATAL
+        if ($errno & ~(E_NOTICE|E_WARNING|E_DEPRECATED|E_STRICT)) {
+            ZLog::Write(LOGLEVEL_FATAL, sprintf("Fatal error: %s:%d - %s (%s)", $errfile, $errline, $errstr, $errno));
+        }
+    }
+}
+register_shutdown_function("zpush_fatal_handler");

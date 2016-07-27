@@ -99,7 +99,7 @@ interface IStateMachine {
      *
      * @access public
      * @return mixed
-     * @throws StateNotFoundException, StateInvalidException
+     * @throws StateNotFoundException, StateInvalidException, UnavailableException
      */
     public function GetState($devid, $type, $key = false, $counter = false, $cleanstates = true);
 
@@ -114,25 +114,27 @@ interface IStateMachine {
      *
      * @access public
      * @return boolean
-     * @throws StateInvalidException
+     * @throws StateInvalidException, UnavailableException
      */
     public function SetState($state, $devid, $type, $key = false, $counter = false);
 
     /**
-     * Cleans up all older states
-     * If called with a $counter, all states previous state counter can be removed
-     * If called without $counter, all keys (independently from the counter) can be removed
+     * Cleans up all older states.
+     * If called with a $counter, all states previous state counter can be removed.
+     * If additionally the $thisCounterOnly flag is true, only that specific counter will be removed.
+     * If called without $counter, all keys (independently from the counter) can be removed.
      *
      * @param string    $devid              the device id
      * @param string    $type               the state type
      * @param string    $key
      * @param string    $counter            (opt)
+     * @param string    $thisCounterOnly    (opt) if provided, the exact counter only will be removed
      *
      * @access public
      * @return
      * @throws StateInvalidException
      */
-    public function CleanStates($devid, $type, $key, $counter = false);
+    public function CleanStates($devid, $type, $key, $counter = false, $thisCounterOnly = false);
 
     /**
      * Links a user to a device
@@ -195,5 +197,3 @@ interface IStateMachine {
      */
     public function GetAllStatesForDevice($devid);
 }
-
-?>

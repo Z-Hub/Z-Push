@@ -72,5 +72,3 @@ interface IExportChanges extends IChanges {
      */
     public function Synchronize();
 }
-
-?>

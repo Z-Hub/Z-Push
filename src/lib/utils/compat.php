@@ -164,5 +164,3 @@ if (!function_exists('memory_get_peak_usage')) {
     }
 
 }
-
-?>

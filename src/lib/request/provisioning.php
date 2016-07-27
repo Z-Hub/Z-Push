@@ -75,7 +75,8 @@ class Provisioning extends RequestProcessor {
         // - DeviceInformation
         // - Policies
         // Each of them should only be once per request.
-        while(1) {
+        WBXMLDecoder::ResetInWhile("provisioningMain");
+        while(WBXMLDecoder::InWhile("provisioningMain")) {
             $requestName = "";
             if (self::$decoder->getElementStartTag(SYNC_PROVISION_REMOTEWIPE)) {
                 $requestName = SYNC_PROVISION_REMOTEWIPE;
@@ -231,10 +232,12 @@ class Provisioning extends RequestProcessor {
                     elseif ($policytype == 'MS-EAS-Provisioning-WBXML') {
                         self::$encoder->startTag(SYNC_PROVISION_EASPROVISIONDOC);
 
-                            $prov = self::$deviceManager->GetProvisioningObject();
+                            // get the provisioning object and log the loaded policy values
+                            $prov = self::$deviceManager->GetProvisioningObject(true);
                             if (!$prov->Check())
                                 throw new FatalException("Invalid policies!");
 
+                            self::$deviceManager->SavePolicyHashAndName($prov);
                             $prov->Encode(self::$encoder);
                         self::$encoder->endTag();
                     }
@@ -263,4 +266,3 @@ class Provisioning extends RequestProcessor {
         return true;
     }
 }
-?>

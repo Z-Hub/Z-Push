@@ -11,7 +11,7 @@
 *
 * Created   :   01.10.2007
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -167,6 +167,175 @@ abstract class SyncObject extends Streamer {
     }
 
     /**
+     * Compares this a SyncObject to another, while printing out all properties and showing where they differ.
+     *
+     * @see SyncObject
+     * @param SyncObject    $odo                other SyncObject
+     * @param string        $odoName            how different data should be named
+     * @param array         $supportedFields    the list of the supported fields of the device
+     * @param int           $recCount           recursion counter
+     *
+     * @access public
+     * @return array with one property per line, key being the property instance variable name
+     */
+    public function EvaluateAndCompare($odo, $odoName = "", $supportedFields, $keyprefix = "", $recCount = 0) {
+        if ($odo === false)
+            return false;
+
+        // check objecttype
+        if (! ($odo instanceof SyncObject) || get_class($this) != get_class($odo)) {
+            ZLog::Write(LOGLEVEL_DEBUG, "SyncObject->EvaluateAndCompare() the target object is not a SyncObject or the objects are different SyncObjects: '%s' and '%s'", get_class($this), get_class($odo));
+            return false;
+        }
+
+        // If $supportedFields is false, it means that the device doesn't have any supported fields.
+        // Set it to an empty array in order to avoid warnings.
+        if ($supportedFields == false) {
+            $supportedFields = array();
+        }
+
+        $out = array();
+        if ($keyprefix)
+            $keyprefix = $keyprefix . $recCount;
+
+        // check for mapped fields
+        foreach ($this->mapping as $k=>$v) {
+            // Do not bother with the properties for which notifications aren't required
+            // or if they are not set
+            if (!isset($v[self::STREAMER_RONOTIFY]) || !$v[self::STREAMER_RONOTIFY] || (!isset($this->{$v[self::STREAMER_VAR]}) && !isset($odo->{$v[self::STREAMER_VAR]}))) {
+                continue;
+            }
+            $val = $v[self::STREAMER_VAR];
+            // both values are set case
+            if (isset($this->$val) && isset($odo->$val)) {
+                if (isset($v[self::STREAMER_TYPE])) {
+                    // Do the recursive compare of sub SyncObject
+                    if ($this->$val instanceof SyncObject) {
+                        $out += $this->$val->EvaluateAndCompare($odo->$val, $odoName, $supportedFields, substr(get_class($this->$val), 4), $recCount++);
+                    }
+                    // array of values?
+                    else if (isset($v[self::STREAMER_ARRAY])) {
+                        // if both arrays exist then seek for differences in the arrays
+                        if (count(array_diff($this->$val, $odo->$val)) + count(array_diff($odo->$val, $this->$val)) > 0) {
+                            if ($v[self::STREAMER_TYPE] == "SyncAppointmentException") {
+                                $out[$keyprefix.$val] = "An exception was changed.";
+                            }
+                            else {
+                                $out[$keyprefix.$val] = implode(", ", $this->$val) ." - ". $odoName .": ". implode(", ", $odo->$val);
+                            }
+                        }
+                    }
+                    // if they are streams, compare the streams
+                    else if ($v[self::STREAMER_TYPE] == self::STREAMER_TYPE_STREAM_ASPLAIN || $v[self::STREAMER_TYPE] == self::STREAMER_TYPE_STREAM_ASBASE64) {
+                        // Remove the \r as it seems to be only in one of the streams
+                        $t = str_replace("\r", "", stream_get_contents($this->$val));
+                        $o = str_replace("\r", "", stream_get_contents($odo->$val));
+                        if ($this instanceof SyncBaseBody) {
+                            $out["Body/Description"] = (trim($t) == trim($o)) ? "No changes made" : $t." - ". $odoName .": ".$o;
+                        }
+                        else if($v[self::STREAMER_TYPE] == self::STREAMER_TYPE_STREAM_ASPLAIN) {
+                            $out[$keyprefix.$val] = (trim($t) == trim($o)) ? $t : $t." - ". $odoName .": ".$o;
+                        }
+                        else {
+                            $out[$keyprefix.$val] = "Binary data changed";
+                        }
+                    }
+                    // do the nice date formatting
+                    else if ($v[self::STREAMER_TYPE] == self::STREAMER_TYPE_DATE || $v[self::STREAMER_TYPE] == self::STREAMER_TYPE_DATE_DASHES) {
+                        if($this->$val == $odo->$val) {
+                            $out[$keyprefix.$val] = Utils::GetFormattedTime($this->$val);
+                        }
+                        else {
+                            $out[$keyprefix.$val] = (strlen($this->$val) ?
+                                    Utils::GetFormattedTime($this->$val):"undefined") ." - ". $odoName .": ".
+                                    (strlen($odo->$val) ? Utils::GetFormattedTime($odo->$val) : "undefined");
+                        }
+                    }
+                    // else just compare their values and print human friendly if necessary
+                    else {
+                        if($this->$val == $odo->$val) {
+                            $out[$keyprefix.$val] = $this->GetNameFromPropertyValue($v, $this->$val);
+                        }
+                        else {
+                            $out[$keyprefix.$val] = (strlen($this->$val) ? $this->GetNameFromPropertyValue($v, $this->$val) : "undefined") .
+                                    " - ". $odoName .": ".
+                                    (strlen($odo->$val) ? $odo->GetNameFromPropertyValue($v, $odo->$val) : "undefined");
+                        }
+                    }
+                }
+                // array of values?
+                else if (isset($v[self::STREAMER_ARRAY])) {
+                    // if both arrays exist then seek for differences in the arrays
+                    if (count(array_diff($this->$val, $odo->$val)) + count(array_diff($odo->$val, $this->$val)) > 0) {
+                        $out[$keyprefix.$val] = implode(", ", $this->$val) ." - ". $odoName .": ". implode(", ", $odo->$val);
+                    }
+                }
+                // else just compare their values
+                else {
+                    if($this->$val == $odo->$val) {
+                        if (! ($this instanceof SyncRecurrence)) {
+                            $out[$keyprefix.$val] = ($this->GetNameFromPropertyValue($v, $this->$val));
+                        }
+                    }
+                    else {
+                        if ($this instanceof SyncRecurrence) {
+                            $out["Recurrence"] = "Recurrence changed";
+                        }
+                        else {
+                            $out[$keyprefix.$val] = (strlen($this->$val) ? $this->GetNameFromPropertyValue($v, $this->$val) : "undefined") .
+                                    " - ". $odoName .": ".
+                                    (strlen($odo->$val) ? ($odo->GetNameFromPropertyValue($v, $odo->$val)) : "undefined");
+                        }
+                    }
+                }
+            }
+            // a value removed in $odo case
+            elseif (isset($this->$val)) {
+                // If it's a supported property and it's not set, it was removed.
+                // Otherwise it's a ghosted property and the device didn't send it, so we don't have to care about that case.
+                if (in_array($k, $supportedFields)) {
+                    if ((is_scalar($this->$val) && strlen($this->$val)) || (!is_scalar($this->$val) && !empty($this->$val))) {
+                        $out[$keyprefix.$val] = (is_array($this->$val) ? implode(",", $this->$val) : $this->GetNameFromPropertyValue($v, $this->$val)) .
+                        " - " . $odoName .": value completely removed";
+                    }
+                }
+                // there is no data sent for SyncMail, so just output its values
+                else if ($this instanceof SyncMail) {
+                    if (isset($v[self::STREAMER_TYPE]) && ($v[self::STREAMER_TYPE] == self::STREAMER_TYPE_DATE || $v[self::STREAMER_TYPE] == self::STREAMER_TYPE_DATE_DASHES)) {
+                        $out[$keyprefix.$val] = Utils::GetFormattedTime($this->$val);
+                    }
+                    else {
+                        $out[$keyprefix.$val] = $this->GetNameFromPropertyValue($v, $this->$val);
+                    }
+                }
+            }
+            // a value added to $odo case
+            elseif (isset($odo->$val)) {
+                if (stripos($keyprefix, "MailFlags") !== false) {
+                    $out["Flags"] = "To-do flags were added";
+                }
+                else if (isset($v[self::STREAMER_TYPE])) {
+                    if($v[self::STREAMER_TYPE] == "SyncAppointmentException") {
+                        $out[$keyprefix.$val] = "Not set - " . $odoName . ": an exception was added";
+                    }
+                    else {
+                        $out[$keyprefix.$val] = "Not set - " . $odoName . ": " . $odo->GetNameFromPropertyValue($v, $odo->$val) . " (value added)";
+                    }
+                }
+                else if (isset($v[self::STREAMER_ARRAY])) {
+                    // if both arrays exist then seek for differences in the arrays
+                    $out[$keyprefix.$val] = "Not set - ". $odoName .": ". implode(", ", $odo->$val) . " (value added)";
+                }
+                else {
+                    $out[$keyprefix.$val] = "Not set - " . $odoName . ": " . $odo->GetNameFromPropertyValue($v, $odo->$val) . " (value added)";
+                }
+            }
+        }
+
+        return $out;
+    }
+
+    /**
      * String representation of the object
      *
      * @return String
@@ -210,6 +379,19 @@ abstract class SyncObject extends Streamer {
      */
     public function getUnsetVars() {
         return $this->unsetVars;
+    }
+
+    /**
+     * Removes not necessary data from the object
+     *
+     * @access public
+     * @return boolean
+     */
+    public function StripData() {
+        if (isset($this->unsetVars)) {
+            unset($this->unsetVars);
+        }
+        return parent::StripData();
     }
 
     /**
@@ -423,6 +605,20 @@ abstract class SyncObject extends Streamer {
 
         return true;
     }
-}
 
-?>
+    /**
+     * Returns human friendly property name from its value if a mapping is available.
+     *
+     * @param array $v
+     * @param mixed $val
+     *
+     * @access public
+     * @return mixed
+     */
+    public function GetNameFromPropertyValue($v, $val) {
+        if (isset($v[self::STREAMER_VALUEMAP][$val])) {
+            return $v[self::STREAMER_VALUEMAP][$val];
+        }
+        return $val;
+    }
+}

@@ -43,5 +43,3 @@
 ************************************************/
 
 class FatalException extends ZPushException {}
-
-?>

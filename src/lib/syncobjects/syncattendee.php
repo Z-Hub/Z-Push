@@ -10,7 +10,7 @@
 *
 * Created   :   05.09.2011
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -53,19 +53,21 @@ class SyncAttendee extends SyncObject {
     function SyncAttendee() {
         $mapping = array(
                     SYNC_POOMCAL_EMAIL                                  => array (  self::STREAMER_VAR      => "email",
-                                                                                    self::STREAMER_CHECKS   => array(   self::STREAMER_CHECK_REQUIRED => self::STREAMER_CHECK_SETEMPTY)),
+                                                                                    self::STREAMER_CHECKS   => array(   self::STREAMER_CHECK_REQUIRED => self::STREAMER_CHECK_SETEMPTY),
+                                                                                    self::STREAMER_RONOTIFY => true),
 
                     SYNC_POOMCAL_NAME                                   => array (  self::STREAMER_VAR      => "name",
-                                                                                    self::STREAMER_CHECKS   => array(   self::STREAMER_CHECK_REQUIRED => self::STREAMER_CHECK_SETEMPTY) )
+                                                                                    self::STREAMER_CHECKS   => array(   self::STREAMER_CHECK_REQUIRED => self::STREAMER_CHECK_SETEMPTY),
+                                                                                    self::STREAMER_RONOTIFY => true)
                 );
 
         if (Request::GetProtocolVersion() >= 12.0) {
-            $mapping[SYNC_POOMCAL_ATTENDEESTATUS]                       =  array (  self::STREAMER_VAR      => "attendeestatus");
-            $mapping[SYNC_POOMCAL_ATTENDEETYPE]                         =  array (  self::STREAMER_VAR      => "attendeetype");
+            $mapping[SYNC_POOMCAL_ATTENDEESTATUS]                       =  array (  self::STREAMER_VAR      => "attendeestatus",
+                                                                                    self::STREAMER_RONOTIFY => true);
+            $mapping[SYNC_POOMCAL_ATTENDEETYPE]                         =  array (  self::STREAMER_VAR      => "attendeetype",
+                                                                                    self::STREAMER_RONOTIFY => true);
         }
 
         parent::SyncObject($mapping);
     }
 }
-
-?>

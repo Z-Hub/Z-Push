@@ -6,7 +6,7 @@
 *
 * Created   :   01.10.2007
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2015 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -324,6 +324,8 @@ define("SYNC_FOLDERHIERARCHY_COUNT","FolderHierarchy:Count");
 define("SYNC_FOLDERHIERARCHY_VERSION","FolderHierarchy:Version");
 // only for internal use - never to be streamed to the mobile
 define("SYNC_FOLDERHIERARCHY_IGNORE_STORE","FolderHierarchy:IgnoreStore");
+define("SYNC_FOLDERHIERARCHY_IGNORE_NOBCKENDFLD","FolderHierarchy:IgnoreNoBackendFolder");
+define("SYNC_FOLDERHIERARCHY_IGNORE_BACKENDID","FolderHierarchy:IgnoreBackendId");
 
 // MeetingResponse
 define("SYNC_MEETINGRESPONSE_CALENDARID","MeetingResponse:CalendarId");
@@ -487,7 +489,8 @@ define("SYNC_PROVISION_UNAPPROVEDINROMAPPLIST", "Provision:UnapprovedInROMApplic
 define("SYNC_PROVISION_APPNAME", "Provision:ApplicationName");
 define("SYNC_PROVISION_APPROVEDAPPLIST", "Provision:ApprovedApplicationList");
 define("SYNC_PROVISION_HASH", "Provision:Hash");
-
+// only for internal use - never to be streamed to the mobile
+define("SYNC_PROVISION_POLICYNAME", "Provision:PolicyName");
 
 //Search
 define("SYNC_SEARCH_SEARCH", "Search:Search");
@@ -678,6 +681,7 @@ define("SYNC_NOTES_MESSAGECLASS", "Notes:MessageClass");
 define("SYNC_NOTES_LASTMODIFIEDDATE", "Notes:LastModifiedDate");
 define("SYNC_NOTES_CATEGORIES", "Notes:Categories");
 define("SYNC_NOTES_CATEGORY", "Notes:Category");
+define("SYNC_NOTES_IGNORE_COLOR","Notes:IgnoreColor");
 
 //RightsManagement //post 14.0
 define("SYNC_RIGHTSMANAGEMENT_SUPPORT", "RightsManagement:RightsManagementSupport");
@@ -1064,5 +1068,3 @@ define("NOTEIVERB_FORWARD", 104);
 define("AS_REPLYTOSENDER", 1);
 define("AS_REPLYTOALL", 2);
 define("AS_FORWARD", 3);
-
-?>

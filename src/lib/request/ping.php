@@ -6,7 +6,7 @@
 *
 * Created   :   16.02.2012
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -63,9 +63,9 @@ class Ping extends RequestProcessor {
         // read from stream to see if the symc params are being sent
         $params_present = self::$decoder->getElementStartTag(SYNC_PING_PING);
 
-        // Load all collections - do load states and check permissions
+        // Load all collections - do load states, check permissions and allow unconfirmed states
         try {
-            $sc->LoadAllCollections(true, true, true);
+            $sc->LoadAllCollections(true, true, true, true, false);
         }
         catch (StateInvalidException $siex) {
             // if no params are present, indicate to send params, else do hierarchy sync
@@ -103,7 +103,8 @@ class Ping extends RequestProcessor {
                 $pingable = array();
 
                 while(self::$decoder->getElementStartTag(SYNC_PING_FOLDER)) {
-                    while(1) {
+                    WBXMLDecoder::ResetInWhile("pingFolder");
+                    while(WBXMLDecoder::InWhile("pingFolder")) {
                         if(self::$decoder->getElementStartTag(SYNC_PING_SERVERENTRYID)) {
                             $folderid = self::$decoder->getElementContent();
                             self::$decoder->getElementEndTag();
@@ -136,11 +137,10 @@ class Ping extends RequestProcessor {
                         $fakechanges[$folderid] = 1;
                         $foundchanges = true;
                     }
-                    else if ($class == $spa->GetContentClass()) {
+                    else if ($this->isClassValid($class, $spa)) {
                         $pingable[] = $folderid;
                         ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandlePing(): using saved sync state for '%s' id '%s'", $spa->GetContentClass(), $folderid));
                     }
-
                 }
                 if(!self::$decoder->getElementEndTag())
                     return false;
@@ -159,6 +159,10 @@ class Ping extends RequestProcessor {
             if(!self::$decoder->getElementEndTag())
                 return false;
 
+            if(!$this->lifetimeBetweenBound($sc->GetLifetime())){
+                $pingstatus = SYNC_PINGSTATUS_HBOUTOFRANGE;
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandlePing(): ping lifetime not between bound (higher bound:'%d' lower bound:'%d' current lifetime:'%d'. Returning SYNC_PINGSTATUS_HBOUTOFRANGE.", PING_HIGHER_BOUND_LIFETIME, PING_LOWER_BOUND_LIFETIME, $sc->GetLifetime()));
+            }
             // save changed data
             foreach ($sc as $folderid => $spa)
                 $sc->SaveCollection($spa);
@@ -170,11 +174,17 @@ class Ping extends RequestProcessor {
                 $pingstatus = SYNC_PINGSTATUS_FAILINGPARAMS;
                 ZLog::Write(LOGLEVEL_DEBUG, "HandlePing(): no pingable folders found and no initialization data sent. Returning SYNC_PINGSTATUS_FAILINGPARAMS.");
             }
+            elseif(!$this->lifetimeBetweenBound($sc->GetLifetime())){
+                $pingstatus = SYNC_PINGSTATUS_FAILINGPARAMS;
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandlePing(): ping lifetime not between bound (higher bound:'%d' lower bound:'%d' current lifetime:'%d'. Returning SYNC_PINGSTATUS_FAILINGPARAMS.", PING_HIGHER_BOUND_LIFETIME, PING_LOWER_BOUND_LIFETIME, $sc->GetLifetime()));
+            }
         }
+
 
         // Check for changes on the default LifeTime, set interval and ONLY on pingable collections
         try {
             if (!$pingstatus && empty($fakechanges)) {
+                self::$deviceManager->DoAutomaticASDeviceSaving(false);
                 $foundchanges = $sc->CheckForChanges($sc->GetLifetime(), $interval, true);
             }
         }
@@ -225,10 +235,60 @@ class Ping extends RequestProcessor {
                 }
                 self::$encoder->endTag();
             }
+            elseif($pingstatus == SYNC_PINGSTATUS_HBOUTOFRANGE){
+                self::$encoder->startTag(SYNC_PING_LIFETIME);
+                if($sc->GetLifetime() > PING_HIGHER_BOUND_LIFETIME){
+                    self::$encoder->content(PING_HIGHER_BOUND_LIFETIME);
+                }
+                else{
+                    self::$encoder->content(PING_LOWER_BOUND_LIFETIME);
+                }
+                self::$encoder->endTag();
+            }
         }
+
         self::$encoder->endTag();
 
         return true;
     }
+
+    /**
+     * Return true if the ping lifetime is between the specified bound (PING_HIGHER_BOUND_LIFETIME and PING_LOWER_BOUND_LIFETIME). If no bound are specified, it returns true.
+     *
+     * @param int       $lifetime
+     *
+     * @access private
+     * @return boolean
+     */
+    private function lifetimeBetweenBound($lifetime){
+        if(PING_HIGHER_BOUND_LIFETIME !== false && PING_LOWER_BOUND_LIFETIME !== false){
+            return ($lifetime <= PING_HIGHER_BOUND_LIFETIME && $lifetime >= PING_LOWER_BOUND_LIFETIME);
+        }
+        if(PING_HIGHER_BOUND_LIFETIME !== false){
+            return $lifetime <= PING_HIGHER_BOUND_LIFETIME;
+        }
+        if(PING_LOWER_BOUND_LIFETIME !== false){
+            return $lifetime >= PING_LOWER_BOUND_LIFETIME;
+        }
+        return true;
+    }
+
+    /**
+     * Checks if a sent folder class is valid for that SyncParameters object.
+     *
+     * @param string $class
+     * @param SycnParameters $spa
+     *
+     * @access public
+     * @return boolean
+     */
+    private function isClassValid($class, $spa) {
+        if ($class == $spa->GetContentClass() ||
+                // KOE ZO-42: Notes are synched as Appointments
+                (self::$deviceManager->IsKoe() && KOE_CAPABILITY_NOTES && $class == "Calendar" && $spa->GetContentClass() == "Notes")
+            ) {
+            return true;
+        }
+        return false;
+    }
 }
-?>

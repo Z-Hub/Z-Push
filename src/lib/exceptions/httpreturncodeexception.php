@@ -52,5 +52,3 @@ class HTTPReturnCodeException extends FatalException {
         parent::__construct($message, (int) $code, $previous, $logLevel);
     }
 }
-
-?>

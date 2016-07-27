@@ -12,7 +12,7 @@
 *
 * Created   :   01.10.2007
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -52,6 +52,8 @@ class Streamer implements Serializable {
     const STREAMER_ARRAY = 2;
     const STREAMER_TYPE = 3;
     const STREAMER_PROP = 4;
+    const STREAMER_RONOTIFY = 5;
+    const STREAMER_VALUEMAP = 20;
     const STREAMER_TYPE_DATE = 1;
     const STREAMER_TYPE_HEX = 2;
     const STREAMER_TYPE_DATE_DASHES = 3;
@@ -82,7 +84,7 @@ class Streamer implements Serializable {
 
 
     /**
-     * Return the streamer mapping for this object 
+     * Return the streamer mapping for this object
      *
      * @access public
      */
@@ -101,7 +103,8 @@ class Streamer implements Serializable {
      * @access public
      */
     public function Decode(&$decoder) {
-        while(1) {
+        WBXMLDecoder::ResetInWhile("decodeMain");
+        while(WBXMLDecoder::InWhile("decodeMain")) {
             $entity = $decoder->getElement();
 
             if($entity[EN_TYPE] == EN_TYPE_STARTTAG) {
@@ -132,7 +135,8 @@ class Streamer implements Serializable {
 
                     // Handle an array
                     if(isset($map[self::STREAMER_ARRAY])) {
-                        while(1) {
+                        WBXMLDecoder::ResetInWhile("decodeArray");
+                        while(WBXMLDecoder::InWhile("decodeArray")) {
                             //do not get start tag for an array without a container
                             if (!(isset($map[self::STREAMER_PROP]) && $map[self::STREAMER_PROP] == self::STREAMER_TYPE_NO_CONTAINER)) {
                                 if(!$decoder->getElementStartTag($map[self::STREAMER_ARRAY]))
@@ -191,6 +195,11 @@ class Streamer implements Serializable {
                             else if($map[self::STREAMER_TYPE] == self::STREAMER_TYPE_COMMA_SEPARATED || $map[self::STREAMER_TYPE] == self::STREAMER_TYPE_SEMICOLON_SEPARATED) {
                                 $glue = ($map[self::STREAMER_TYPE] == self::STREAMER_TYPE_COMMA_SEPARATED)?", ":"; ";
                                 $decoded = explode($glue, $decoder->getElementContent());
+                                if(!$decoder->getElementEndTag())
+                                    return false;
+                            }
+                            else if($map[self::STREAMER_TYPE] == self::STREAMER_TYPE_STREAM_ASPLAIN) {
+                                $decoded = StringStreamWrapper::Open($decoder->getElementContent());
                                 if(!$decoder->getElementEndTag())
                                     return false;
                             }
@@ -414,6 +423,20 @@ class Streamer implements Serializable {
         return true;
     }
 
+    /**
+     * Returns SyncObject's streamer variable names.
+     *
+     * @access public
+     * @return multitype:array
+     */
+    public function GetStreamerVars() {
+        $streamerVars = array();
+        foreach ($this->mapping as $v) {
+            $streamerVars[] = $v[self::STREAMER_VAR];
+        }
+        return $streamerVars;
+    }
+
     /**----------------------------------------------------------------------------------------------------------
      * Private methods for conversion
      */
@@ -464,5 +487,3 @@ class Streamer implements Serializable {
         return 0;
     }
 }
-
-?>

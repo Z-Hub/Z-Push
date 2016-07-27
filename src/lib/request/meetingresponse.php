@@ -6,7 +6,7 @@
 *
 * Created   :   16.02.2012
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2015 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -59,7 +59,8 @@ class MeetingResponse extends RequestProcessor {
 
         while(self::$decoder->getElementStartTag(SYNC_MEETINGRESPONSE_REQUEST)) {
             $req = Array();
-            while(1) {
+            WBXMLDecoder::ResetInWhile("meetingResponseRequest");
+            while(WBXMLDecoder::InWhile("meetingResponseRequest")) {
                 if(self::$decoder->getElementStartTag(SYNC_MEETINGRESPONSE_USERRESPONSE)) {
                     $req["response"] = self::$decoder->getElementContent();
                     if(!self::$decoder->getElementEndTag())
@@ -99,7 +100,13 @@ class MeetingResponse extends RequestProcessor {
             $status = SYNC_MEETRESPSTATUS_SUCCESS;
 
             try {
-                $calendarid = self::$backend->MeetingResponse($req["requestid"], $req["folderid"], $req["response"]);
+                $backendFolderId = self::$deviceManager->GetBackendIdForFolderId($req["folderid"]);
+
+                // if the source folder is an additional folder the backend has to be setup correctly
+                if (!self::$backend->Setup(ZPush::GetAdditionalSyncFolderStore($backendFolderId)))
+                    throw new StatusException(sprintf("HandleMoveItems() could not Setup() the backend for folder id %s/%s", $req["folderid"], $backendFolderId), SYNC_MEETRESPSTATUS_SERVERERROR);
+
+                $calendarid = self::$backend->MeetingResponse($req["requestid"], $backendFolderId, $req["response"]);
                 if ($calendarid === false)
                     throw new StatusException("HandleMeetingResponse() not possible", SYNC_MEETRESPSTATUS_SERVERERROR);
             }
@@ -129,4 +136,3 @@ class MeetingResponse extends RequestProcessor {
         return true;
     }
 }
-?>

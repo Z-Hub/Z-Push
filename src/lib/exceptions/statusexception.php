@@ -44,5 +44,3 @@
 class StatusException extends ZPushException {
     protected $defaultLogLevel = LOGLEVEL_INFO;
 }
-
-?>

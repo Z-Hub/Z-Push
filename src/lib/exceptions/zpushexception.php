@@ -71,4 +71,3 @@ class ZPushException extends Exception {
         return $this->showLegal;
     }
 }
-?>
