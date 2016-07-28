@@ -660,7 +660,7 @@ class SqlStateMachine implements IStateMachine {
      * @return string
      */
     protected function getSQLOp(&$params, $key) {
-        if (is_null($params[$key])) {
+        if (!array_key_exists($key, $params) || (array_key_exists($key, $params) && is_null($params[$key]))) {
             unset($params[$key]);
             return " IS NULL";
         }
