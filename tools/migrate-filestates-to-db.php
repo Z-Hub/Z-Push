@@ -1,4 +1,4 @@
-#!/usr/bin/php
+#!/usr/bin/env php
 <?php
 /**********************************************************
 * File      :   migrate-filestates-to-db.php
@@ -43,7 +43,7 @@
 ************************************************/
 
 // Please adjust to match your z-push installation directory, usually /usr/share/z-push
-define('ZPUSH_BASE_PATH', "/usr/share/z-push");
+define('ZPUSH_BASE_PATH', "../src");
 
 /************************************************
  * MAIN
