@@ -195,6 +195,12 @@ class ItemOperations extends RequestProcessor {
                                 }
                             }
 
+                            if(self::$decoder->getElementStartTag(SYNC_RIGHTSMANAGEMENT_SUPPORT)) {
+                                $rmsupport = self::$decoder->getElementContent(); // TODO - do something with RightsManagementSupport
+                                if(!self::$decoder->getElementEndTag())
+                                    return false;
+                            }
+
                             //break if it reached the endtag
                             $e = self::$decoder->peek();
                             if($e[EN_TYPE] == EN_TYPE_ENDTAG) {
