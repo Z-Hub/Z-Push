@@ -10,7 +10,7 @@
 *
 * Created   :   28.10.2012
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2013, 2015 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -51,7 +51,8 @@ class SyncResolveRecipient extends SyncObject {
     public $emailaddress;
     public $availability;
     public $certificates;
-    public $pictures;
+    public $picture;
+    public $id;
 
     public function SyncResolveRecipient() {
         $mapping = array (
@@ -59,16 +60,19 @@ class SyncResolveRecipient extends SyncObject {
             SYNC_RESOLVERECIPIENTS_DISPLAYNAME              => array (  self::STREAMER_VAR      => "displayname"),
             SYNC_RESOLVERECIPIENTS_EMAILADDRESS             => array (  self::STREAMER_VAR      => "emailaddress"),
 
-            SYNC_RESOLVERECIPIENTS_AVAILABILITY             => array (  self::STREAMER_VAR      => "availability",
-                                                                        self::STREAMER_TYPE     => "SyncRRAvailability"),
-
             SYNC_RESOLVERECIPIENTS_CERTIFICATES             => array (  self::STREAMER_VAR      => "certificates",
-                                                                        self::STREAMER_TYPE     => "SyncRRCertificates"),
-
-            SYNC_RESOLVERECIPIENTS_PICTURE                  => array (  self::STREAMER_VAR      => "pictures",
-                                                                        self::STREAMER_TYPE     => "SyncRRPicture",
-                                                                        self::STREAMER_ARRAY    => SYNC_RESOLVERECIPIENTS_PICTURE),
+                                                                        self::STREAMER_TYPE     => "SyncResolveRecipientsCertificates")
         );
+
+        if (Request::GetProtocolVersion() >= 14.0) {
+            $mapping[SYNC_RESOLVERECIPIENTS_AVAILABILITY]   = array (  self::STREAMER_VAR      => "availability",
+                                                                       self::STREAMER_TYPE     => "SyncResolveRecipientsAvailability");
+        }
+
+        if (Request::GetProtocolVersion() >= 14.1) {
+            $mapping[SYNC_RESOLVERECIPIENTS_PICTURE]        = array (  self::STREAMER_VAR      => "picture",
+                                                                       self::STREAMER_TYPE     => "SyncResolveRecipientsPicture");
+        }
 
         parent::SyncObject($mapping);
     }

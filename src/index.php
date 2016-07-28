@@ -8,7 +8,7 @@
 *
 * Created   :   01.10.2007
 *
-* Copyright 2007 - 2015 Zarafa Deutschland GmbH
+* Copyright 2007 - 2013 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -43,93 +43,15 @@
 * Consult LICENSE file for details
 ************************************************/
 
-
-if (version_compare(phpversion(), '5.4.0') < 0) {
-    ob_start(null, 1048576);
-}
-else {
-    ob_start(null, 1048576, PHP_OUTPUT_HANDLER_STDFLAGS);
-}
+ob_start(null, 1048576);
 
 // ignore user abortions because this can lead to weird errors - see ZP-239
 ignore_user_abort(true);
 
-include_once('lib/exceptions/exceptions.php');
-include_once('lib/utils/utils.php');
-include_once('lib/utils/compat.php');
-include_once('lib/utils/timezoneutil.php');
-include_once('lib/utils/stringstreamwrapper.php');
-include_once('lib/core/zpushdefs.php');
-include_once('lib/core/stateobject.php');
-include_once('lib/core/interprocessdata.php');
-include_once('lib/core/pingtracking.php');
-include_once('lib/core/topcollector.php');
-include_once('lib/core/loopdetection.php');
-include_once('lib/core/asdevice.php');
-include_once('lib/core/statemanager.php');
-include_once('lib/core/devicemanager.php');
-include_once('lib/core/zpush.php');
-include_once('include/z_syslog.php');
-include_once('lib/core/zlog.php');
-include_once('lib/core/paddingfilter.php');
-include_once('lib/interface/ibackend.php');
-include_once('lib/interface/ichanges.php');
-include_once('lib/interface/iexportchanges.php');
-include_once('lib/interface/iimportchanges.php');
-include_once('lib/interface/isearchprovider.php');
-include_once('lib/interface/istatemachine.php');
-include_once('lib/core/streamer.php');
-include_once('lib/core/streamimporter.php');
-include_once('lib/core/synccollections.php');
-include_once('lib/core/hierarchycache.php');
-include_once('lib/core/changesmemorywrapper.php');
-include_once('lib/core/syncparameters.php');
-include_once('lib/core/bodypreference.php');
-include_once('lib/core/contentparameters.php');
-include_once('lib/wbxml/wbxmldefs.php');
-include_once('lib/wbxml/wbxmldecoder.php');
-include_once('lib/wbxml/wbxmlencoder.php');
-include_once('lib/syncobjects/syncobject.php');
-include_once('lib/syncobjects/syncbasebody.php');
-include_once('lib/syncobjects/syncbaseattachment.php');
-include_once('lib/syncobjects/syncmailflags.php');
-include_once('lib/syncobjects/syncrecurrence.php');
-include_once('lib/syncobjects/syncappointment.php');
-include_once('lib/syncobjects/syncappointmentexception.php');
-include_once('lib/syncobjects/syncattachment.php');
-include_once('lib/syncobjects/syncattendee.php');
-include_once('lib/syncobjects/syncmeetingrequestrecurrence.php');
-include_once('lib/syncobjects/syncmeetingrequest.php');
-include_once('lib/syncobjects/syncmail.php');
-include_once('lib/syncobjects/syncnote.php');
-include_once('lib/syncobjects/synccontact.php');
-include_once('lib/syncobjects/syncfolder.php');
-include_once('lib/syncobjects/syncprovisioning.php');
-include_once('lib/syncobjects/synctaskrecurrence.php');
-include_once('lib/syncobjects/synctask.php');
-include_once('lib/syncobjects/syncoofmessage.php');
-include_once('lib/syncobjects/syncoof.php');
-include_once('lib/syncobjects/syncuserinformation.php');
-include_once('lib/syncobjects/syncdeviceinformation.php');
-include_once('lib/syncobjects/syncdevicepassword.php');
-include_once('lib/syncobjects/syncitemoperationsattachment.php');
-include_once('lib/syncobjects/syncsendmail.php');
-include_once('lib/syncobjects/syncsendmailsource.php');
-include_once('lib/syncobjects/syncvalidatecert.php');
-include_once('lib/syncobjects/syncresolverecipients.php');
-include_once('lib/syncobjects/syncresolverecipient.php');
-include_once('lib/syncobjects/syncresolverecipientsoptions.php');
-include_once('lib/syncobjects/syncresolverecipientsavailability.php');
-include_once('lib/syncobjects/syncresolverecipientscertificates.php');
-include_once('lib/syncobjects/syncresolverecipientspicture.php');
-include_once('lib/default/backend.php');
-include_once('lib/default/searchprovider.php');
-include_once('lib/request/request.php');
-include_once('lib/request/requestprocessor.php');
+require_once 'vendor/autoload.php';
 
 if (!defined('ZPUSH_CONFIG')) define('ZPUSH_CONFIG', 'config.php');
 include_once(ZPUSH_CONFIG);
-include_once('version.php');
 
 
     // Attempt to set maximum execution time
@@ -143,19 +65,13 @@ include_once('version.php');
         ZLog::Initialize();
 
         ZLog::Write(LOGLEVEL_DEBUG,"-------- Start");
-        ZLog::Write(LOGLEVEL_INFO,
-                    sprintf("Version='%s' method='%s' from='%s' cmd='%s' getUser='%s' devId='%s' devType='%s'",
-                                    @constant('ZPUSH_VERSION'), Request::GetMethod(), Request::GetRemoteAddr(),
-                                    Request::GetCommand(), Request::GetGETUser(), Request::GetDeviceID(), Request::GetDeviceType()));
+        ZLog::Write(LOGLEVEL_DEBUG,
+                sprintf("cmd='%s' devType='%s' devId='%s' getUser='%s' from='%s' version='%s' method='%s'",
+                        Request::GetCommand(), Request::GetDeviceType(), Request::GetDeviceID(), Request::GetGETUser(), Request::GetRemoteAddr(), @constant('ZPUSH_VERSION'), Request::GetMethod() ));
 
-        // always request the authorization header
-        if (! Request::AuthenticationInfo())
-            throw new AuthenticationRequiredException("Access denied. Please send authorization header.");
-
-        // Stop here if this is an OPTIONS request - Auth information is available but not verified
-        if (Request::IsMethodOPTIONS()) {
+        // Stop here if this is an OPTIONS request
+        if (Request::IsMethodOPTIONS())
             throw new NoPostRequestException("Options request", NoPostRequestException::OPTIONS_REQUEST);
-        }
 
         ZPush::CheckAdvancedConfig();
 
@@ -163,11 +79,15 @@ include_once('version.php');
         Request::ProcessHeaders();
 
         // Check required GET parameters
-        if(Request::IsMethodPOST() && (Request::GetCommandCode() === false || !Request::GetDeviceID() || !Request::GetDeviceType() || !Request::GetGETUser()))
+        if(Request::IsMethodPOST() && (Request::GetCommandCode() === false || !Request::GetDeviceID() || !Request::GetDeviceType()))
             throw new FatalException("Requested the Z-Push URL without the required GET parameters");
 
         // Load the backend
         $backend = ZPush::GetBackend();
+
+        // always request the authorization header
+        if (! Request::HasAuthenticationInfo() || !Request::GetGETUser())
+            throw new AuthenticationRequiredException("Access denied. Please send authorisation information");
 
         // check the provisioning information
         if (PROVISIONING === true && Request::IsMethodPOST() && ZPush::CommandNeedsProvisioning(Request::GetCommandCode()) &&
@@ -187,6 +107,10 @@ include_once('version.php');
 
         // Do the actual request
         header(ZPush::GetServerHeader());
+
+        if (RequestProcessor::isUserAuthenticated()) {
+            header("X-Z-Push-Version: ". @constant('ZPUSH_VERSION'));
+        }
 
         // announce the supported AS versions (if not already sent to device)
         if (ZPush::GetDeviceManager()->AnnounceASVersion()) {
@@ -247,9 +171,20 @@ include_once('version.php');
     }
 
     catch (Exception $ex) {
+        // Extract any previous exception message for logging purpose.
+        $exclass = get_class($ex);
+        $exception_message = $ex->getMessage();
+        if($ex->getPrevious()){
+            do {
+                $current_exception = $ex->getPrevious();
+                $exception_message .= ' -> ' . $current_exception->getMessage();
+            } while($current_exception->getPrevious());
+        }
+
         if (Request::GetUserAgent())
             ZLog::Write(LOGLEVEL_INFO, sprintf("User-agent: '%s'", Request::GetUserAgent()));
-        $exclass = get_class($ex);
+
+        ZLog::Write(LOGLEVEL_FATAL, sprintf('Exception: (%s) - %s', $exclass, $exception_message));
 
         if(!headers_sent()) {
             if ($ex instanceof ZPushException) {
@@ -261,8 +196,6 @@ include_once('version.php');
             else
                 header('HTTP/1.1 500 Internal Server Error');
         }
-        else
-            ZLog::Write(LOGLEVEL_FATAL, "Exception: ($exclass) - headers were already sent. Message: ". $ex->getMessage());
 
         if ($ex instanceof AuthenticationRequiredException) {
             ZPush::PrintZPushLegal($exclass, sprintf('<pre>%s</pre>',$ex->getMessage()));
@@ -300,4 +233,11 @@ include_once('version.php');
         ZPush::GetDeviceManager()->Save();
 
     // end gracefully
-    ZLog::WriteEnd();
+    ZLog::Write(LOGLEVEL_INFO,
+            sprintf("cmd='%s' memory='%s/%s' time='%ss' devType='%s' devId='%s' getUser='%s' from='%s' version='%s' method='%s' httpcode='%s'",
+                    Request::GetCommand(), Utils::FormatBytes(memory_get_peak_usage(false)), Utils::FormatBytes(memory_get_peak_usage(true)),
+                    number_format(microtime(true) - $_SERVER["REQUEST_TIME_FLOAT"], 2),
+                    Request::GetDeviceType(), Request::GetDeviceID(), Request::GetGETUser(), Request::GetRemoteAddr(), @constant('ZPUSH_VERSION'), Request::GetMethod(), http_response_code() ));
+
+    ZLog::Write(LOGLEVEL_DEBUG, "-------- End");
+

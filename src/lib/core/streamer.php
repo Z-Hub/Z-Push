@@ -12,7 +12,7 @@
 *
 * Created   :   01.10.2007
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -52,16 +52,20 @@ class Streamer implements Serializable {
     const STREAMER_ARRAY = 2;
     const STREAMER_TYPE = 3;
     const STREAMER_PROP = 4;
+    const STREAMER_RONOTIFY = 5;
+    const STREAMER_VALUEMAP = 20;
     const STREAMER_TYPE_DATE = 1;
     const STREAMER_TYPE_HEX = 2;
     const STREAMER_TYPE_DATE_DASHES = 3;
-    const STREAMER_TYPE_STREAM = 4;
+    const STREAMER_TYPE_STREAM = 4; // deprecated
     const STREAMER_TYPE_IGNORE = 5;
     const STREAMER_TYPE_SEND_EMPTY = 6;
     const STREAMER_TYPE_NO_CONTAINER = 7;
     const STREAMER_TYPE_COMMA_SEPARATED = 8;
     const STREAMER_TYPE_SEMICOLON_SEPARATED = 9;
     const STREAMER_TYPE_MULTIPART = 10;
+    const STREAMER_TYPE_STREAM_ASBASE64 = 11;
+    const STREAMER_TYPE_STREAM_ASPLAIN = 12;
 
     protected $mapping;
     public $flags;
@@ -78,6 +82,17 @@ class Streamer implements Serializable {
         $this->flags = false;
     }
 
+
+    /**
+     * Return the streamer mapping for this object
+     *
+     * @access public
+     */
+    public function GetMapping() {
+        return $this->mapping;
+    }
+
+
     /**
      * Decodes the WBXML from a WBXMLdecoder until we reach the same depth level of WBXML.
      * This means that if there are multiple objects at this level, then only the first is
@@ -88,7 +103,8 @@ class Streamer implements Serializable {
      * @access public
      */
     public function Decode(&$decoder) {
-        while(1) {
+        WBXMLDecoder::ResetInWhile("decodeMain");
+        while(WBXMLDecoder::InWhile("decodeMain")) {
             $entity = $decoder->getElement();
 
             if($entity[EN_TYPE] == EN_TYPE_STARTTAG) {
@@ -119,7 +135,8 @@ class Streamer implements Serializable {
 
                     // Handle an array
                     if(isset($map[self::STREAMER_ARRAY])) {
-                        while(1) {
+                        WBXMLDecoder::ResetInWhile("decodeArray");
+                        while(WBXMLDecoder::InWhile("decodeArray")) {
                             //do not get start tag for an array without a container
                             if (!(isset($map[self::STREAMER_PROP]) && $map[self::STREAMER_PROP] == self::STREAMER_TYPE_NO_CONTAINER)) {
                                 if(!$decoder->getElementStartTag($map[self::STREAMER_ARRAY]))
@@ -178,6 +195,11 @@ class Streamer implements Serializable {
                             else if($map[self::STREAMER_TYPE] == self::STREAMER_TYPE_COMMA_SEPARATED || $map[self::STREAMER_TYPE] == self::STREAMER_TYPE_SEMICOLON_SEPARATED) {
                                 $glue = ($map[self::STREAMER_TYPE] == self::STREAMER_TYPE_COMMA_SEPARATED)?", ":"; ";
                                 $decoded = explode($glue, $decoder->getElementContent());
+                                if(!$decoder->getElementEndTag())
+                                    return false;
+                            }
+                            else if($map[self::STREAMER_TYPE] == self::STREAMER_TYPE_STREAM_ASPLAIN) {
+                                $decoded = StringStreamWrapper::Open($decoder->getElementContent());
                                 if(!$decoder->getElementEndTag())
                                     return false;
                             }
@@ -316,23 +338,11 @@ class Streamer implements Serializable {
                     else if(isset($map[self::STREAMER_TYPE]) && $map[self::STREAMER_TYPE] == self::STREAMER_TYPE_HEX) {
                         $encoder->content(strtoupper(bin2hex($this->$map[self::STREAMER_VAR])));
                     }
-                    else if(isset($map[self::STREAMER_TYPE]) && $map[self::STREAMER_TYPE] == self::STREAMER_TYPE_STREAM) {
-                        //encode stream with base64
-                        $stream = $this->$map[self::STREAMER_VAR];
-                        $stat = fstat($stream);
-                        // the padding size muss be calculated for the entire stream,
-                        // the base64 filter seems to process 8192 byte chunks correctly itself
-                        $padding = (isset($stat['size']) && $stat['size'] > 8192) ? ($stat['size'] % 3) : 0;
-
-                        $paddingfilter = stream_filter_append($stream, 'padding.'.$padding);
-                        $base64filter = stream_filter_append($stream, 'convert.base64-encode');
-                        $d = "";
-                        while (!feof($stream)) {
-                            $d .= fgets($stream, 4096);
-                        }
-                        $encoder->content($d);
-                        stream_filter_remove($base64filter);
-                        stream_filter_remove($paddingfilter);
+                    else if(isset($map[self::STREAMER_TYPE]) && $map[self::STREAMER_TYPE] == self::STREAMER_TYPE_STREAM_ASPLAIN) {
+                        $encoder->contentStream($this->$map[self::STREAMER_VAR], false);
+                    }
+                    else if(isset($map[self::STREAMER_TYPE]) && ($map[self::STREAMER_TYPE] == self::STREAMER_TYPE_STREAM_ASBASE64 || $map[self::STREAMER_TYPE] == self::STREAMER_TYPE_STREAM)) {
+                        $encoder->contentStream($this->$map[self::STREAMER_VAR], true);
                     }
                     // implode comma or semicolon arrays into a string
                     else if(isset($map[self::STREAMER_TYPE]) && is_array($this->$map[self::STREAMER_VAR]) &&
@@ -411,6 +421,20 @@ class Streamer implements Serializable {
             $this->$k = unserialize($v);
 
         return true;
+    }
+
+    /**
+     * Returns SyncObject's streamer variable names.
+     *
+     * @access public
+     * @return multitype:array
+     */
+    public function GetStreamerVars() {
+        $streamerVars = array();
+        foreach ($this->mapping as $v) {
+            $streamerVars[] = $v[self::STREAMER_VAR];
+        }
+        return $streamerVars;
     }
 
     /**----------------------------------------------------------------------------------------------------------

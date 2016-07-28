@@ -7,7 +7,7 @@
 *
 * Created   :   01.10.2007
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -54,6 +54,7 @@ class Request {
     const NUMBERS_ONLY = 4;
     const NUMBERSDOT_ONLY = 5;
     const HEX_EXTENDED = 6;
+    const ISO8601 = 7;
 
     /**
      * Command parameters for base64 encoded requests (AS >= 12.1)
@@ -74,9 +75,7 @@ class Request {
     static private $input;
     static private $output;
     static private $headers;
-    static private $getparameters;
     static private $command;
-    static private $device;
     static private $method;
     static private $remoteAddr;
     static private $getUser;
@@ -91,11 +90,14 @@ class Request {
     static private $attachmentName;
     static private $collectionId;
     static private $itemId;
-    static private $longId; //TODO
+    static private $longId; // TODO
     static private $occurence; //TODO
     static private $saveInSent;
     static private $acceptMultipart;
-
+    static private $koeVersion;
+    static private $koeBuild;
+    static private $koeBuildDate;
+    static private $expectedConnectionTimeout;
 
     /**
      * Initializes request data
@@ -186,6 +188,16 @@ class Request {
                 self::$getUser = Utils::GetLocalPartFromEmail(self::$getUser);
             }
         }
+
+        // authUser & authPassword are unfiltered!
+        // split username & domain if received as one
+        if (isset($_SERVER['PHP_AUTH_USER'])) {
+            list(self::$authUser, self::$authDomain) = Utils::SplitDomainUser($_SERVER['PHP_AUTH_USER']);
+            self::$authPassword = (isset($_SERVER['PHP_AUTH_PW']))?$_SERVER['PHP_AUTH_PW'] : "";
+        }
+        if(defined('USE_FULLEMAIL_FOR_LOGIN') && ! USE_FULLEMAIL_FOR_LOGIN) {
+            self::$authUser = Utils::GetLocalPartFromEmail(self::$authUser);
+        }
     }
 
     /**
@@ -224,31 +236,50 @@ class Request {
 
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("Request::ProcessHeaders() ASVersion: %s", self::$asProtocolVersion));
 
+        if (isset(self::$headers["x-push-plugin"])) {
+            list($version, $build, $buildDate) = explode("/", self::$headers["x-push-plugin"]);
+            self::$koeVersion = self::filterEvilInput($version, self::NUMBERSDOT_ONLY);
+            self::$koeBuild = self::filterEvilInput($build, self::HEX_ONLY);
+            self::$koeBuildDate = strtotime(self::filterEvilInput($buildDate, self::ISO8601));
+        }
+
         if (defined('USE_X_FORWARDED_FOR_HEADER') && USE_X_FORWARDED_FOR_HEADER == true && isset(self::$headers["x-forwarded-for"])) {
             $forwardedIP = self::filterEvilInput(self::$headers["x-forwarded-for"], self::NUMBERSDOT_ONLY);
             if ($forwardedIP) {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("'X-Forwarded-for' indicates remote IP: %s - connect is coming from IP: %s", $forwardedIP, self::$remoteAddr));
                 self::$remoteAddr = $forwardedIP;
-                ZLog::Write(LOGLEVEL_INFO, sprintf("'X-Forwarded-for' indicates remote IP: %s", self::$remoteAddr));
+            }
+        }
+
+        // Mobile devices send Authorization header using UTF-8 charset. Outlook sends it using ISO-8859-1 encoding.
+        // For the successful authentication the user and password must be UTF-8 encoded. Try to determine which
+        // charset was sent by the client and convert it to UTF-8. See https://jira.z-hub.io/browse/ZP-864.
+        if (isset($_SERVER['PHP_AUTH_USER'])) {
+            $encoding = mb_detect_encoding(self::$authUser, "UTF-8, ISO-8859-1");
+            if (!$encoding) {
+                $encoding = mb_detect_encoding(self::$authUser, Utils::GetAvailableCharacterEncodings());
+                if ($encoding) {
+                    ZLog::Write(LOGLEVEL_WARN,
+                            sprintf("Request->ProcessHeaders(): mb_detect_encoding detected '%s' charset. This charset is not in the default detect list. Please report it to Z-Push developers.",
+                                    $encoding));
+                }
+                else {
+                    ZLog::Write(LOGLEVEL_ERROR, "Request->ProcessHeaders(): mb_detect_encoding failed to detect the Authorization header charset. It's possible that user won't be able to login.");
+                }
+            }
+            if ($encoding && strtolower($encoding) != "utf-8") {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("Request->ProcessHeaders(): mb_detect_encoding detected '%s' charset. Authorization header will be converted to UTF-8 from it.", $encoding));
+                self::$authUser = mb_convert_encoding(self::$authUser, "UTF-8", $encoding);
+                self::$authPassword = mb_convert_encoding(self::$authPassword, "UTF-8", $encoding);
             }
         }
     }
 
     /**
-     * Reads and parses the HTTP-Basic-Auth data
-     *
      * @access public
      * @return boolean      data sent or not
      */
-    static public function AuthenticationInfo() {
-        // split username & domain if received as one
-        if (isset($_SERVER['PHP_AUTH_USER'])) {
-            list(self::$authUser, self::$authDomain) = Utils::SplitDomainUser($_SERVER['PHP_AUTH_USER']);
-            self::$authPassword = (isset($_SERVER['PHP_AUTH_PW']))?$_SERVER['PHP_AUTH_PW'] : "";
-        }
-        if(defined('USE_FULLEMAIL_FOR_LOGIN') && ! USE_FULLEMAIL_FOR_LOGIN) {
-            self::$authUser = Utils::GetLocalPartFromEmail(self::$authUser);
-        }
-        // authUser & authPassword are unfiltered!
+    static public function HasAuthenticationInfo() {
         return (self::$authUser != "" && self::$authPassword != "");
     }
 
@@ -595,17 +626,32 @@ class Request {
         // The amount of time returned is somehow lower than the max timeout so we have
         // time for processing.
 
-        // Apple and Windows Phone have higher timeouts (4min = 240sec)
-        if (in_array(self::GetDeviceType(), array("iPod", "iPad", "iPhone", "WP"))) {
-            return 200;
+        if (!isset(self::$expectedConnectionTimeout)) {
+            // Apple and Windows Phone have higher timeouts (4min = 240sec)
+            if (stripos(SYNC_TIMEOUT_LONG_DEVICETYPES, self::GetDeviceType()) !== false) {
+                self::$expectedConnectionTimeout = 210;
+            }
+            // Samsung devices have a intermediate timeout (90sec)
+            else if (stripos(SYNC_TIMEOUT_MEDIUM_DEVICETYPES, self::GetDeviceType()) !== false) {
+                self::$expectedConnectionTimeout = 85;
+            }
+            else {
+                // for all other devices, a timeout of 30 seconds is expected
+                self::$expectedConnectionTimeout = 28;
+            }
         }
-        // Samsung devices have a intermediate timeout (90sec)
-        if (in_array(self::GetDeviceType(), array("SAMSUNGGTI"))) {
-            return 50;
-        }
+        return self::$expectedConnectionTimeout;
+    }
 
-        // for all other devices, a timeout of 30 seconds is expected
-        return 20;
+    /**
+     * Indicates if the maximum timeout for the devicetype of this request is
+     * almost reached.
+     *
+     * @access public
+     * @return boolean
+     */
+    static public function IsRequestTimeoutReached() {
+        return (time() - $_SERVER["REQUEST_TIME"]) >= self::GetExpectedConnectionTimeout();
     }
 
     /**----------------------------------------------------------------------------------------------------------
@@ -630,7 +676,82 @@ class Request {
         else if ($filter == self::NUMBERS_ONLY)       $re = "/[^0-9]/";
         else if ($filter == self::NUMBERSDOT_ONLY)    $re = "/[^0-9\.]/";
         else if ($filter == self::HEX_EXTENDED)       $re = "/[^A-Fa-f0-9\:]/";
+        else if ($filter == self::ISO8601)            $re = "/[^\d{8}T\d{6}Z]/";
 
         return ($re) ? preg_replace($re, $replacevalue, $input) : '';
+    }
+
+    /**
+     * Returns base64 encoded "php://input"
+     * With POST request (our case), you can open and read
+     * multiple times "php://input"
+     *
+     * @access public
+     * @return string - base64 encoded wbxml
+     */
+    public static function GetInputAsBase64() {
+        $input = fopen('php://input', 'r');
+        $wbxml = base64_encode(stream_get_contents($input));
+        fclose($input);
+        return $wbxml;
+    }
+
+    /**
+     * Indicates if the request contained the KOE stats header.
+     *
+     * @access public
+     * @return boolean
+     */
+    static public function HasKoeStats() {
+        return isset(self::$koeVersion) && isset(self::$koeBuild) && isset(self::$koeBuildDate);
+    }
+
+    /**
+     * Returns the version number of the KOE informed by the stats header.
+     *
+     * @access public
+     * @return string
+     */
+    static public function GetKoeVersion() {
+        if (isset(self::$koeVersion))
+            return self::$koeVersion;
+        else
+            return self::UNKNOWN;
+    }
+
+    /**
+     * Returns the build of the KOE informed by the stats header.
+     *
+     * @access public
+     * @return string
+     */
+    static public function GetKoeBuild() {
+        if (isset(self::$koeBuild))
+            return self::$koeBuild;
+        else
+            return self::UNKNOWN;
+    }
+
+    /**
+     * Returns the build date of the KOE informed by the stats header.
+     *
+     * @access public
+     * @return string
+     */
+    static public function GetKoeBuildDate() {
+        if (isset(self::$koeBuildDate))
+            return self::$koeBuildDate;
+        else
+            return self::UNKNOWN;
+    }
+
+    /**
+     * Returns whether it is an Outlook client.
+     *
+     * @access public
+     * @return boolean
+     */
+    static public function IsOutlook() {
+        return (self::GetDeviceType() == "WindowsOutlook");
     }
 }

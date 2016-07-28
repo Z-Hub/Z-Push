@@ -6,7 +6,7 @@
  *
  * Created   :   18.05.2015
  *
- * Copyright 2015 Zarafa Deutschland GmbH
+ * Copyright 2015-2016 Zarafa Deutschland GmbH
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License, version 3,
@@ -42,9 +42,10 @@
  ************************************************/
 
 if (count($argv) < 2) {
-    die("\tUsage: printwbmxl.php WBXML-INPUT-HERE\n\n");
+    die("\tUsage: printwbmxl.php WBXML-INPUT-HERE or PATH-TO-FILE\n\n");
 }
-$wbxml64 = $argv[1];
+$wbxml64 = is_file($argv[1]) ? realpath($argv[1]) : $argv[1];
+chdir(__DIR__);
 
 // include the stuff we need
 include_once('../../src/lib/utils/stringstreamwrapper.php');
@@ -71,7 +72,7 @@ class ZLog {
 }
 
 // setup
-$wxbml = StringStreamWrapper::Open($wbxml64);
+$wxbml = is_file($wbxml64) ? fopen($wbxml64, 'r+') : StringStreamWrapper::Open($wbxml64);
 $base64filter = stream_filter_append($wxbml, 'convert.base64-decode');
 $decoder = new WBXMLDecoder($wxbml);
 if (! $decoder->IsWBXML()) {

@@ -6,7 +6,7 @@
 *
 * Created   :   16.02.2012
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2015 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -194,7 +194,8 @@ class Search extends RequestProcessor {
         }
 
         if(self::$decoder->getElementStartTag(SYNC_SEARCH_OPTIONS)) {
-            while(1) {
+            WBXMLDecoder::ResetInWhile("searchOptions");
+            while(WBXMLDecoder::InWhile("searchOptions")) {
                 if(self::$decoder->getElementStartTag(SYNC_SEARCH_RANGE)) {
                     $searchrange = self::$decoder->getElementContent();
                     $cpo->SetSearchRange($searchrange);
@@ -290,6 +291,8 @@ class Search extends RequestProcessor {
                     $rows = $searchprovider->GetGALSearchResults($searchquery, $searchrange);
                 }
                 elseif ($searchname == ISearchProvider::SEARCH_MAILBOX) {
+                    $backendFolderId = self::$deviceManager->GetBackendIdForFolderId($cpo->GetSearchFolderid());
+                    $cpo->SetSearchFolderid($backendFolderId);
                     $rows = $searchprovider->GetMailboxSearchResults($cpo);
                 }
             }
@@ -402,6 +405,8 @@ class Search extends RequestProcessor {
                     }
                     elseif ($searchname == ISearchProvider::SEARCH_MAILBOX) {
                         foreach ($rows as $u) {
+                            $folderid = self::$deviceManager->GetFolderIdForBackendId($u['folderid']);
+
                             self::$encoder->startTag(SYNC_SEARCH_RESULT);
                                 self::$encoder->startTag(SYNC_FOLDERTYPE);
                                 self::$encoder->content($u['class']);
@@ -410,7 +415,7 @@ class Search extends RequestProcessor {
                                 self::$encoder->content($u['longid']);
                                 self::$encoder->endTag();
                                 self::$encoder->startTag(SYNC_FOLDERID);
-                                self::$encoder->content($u['folderid']);
+                                self::$encoder->content($folderid);
                                 self::$encoder->endTag();
 
                                 self::$encoder->startTag(SYNC_SEARCH_PROPERTIES);

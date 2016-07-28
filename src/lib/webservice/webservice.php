@@ -7,7 +7,7 @@
 *
 * Created   :   29.12.2011
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -66,23 +66,26 @@ class Webservice {
 
         // the webservice command is handled by its class
         if ($commandCode == ZPush::COMMAND_WEBSERVICE_DEVICE) {
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("Webservice::HandleWebservice('%s'): executing WebserviceDevice service", $commandCode));
+            // check if the authUser has admin permissions to get data on the GETUser's device
+            if(ZPush::GetBackend()->Setup(Request::GetGETUser(), true) == false)
+                throw new AuthenticationRequiredException(sprintf("Not enough privileges of '%s' to setup for user '%s': Permission denied", Request::GetAuthUser(), Request::GetGETUser()));
 
-            include_once('webservicedevice.php');
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("Webservice::HandleWebservice('%s'): executing WebserviceDevice service", $commandCode));
             $this->server->setClass("WebserviceDevice");
         }
-
-        // the webservice command is handled by its class
-        if ($commandCode == ZPush::COMMAND_WEBSERVICE_USERS) {
+        else if ($commandCode == ZPush::COMMAND_WEBSERVICE_INFO) {
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("Webservice::HandleWebservice('%s'): executing WebserviceInfo service", $commandCode));
+            $this->server->setClass("WebserviceInfo");
+        }
+        else if ($commandCode == ZPush::COMMAND_WEBSERVICE_USERS) {
             if (!defined("ALLOW_WEBSERVICE_USERS_ACCESS") || ALLOW_WEBSERVICE_USERS_ACCESS !== true)
-                throw new HTTPReturnCodeException(sprintf("Access to the WebserviceUsers service is disabled in configuration. Enable setting ALLOW_WEBSERVICE_USERS_ACCESS.", Request::GetAuthUser()), 403);
+                throw new HTTPReturnCodeException("Access to the WebserviceUsers service is disabled in configuration. Enable setting ALLOW_WEBSERVICE_USERS_ACCESS", 403);
 
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("Webservice::HandleWebservice('%s'): executing WebserviceUsers service", $commandCode));
 
             if(ZPush::GetBackend()->Setup("SYSTEM", true) == false)
                 throw new AuthenticationRequiredException(sprintf("User '%s' has no admin privileges", Request::GetAuthUser()));
 
-            include_once('webserviceusers.php');
             $this->server->setClass("WebserviceUsers");
         }
 

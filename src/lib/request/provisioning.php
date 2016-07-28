@@ -6,7 +6,7 @@
 *
 * Created   :   16.02.2012
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2013, 2015 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -57,6 +57,7 @@ class Provisioning extends RequestProcessor {
 
         $rwstatus = self::$deviceManager->GetProvisioningWipeStatus();
         $rwstatusWiped = false;
+        $deviceInfoSet = false;
 
         // if this is a regular provisioning require that an authenticated remote user
         if ($rwstatus < SYNC_PROVISION_RWSTATUS_PENDING) {
@@ -69,78 +70,106 @@ class Provisioning extends RequestProcessor {
         if(!self::$decoder->getElementStartTag(SYNC_PROVISION_PROVISION))
             return false;
 
-        //handle android remote wipe.
-        if (self::$decoder->getElementStartTag(SYNC_PROVISION_REMOTEWIPE)) {
-            if(!self::$decoder->getElementStartTag(SYNC_PROVISION_STATUS))
-                return false;
-
-            $instatus = self::$decoder->getElementContent();
-
-            if(!self::$decoder->getElementEndTag())
-                return false;
-
-            if(!self::$decoder->getElementEndTag())
-                return false;
-
-            $phase2 = false;
-            $rwstatusWiped = true;
-        }
-        else {
-
-            if(!self::$decoder->getElementStartTag(SYNC_PROVISION_POLICIES))
-                return false;
-
-            if(!self::$decoder->getElementStartTag(SYNC_PROVISION_POLICY))
-                return false;
-
-            if(!self::$decoder->getElementStartTag(SYNC_PROVISION_POLICYTYPE))
-                return false;
-
-            $policytype = self::$decoder->getElementContent();
-            if ($policytype != 'MS-WAP-Provisioning-XML' && $policytype != 'MS-EAS-Provisioning-WBXML') {
-                $status = SYNC_PROVISION_STATUS_SERVERERROR;
-            }
-            if(!self::$decoder->getElementEndTag()) //policytype
-                return false;
-
-            if (self::$decoder->getElementStartTag(SYNC_PROVISION_POLICYKEY)) {
-                $devpolicykey = self::$decoder->getElementContent();
-
-                if(!self::$decoder->getElementEndTag())
-                    return false;
-
-                if(!self::$decoder->getElementStartTag(SYNC_PROVISION_STATUS))
-                    return false;
-
-                $instatus = self::$decoder->getElementContent();
-
-                if(!self::$decoder->getElementEndTag())
-                    return false;
-
-                $phase2 = false;
-            }
-
-            if(!self::$decoder->getElementEndTag()) //policy
-                return false;
-
-            if(!self::$decoder->getElementEndTag()) //policies
-                return false;
-
+        // Loop through Provision request tags. Possible are:
+        // - Remote Wipe
+        // - DeviceInformation
+        // - Policies
+        // Each of them should only be once per request.
+        WBXMLDecoder::ResetInWhile("provisioningMain");
+        while(WBXMLDecoder::InWhile("provisioningMain")) {
+            $requestName = "";
             if (self::$decoder->getElementStartTag(SYNC_PROVISION_REMOTEWIPE)) {
-                if(!self::$decoder->getElementStartTag(SYNC_PROVISION_STATUS))
-                    return false;
-
-                $status = self::$decoder->getElementContent();
-
-                if(!self::$decoder->getElementEndTag())
-                    return false;
-
-                if(!self::$decoder->getElementEndTag())
-                    return false;
-
-                $rwstatusWiped = true;
+                $requestName = SYNC_PROVISION_REMOTEWIPE;
             }
+            if (self::$decoder->getElementStartTag(SYNC_PROVISION_POLICIES)) {
+                $requestName = SYNC_PROVISION_POLICIES;
+            }
+            if (self::$decoder->getElementStartTag(SYNC_SETTINGS_DEVICEINFORMATION)) {
+                $requestName = SYNC_SETTINGS_DEVICEINFORMATION;
+            }
+
+            if (!$requestName)
+                break;
+
+                //set is available for OOF, device password and device information
+            switch ($requestName) {
+                case SYNC_PROVISION_REMOTEWIPE:
+                    if(!self::$decoder->getElementStartTag(SYNC_PROVISION_STATUS))
+                        return false;
+
+                    $instatus = self::$decoder->getElementContent();
+
+                    if(!self::$decoder->getElementEndTag())
+                        return false;
+
+                    if(!self::$decoder->getElementEndTag())
+                        return false;
+
+                    $phase2 = false;
+                    $rwstatusWiped = true;
+                    //TODO check - do it after while(1) finished?
+                    break;
+
+                case SYNC_PROVISION_POLICIES:
+                    if(!self::$decoder->getElementStartTag(SYNC_PROVISION_POLICY))
+                        return false;
+
+                    if(!self::$decoder->getElementStartTag(SYNC_PROVISION_POLICYTYPE))
+                        return false;
+
+                    $policytype = self::$decoder->getElementContent();
+                    if ($policytype != 'MS-WAP-Provisioning-XML' && $policytype != 'MS-EAS-Provisioning-WBXML') {
+                        $status = SYNC_PROVISION_STATUS_SERVERERROR;
+                    }
+                    if(!self::$decoder->getElementEndTag()) //policytype
+                        return false;
+
+                    if (self::$decoder->getElementStartTag(SYNC_PROVISION_POLICYKEY)) {
+                        $devpolicykey = self::$decoder->getElementContent();
+
+                        if(!self::$decoder->getElementEndTag())
+                            return false;
+
+                        if(!self::$decoder->getElementStartTag(SYNC_PROVISION_STATUS))
+                            return false;
+
+                        $instatus = self::$decoder->getElementContent();
+
+                        if(!self::$decoder->getElementEndTag())
+                            return false;
+
+                        $phase2 = false;
+                    }
+
+                    if(!self::$decoder->getElementEndTag()) //policy
+                        return false;
+
+                    if(!self::$decoder->getElementEndTag()) //policies
+                        return false;
+                    break;
+
+                case SYNC_SETTINGS_DEVICEINFORMATION:
+                    // AS14.1 and later clients pass Device Information on the initial Provision request
+                    if (!self::$decoder->getElementStartTag(SYNC_SETTINGS_SET))
+                        return false;
+                    $deviceInfoSet = true;
+                    $deviceinformation = new SyncDeviceInformation();
+                    $deviceinformation->Decode(self::$decoder);
+                    $deviceinformation->Status = SYNC_SETTINGSSTATUS_SUCCESS;
+                    self::$deviceManager->SaveDeviceInformation($deviceinformation);
+                    if (!self::$decoder->getElementEndTag())  // SYNC_SETTINGS_SET
+                        return false;
+                    if (!self::$decoder->getElementEndTag())  // SYNC_SETTINGS_DEVICEINFORMATION
+                        return false;
+                    break;
+
+                default:
+                    //TODO: a special status code needed?
+                    ZLog::Write(LOGLEVEL_WARN, sprintf ("This property ('%s') is not allowed to be used in a provision request", $requestName));
+            }
+
         }
+
         if(!self::$decoder->getElementEndTag()) //provision
             return false;
 
@@ -170,6 +199,14 @@ class Provisioning extends RequestProcessor {
                 self::$encoder->content($status);
             self::$encoder->endTag();
 
+            if ($deviceInfoSet) {
+                self::$encoder->startTag(SYNC_SETTINGS_DEVICEINFORMATION);
+                    self::$encoder->startTag(SYNC_SETTINGS_STATUS);
+                    self::$encoder->content($deviceinformation->Status);
+                    self::$encoder->endTag(); //SYNC_SETTINGS_STATUS
+                self::$encoder->endTag(); //SYNC_SETTINGS_DEVICEINFORMATION
+            }
+
             self::$encoder->startTag(SYNC_PROVISION_POLICIES);
                 self::$encoder->startTag(SYNC_PROVISION_POLICY);
 
@@ -195,10 +232,12 @@ class Provisioning extends RequestProcessor {
                     elseif ($policytype == 'MS-EAS-Provisioning-WBXML') {
                         self::$encoder->startTag(SYNC_PROVISION_EASPROVISIONDOC);
 
-                            $prov = self::$deviceManager->GetProvisioningObject();
+                            // get the provisioning object and log the loaded policy values
+                            $prov = self::$deviceManager->GetProvisioningObject(true);
                             if (!$prov->Check())
                                 throw new FatalException("Invalid policies!");
 
+                            self::$deviceManager->SavePolicyHashAndName($prov);
                             $prov->Encode(self::$encoder);
                         self::$encoder->endTag();
                     }

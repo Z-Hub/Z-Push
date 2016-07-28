@@ -62,7 +62,7 @@ class SyncMeetingRequest extends SyncObject {
     public $busystatus;
     public $timezone;
     public $globalobjid;
-    public $meetingmessagetype; 
+    public $meetingmessagetype;
     public $disallownewtimeproposal;
 
     function SyncMeetingRequest() {
@@ -130,12 +130,15 @@ class SyncMeetingRequest extends SyncObject {
 
                     SYNC_POOMMAIL_GLOBALOBJID                           => array (  self::STREAMER_VAR      => "globalobjid"),
 
-                    SYNC_POOMMAIL_DISALLOWNEWTIMEPROPOSAL               => array (  self::STREAMER_VAR      => "disallownewtimeproposal",
-                                                                                    self::STREAMER_CHECKS   => array(   self::STREAMER_CHECK_REQUIRED   => self::STREAMER_CHECK_SETZERO,
-                                                                                    self::STREAMER_CHECK_ONEVALUEOF => array(0,1)  )),
                 );
 
-        if (Request::GetProtocolVersion() > 14.0) {
+        if (Request::GetProtocolVersion() >= 14.0) {
+            $mapping[SYNC_POOMMAIL_DISALLOWNEWTIMEPROPOSAL]             =  array (  self::STREAMER_VAR      => "disallownewtimeproposal",
+                                                                                    self::STREAMER_CHECKS   => array(   self::STREAMER_CHECK_REQUIRED   => self::STREAMER_CHECK_SETZERO,
+                                                                                    self::STREAMER_CHECK_ONEVALUEOF => array(0,1)  ));
+        }
+
+        if (Request::GetProtocolVersion() >= 14.1) {
                     // MeetimgMessageType values
                     // 0 = A silent update was performed, or the message type is unspecified.
                     // 1 = Initial meeting request.
