@@ -63,6 +63,7 @@ class ZPush {
     const ASV_12 = "12.0";
     const ASV_121 = "12.1";
     const ASV_14 = "14.0";
+    const ASV_141 = "14.1";
 
     /**
      * Command codes for base64 encoded requests (AS >= 12.1)
@@ -114,7 +115,8 @@ class ZPush {
     static private $supportedASVersions = array(
                     self::ASV_12,
                     self::ASV_121,
-                    self::ASV_14
+                    self::ASV_14,
+                    self::ASV_141
                 );
 
     static private $supportedCommands = array(
