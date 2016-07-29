@@ -43,7 +43,7 @@
 ************************************************/
 
 // Please adjust to match your z-push installation directory, usually /usr/share/z-push
-define('ZPUSH_BASE_PATH', "../src");
+define('ZPUSH_BASE_PATH', "/usr/share/z-push");
 
 /************************************************
  * MAIN
