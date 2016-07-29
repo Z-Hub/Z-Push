@@ -751,7 +751,6 @@ class Sync extends RequestProcessor {
             self::$encoder->startTag(SYNC_STATUS);
                 self::$encoder->content($status);
             self::$encoder->endTag();
-            self::$encoder->endTag(); // SYNC_SYNCHRONIZE
             return true;
         }
 
@@ -892,7 +891,6 @@ class Sync extends RequestProcessor {
                 self::$encoder->startTag(SYNC_STATUS);
                 self::$encoder->content($status);
                 self::$encoder->endTag();
-                self::$encoder->endTag(); // SYNC_SYNCHRONIZE
                 return true;
             }
 
