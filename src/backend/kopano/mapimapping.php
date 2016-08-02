@@ -252,6 +252,7 @@ class MAPIMapping {
             "reminderset"           => "PT_BOOLEAN:PSETID_Common:0x8503",
             "remindertime"          => "PT_LONG:PSETID_Common:0x8501",
             "recurrenceend"         => "PT_SYSTIME:PSETID_Appointment:0x8236",
+            "meetingType"           => "PT_LONG:PSETID_Meeting:0x26",
             );
     }
 

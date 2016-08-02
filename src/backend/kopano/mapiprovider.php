@@ -678,6 +678,36 @@ class MAPIProvider {
                 }
             }
             $message->contentclass = DEFAULT_CALENDAR_CONTENTCLASS;
+
+            // MeetingMessageType values
+            // 0 = A silent update was performed, or the message type is unspecified.
+            // 1 = Initial meeting request.
+            // 2 = Full update.
+            // 3 = Informational update.
+            // 4 = Outdated. A newer meeting request or meeting update was received after this message.
+            // 5 = Identifies the delegator's copy of the meeting request.
+            // 6 = Identifies that the meeting request has been delegated and the meeting request cannot be responded to.
+            $message->meetingrequest->meetingmessagetype = mtgEmpty;
+
+            if (isset($props[$meetingrequestproperties["meetingType"]])) {
+                switch ($props[$meetingrequestproperties["meetingType"]]) {
+                    case mtgRequest:
+                        $message->meetingrequest->meetingmessagetype = 1;
+                        break;
+                    case mtgFull:
+                        $message->meetingrequest->meetingmessagetype = 2;
+                        break;
+                    case mtgInfo:
+                        $message->meetingrequest->meetingmessagetype = 3;
+                        break;
+                    case mtgOutOfDate:
+                        $message->meetingrequest->meetingmessagetype = 4;
+                        break;
+                    case mtgDelegatorCopy:
+                        $message->meetingrequest->meetingmessagetype = 5;
+                        break;
+                }
+            }
         }
 
         // Add attachments
