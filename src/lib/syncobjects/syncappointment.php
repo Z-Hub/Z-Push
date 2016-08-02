@@ -80,6 +80,9 @@ class SyncAppointment extends SyncObject {
     public $responsetype;
     public $responserequested;
 
+    // AS 14.1 props
+    public $onlineMeetingConfLink;
+    public $onlineMeetingExternalLink;
 
     function SyncAppointment() {
         $mapping = array(
@@ -215,6 +218,13 @@ class SyncAppointment extends SyncObject {
             $mapping[SYNC_POOMCAL_RESPONSEREQUESTED]                    = array (   self::STREAMER_VAR      => "responserequested",
                                                                                     self::STREAMER_RONOTIFY => true);
             $mapping[SYNC_POOMCAL_RESPONSETYPE]                         = array (   self::STREAMER_VAR      => "responsetype",
+                                                                                    self::STREAMER_RONOTIFY => true);
+        }
+
+        if(Request::GetProtocolVersion() >= 14.1) {
+            $mapping[SYNC_POOMCAL_ONLINEMEETINGCONFLINK]                = array (   self::STREAMER_VAR      => "onlineMeetingConfLink",
+                                                                                    self::STREAMER_RONOTIFY => true);
+            $mapping[SYNC_POOMCAL_ONLINEMEETINGEXTERNALLINK]            = array (   self::STREAMER_VAR      => "onlineMeetingExternalLink",
                                                                                     self::STREAMER_RONOTIFY => true);
         }
 
