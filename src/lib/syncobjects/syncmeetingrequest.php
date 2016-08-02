@@ -139,7 +139,7 @@ class SyncMeetingRequest extends SyncObject {
         }
 
         if (Request::GetProtocolVersion() >= 14.1) {
-                    // MeetimgMessageType values
+                    // MeetingMessageType values
                     // 0 = A silent update was performed, or the message type is unspecified.
                     // 1 = Initial meeting request.
                     // 2 = Full update.
