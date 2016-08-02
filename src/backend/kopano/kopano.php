@@ -339,8 +339,16 @@ class BackendKopano implements IBackend, ISearchProvider {
     public function GetHierarchy() {
         $folders = array();
         $mapiprovider = new MAPIProvider($this->session, $this->store);
+        $storeProps = $mapiprovider->GetStoreProps();
 
-        $rootfolder = mapi_msgstore_openentry($this->store);
+        // for SYSTEM user open the public folders
+        if (strtoupper($this->storeName) == "SYSTEM") {
+            $rootfolder = mapi_msgstore_openentry($this->store, $storeProps[PR_IPM_PUBLIC_FOLDERS_ENTRYID]);
+        }
+        else {
+            $rootfolder = mapi_msgstore_openentry($this->store);
+        }
+
         $rootfolderprops = mapi_getprops($rootfolder, array(PR_SOURCE_KEY));
 
         $hierarchy =  mapi_folder_gethierarchytable($rootfolder, CONVENIENT_DEPTH);
@@ -350,8 +358,9 @@ class BackendKopano implements IBackend, ISearchProvider {
             // do not display hidden and search folders
             if ((isset($row[PR_ATTR_HIDDEN]) && $row[PR_ATTR_HIDDEN]) ||
                 (isset($row[PR_FOLDER_TYPE]) && $row[PR_FOLDER_TYPE] == FOLDER_SEARCH) ||
-                (isset($row[PR_PARENT_SOURCE_KEY]) && $row[PR_PARENT_SOURCE_KEY] == $rootfolderprops[PR_SOURCE_KEY]) ) {
-                continue;
+                // for SYSTEM user $row[PR_PARENT_SOURCE_KEY] == $rootfolderprops[PR_SOURCE_KEY] is true, but we need those folders
+                (isset($row[PR_PARENT_SOURCE_KEY]) && $row[PR_PARENT_SOURCE_KEY] == $rootfolderprops[PR_SOURCE_KEY] && strtoupper($this->storeName) != "SYSTEM")) {
+                    continue;
             }
             $folder = $mapiprovider->GetFolder($row);
             if ($folder) {
@@ -363,7 +372,8 @@ class BackendKopano implements IBackend, ISearchProvider {
         $dm = ZPush::GetDeviceManager();
         foreach ($folders as $folder) {
             if ($folder->parentid !== "0") {
-                $folder->parentid = $dm->GetFolderIdForBackendId($folder->parentid);
+                // SYSTEM user's parentid points to $rootfolderprops[PR_SOURCE_KEY], but they need to be on the top level
+                $folder->parentid = (strtoupper($this->storeName) == "SYSTEM" && $folder->parentid == bin2hex($rootfolderprops[PR_SOURCE_KEY])) ? '0' : $dm->GetFolderIdForBackendId($folder->parentid);
             }
         }
 
@@ -764,6 +774,7 @@ class BackendKopano implements IBackend, ISearchProvider {
      */
     public function MeetingResponse($requestid, $folderid, $response) {
         // Use standard meeting response code to process meeting request
+        list($fid, $requestid) = MAPIUtils::SplitMessageId($requestid);
         $reqentryid = mapi_msgstore_entryidfromsourcekey($this->store, hex2bin($folderid), hex2bin($requestid));
         if (!$reqentryid)
             throw new StatusException(sprintf("BackendKopano->MeetingResponse('%s', '%s', '%s'): Error, unable to entryid of the message 0x%X", $requestid, $folderid, $response, mapi_last_hresult()), SYNC_MEETRESPSTATUS_INVALIDMEETREQ);

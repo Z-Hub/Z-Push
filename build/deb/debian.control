@@ -92,7 +92,7 @@ Description: Z-Push mysql state backend
 
 Package: z-push-autodiscover
 Architecture: all
-Depends: ${misc:Depends}, z-push-common (= ${binary:Version}), apache2, z-push-backend-caldav | z-push-backend-carddav | z-push-backend-combined | z-push-backend-imap | z-push-backend-ldap | z-push-backend-kopano
+Depends: ${misc:Depends}, z-push-common (= ${binary:Version}), z-push-backend-caldav | z-push-backend-carddav | z-push-backend-combined | z-push-backend-imap | z-push-backend-ldap | z-push-backend-kopano
 Description: Z-Push autodiscover
  Autodiscover for Z-Push backends
 

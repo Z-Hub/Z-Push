@@ -280,7 +280,7 @@ class MAPIProvider {
             }
 
             //set attendee's status and type if they're available and if we are the organizer
-            $storeprops = $this->getStoreProps();
+            $storeprops = $this->GetStoreProps();
             if (isset($row[PR_RECIPIENT_TRACKSTATUS]) && $messageprops[$appointmentprops["representingentryid"]] == $storeprops[PR_MAILBOX_OWNER_ENTRYID])
                 $attendee->attendeestatus = $row[PR_RECIPIENT_TRACKSTATUS];
             if (isset($row[PR_RECIPIENT_TYPE]))
@@ -313,6 +313,7 @@ class MAPIProvider {
                     array_push($message->attendees, $attendee);
                 }
             }
+            $message->responsetype = $messageprops[$appointmentprops["responsestatus"]];
         }
 
         if (!isset($message->nativebodytype)) $message->nativebodytype = $this->getNativeBodyType($messageprops);
@@ -851,7 +852,7 @@ class MAPIProvider {
     public function GetFolder($folderprops) {
         $folder = new SyncFolder();
 
-        $storeprops = $this->getStoreProps();
+        $storeprops = $this->GetStoreProps();
 
         // For ZCP 7.0.x we need to retrieve more properties explicitly, see ZP-780
         if (isset($folderprops[PR_SOURCE_KEY]) && !isset($folderprops[PR_ENTRYID]) && !isset($folderprops[PR_CONTAINER_CLASS])) {
@@ -918,29 +919,34 @@ class MAPIProvider {
      * @return long
      */
     public function GetFolderType($entryid, $class = false) {
-        $storeprops = $this->getStoreProps();
+        $storeprops = $this->GetStoreProps();
         $inboxprops = $this->getInboxProps();
 
-        if($entryid == $inboxprops[PR_ENTRYID])
-            return SYNC_FOLDER_TYPE_INBOX;
-        if($entryid == $inboxprops[PR_IPM_DRAFTS_ENTRYID])
-            return SYNC_FOLDER_TYPE_DRAFTS;
         if($entryid == $storeprops[PR_IPM_WASTEBASKET_ENTRYID])
             return SYNC_FOLDER_TYPE_WASTEBASKET;
         if($entryid == $storeprops[PR_IPM_SENTMAIL_ENTRYID])
             return SYNC_FOLDER_TYPE_SENTMAIL;
         if($entryid == $storeprops[PR_IPM_OUTBOX_ENTRYID])
             return SYNC_FOLDER_TYPE_OUTBOX;
-        if($entryid == $inboxprops[PR_IPM_TASK_ENTRYID])
-            return SYNC_FOLDER_TYPE_TASK;
-        if($entryid == $inboxprops[PR_IPM_APPOINTMENT_ENTRYID])
-            return SYNC_FOLDER_TYPE_APPOINTMENT;
-        if($entryid == $inboxprops[PR_IPM_CONTACT_ENTRYID])
-            return SYNC_FOLDER_TYPE_CONTACT;
-        if($entryid == $inboxprops[PR_IPM_NOTE_ENTRYID])
-            return SYNC_FOLDER_TYPE_NOTE;
-        if($entryid == $inboxprops[PR_IPM_JOURNAL_ENTRYID])
-            return SYNC_FOLDER_TYPE_JOURNAL;
+
+        // Public folders do not have inboxprops
+        // @see https://jira.z-hub.io/browse/ZP-995
+        if (!empty($inboxprops)) {
+            if($entryid == $inboxprops[PR_ENTRYID])
+                return SYNC_FOLDER_TYPE_INBOX;
+            if($entryid == $inboxprops[PR_IPM_DRAFTS_ENTRYID])
+                return SYNC_FOLDER_TYPE_DRAFTS;
+            if($entryid == $inboxprops[PR_IPM_TASK_ENTRYID])
+                return SYNC_FOLDER_TYPE_TASK;
+            if($entryid == $inboxprops[PR_IPM_APPOINTMENT_ENTRYID])
+                return SYNC_FOLDER_TYPE_APPOINTMENT;
+            if($entryid == $inboxprops[PR_IPM_CONTACT_ENTRYID])
+                return SYNC_FOLDER_TYPE_CONTACT;
+            if($entryid == $inboxprops[PR_IPM_NOTE_ENTRYID])
+                return SYNC_FOLDER_TYPE_NOTE;
+            if($entryid == $inboxprops[PR_IPM_JOURNAL_ENTRYID])
+                return SYNC_FOLDER_TYPE_JOURNAL;
+        }
 
         // user created folders
         if ($class == "IPF.Note")
@@ -1338,7 +1344,7 @@ class MAPIProvider {
         $representingprops = $this->getProps($mapimessage, $p);
 
         if (!isset($representingprops[$appointmentprops["representingentryid"]])) {
-            // TODO use getStoreProps
+            // TODO use GetStoreProps
             $storeProps = mapi_getprops($this->store, array(PR_MAILBOX_OWNER_ENTRYID));
             $props[$appointmentprops["representingentryid"]] = $storeProps[PR_MAILBOX_OWNER_ENTRYID];
             $displayname = $this->getFullnameFromEntryID($storeProps[PR_MAILBOX_OWNER_ENTRYID]);
@@ -2728,9 +2734,9 @@ class MAPIProvider {
      * @access private
      * @return array
      */
-    private function getStoreProps() {
+    public function GetStoreProps() {
         if (!isset($this->storeProps) || empty($this->storeProps)) {
-            ZLog::Write(LOGLEVEL_DEBUG, "MAPIProvider->getStoreProps(): Getting store properties.");
+            ZLog::Write(LOGLEVEL_DEBUG, "MAPIProvider->GetStoreProps(): Getting store properties.");
             $this->storeProps = mapi_getprops($this->store, array(PR_IPM_SUBTREE_ENTRYID, PR_IPM_OUTBOX_ENTRYID, PR_IPM_WASTEBASKET_ENTRYID, PR_IPM_SENTMAIL_ENTRYID, PR_ENTRYID, PR_IPM_PUBLIC_FOLDERS_ENTRYID, PR_IPM_FAVORITES_ENTRYID, PR_MAILBOX_OWNER_ENTRYID));
             // make sure all properties are set
             if(!isset($this->storeProps[PR_IPM_WASTEBASKET_ENTRYID])) {
