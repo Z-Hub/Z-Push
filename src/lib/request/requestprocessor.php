@@ -124,8 +124,14 @@ abstract class RequestProcessor {
         $handler = ZPush::GetRequestHandlerForCommand(Request::GetCommandCode());
 
         // if there is an error decoding wbxml, consume remaining data and include it in the WBXMLException
-        if (!$handler->Handle(Request::GetCommandCode())) {
-            throw new WBXMLException("Debug data: " . Request::GetInputAsBase64());
+        try {
+            if (!$handler->Handle(Request::GetCommandCode())) {
+                throw new WBXMLException(sprintf("Unknown error in %s->Handle()", get_class($handler)));
+            }
+        }
+        catch (Exception $ex) {
+            ZLog::Write(LOGLEVEL_ERROR, "WBXML debug data: " . Request::GetInputAsBase64(), false);
+            throw $ex;
         }
 
         // also log WBXML in happy case
