@@ -679,13 +679,6 @@ class SyncCollections implements Iterator {
             return false;
         }
 
-        // prevent ZP-623 by checking if the states have been used before, if so force a sync on this folder
-        if (ZPush::GetDeviceManager()->CheckHearbeatStateIntegrity($spa->GetFolderId(), $spa->GetUuid(), $spa->GetUuidCounter())) {
-            ZLog::Write(LOGLEVEL_DEBUG, "SyncCollections->CountChange(): Cannot verify changes for state as it was already used. Forcing sync of folder.");
-            $this->changes[$folderid] = 1;
-            return true;
-        }
-
         $backendFolderId = ZPush::GetDeviceManager()->GetBackendIdForFolderId($folderid);
         // switch user store if this is a additional folder (additional true -> do not debug)
         ZPush::GetBackend()->Setup(ZPush::GetAdditionalSyncFolderStore($backendFolderId, true));
