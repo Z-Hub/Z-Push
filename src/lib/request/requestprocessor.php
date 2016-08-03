@@ -130,7 +130,7 @@ abstract class RequestProcessor {
             }
         }
         catch (Exception $ex) {
-            ZLog::Write(LOGLEVEL_ERROR, "WBXML debug data: " . Request::GetInputAsBase64(), false);
+            ZLog::Write(LOGLEVEL_FATAL, "WBXML debug data: " . Request::GetInputAsBase64(), false);
             throw $ex;
         }
 
