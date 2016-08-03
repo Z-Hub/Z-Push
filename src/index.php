@@ -269,7 +269,7 @@ include_once('version.php');
 
         // This could be a WBXML problem.. try to get the complete request
         else if ($ex instanceof WBXMLException) {
-            ZLog::Write(LOGLEVEL_FATAL, "Request could not be processed correctly due to a WBXMLException. Please report this including WBXML debug data logged. Be aware that the debug data could contain confidential information.");
+            ZLog::Write(LOGLEVEL_FATAL, "Request could not be processed correctly due to a WBXMLException. Please report this including the 'WBXML debug data' logged. Be aware that the debug data could contain confidential information.");
         }
 
         // Try to output some kind of error information. This is only possible if
