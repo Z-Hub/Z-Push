@@ -13,7 +13,11 @@ BuildRoot:  %_tmppath/%name-%version-build
 %if 0%{?suse_version}
     %define apache_dir %_sysconfdir/apache2
 %else
-    %define apache_dir %_sysconfdir/httpd
+	%if "%_repository" == "RHEL_6_PHP_56" || "%_repository" == "RHEL_7_PHP_56"
+		%define apache_dir /opt/rh/httpd24/root/etc/httpd/
+	%else
+		%define apache_dir %_sysconfdir/httpd
+	%endif
 %endif
 
 %description
@@ -96,7 +100,11 @@ Backend for Z-Push, that adds the ability to connect to a ldap server
 Summary:    Z-Push Kopano backend
 Group:      Productivity/Networking/Email/Utilities
 Requires:   %name-common = %version
+%if 0%{?fedora_version} || 0%{?centos_version} || 0%{?rhel_version}
+Requires:   php-mapi-webapp
+%else
 Requires:   php-mapi
+%endif
 Provides:   %name-backend
 
 %description -n %name-backend-kopano
@@ -459,7 +467,7 @@ install -Dpm 644 config/apache2/z-push-autodiscover.conf \
 %dir %zpush_dir/backend/ipcsharedmemory/
 %zpush_dir/backend/ipcsharedmemory
 
-# IPCMEMCACHED
+# IPC-MEMCACHED
 %files -n %name-ipc-memcached
 %defattr(-, root, root)
 %dir %zpush_dir/backend
