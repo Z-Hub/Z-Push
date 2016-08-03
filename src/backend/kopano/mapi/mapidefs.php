@@ -628,6 +628,7 @@ define('SYNC_PROGRESS_MODE'                      ,0x8000);        // AirMapi pro
 define('SYNC_FXRECOVERMODE'                      ,0x10000);
 define('SYNC_DEFER_CONFIG'                       ,0x20000);
 define('SYNC_FORCE_UNICODE'                      ,0x40000);       // Forces server to return Unicode properties
+define('SYNC_STATE_READONLY'                     ,0x80000);       // Server will not update the states in the DB, setting up exporter with this flag states are read only
 
 define('EMS_AB_ADDRESS_LOOKUP'                   ,0x00000001);    // Flag for resolvename to resolve only exact matches
 
