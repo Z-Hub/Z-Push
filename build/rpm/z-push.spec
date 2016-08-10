@@ -28,19 +28,19 @@ Summary:    Z-Push core package
 Group:      Productivity/Networking/Email/Utilities
 
 %if 0%{?suse_version}
-	Requires:   php-posix
+Requires:   php-posix
 %else
-	Requires:   php-process
+Requires:   php-process
 %endif
 %if "%_repository" == "RHEL_6_PHP_56" || "%_repository" == "RHEL_7_PHP_56"
-	Requires:   rh-php56
-	Requires:   rh-php56-php-soap
-	Requires:   rh-php56-php-mbstring
-	Requires:   rh-php56-php-process
+Requires:   rh-php56
+Requires:   rh-php56-php-soap
+Requires:   rh-php56-php-mbstring
+Requires:   rh-php56-php-process
 %else
-	Requires:   php >= 5.4.0
-	Requires:   php-soap
-	Requires:   php-mbstring
+Requires:   php >= 5.4.0
+Requires:   php-soap
+Requires:   php-mbstring
 %endif
 %description -n %name-common
 Z-push is an implementation of the ActiveSync protocol which is used 'over-the-air' for multi platform ActiveSync devices. Devices supported are including Windows Mobile, Android, iPhone, and Nokia. With Z-push any groupware can be connected and synced with these devices.
@@ -140,11 +140,11 @@ Summary:    Z-Push ipc shared memory provider
 Group:      Productivity/Networking/Email/Utilities
 Requires:   %name-common = %version
 %if "%_repository" == "RHEL_6_PHP_56" || "%_repository" == "RHEL_7_PHP_56"
-	Requires:   rh-php56-php-process
+Requires:   rh-php56-php-process
 %else
-	Requires:   php-sysvshm
-	Requires:   php-sysvsem
-	Requires:   php-pcntl
+Requires:   php-sysvshm
+Requires:   php-sysvsem
+Requires:   php-pcntl
 %endif
 
 %description -n %name-ipc-sharedmemory
@@ -207,11 +207,11 @@ Requires:   %name-common = %version
 Requires:   apache2
 Requires:   mod_php_any
 %else
-	%if "%_repository" == "RHEL_6_PHP_56" || "%_repository" == "RHEL_7_PHP_56"
-		Requires:   httpd24-httpd
-	%else
-		Requires:   httpd
-	%endif
+%if "%_repository" == "RHEL_6_PHP_56" || "%_repository" == "RHEL_7_PHP_56"
+Requires:   httpd24-httpd
+%else
+Requires:   httpd
+%endif
 %endif
 
 %description -n %name-config-apache
@@ -225,11 +225,11 @@ Requires:   %name-autodiscover = %version
 Requires:   apache2
 Requires:   mod_php_any
 %else
-        %if "%_repository" == "RHEL_6_PHP_56" || "%_repository" == "RHEL_7_PHP_56"
-                Requires:   httpd24-httpd
-        %else
-                Requires:   httpd
-        %endif
+%if "%_repository" == "RHEL_6_PHP_56" || "%_repository" == "RHEL_7_PHP_56"
+Requires:   httpd24-httpd
+%else
+Requires:   httpd
+%endif
 %endif
 
 %description -n %name-config-apache-autodiscover
