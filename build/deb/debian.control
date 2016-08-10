@@ -98,12 +98,12 @@ Description: Z-Push autodiscover
 
 Package: z-push-config-apache
 Architecture: all
-Depends: ${misc:Depends}, z-push-common (= ${binary:Version}), libapache2-mod-php | libapache2-mod-php5
+Depends: ${misc:Depends}, z-push-common (= ${binary:Version}), apache2, libapache2-mod-php | libapache2-mod-php5
 Description: Z-Push apache configuration
  Z-push apache configuration files
 
 Package: z-push-config-apache-autodiscover
 Architecture: all
-Depends: ${misc:Depends}, z-push-autodiscover (= ${binary:Version}), libapache2-mod-php | libapache2-mod-php5
+Depends: ${misc:Depends}, z-push-autodiscover (= ${binary:Version}), apache2, libapache2-mod-php | libapache2-mod-php5
 Description: Z-Push autodiscover apache configuration
  Z-push autodiscover apache configuration files
