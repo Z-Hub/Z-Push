@@ -50,7 +50,7 @@ Description: Z-Push ldap backend
 
 Package: z-push-backend-kopano
 Architecture: all
-Depends: ${misc:Depends}, z-push-common (= ${binary:Version}), php5-mapi
+Depends: ${misc:Depends}, z-push-common (= ${binary:Version}), php5-mapi | php7-mapi
 Description: Z-Push Kopano backend
  Backend for Z-Push, that adds the ability to connect to a Kopano server
 
@@ -62,7 +62,7 @@ Description: Z-Push for Kopano
 
 Package: z-push-kopano-gabsync
 Architecture: all
-Depends: ${misc:Depends}, php5-mapi
+Depends: ${misc:Depends}, php5-mapi | php7-mapi
 Description: GAB sync for Kopano
  Synchronizes a the global address book for the Kopano Outlook Extension
 
