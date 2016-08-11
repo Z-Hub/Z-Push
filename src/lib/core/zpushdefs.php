@@ -536,7 +536,7 @@ define("SYNC_GAL_HOMEPHONE", "GAL:HomePhone");
 define("SYNC_GAL_MOBILEPHONE", "GAL:MobilePhone");
 define("SYNC_GAL_EMAILADDRESS", "GAL:EmailAddress");
 define("SYNC_GAL_PICTURE","GAL:Picture"); //post 14.0
-define("SYNC_GAL_MAXSIZE","GAL:Status"); //post 14.0
+define("SYNC_GAL_STATUS","GAL:Status"); //post 14.0
 define("SYNC_GAL_DATA","GAL:Data"); //post 14.0
 
 //AirSyncBase //12.0, 12.1 and 14.0
