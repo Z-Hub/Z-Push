@@ -449,7 +449,7 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
         }
         $message = false;
 
-        list($fsk, $sk) = MAPIUtils::SplitMessageId($id);
+        list($fsk, $sk) = Utils::SplitMessageId($id);
 
         $sourcekey = hex2bin($sk);
         $parentsourcekey = hex2bin(ZPush::GetDeviceManager()->GetBackendIdForFolderId($fsk));
