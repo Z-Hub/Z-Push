@@ -316,6 +316,20 @@ class MAPIProvider {
             $message->responsetype = $messageprops[$appointmentprops["responsestatus"]];
         }
 
+        // If it's an appointment which doesn't have any attendees, we have to make sure that
+        // the user is the owner or it will not work properly with android devices
+        // @see https://jira.z-hub.io/browse/ZP-1020
+        if(isset($messageprops[$appointmentprops["meetingstatus"]]) && $messageprops[$appointmentprops["meetingstatus"]] == olNonMeeting && empty($message->attendees)) {
+            $meinfo = mapi_zarafa_getuser_by_name($this->store, Request::GetAuthUser());
+
+            if (is_array($meinfo)) {
+                $message->organizeremail = w2u($meinfo["emailaddress"]);
+                $message->organizername = w2u($meinfo["fullname"]);
+                ZLog::Write(LOGLEVEL_DEBUG, "MAPIProvider->getAppointment(): setting ourself as the organizer for an appointment without attendees.");
+            }
+
+        }
+
         if (!isset($message->nativebodytype)) $message->nativebodytype = $this->getNativeBodyType($messageprops);
 
         // If the user is working from a location other than the office the busystatus should be interpreted as free.
