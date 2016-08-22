@@ -1111,6 +1111,22 @@ class Utils {
         ZLog::Write(LOGLEVEL_WARN, sprintf("Utils->GetFolderOriginFromId(): Unknown folder origin for folder with id '%s'", $fid));
         return 'unknown';
     }
+
+    /**
+     * Splits the id into folder id and message id parts. A colon in the $id indicates
+     * that the id has folderid:messageid format.
+     *
+     * @param string            $id
+     *
+     * @access public
+     * @return array
+     */
+    public static function SplitMessageId($id) {
+        if (strpos($id, ':') !== false) {
+            return explode(':', $id);
+        }
+        return array(null, $id);
+    }
 }
 
 

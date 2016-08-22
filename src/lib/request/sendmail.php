@@ -125,7 +125,7 @@ class SendMail extends RequestProcessor {
                 $sm->source->folderid = self::$deviceManager->GetBackendIdForFolderId($sm->source->folderid);
             }
             if (isset($sm->source->itemid)) {
-                list(, $sk) = MAPIUtils::SplitMessageId($sm->source->itemid);
+                list(, $sk) = Utils::SplitMessageId($sm->source->itemid);
                 $sm->source->itemid = $sk;
             }
             // replyflag and forward flags are actually only for the correct icon.
