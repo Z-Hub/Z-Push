@@ -845,6 +845,9 @@ class Utils {
      * @return int
      */
     public static function GetBodyPreferenceBestMatch($bpTypes) {
+        if ($bpTypes === false) {
+            return SYNC_BODYPREFERENCE_PLAIN;
+        }
         // The best choice is RTF, then HTML and then MIME in order to save bandwidth
         // because MIME is a complete message including the headers and attachments
         if (in_array(SYNC_BODYPREFERENCE_RTF, $bpTypes))  return SYNC_BODYPREFERENCE_RTF;
