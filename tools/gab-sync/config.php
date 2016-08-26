@@ -60,11 +60,11 @@ define('UNIQUEID', 'account');
 // Examples: define("SERVER", "default:");
 //           define("SERVER", "http://localhost:236/kopano");
 //           define("SERVER", "https://localhost:237/kopano");
-//           define("SERVER", "file:///var/run/kopano/server.sock)";
+//           define("SERVER", "file:///var/run/kopano/server.sock");
 // If you are using ZCP >= 7.2.0, set it to the zarafa location, e.g.
 //           define("SERVER", "http://localhost:236/zarafa");
 //           define("SERVER", "https://localhost:237/zarafa");
-//           define("SERVER", "file:///var/run/zarafad/server.sock)";
+//           define("SERVER", "file:///var/run/zarafad/server.sock");
 // For ZCP versions prior to 7.2.0 the socket location is different (http(s) sockets are the same):
 //           define("SERVER", "file:///var/run/zarafa");
 
