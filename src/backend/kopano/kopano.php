@@ -810,6 +810,7 @@ class BackendKopano implements IBackend, ISearchProvider {
 
         // We have to return the ID of the new calendar item, so do that here
         $calendarid = "";
+        $calFolderId = "";
         if (isset($entryid)) {
             $newitem = mapi_msgstore_openentry($this->store, $entryid);
             // new item might be in a delegator's store. ActiveSync does not support accepting them.
@@ -817,8 +818,9 @@ class BackendKopano implements IBackend, ISearchProvider {
                 throw new StatusException(sprintf("BackendKopano->MeetingResponse('%s','%s', '%s'): Object with entryid '%s' was not found in user's store (0x%X). It might be in a delegator's store.", $requestid, $folderid, $response, bin2hex($entryid), mapi_last_hresult()), SYNC_MEETRESPSTATUS_SERVERERROR, null, LOGLEVEL_WARN);
             }
 
-            $newprops = mapi_getprops($newitem, array(PR_SOURCE_KEY));
+            $newprops = mapi_getprops($newitem, array(PR_SOURCE_KEY, PR_PARENT_SOURCE_KEY));
             $calendarid = bin2hex($newprops[PR_SOURCE_KEY]);
+            $calFolderId = bin2hex($newprops[PR_PARENT_SOURCE_KEY]);
         }
 
         // on recurring items, the MeetingRequest class responds with a wrong entryid
@@ -835,8 +837,9 @@ class BackendKopano implements IBackend, ISearchProvider {
 
             if (is_array($items)) {
                $newitem = mapi_msgstore_openentry($this->store, $items[0]);
-               $newprops = mapi_getprops($newitem, array(PR_SOURCE_KEY));
+               $newprops = mapi_getprops($newitem, array(PR_SOURCE_KEY, PR_PARENT_SOURCE_KEY));
                $calendarid = bin2hex($newprops[PR_SOURCE_KEY]);
+               $calFolderId = bin2hex($newprops[PR_PARENT_SOURCE_KEY]);
                ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendKopano->MeetingResponse('%s','%s', '%s'): found other calendar entryid", $requestid, $folderid, $response));
             }
 
@@ -849,7 +852,15 @@ class BackendKopano implements IBackend, ISearchProvider {
         $folder = mapi_msgstore_openentry($this->store, $folderentryid);
         mapi_folder_deletemessages($folder, array($reqentryid), 0);
 
-        return $calendarid;
+        $prefix = '';
+        // prepend the short folderid of the target calendar: if available and short ids are used
+        if ($calFolderId) {
+            $shortFolderId = ZPush::GetDeviceManager()->GetFolderIdForBackendId($calFolderId);
+            if ($calFolderId != $shortFolderId) {
+                $prefix = $shortFolderId . ':';
+            }
+        }
+        return $prefix . $calendarid;
     }
 
     /**
