@@ -7,9 +7,7 @@ set -e
 
 case "$1" in
     configure)
-    if [ "$1" = "configure" -a -n "$2" ] && dpkg --compare-versions "$2" le 2.3.0 ; then
         /usr/local/sbin/z-push-admin -a fixstates
-    fi
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)
