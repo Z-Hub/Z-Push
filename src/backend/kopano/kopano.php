@@ -1582,7 +1582,7 @@ class BackendKopano implements IBackend, ISearchProvider {
 
         $folder = mapi_msgstore_openentry($store, $entryid);
         if (!$folder) {
-            ZLog::Write(LOGLEVEL_WARN, sprintf("KopanoBackend->HasSecretaryACLs(): error, could not open folder with entryid %s on store %s", $entryid, $store));
+            ZLog::Write(LOGLEVEL_WARN, sprintf("KopanoBackend->HasSecretaryACLs(): error, could not open folder with entryid %s on store %s", bin2hex($entryid), $store));
             return false;
         }
 
@@ -1618,7 +1618,7 @@ class BackendKopano implements IBackend, ISearchProvider {
 
         $folder = mapi_msgstore_openentry($store, $entryid);
         if (!$folder) {
-            ZLog::Write(LOGLEVEL_WARN, sprintf("KopanoBackend->HasReadACLs(): error, could not open folder with entryid %s on store %s", $entryid, $store));
+            ZLog::Write(LOGLEVEL_WARN, sprintf("KopanoBackend->HasReadACLs(): error, could not open folder with entryid %s on store %s", bin2hex($entryid), $store));
             return false;
         }
 
