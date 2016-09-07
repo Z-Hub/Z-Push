@@ -1576,13 +1576,13 @@ class BackendKopano implements IBackend, ISearchProvider {
     public function HasSecretaryACLs($store, $folderid) {
         $entryid = mapi_msgstore_entryidfromsourcekey($store, hex2bin($folderid));
         if (!$entryid) {
-            ZLog::Write(LOGLEVEL_WARN, sprintf("Kopano->HasSecretaryACLs(): error, no entryid resolved for %s on store %s", $folderid, $store));
+            ZLog::Write(LOGLEVEL_WARN, sprintf("KopanoBackend->HasSecretaryACLs(): error, no entryid resolved for %s on store %s", $folderid, $store));
             return false;
         }
 
         $folder = mapi_msgstore_openentry($store, $entryid);
         if (!$folder) {
-            ZLog::Write(LOGLEVEL_WARN, sprintf("Kopano->HasSecretaryACLs(): error, could not open folder with entryid %s on store %s", $entryid, $store));
+            ZLog::Write(LOGLEVEL_WARN, sprintf("KopanoBackend->HasSecretaryACLs(): error, could not open folder with entryid %s on store %s", $entryid, $store));
             return false;
         }
 
@@ -1612,13 +1612,13 @@ class BackendKopano implements IBackend, ISearchProvider {
     public function HasReadACLs($store, $folderid) {
         $entryid = mapi_msgstore_entryidfromsourcekey($store, hex2bin($folderid));
         if (!$entryid) {
-            ZLog::Write(LOGLEVEL_WARN, sprintf("Kopano->HasReadACLs(): error, no entryid resolved for %s on store %s", $folderid, $store));
+            ZLog::Write(LOGLEVEL_WARN, sprintf("KopanoBackend->HasReadACLs(): error, no entryid resolved for %s on store %s", $folderid, $store));
             return false;
         }
 
         $folder = mapi_msgstore_openentry($store, $entryid);
         if (!$folder) {
-            ZLog::Write(LOGLEVEL_WARN, sprintf("Kopano->HasReadACLs(): error, could not open folder with entryid %s on store %s", $entryid, $store));
+            ZLog::Write(LOGLEVEL_WARN, sprintf("KopanoBackend->HasReadACLs(): error, could not open folder with entryid %s on store %s", $entryid, $store));
             return false;
         }
 
