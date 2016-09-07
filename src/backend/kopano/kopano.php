@@ -1575,10 +1575,16 @@ class BackendKopano implements IBackend, ISearchProvider {
      */
     public function HasSecretaryACLs($store, $folderid) {
         $entryid = mapi_msgstore_entryidfromsourcekey($store, hex2bin($folderid));
-        if (!$entryid)  return false;
+        if (!$entryid) {
+            ZLog::Write(LOGLEVEL_WARN, sprintf("KopanoBackend->HasSecretaryACLs(): error, no entryid resolved for %s on store %s", $folderid, $store));
+            return false;
+        }
 
         $folder = mapi_msgstore_openentry($store, $entryid);
-        if (!$folder) return false;
+        if (!$folder) {
+            ZLog::Write(LOGLEVEL_WARN, sprintf("KopanoBackend->HasSecretaryACLs(): error, could not open folder with entryid %s on store %s", bin2hex($entryid), $store));
+            return false;
+        }
 
         $props = mapi_getprops($folder, array(PR_RIGHTS));
         if (isset($props[PR_RIGHTS]) &&
@@ -1605,10 +1611,16 @@ class BackendKopano implements IBackend, ISearchProvider {
      */
     public function HasReadACLs($store, $folderid) {
         $entryid = mapi_msgstore_entryidfromsourcekey($store, hex2bin($folderid));
-        if (!$entryid)  return false;
+        if (!$entryid) {
+            ZLog::Write(LOGLEVEL_WARN, sprintf("KopanoBackend->HasReadACLs(): error, no entryid resolved for %s on store %s", $folderid, $store));
+            return false;
+        }
 
         $folder = mapi_msgstore_openentry($store, $entryid);
-        if (!$folder) return false;
+        if (!$folder) {
+            ZLog::Write(LOGLEVEL_WARN, sprintf("KopanoBackend->HasReadACLs(): error, could not open folder with entryid %s on store %s", bin2hex($entryid), $store));
+            return false;
+        }
 
         $props = mapi_getprops($folder, array(PR_RIGHTS));
         if (isset($props[PR_RIGHTS]) &&

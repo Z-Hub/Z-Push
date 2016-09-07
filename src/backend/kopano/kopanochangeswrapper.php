@@ -397,7 +397,10 @@ class KopanoChangesWrapper implements IImportChanges, IExportChanges {
         // When we setup the $current importer, we didn't know what we needed to do, so we look only at the src folder for permissions.
         // Now the $newfolder could be read only as well. So we need to check it's permissions and then switch to a ReplyBackImExporter if it's r/o.
         if (!$this->isReplyBackExporter()) {
-            if (!self::$backend->HasSecretaryACLs($this->store, $newfolder)) {
+
+            // check if the user has permissions on the destination folder
+            $dststore = self::$backend->GetMAPIStoreForFolderId(ZPush::GetAdditionalSyncFolderStore($newfolder), $newfolder);
+            if (!self::$backend->HasSecretaryACLs($dststore, $newfolder)) {
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoChangesWrapper->ImportMessageMove(): destination folderid '%s' is missing permissions. Switching to ReplyBackImExporter.", Utils::PrintAsString($newfolder)));
                 $this->replyback = $this->getReplyBackImExporter();
                 $this->current = $this->replyback;
