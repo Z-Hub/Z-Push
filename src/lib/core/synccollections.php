@@ -100,7 +100,7 @@ class SyncCollections implements Iterator {
     /**
      * Constructor
      */
-    public function SyncCollections() {
+    public function __construct() {
     }
 
     /**

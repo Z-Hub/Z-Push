@@ -58,7 +58,7 @@ class SyncRecurrence extends SyncObject {
     public $monthofyear;
     public $calendartype;
 
-    function SyncRecurrence() {
+    function __construct() {
         $mapping = array (
                     // Recurrence type
                     // 0 = Recurs daily
@@ -128,6 +128,6 @@ class SyncRecurrence extends SyncObject {
                                                                                     self::STREAMER_RONOTIFY => true);
         }
 
-        parent::SyncObject($mapping);
+        parent::__construct($mapping);
     }
 }

@@ -60,7 +60,7 @@ class SearchProvider implements ISearchProvider{
      * @return
      * @throws StatusException, FatalException
      */
-    public function SearchProvider() {
+    public function __construct() {
     }
 
     /**

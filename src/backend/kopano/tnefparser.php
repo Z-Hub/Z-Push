@@ -75,7 +75,7 @@ class TNEFParser {
      *
      * @access public
      */
-    public function TNEFParser(&$store, &$props) {
+    public function __construct(&$store, &$props) {
         $this->store = $store;
         $this->props = $props;
     }

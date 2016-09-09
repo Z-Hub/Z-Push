@@ -51,7 +51,7 @@ class SyncResolveRecipients extends SyncObject {
     public $status;
     public $response;
 
-    public function SyncResolveRecipients() {
+    public function __construct() {
         $mapping = array (
             SYNC_RESOLVERECIPIENTS_TO                       => array (  self::STREAMER_VAR      => "to",
                                                                         self::STREAMER_ARRAY    => SYNC_RESOLVERECIPIENTS_TO,
@@ -67,7 +67,7 @@ class SyncResolveRecipients extends SyncObject {
                                                                         self::STREAMER_ARRAY    => SYNC_RESOLVERECIPIENTS_RESPONSE),
         );
 
-        parent::SyncObject($mapping);
+        parent::__construct($mapping);
     }
 
 }

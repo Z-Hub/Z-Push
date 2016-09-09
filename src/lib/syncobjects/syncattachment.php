@@ -54,7 +54,7 @@ class SyncAttachment extends SyncObject {
     public $attoid;
     public $attremoved;
 
-    function SyncAttachment() {
+    function __construct() {
         $mapping = array(
                     SYNC_POOMMAIL_ATTMETHOD                             => array (  self::STREAMER_VAR      => "attmethod",
                                                                                     self::STREAMER_RONOTIFY => true),
@@ -73,6 +73,6 @@ class SyncAttachment extends SyncObject {
                                                                                     self::STREAMER_RONOTIFY => true),
                 );
 
-        parent::SyncObject($mapping);
+        parent::__construct($mapping);
     }
 }

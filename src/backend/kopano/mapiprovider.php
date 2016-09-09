@@ -58,7 +58,7 @@ class MAPIProvider {
      *
      * @access public
      */
-    function MAPIProvider($session, $store) {
+    function __construct($session, $store) {
         $this->session = $session;
         $this->store = $store;
     }

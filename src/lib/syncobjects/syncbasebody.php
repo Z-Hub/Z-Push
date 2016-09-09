@@ -51,7 +51,7 @@ class SyncBaseBody extends SyncObject {
     public $data;
     public $preview;
 
-    function SyncBaseBody() {
+    function __construct() {
         $mapping = array(
                     SYNC_AIRSYNCBASE_TYPE                               => array (self::STREAMER_VAR        => "type"),
                     SYNC_AIRSYNCBASE_ESTIMATEDDATASIZE                  => array (self::STREAMER_VAR        => "estimatedDataSize"),
@@ -64,6 +64,6 @@ class SyncBaseBody extends SyncObject {
             $mapping[SYNC_AIRSYNCBASE_PREVIEW]                          =  array (self::STREAMER_VAR        => "preview");
         }
 
-        parent::SyncObject($mapping);
+        parent::__construct($mapping);
     }
 }

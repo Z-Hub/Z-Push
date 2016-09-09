@@ -49,7 +49,7 @@ class SyncDevicePassword extends SyncObject {
     public $password;
     public $Status;
 
-    public function SyncDevicePassword() {
+    public function __construct() {
         $mapping = array (
             SYNC_SETTINGS_PW                        => array (  self::STREAMER_VAR      => "password"),
 
@@ -57,6 +57,6 @@ class SyncDevicePassword extends SyncObject {
                                                                 self::STREAMER_TYPE     => self::STREAMER_TYPE_IGNORE)
         );
 
-        parent::SyncObject($mapping);
+        parent::__construct($mapping);
     }
 }

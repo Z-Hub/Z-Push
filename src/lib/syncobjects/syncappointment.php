@@ -81,7 +81,7 @@ class SyncAppointment extends SyncObject {
     public $responserequested;
 
 
-    function SyncAppointment() {
+    function __construct() {
         $mapping = array(
                     SYNC_POOMCAL_TIMEZONE                               => array (  self::STREAMER_VAR      => "timezone",
                                                                                     self::STREAMER_RONOTIFY => true),
@@ -218,7 +218,7 @@ class SyncAppointment extends SyncObject {
                                                                                     self::STREAMER_RONOTIFY => true);
         }
 
-        parent::SyncObject($mapping);
+        parent::__construct($mapping);
     }
 
     /**

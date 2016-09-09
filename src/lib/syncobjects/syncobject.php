@@ -65,9 +65,9 @@ abstract class SyncObject extends Streamer {
     protected $unsetVars;
 
 
-    public function SyncObject($mapping) {
+    public function __construct($mapping) {
         $this->unsetVars = array();
-        parent::Streamer($mapping);
+        parent::__construct($mapping);
     }
 
     /**

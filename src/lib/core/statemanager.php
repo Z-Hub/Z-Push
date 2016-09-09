@@ -80,7 +80,7 @@ class StateManager {
      *
      * @access public
      */
-    public function StateManager() {
+    public function __construct() {
         $this->statemachine = ZPush::GetStateMachine();
         $this->hierarchyOperation = ZPush::HierarchyCommand(Request::GetCommandCode());
         $this->deleteOldStates = (Request::GetCommandCode() === ZPush::COMMAND_SYNC || $this->hierarchyOperation);

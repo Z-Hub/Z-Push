@@ -80,7 +80,7 @@ class DeviceManager {
      *
      * @access public
      */
-    public function DeviceManager() {
+    public function __construct() {
         $this->statemachine = ZPush::GetStateMachine();
         $this->deviceHash = false;
         $this->devid = Request::GetDeviceID();
