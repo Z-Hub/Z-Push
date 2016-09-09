@@ -1,4 +1,4 @@
-#!/usr/bin/php
+#!/usr/bin/env php
 <?php
 /***********************************************
 * File      :   migrate-2.0.x-2.1.0.php

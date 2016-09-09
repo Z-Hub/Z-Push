@@ -83,10 +83,6 @@ abstract class RequestProcessor {
 
         // mark this request as "authenticated"
         self::$userIsAuthenticated = true;
-
-        // check Auth-User's permissions on GETUser's store
-        if($backend->Setup(Request::GetGETUser(), true) == false)
-            throw new AuthenticationRequiredException(sprintf("Not enough privileges of '%s' to setup for user '%s': Permission denied", Request::GetAuthUser(), Request::GetGETUser()));
     }
 
     /**
@@ -128,18 +124,19 @@ abstract class RequestProcessor {
         $handler = ZPush::GetRequestHandlerForCommand(Request::GetCommandCode());
 
         // if there is an error decoding wbxml, consume remaining data and include it in the WBXMLException
-        if (!$handler->Handle(Request::GetCommandCode())) {
-            $wbxmlLog = "no decoder";
-            if (self::$decoder) {
-                self::$decoder->readRemainingData();
-                $wbxmlLog = self::$decoder->getWBXMLLog();
+        try {
+            if (!$handler->Handle(Request::GetCommandCode())) {
+                throw new WBXMLException(sprintf("Unknown error in %s->Handle()", get_class($handler)));
             }
-            throw new WBXMLException("Debug data: " . $wbxmlLog);
+        }
+        catch (Exception $ex) {
+            ZLog::Write(LOGLEVEL_FATAL, "WBXML debug data: " . Request::GetInputAsBase64(), false);
+            throw $ex;
         }
 
         // also log WBXML in happy case
-        if (self::$decoder && @constant('WBXML_DEBUG') === true) {
-            ZLog::Write(LOGLEVEL_WBXML, "WBXML-IN : ". self::$decoder->getWBXMLLog(), false);
+        if (@constant('WBXML_DEBUG') === true) {
+            ZLog::Write(LOGLEVEL_WBXML, "WBXML-IN : ". Request::GetInputAsBase64(), false);
         }
     }
 

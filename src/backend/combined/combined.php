@@ -49,13 +49,8 @@
 * Consult LICENSE file for details
 ************************************************/
 
-// default backend
-include_once('lib/default/backend.php');
-
 //include the CombinedBackend's own config file
 require_once("backend/combined/config.php");
-require_once("backend/combined/importer.php");
-require_once("backend/combined/exporter.php");
 
 class BackendCombined extends Backend implements ISearchProvider {
     public $config;
@@ -139,12 +134,13 @@ class BackendCombined extends Backend implements ISearchProvider {
      * @param string        $store              target store, could contain a "domain\user" value
      * @param boolean       $checkACLonly       if set to true, Setup() should just check ACLs
      * @param string        $folderid           if set, only ACLs on this folderid are relevant
+     * @param boolean       $readonly           if set, the folder needs at least read permissions
      *
      * @access public
      * @return boolean
      */
-    public function Setup($store, $checkACLonly = false, $folderid = false) {
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("Combined->Setup('%s', '%s', '%s')", $store, Utils::PrintAsString($checkACLonly), $folderid));
+    public function Setup($store, $checkACLonly = false, $folderid = false, $readonly = false) {
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("Combined->Setup('%s', '%s', '%s', '%s')", $store, Utils::PrintAsString($checkACLonly), $folderid, Utils::PrintAsString($readonly)));
         if(!is_array($this->backends)){
             return false;
         }
@@ -153,7 +149,7 @@ class BackendCombined extends Backend implements ISearchProvider {
             if(isset($this->config['backends'][$i]['users']) && isset($this->config['backends'][$i]['users'][$store]['username'])){
                 $u = $this->config['backends'][$i]['users'][$store]['username'];
             }
-            if($this->backends[$i]->Setup($u, $checkACLonly, $folderid) == false){
+            if($this->backends[$i]->Setup($u, $checkACLonly, $folderid, $readonly) == false){
                 ZLog::Write(LOGLEVEL_WARN, "Combined->Setup() failed");
                 return false;
             }
@@ -444,7 +440,7 @@ class BackendCombined extends Backend implements ISearchProvider {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCombined->ChangesSinkInitialize('%s') is supported, initializing", $folderid));
             return $backend->ChangesSinkInitialize($this->GetBackendFolder($folderid));
         }
-            
+
         // if the backend doesn't support ChangesSink, we also return true so we don't get an error
         return true;
      }
@@ -533,20 +529,8 @@ class BackendCombined extends Backend implements ISearchProvider {
         $pos = strpos($folderid, $this->config['delimiter']);
         if($pos === false)
             return false;
-        return substr($folderid,0,$pos);
+        return substr($folderid, 0, $pos);
     }
-
-    /**
-     * Returns the BackendCombined as it implements the ISearchProvider interface
-     * This could be overwritten by the global configuration
-     *
-     * @access public
-     * @return object       Implementation of ISearchProvider
-     */
-    public function GetSearchProvider() {
-        return $this;
-    }
-
 
     /**
      * Indicates which AS version is supported by the backend.
@@ -564,6 +548,17 @@ class BackendCombined extends Backend implements ISearchProvider {
             }
         }
         return $version;
+    }
+
+    /**
+     * Returns the BackendCombined as it implements the ISearchProvider interface
+     * This could be overwritten by the global configuration
+     *
+     * @access public
+     * @return object       Implementation of ISearchProvider
+     */
+    public function GetSearchProvider() {
+        return $this;
     }
 
 
@@ -688,5 +683,4 @@ class BackendCombined extends Backend implements ISearchProvider {
 
         return false;
     }
-
 }

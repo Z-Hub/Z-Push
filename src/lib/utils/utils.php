@@ -6,7 +6,7 @@
 *
 * Created   :   03.04.2008
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -51,7 +51,7 @@ class Utils {
      * @return string
      */
     static public function PrintAsString($var) {
-      return ($var)?(($var===true)?'true':$var):(($var===false)?'false':(($var==='')?'empty':$var));
+      return ($var)?(($var===true)?'true':$var):(($var===false)?'false':(($var==='')?'empty':(($var == null) ? 'null':$var)));
 //return ($var)?(($var===true)?'true':$var):'false';
     }
 
@@ -209,13 +209,14 @@ class Utils {
         ZLog::Write(LOGLEVEL_DEBUG, "FILEAS_ORDER not defined. Add it to your config.php.");
         return null;
     }
+
     /**
-     * Checks if the PHP-MAPI extension is available and in a requested version
+     * Checks if the PHP-MAPI extension is available and in a requested version.
      *
      * @param string    $version    the version to be checked ("6.30.10-18495", parts or build number)
      *
      * @access public
-     * @return boolean installed version is superior to the checked strin
+     * @return boolean installed version is superior to the checked string
      */
     static public function CheckMapiExtVersion($version = "") {
         // compare build number if requested
@@ -236,8 +237,7 @@ class Utils {
     }
 
     /**
-     * Parses and returns an ecoded vCal-Uid from an
-     * OL compatible GlobalObjectID
+     * Parses and returns an ecoded vCal-Uid from an OL compatible GlobalObjectID.
      *
      * @param string    $olUid      an OL compatible GlobalObjectID
      *
@@ -308,13 +308,32 @@ class Utils {
     /**
      * Converts SYNC_FILTERTYPE into a timestamp
      *
-     * @param int       Filtertype
+     * @param int $filtertype      Filtertype
      *
      * @access public
      * @return long
      */
-    static public function GetCutOffDate($restrict) {
-        switch($restrict) {
+    static public function GetCutOffDate($filtertype) {
+        $back = Utils::GetFiltertypeInterval($filtertype);
+
+        if ($back === false) {
+            return 0; // unlimited
+        }
+
+        return time() - $back;
+    }
+
+    /**
+     * Returns the interval indicated by the filtertype.
+     *
+     * @param int $filtertype
+     *
+     * @access public
+     * @return long|boolean     returns false on invalid filtertype
+     */
+    static public function GetFiltertypeInterval($filtertype) {
+        $back = false;
+        switch($filtertype) {
             case SYNC_FILTERTYPE_1DAY:
                 $back = 60 * 60 * 24;
                 break;
@@ -337,14 +356,9 @@ class Utils {
                 $back = 60 * 60 * 24 * 31 * 6;
                 break;
             default:
-                break;
+                $back = false;
         }
-
-        if(isset($back)) {
-            $date = time() - $back;
-            return $date;
-        } else
-            return 0; // unlimited
+        return $back;
     }
 
     /**
@@ -441,18 +455,18 @@ class Utils {
         $len = strlen($string) - 1;
         while ($len > 0) {
             //look for '&-' sequence and replace it with '&'
-            if ($len > 0 && $string{($len-1)} == '&' && $string{$len} == '-') {
+            if ($len > 0 && $string[$len-1] == '&' && $string[$len] == '-') {
                 $string = substr_replace($string, '&', $len - 1, 2);
                 $len--; //decrease $len as this char has alreasy been processed
             }
             //search for '&' which weren't found in if clause above and
             //replace them with '+' as they mark an utf7-encoded char
-            if ($len > 0 && $string{($len-1)} == '&') {
+            if ($len > 0 && $string[($len-1)] == '&') {
                 $string = substr_replace($string, '+', $len - 1, 1);
                 $len--; //decrease $len as this char has alreasy been processed
             }
             //finally "escape" all remaining '+' chars
-            if ($len > 0 && $string{($len-1)} == '+') {
+            if ($len > 0 && $string[$len-1] == '+') {
                 $string = substr_replace($string, '+-', $len - 1, 1);
             }
             $len--;
@@ -479,18 +493,18 @@ class Utils {
         $len = strlen($string) - 1;
         while ($len > 0) {
             //look for '&-' sequence and replace it with '&'
-            if ($len > 0 && $string{($len-1)} == '+' && $string{$len} == '-') {
+            if ($len > 0 && $string[$len-1] == '+' && $string[$len] == '-') {
                 $string = substr_replace($string, '+', $len - 1, 2);
                 $len--; //decrease $len as this char has alreasy been processed
             }
             //search for '&' which weren't found in if clause above and
             //replace them with '+' as they mark an utf7-encoded char
-            if ($len > 0 && $string{($len-1)} == '+') {
+            if ($len > 0 && $string[$len-1] == '+') {
                 $string = substr_replace($string, '&', $len - 1, 1);
                 $len--; //decrease $len as this char has alreasy been processed
             }
             //finally "escape" all remaining '+' chars
-            if ($len > 0 && $string{($len-1)} == '&') {
+            if ($len > 0 && $string[$len-1] == '&') {
                 $string = substr_replace($string, '&-', $len - 1, 1);
             }
             $len--;
@@ -645,7 +659,8 @@ class Utils {
 
             // Webservice commands
             case ZPush::COMMAND_WEBSERVICE_DEVICE:    return 'WebserviceDevice';
-            case ZPush::COMMAND_WEBSERVICE_USERS:    return 'WebserviceUsers';
+            case ZPush::COMMAND_WEBSERVICE_USERS:     return 'WebserviceUsers';
+            case ZPush::COMMAND_WEBSERVICE_INFO:      return 'WebserviceInfo';
         }
         return false;
     }
@@ -690,6 +705,7 @@ class Utils {
             // Webservice commands
             case 'WebserviceDevice':     return ZPush::COMMAND_WEBSERVICE_DEVICE;
             case 'WebserviceUsers':      return ZPush::COMMAND_WEBSERVICE_USERS;
+            case 'WebserviceInfo':       return ZPush::COMMAND_WEBSERVICE_INFO;
         }
         return false;
     }
@@ -849,6 +865,9 @@ class Utils {
      * @return int
      */
     public static function GetBodyPreferenceBestMatch($bpTypes) {
+        if ($bpTypes === false) {
+            return SYNC_BODYPREFERENCE_PLAIN;
+        }
         // The best choice is RTF, then HTML and then MIME in order to save bandwidth
         // because MIME is a complete message including the headers and attachments
         if (in_array(SYNC_BODYPREFERENCE_RTF, $bpTypes))  return SYNC_BODYPREFERENCE_RTF;
@@ -890,11 +909,16 @@ class Utils {
         if(posix_getuid() == 0 && file_exists($file)) {
             $dir = dirname($file);
             $perm_dir = stat($dir);
-            $perm_log = stat($file);
+            $perm_file = stat($file);
 
-            if($perm_dir[4] !== $perm_log[4] || $perm_dir[5] !== $perm_log[5]) {
-                chown($file, $perm_dir[4]);
-                chgrp($file, $perm_dir[5]);
+            if ($perm_file['uid'] == 0 && $perm_dir['uid'] == 0) {
+                unlink($file);
+                throw new FatalException("FixFileOwner: $dir must be owned by the nginx/apache/php user instead of root");
+            }
+
+            if($perm_dir['uid'] !== $perm_file['uid'] || $perm_dir['gid'] !== $perm_file['gid']) {
+                chown($file, $perm_dir['uid']);
+                chgrp($file, $perm_dir['gid']);
             }
         }
         return true;
@@ -932,6 +956,179 @@ class Utils {
             return $email;
         }
         return substr($email, 0, $pos);
+    }
+
+    /**
+     * Safely write data to disk, using an unique tmp file (concurrent write),
+     * and using rename for atomicity. It also calls FixFileOwner to prevent
+     * ownership/rights problems when running as root
+     *
+     * If you use SafePutContents, you can safely use file_get_contents
+     * (you will always read a fully written file)
+     *
+     * @param string $filename
+     * @param string $data
+     * @return boolean|int
+     */
+    public static function SafePutContents($filename, $data) {
+        //put the 'tmp' as a prefix (and not suffix) so all glob call will not see temp files
+        $tmp = dirname($filename).DIRECTORY_SEPARATOR.'tmp-'.getmypid().'-'.basename($filename);
+        if (($res = file_put_contents($tmp, $data)) !== false) {
+            self::FixFileOwner($tmp);
+            if (rename($tmp, $filename) !== true)
+                $res = false;
+        }
+
+        return $res;
+    }
+
+    /**
+     * Format bytes to a more human readable value.
+     * @param int $bytes
+     * @param int $precision
+     *
+     * @access public
+     * @return void|string
+     */
+    public static function FormatBytes($bytes, $precision = 2) {
+        if ($bytes <= 0) return '0 B';
+
+        $units = array('B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB');
+        $base = log ($bytes, 1024);
+        $fBase = floor($base);
+        $pow = pow(1024, $base - $fBase);
+        return sprintf ("%.{$precision}f %s", $pow, $units[$fBase]);
+    }
+
+    public static function GetAvailableCharacterEncodings() {
+        return array(
+                'UCS-4',
+                'UCS-4BE',
+                'UCS-4LE',
+                'UCS-2',
+                'UCS-2BE',
+                'UCS-2LE',
+                'UTF-32',
+                'UTF-32BE',
+                'UTF-32LE',
+                'UTF-16',
+                'UTF-16BE',
+                'UTF-16LE',
+                'UTF-7',
+                'UTF7-IMAP',
+                'UTF-8',
+                'ASCII',
+                'EUC-JP',
+                'SJIS',
+                'eucJP-win',
+                'SJIS-win',
+                'ISO-2022-JP',
+                'ISO-2022-JP-MS',
+                'CP932',
+                'CP51932',
+                'SJIS-mac',
+                'MacJapanese',
+                'SJIS-Mobile#DOCOMO',
+                'SJIS-DOCOMO',
+                'SJIS-Mobile#KDDI',
+                'SJIS-KDDI',
+                'SJIS-Mobile#SOFTBANK',
+                'SJIS-SOFTBANK',
+                'UTF-8-Mobile#DOCOMO',
+                'UTF-8-DOCOMO',
+                'UTF-8-Mobile#KDDI-A',
+                'UTF-8-Mobile#KDDI-B',
+                'UTF-8-KDDI',
+                'UTF-8-Mobile#SOFTBANK',
+                'UTF-8-SOFTBANK',
+                'ISO-2022-JP-MOBILE#KDDI',
+                'ISO-2022-JP-KDDI',
+                'JIS',
+                'JIS-ms',
+                'CP50220',
+                'CP50220raw',
+                'CP50221',
+                'CP50222',
+                'ISO-8859-1',
+                'ISO-8859-2',
+                'ISO-8859-3',
+                'ISO-8859-4',
+                'ISO-8859-5',
+                'ISO-8859-6',
+                'ISO-8859-7',
+                'ISO-8859-8',
+                'ISO-8859-9',
+                'ISO-8859-10',
+                'ISO-8859-13',
+                'ISO-8859-14',
+                'ISO-8859-15',
+                'byte2be',
+                'byte2le',
+                'byte4be',
+                'byte4le',
+                'BASE64',
+                'HTML-ENTITIES',
+                '7bit',
+                '8bit',
+                'EUC-CN',
+                'CP936',
+                'GB18030',
+                'HZ',
+                'EUC-TW',
+                'CP950',
+                'BIG-5',
+                'EUC-KR',
+                'UHC (CP949)',
+                'ISO-2022-KR',
+                'Windows-1251',
+                'CP1251',
+                'Windows-1252',
+                'CP1252',
+                'CP866 (IBM866)',
+                'KOI8-R',
+                'ArmSCII-8',
+                'ArmSCII8',
+        );
+    }
+
+    /**
+     * Returns folder origin from its id.
+     *
+     * @param string $fid
+     *
+     * @access public
+     * @return string
+     */
+    public static function GetFolderOriginFromId($fid) {
+        $origin = substr($fid, 0, 1);
+        switch ($origin) {
+            case DeviceManager::FLD_ORIGIN_CONFIG:
+                return 'configured';
+            case DeviceManager::FLD_ORIGIN_GAB:
+                return 'GAB';
+            case DeviceManager::FLD_ORIGIN_SHARED:
+                return 'shared';
+            case DeviceManager::FLD_ORIGIN_USER:
+                return 'user';
+        }
+        ZLog::Write(LOGLEVEL_WARN, sprintf("Utils->GetFolderOriginFromId(): Unknown folder origin for folder with id '%s'", $fid));
+        return 'unknown';
+    }
+
+    /**
+     * Splits the id into folder id and message id parts. A colon in the $id indicates
+     * that the id has folderid:messageid format.
+     *
+     * @param string            $id
+     *
+     * @access public
+     * @return array
+     */
+    public static function SplitMessageId($id) {
+        if (strpos($id, ':') !== false) {
+            return explode(':', $id);
+        }
+        return array(null, $id);
     }
 }
 

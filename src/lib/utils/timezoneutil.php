@@ -1100,25 +1100,42 @@ class TimezoneUtil {
         ZLog::Write(LOGLEVEL_DEBUG, "TimezoneUtil::GetFullTZ() for ". $phptimezone);
 
         $servertzname = self::guessTZNameFromPHPName($phptimezone);
-        $offset = self::$tzonesoffsets[$servertzname];
+        return self::GetFullTZFromTZName($servertzname);
+    }
+
+    /**
+     * Returns a full timezone array
+     *
+     * @param string   $tzname     a TZID value
+     *
+     * @access public
+     * @return array
+     */
+    static public function GetFullTZFromTZName($tzname) {
+        if (!array_key_exists($tzname, self::$tzonesoffsets)) {
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("TimezoneUtil::GetFullTZFromTZName('%s'): Is a PHP TimeZone, converting", $tzname));
+            $tzname = self::guessTZNameFromPHPName($tzname);
+        }
+
+        $offset = self::$tzonesoffsets[$tzname];
 
         $tz = array(
             "bias" => $offset[0],
-            "tzname" => self::encodeTZName(self::getMSTZnameFromTZName($servertzname)),
+            "tzname" => self::encodeTZName(self::getMSTZnameFromTZName($tzname)),
             "dstendyear" => $offset[3],
             "dstendmonth" => $offset[4],
-            "dstendday" => $offset[6],
-            "dstendweek" => $offset[5],
+            "dstendday" => $offset[5],
+            "dstendweek" => $offset[6],
             "dstendhour" => $offset[7],
             "dstendminute" => $offset[8],
             "dstendsecond" => $offset[9],
             "dstendmillis" => $offset[10],
             "stdbias" => $offset[1],
-            "tznamedst" => self::encodeTZName(self::getMSTZnameFromTZName($servertzname)),
+            "tznamedst" => self::encodeTZName(self::getMSTZnameFromTZName($tzname)),
             "dststartyear" => $offset[11],
             "dststartmonth" => $offset[12],
-            "dststartday" => $offset[14],
-            "dststartweek" => $offset[13],
+            "dststartday" => $offset[13],
+            "dststartweek" => $offset[14],
             "dststarthour" => $offset[15],
             "dststartminute" => $offset[16],
             "dststartsecond" => $offset[17],
@@ -1207,13 +1224,33 @@ class TimezoneUtil {
      *
      * @param string    $name       internal timezone name
      *
-     * @access public
+     * @access private
      * @return string
      */
     static private function getMSTZnameFromTZName($name) {
         foreach (self::$mstzones as $mskey => $msdefs) {
             if ($name == $msdefs[0])
                 return $msdefs[1];
+        }
+
+        // Not found? Then retrieve the correct TZName first and try again.
+        // That's ugly and needs a proper fix. But for now this method can convert
+        // - Europe/Berlin
+        // - W Europe Standard Time
+        // to "(GMT+01:00) Amsterdam, Berlin, Bern, Rome, Stockholm, Vienna"
+        // which is more correct than the hardcoded default of (GMT+00:00...)
+        $tzName = '';
+        foreach (self::$phptimezones as $tzn => $phptzs) {
+            if (in_array($name, $phptzs)) {
+                $tzName = $tzn;
+                break;
+            }
+        }
+        if ($tzName != '') {
+            foreach (self::$mstzones as $mskey => $msdefs) {
+                if ($tzName == $msdefs[0])
+                    return $msdefs[1];
+            }
         }
 
         ZLog::Write(LOGLEVEL_WARN, sprintf("TimezoneUtil::getMSTZnameFromTZName() no MS name found for '%s'. Returning '(GMT) Greenwich Mean Time: Dublin, Edinburgh, Lisbon, London'", $name));
@@ -1259,11 +1296,11 @@ class TimezoneUtil {
     }
 
     /**
-     * Pack timezone info for Sync
+     * Pack timezone info for Sync.
      *
      * @param array     $tz
      *
-     * @access private
+     * @access public
      * @return string
      */
     static public function GetSyncBlobFromTZ($tz) {
@@ -1277,5 +1314,61 @@ class TimezoneUtil {
                 $tz["dstbias"]);
 
         return $packed;
+    }
+
+    /**
+     * Generate date object from string and timezone.
+     *
+     * @param string $value
+     * @param string $timezone
+     *
+     * @access public
+     * @return int epoch
+     */
+    public static function MakeUTCDate($value, $timezone = null) {
+        $tz = null;
+        if ($timezone) {
+            $tz = timezone_open($timezone);
+        }
+        if (!$tz) {
+            //If there is no timezone set, we use the default timezone
+            $tz = timezone_open(date_default_timezone_get());
+        }
+        //20110930T090000Z
+        $date = date_create_from_format('Ymd\THis\Z', $value, timezone_open("UTC"));
+        if (!$date) {
+            //20110930T090000
+            $date = date_create_from_format('Ymd\THis', $value, $tz);
+        }
+        if (!$date) {
+            //20110930 (Append T000000Z to the date, so it starts at midnight)
+            $date = date_create_from_format('Ymd\THis\Z', $value . "T000000Z", $tz);
+        }
+        return date_timestamp_get($date);
+    }
+
+
+    /**
+     * Generate a tzid from various formats
+     *
+     * @param str $timezone
+     *
+     * @access public
+     * @return timezone id
+     */
+    public static function ParseTimezone($timezone) {
+        //(GMT+01.00) Amsterdam / Berlin / Bern / Rome / Stockholm / Vienna
+        if (preg_match('/GMT(\\+|\\-)0(\d)/', $timezone, $matches)) {
+            return "Etc/GMT" . $matches[1] . $matches[2];
+        }
+        //(GMT+10.00) XXX / XXX / XXX / XXX
+        if (preg_match('/GMT(\\+|\\-)1(\d)/', $timezone, $matches)) {
+            return "Etc/GMT" . $matches[1] . "1" . $matches[2];
+        }
+        ///inverse.ca/20101018_1/Europe/Amsterdam or /inverse.ca/20101018_1/America/Argentina/Buenos_Aires
+        if (preg_match('/\/[.[:word:]]+\/\w+\/(\w+)\/([\w\/]+)/', $timezone, $matches)) {
+            return $matches[1] . "/" . $matches[2];
+        }
+        return self::getMSTZnameFromTZName(trim($timezone, '"'));
     }
 }

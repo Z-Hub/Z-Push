@@ -89,7 +89,7 @@ class PingTracking extends InterProcessData {
         $stat = false;
 
         // initialize params
-        $this->InitializeParams();
+        $this->initializeParams();
 
         // exclusive block
         if ($this->blockMutex()) {

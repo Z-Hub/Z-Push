@@ -6,7 +6,7 @@
 *
 * Created   :   23.12.2011
 *
-* Copyright 2007 - 2015 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -106,9 +106,15 @@ class ZPushAdmin {
                 $sc = new SyncCollections();
                 $sc->SetStateManager($stateManager);
 
-                // load all collections of device without loading states or checking permissions
-                $sc->LoadAllCollections(true, false, false);
+                // load all collections of device also loading states and loading hierarchy, but not checking permissions
+                $sc->LoadAllCollections(true, true, false, true);
+            }
+            catch (StateInvalidException $sive) {
+                ZLog::Write(LOGLEVEL_WARN, sprintf("ZPushAdmin::GetDeviceDetails(): device '%s' of user '%s' has invalid states. Please sync to solve this issue.", $devid, $user));
+                $device->SetDeviceError("Invalid states. Please force synchronization!");
+            }
 
+            if ($sc) {
                 if ($sc->GetLastSyncTime())
                     $device->SetLastSyncTime($sc->GetLastSyncTime());
 
@@ -131,11 +137,6 @@ class ZPushAdmin {
                     }
                 }
             }
-            catch (StateInvalidException $sive) {
-                ZLog::Write(LOGLEVEL_WARN, sprintf("ZPushAdmin::GetDeviceDetails(): device '%s' of user '%s' has invalid states. Please sync to solve this issue.", $devid, $user));
-                $device->SetDeviceError("Invalid states. Please force synchronization!");
-            }
-
             return $device;
         }
         catch (StateNotFoundException $e) {
@@ -282,7 +283,7 @@ class ZPushAdmin {
             StateManager::UnLinkState($device, false);
 
             // remove backend storage permanent data
-            ZPush::GetStateMachine()->CleanStates($device->GetDeviceId(), IStateMachine::BACKENDSTORAGE, false, 99999999999);
+            ZPush::GetStateMachine()->CleanStates($device->GetDeviceId(), IStateMachine::BACKENDSTORAGE, false, $device->GetFirstSyncTime(), true);
 
             // remove devicedata and unlink user from device
             unset($devices[$user]);
@@ -326,7 +327,7 @@ class ZPushAdmin {
             }
 
             if (!$folderid || (is_array($folderid) && empty($folderid))) {
-                ZLog::Write(LOGLEVEL_ERROR, sprintf("ZPushAdmin::ResyncFolder(): no folders synchronized for user '%s' on device '%s'. Aborting.",$user, $devid));
+                ZLog::Write(LOGLEVEL_ERROR, sprintf("ZPushAdmin::ResyncFolder(): no folders requested for user '%s' on device '%s'. Aborting.",$user, $devid));
                 return false;
             }
 
@@ -342,6 +343,10 @@ class ZPushAdmin {
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::ResyncFolder(): folder '%s' on device '%s' of user '%s' marked to be re-synchronized.", $folderid, $devid, $user));
             }
 
+            if ($device->GetData() === false) {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::ResyncFolder(): nothing changed for device '%s' of user '%s'", $devid, $user));
+                return false;
+            }
             ZPush::GetStateMachine()->SetState($device->GetData(), $devid, IStateMachine::DEVICEDATA);
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::ResyncFolder(): saved updated device data of device '%s' of user '%s'", $devid, $user));
         }
@@ -485,18 +490,22 @@ class ZPushAdmin {
             // unify the lists saved for the user/device and the staticly configured one
             $new_list = array();
             foreach ($device->GetAdditionalFolders() as $folder) {
-                $folder['source'] = 'user';
+                $syncfolderid = $device->GetFolderIdForBackendId($folder['folderid'], false, false, null);
+                $folder['syncfolderid'] = $syncfolderid;
+                $folder['origin'] = Utils::GetFolderOriginFromId($syncfolderid);
                 $new_list[$folder['folderid']] = $folder;
             }
             foreach (ZPush::GetAdditionalSyncFolders() as $fid => $so) {
                 // if this is not part of the device list
                 if (!isset($new_list[$fid])) {
+                    $syncfolderid = $device->GetFolderIdForBackendId($fid, false, false, null);
                     $new_list[$fid] = array(
                                         'store' => $so->Store,
                                         'folderid' => $fid,
+                                        'syncfolderid' => $syncfolderid,
                                         'name' => $so->displayname,
                                         'type' => $so->type,
-                                        'source' => 'static'
+                                        'origin' => Utils::GetFolderOriginFromId($syncfolderid),
                                     );
                 }
             }
@@ -759,7 +768,7 @@ class ZPushAdmin {
             $users = self::ListUsers($devid);
             foreach ($users as $username) {
                 $seen++;
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::FixStatesDeviceToUserLinking(): linking user '%s' to device '%d'", $username, $devid));
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::FixStatesDeviceToUserLinking(): linking user '%s' to device '%s'", $username, $devid));
 
                 if (ZPush::GetStateMachine()->LinkUserDevice($username, $devid))
                     $fixed++;
@@ -829,6 +838,83 @@ class ZPushAdmin {
             }
         }
         return array($processed, $deleted);
+    }
+
+    /**
+     * Fixes hierarchy states writing folderdata states.
+     *
+     * @access public
+     * @return array(seenDevices, seenHierarchyStates, fixedHierarchyStates, usersWithoutHierarchy)
+     */
+    static public function FixStatesHierarchyFolderData() {
+        $devices = 0;
+        $seen = 0;
+        $nouuid = 0;
+        $fixed = 0;
+        $asdevices = ZPush::GetStateMachine()->GetAllDevices(false);
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::FixStatesHierarchyFolderData(): found %d devices", count($devices)));
+
+        foreach ($asdevices as $devid) {
+            try {
+                // get the device
+                $devicedata = ZPush::GetStateMachine()->GetState($devid, IStateMachine::DEVICEDATA);
+                $devices++;
+
+                // get hierarchy UUID, check if FD is there else create it
+                foreach (self::ListUsers($devid) as $username) {
+                    $device = new ASDevice($devid, ASDevice::UNDEFINED, $username, ASDevice::UNDEFINED);
+                    $device->SetData($devicedata, false);
+
+                    // get hierarchy UUID
+                    $hierarchyUuid = $device->GetFolderUUID(false);
+                    if ($hierarchyUuid == false) {
+                        ZLog::Write(LOGLEVEL_WARN, sprintf("ZPushAdmin::FixStatesHierarchyFolderData(): device %s user '%s' has no hierarchy synchronized! Ignoring.", $devid, $username));
+                        $nouuid++;
+                        continue;
+                    }
+                    $seen++;
+                    $needsFixing = false;
+                    $spa = false;
+
+                    // try getting the FOLDERDATA for that state
+                    try {
+                        $spa = ZPush::GetStateMachine()->GetState($device->GetDeviceId(), IStateMachine::FOLDERDATA, $hierarchyUuid);
+                    }
+                    catch(StateNotFoundException $snfe) {
+                        $needsFixing = true;
+                    }
+                    // Search all states, and find the highest counter for the hierarchy UUID
+                    $allStates = ZPush::GetStateMachine()->GetAllStatesForDevice($devid);
+                    $maxCounter = 1;
+                    foreach ($allStates as $state) {
+                        if ($state["uuid"] == $hierarchyUuid && $state['counter'] > $maxCounter && ($state['type'] == "" || $state['type'] == false)) {
+                            $maxCounter = $state['counter'];
+                        }
+                    }
+                    $hierarchySyncKey = StateManager::BuildStateKey($hierarchyUuid, $maxCounter);
+
+                    if ($spa) {
+                        if ($spa->GetSyncKey() !== $hierarchySyncKey) {
+                            $needsFixing = true;
+                        }
+                    }
+                    else {
+                        $spa = new SyncParameters();
+                    }
+
+                    if ($needsFixing) {
+                        // generate FOLDERDATA
+                        $spa->SetSyncKey($hierarchySyncKey);
+                        $spa->SetFolderId(false);
+                        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::FixStatesHierarchyFolderData(): write data for %s", $spa->GetSyncKey()));
+                        ZPush::GetStateMachine()->SetState($spa, $device->GetDeviceId(), IStateMachine::FOLDERDATA, $hierarchyUuid);
+                        $fixed++;
+                    }
+                }
+            }
+            catch (StateNotFoundException $e) {}
+        }
+        return array($devices, $seen, $fixed, $nouuid);
     }
 
 }

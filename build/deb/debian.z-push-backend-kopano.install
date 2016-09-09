@@ -1,0 +1,2 @@
+conftmp/kopano.conf.php /etc/z-push/
+backend/kopano            /usr/share/z-push/backend/

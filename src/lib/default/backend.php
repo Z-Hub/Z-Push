@@ -20,7 +20,7 @@
 *
 * Created   :   01.10.2007
 *
-* Copyright 2007 - 2015 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -105,7 +105,7 @@ abstract class Backend implements IBackend {
      * Methods to be implemented
      *
      * public function Logon($username, $domain, $password);
-     * public function Setup($store, $checkACLonly = false, $folderid = false);
+     * public function Setup($store, $checkACLonly = false, $folderid = false, $readonly = false);
      * public function Logoff();
      * public function GetHierarchy();
      * public function GetImporter($folderid = false);
@@ -183,8 +183,22 @@ abstract class Backend implements IBackend {
      * @return SyncObject   $settings
      */
     public function Settings($settings) {
-        if ($settings instanceof SyncOOF || $settings instanceof SyncUserInformation)
+        if ($settings instanceof SyncOOF) {
+            $isget = !empty($settings->bodytype);
+            $settings = new SyncOOF();
+            if ($isget) {
+                //oof get
+                $settings->oofstate = 0;
+                $settings->Status = SYNC_SETTINGSSTATUS_SUCCESS;
+            } else {
+                //oof set
+                $settings->Status = SYNC_SETTINGSSTATUS_PROTOCOLLERROR;
+            }
+        }
+        if ($settings instanceof SyncUserInformation) {
+            $settings->emailaddresses = array(ZPush::GetBackend()->GetUserDetails(Request::GetAuthUser())['emailaddress']);
             $settings->Status = SYNC_SETTINGSSTATUS_SUCCESS;
+        }
         return $settings;
     }
 
@@ -223,6 +237,34 @@ abstract class Backend implements IBackend {
     public function GetCurrentUsername() {
         return $this->GetUserDetails(Request::GetAuthUser());
     }
+
+    /**
+     * Indicates if the Backend supports folder statistics.
+     *
+     * @access public
+     * @return boolean
+     */
+    public function HasFolderStats() {
+        return false;
+    }
+
+    /**
+     * Returns a status indication of the folder.
+     * If there are changes in the folder, the returned value must change.
+     * The returned values are compared with '===' to determine if a folder needs synchronization or not.
+     *
+     * @param string $store         the store where the folder resides
+     * @param string $folderid      the folder id
+     *
+     * @access public
+     * @return string
+     */
+    public function GetFolderStat($store, $folderid) {
+        // As this is not implemented, the value returned will change every hour.
+        // This will only be called if HasFolderStats() returns true.
+        return "not implemented-".gmdate("Y-m-d-H");
+    }
+
 
     /**----------------------------------------------------------------------------------------------------------
      * Protected methods for BackendStorage
@@ -303,11 +345,35 @@ abstract class Backend implements IBackend {
         }
         if (isset($this->stateStorage)) {
             try {
-                $this->storage_state = ZPush::GetDeviceManager()->GetStateManager()->SetBackendStorage($this->stateStorage, StateManager::BACKENDSTORAGE_STATE);
+                ZPush::GetDeviceManager()->GetStateManager()->SetBackendStorage($this->stateStorage, StateManager::BACKENDSTORAGE_STATE);
             }
             catch (StateNotYetAvailableException $snyae) { }
             catch(StateNotFoundException $snfe) { }
         }
     }
 
+    /**
+     * Returns the policy name for the user.
+     * If the backend returns false, the 'default' policy is used.
+     * If the backend returns any other name than 'default' the policygroup with
+     * that name (defined in the policies.ini file) will be applied for this user.
+     *
+     * @access public
+     * @return string|boolean
+     */
+    public function GetUserPolicyName() {
+        return false;
+    }
+
+    /**
+     * Returns the backend ID of the folder of the KOE GAB.
+     *
+     * @param string $foldername
+     *
+     * @access public
+     * @return string|boolean
+     */
+    public function GetKoeGabBackendFolderId($foldername) {
+        return false;
+    }
 }
