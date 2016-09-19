@@ -2541,6 +2541,15 @@ class MAPIProvider {
                     $bpReturnType != SYNC_BODYPREFERENCE_MIME &&
                     $message->asbody->estimatedDataSize > $bpo->GetTruncationSize()
                 ) {
+
+                // Truncated plaintext requests are used on iOS for the preview in the email list. All images and links should be removed - see https://jira.z-hub.io/browse/ZP-1025
+                if ($bpReturnType == SYNC_BODYPREFERENCE_PLAIN) {
+                    ZLog::Write(LOGLEVEL_DEBUG, "MAPIProvider->setMessageBody(): truncated plain-text body requested, stripping all links and images");
+                    // Get more data because of the filtering it's most probably going down in size. It's going to be truncated to the correct size below.
+                    $plainbody = stream_get_contents($message->asbody->data, $bpo->GetTruncationSize() * 3);
+                    $message->asbody->data = StringStreamWrapper::Open(preg_replace('/<http(s){0,1}:\/\/.*?>/i', '', $plainbody));
+                }
+
                 // truncate data stream
                 ftruncate($message->asbody->data, $bpo->GetTruncationSize());
                 $message->asbody->truncated = 1;
