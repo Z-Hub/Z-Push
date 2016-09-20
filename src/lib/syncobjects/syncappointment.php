@@ -92,8 +92,7 @@ class SyncAppointment extends SyncObject {
 
                     SYNC_POOMCAL_STARTTIME                              => array (  self::STREAMER_VAR      => "starttime",
                                                                                     self::STREAMER_TYPE     => self::STREAMER_TYPE_DATE,
-                                                                                    self::STREAMER_CHECKS   => array(   self::STREAMER_CHECK_REQUIRED       => self::STREAMER_CHECK_SETZERO,
-                                                                                                                        self::STREAMER_CHECK_CMPLOWER       => SYNC_POOMCAL_ENDTIME ),
+                                                                                    self::STREAMER_CHECKS   => array(   self::STREAMER_CHECK_CMPLOWER       => SYNC_POOMCAL_ENDTIME ),
                                                                                     self::STREAMER_RONOTIFY => true ),
 
 
@@ -108,8 +107,7 @@ class SyncAppointment extends SyncObject {
                                                                                     self::STREAMER_RONOTIFY => true),
                     SYNC_POOMCAL_ENDTIME                                => array (  self::STREAMER_VAR      => "endtime",
                                                                                     self::STREAMER_TYPE     => self::STREAMER_TYPE_DATE,
-                                                                                    self::STREAMER_CHECKS   => array(   self::STREAMER_CHECK_REQUIRED       => self::STREAMER_CHECK_SETONE,
-                                                                                                                        self::STREAMER_CHECK_CMPHIGHER      => SYNC_POOMCAL_STARTTIME ),
+                                                                                    self::STREAMER_CHECKS   => array(   self::STREAMER_CHECK_CMPHIGHER      => SYNC_POOMCAL_STARTTIME ),
                                                                                     self::STREAMER_RONOTIFY => true ),
 
                     SYNC_POOMCAL_RECURRENCE                             => array (  self::STREAMER_VAR      => "recurrence",
