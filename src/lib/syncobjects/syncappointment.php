@@ -232,6 +232,41 @@ class SyncAppointment extends SyncObject {
      * @return boolean
      */
     public function Check($logAsDebug = false) {
+        // Fix starttime and endtime if they are not set on NEW appointments - see https://jira.z-hub.io/browse/ZP-983
+        if ($this->flags === SYNC_NEWMESSAGE) {
+            $time = time();
+            $calcstart = $time + 1800 - ($time % 1800); // round up to the next half hour
+
+            // Check error cases first
+            // Case 2: starttime not set, endtime in the past
+            if (!isset($this->starttime) && isset($this->endtime) && $this->endtime < $time) {
+                ZLog::Write(LOGLEVEL_WARN, "SyncAppointment->Check(): Parameter 'starttime' not set while 'endtime' is in the past (case 2). Aborting.");
+                return false;
+            }
+            // Case 3b: starttime not set, endtime in the future (3) but before the calculated starttime (3b)
+            elseif (!isset($this->starttime) && isset($this->endtime) && $this->endtime > $time && $this->endtime < $calcstart) {
+                ZLog::Write(LOGLEVEL_WARN, "SyncAppointment->Check(): Parameter 'starttime' not set while 'endtime' is in the future but before the calculated starttime (case 3b). Aborting.");
+                return false;
+            }
+            // Case 5: starttime in the future but no endtime set
+            elseif (isset($this->starttime) && $this->starttime > $time && !isset($this->endtime)) {
+                ZLog::Write(LOGLEVEL_WARN, "SyncAppointment->Check(): Parameter 'starttime' is in the future but 'endtime' is not set (case 5). Aborting.");
+                return false;
+            }
+
+            // Set starttime to the rounded up next half hour
+            // Case 1, 3a (endtime won't be changed as it's set)
+            if (!isset($this->starttime)) {
+                $this->starttime = $calcstart;
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncAppointment->Check(): Parameter 'starttime' was not set, setting it to %d (%s).", $this->starttime, date(DATE_ISO8601, $this->starttime)));
+            }
+            // Case 1, 4
+            if (!isset($this->endtime)) {
+                $this->endtime = $calcstart + 1800; // 30 min after calcstart
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncAppointment->Check(): Parameter 'endtime' was not set, setting it to %d (%s).", $this->endtime, date(DATE_ISO8601, $this->endtime)));
+            }
+        }
+
         $ret = parent::Check($logAsDebug);
 
         // semantic checks general "turn off switch"
