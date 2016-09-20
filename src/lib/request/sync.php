@@ -1445,6 +1445,19 @@ class Sync extends RequestProcessor {
                 case SYNC_ADD:
                     self::$topCollector->AnnounceInformation(sprintf("Creating new message from mobile %d", $messageCount));
                     try {
+                        // set start & endtime to the next half hour - see https://jira.z-hub.io/browse/ZP-983
+                        if ($message instanceof SyncAppointment) {
+                            if (!isset($message->starttime)) {
+                                // round starttime up to the next half hour
+                                $time = time();
+                                $offset = ($time % 1800);
+                                $message->starttime = $time + 1800 - $offset;
+                            }
+                            if (!isset($message->endtime)) {
+                                // set endtime to starttime + half hour
+                                $message->endtime = $message->starttime + 1800;
+                            }
+                        }
                         // ignore sms messages
                         if ($foldertype == "SMS") {
                             ZLog::Write(LOGLEVEL_DEBUG, "SMS sync are not supported. Ignoring message.");
