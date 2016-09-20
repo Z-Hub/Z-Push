@@ -117,6 +117,10 @@ abstract class SyncWorker {
     private function doSync($gabId = null, $gabName = 'default', $doWrite = true) {
         // get the folderid of the hidden folder - will be created if not yet available
         $folderid = $this->getFolderId($gabId, $gabName, $doWrite);
+        if ($folderid === false) {
+            $this->Log(sprintf("Aborting %sGAB sync to store '%s'%s. Store not found or create not possible.", (!$doWrite?"simulated ":""), HIDDEN_FOLDERSTORE, ($gabId?" of '".$gabName."'":"")));
+            return;
+        }
 
         $this->Log(sprintf("Starting %sGAB sync to store '%s' %s on id '%s'", (!$doWrite?"simulated ":""), HIDDEN_FOLDERSTORE, ($gabId?"of '".$gabName."'":""), $folderid));
 
