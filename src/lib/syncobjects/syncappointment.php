@@ -258,12 +258,12 @@ class SyncAppointment extends SyncObject {
             // Case 1, 3a (endtime won't be changed as it's set)
             if (!isset($this->starttime)) {
                 $this->starttime = $calcstart;
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncAppointment->Check(): Parameter 'starttime' was not set, setting it to %d (%s).", $this->starttime, date(DATE_ISO8601, $this->starttime)));
+                ZLog::Write(LOGLEVEL_WBXML, sprintf("SyncAppointment->Check(): Parameter 'starttime' was not set, setting it to %d (%s).", $this->starttime, gmstrftime("%Y%m%dT%H%M%SZ", $this->starttime)));
             }
             // Case 1, 4
             if (!isset($this->endtime)) {
                 $this->endtime = $calcstart + 1800; // 30 min after calcstart
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncAppointment->Check(): Parameter 'endtime' was not set, setting it to %d (%s).", $this->endtime, date(DATE_ISO8601, $this->endtime)));
+                ZLog::Write(LOGLEVEL_WBXML, sprintf("SyncAppointment->Check(): Parameter 'endtime' was not set, setting it to %d (%s).", $this->endtime, gmstrftime("%Y%m%dT%H%M%SZ", $this->endtime)));
             }
         }
 
