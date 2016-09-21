@@ -1192,7 +1192,6 @@ class MAPIProvider {
             $existingstartendpropsmap = array($amapping["starttime"], $amapping["endtime"]);
             $existingstartendprops = $this->getProps($mapimessage, $existingstartendpropsmap);
 
-            ZLog::Write(LOGLEVEL_DEBUG, "starttime: ". $existingstartendprops[$amapping["starttime"]]);
             if (isset($existingstartendprops[$amapping["starttime"]]) && !isset($appointment->starttime)) {
                 $appointment->starttime = $existingstartendprops[$amapping["starttime"]];
                 ZLog::Write(LOGLEVEL_WBXML, sprintf("MAPIProvider->setAppointment(): Parameter 'starttime' was not set, using value from MAPI %d (%s).", $appointment->starttime, gmstrftime("%Y%m%dT%H%M%SZ", $appointment->starttime)));
