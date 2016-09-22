@@ -854,11 +854,12 @@ class ASDevice extends StateObject {
      * @param string    $folderid   the folder id of the additional folder.
      * @param string    $name       the name of the additional folder (has to be unique for all folders on the device).
      * @param string    $type       AS foldertype of SYNC_FOLDER_TYPE_USER_*
+     * @param int       $flags      Additional flags, like DeviceManager::FLD_FLAGS_REPLYASUSER
      *
      * @access public
      * @return boolean
      */
-    public function AddAdditionalFolder($store, $folderid, $name, $type) {
+    public function AddAdditionalFolder($store, $folderid, $name, $type, $flags) {
         // check if type is of a additional user type
         if (!in_array($type, array(SYNC_FOLDER_TYPE_USER_CONTACT, SYNC_FOLDER_TYPE_USER_APPOINTMENT, SYNC_FOLDER_TYPE_USER_TASK, SYNC_FOLDER_TYPE_USER_MAIL, SYNC_FOLDER_TYPE_USER_NOTE, SYNC_FOLDER_TYPE_USER_JOURNAL))) {
             ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->AddAdditionalFolder(): folder can not be added because the specified type '%s' is not a permitted user type.", $type));
@@ -900,6 +901,7 @@ class ASDevice extends StateObject {
                             'folderid'  => $folderid,
                             'name'      => $name,
                             'type'      => $type,
+                            'flags'     => $flags,
                          );
         $this->additionalfolders = $af;
 
@@ -914,11 +916,12 @@ class ASDevice extends StateObject {
      *
      * @param string    $folderid   the folder id of the additional folder.
      * @param string    $name       the name of the additional folder (has to be unique for all folders on the device).
+     * @param int       $flags      Additional flags, like DeviceManager::FLD_FLAGS_REPLYASUSER
      *
      * @access public
      * @return boolean
      */
-    public function EditAdditionalFolder($folderid, $name) {
+    public function EditAdditionalFolder($folderid, $name, $flags) {
         // check if a folder with this ID is known
         if (!isset($this->additionalfolders[$folderid])) {
             ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->EditAdditionalFolder(): folder can not be edited because there is no folder known with this folder id: '%s'. Add the folder first.", $folderid));
@@ -926,9 +929,9 @@ class ASDevice extends StateObject {
         }
 
         // check if a folder with the new name is already in the list
-        foreach ($this->additionalfolders as $k => $folder) {
-            if ($folder['name'] == $name) {
-                ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->EditAdditionalFolder(): folder can not be added because there is already an additional folder with the same name: '%s'", $name));
+        foreach ($this->additionalfolders as $existingFolderid => $folder) {
+            if ($folder['name'] == $name &&  $folderid !== $existingFolderid) {
+                ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->EditAdditionalFolder(): folder can not be edited because there is already an additional folder with the same name: '%s'", $name));
                 return false;
             }
         }
@@ -936,8 +939,8 @@ class ASDevice extends StateObject {
         // check if a folder with the new name is already known on the device (regular folder)
         foreach($this->GetHierarchyCache()->ExportFolders() as $syncedFolderid => $folder) {
             // $folder is a SyncFolder object here
-            if ($folder->displayname == $name) {
-                ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->EditAdditionalFolder(): folder can not be added because there is already a folder with the same name synchronized: '%s'", $folderid));
+            if ($folder->displayname == $name && $folderid !== $folder->BackendId && $folderid !== $syncedFolderid) {
+                ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->EditAdditionalFolder(): folder can not be edited because there is already a folder with the same name synchronized: '%s'", $folderid));
                 return false;
             }
         }
@@ -945,6 +948,7 @@ class ASDevice extends StateObject {
         // update the name
         $af = $this->additionalfolders;
         $af[$folderid]['name'] = $name;
+        $af[$folderid]['flags'] = $flags;
         $this->additionalfolders = $af;
 
         return true;

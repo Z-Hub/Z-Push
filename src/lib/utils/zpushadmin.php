@@ -506,6 +506,7 @@ class ZPushAdmin {
                                         'name' => $so->displayname,
                                         'type' => $so->type,
                                         'origin' => Utils::GetFolderOriginFromId($syncfolderid),
+                                        'flags' => 0,           // static folders have no flags
                                     );
                 }
             }
@@ -528,11 +529,12 @@ class ZPushAdmin {
      * @param string    $add_folderid   the folder id of the additional folder.
      * @param string    $add_name       the name of the additional folder (has to be unique for all folders on the device).
      * @param string    $add_type       AS foldertype of SYNC_FOLDER_TYPE_USER_*
+     * @param int       $add_flags      Additional flags, like DeviceManager::FLD_FLAGS_REPLYASUSER
      *
      * @access public
      * @return boolean
      */
-    static public function AdditionalFolderAdd($user, $devid, $add_store, $add_folderid, $add_name, $add_type) {
+    static public function AdditionalFolderAdd($user, $devid, $add_store, $add_folderid, $add_name, $add_type, $add_flags) {
         // load device data
         $device = new ASDevice($devid, ASDevice::UNDEFINED, $user, ASDevice::UNDEFINED);
         try {
@@ -549,7 +551,7 @@ class ZPushAdmin {
                 return false;
             }
 
-            $status = $device->AddAdditionalFolder($add_store, $add_folderid, $add_name, $add_type);
+            $status = $device->AddAdditionalFolder($add_store, $add_folderid, $add_name, $add_type, $add_flags);
             if ($status)
                 ZPush::GetStateMachine()->SetState($device->GetData(), $devid, IStateMachine::DEVICEDATA);
 
@@ -570,11 +572,12 @@ class ZPushAdmin {
      * @param string    $devid          device id of where the folder should be updated.
      * @param string    $add_folderid   the folder id of the additional folder.
      * @param string    $add_name       the name of the additional folder (has to be unique for all folders on the device).
+     * @param int       $add_flags      Additional flags, like DeviceManager::FLD_FLAGS_REPLYASUSER
      *
      * @access public
      * @return boolean
      */
-    static public function AdditionalFolderEdit($user, $devid, $add_folderid, $add_name) {
+    static public function AdditionalFolderEdit($user, $devid, $add_folderid, $add_name, $add_flags) {
         // load device data
         $device = new ASDevice($devid, ASDevice::UNDEFINED, $user, ASDevice::UNDEFINED);
         try {
@@ -597,7 +600,7 @@ class ZPushAdmin {
                 return false;
             }
 
-            $status = $device->EditAdditionalFolder($add_folderid, $add_name);
+            $status = $device->EditAdditionalFolder($add_folderid, $add_name, $add_flags);
             if ($status)
                 ZPush::GetStateMachine()->SetState($device->GetData(), $devid, IStateMachine::DEVICEDATA);
 
