@@ -743,6 +743,12 @@ class ZPushAdminCLI {
             printf("Devices: %d - Processed: %d - Fixed: %d - Device+User without hierarchy: %d\n",  $stat[0], $stat[1], $stat[2], $stat[3]);
         else
             echo ZLog::GetLastMessage(LOGLEVEL_ERROR) . "\n";
+
+        echo "\tChecking flags of shared folders: ";
+        if (($stat = ZPushAdmin::FixStatesAdditionalFolderFlags()) !== false)
+            printf("Devices: %d - Devices with additional folders: %d - Fixed: %d\n",  $stat[0], $stat[1], $stat[2]);
+        else
+            echo ZLog::GetLastMessage(LOGLEVEL_ERROR) . "\n";
     }
 
     /**
