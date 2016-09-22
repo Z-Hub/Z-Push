@@ -122,7 +122,8 @@ include('version.php');
         ZPushAdminCLI::RunCommand();
     }
     catch (ZPushException $zpe) {
-        die(get_class($zpe) . ": ". $zpe->getMessage() . "\n");
+        fwrite(STDERR, get_class($zpe) . ": ". $zpe->getMessage() . "\n");
+        exit(1);
     }
 
 
