@@ -1185,6 +1185,26 @@ class MAPIProvider {
         else
             $tz = false;
 
+        // start and end time may not be set - try to get them from the existing appointment for further calculation - see https://jira.z-hub.io/browse/ZP-983
+        if (!isset($appointment->starttime) || !isset($appointment->endtime)) {
+            $amapping = MAPIMapping::GetAppointmentMapping();
+            $amapping = $this->getPropIdsFromStrings($amapping);
+            $existingstartendpropsmap = array($amapping["starttime"], $amapping["endtime"]);
+            $existingstartendprops = $this->getProps($mapimessage, $existingstartendpropsmap);
+
+            if (isset($existingstartendprops[$amapping["starttime"]]) && !isset($appointment->starttime)) {
+                $appointment->starttime = $existingstartendprops[$amapping["starttime"]];
+                ZLog::Write(LOGLEVEL_WBXML, sprintf("MAPIProvider->setAppointment(): Parameter 'starttime' was not set, using value from MAPI %d (%s).", $appointment->starttime, gmstrftime("%Y%m%dT%H%M%SZ", $appointment->starttime)));
+            }
+            if (isset($existingstartendprops[$amapping["endtime"]]) && !isset($appointment->endtime)) {
+                $appointment->endtime = $existingstartendprops[$amapping["endtime"]];
+                ZLog::Write(LOGLEVEL_WBXML, sprintf("MAPIProvider->setAppointment(): Parameter 'endtime' was not set, using value from MAPI %d (%s).", $appointment->endtime, gmstrftime("%Y%m%dT%H%M%SZ", $appointment->endtime)));
+            }
+        }
+        if (!isset($appointment->starttime) || !isset($appointment->endtime)) {
+            throw new StatusException("MAPIProvider->setAppointment(): Error, start and/or end time not set and can not be retrieved from MAPI.", SYNC_STATUS_SYNCCANNOTBECOMPLETED);
+        }
+
         //calculate duration because without it some webaccess views are broken. duration is in min
         $localstart = $this->getLocaltimeByTZ($appointment->starttime, $tz);
         $localend = $this->getLocaltimeByTZ($appointment->endtime, $tz);
