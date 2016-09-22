@@ -1192,6 +1192,39 @@ class MAPIProvider {
         else
             $tz = false;
 
+        // start and end time may not be set - try to get them from the existing appointment for further calculation - see https://jira.z-hub.io/browse/ZP-983
+        if (!isset($appointment->starttime) || !isset($appointment->endtime)) {
+            $amapping = MAPIMapping::GetAppointmentMapping();
+            $amapping = $this->getPropIdsFromStrings($amapping);
+            $existingstartendpropsmap = array($amapping["starttime"], $amapping["endtime"]);
+            $existingstartendprops = $this->getProps($mapimessage, $existingstartendpropsmap);
+
+            if (isset($existingstartendprops[$amapping["starttime"]]) && !isset($appointment->starttime)) {
+                $appointment->starttime = $existingstartendprops[$amapping["starttime"]];
+                ZLog::Write(LOGLEVEL_WBXML, sprintf("MAPIProvider->setAppointment(): Parameter 'starttime' was not set, using value from MAPI %d (%s).", $appointment->starttime, gmstrftime("%Y%m%dT%H%M%SZ", $appointment->starttime)));
+            }
+            if (isset($existingstartendprops[$amapping["endtime"]]) && !isset($appointment->endtime)) {
+                $appointment->endtime = $existingstartendprops[$amapping["endtime"]];
+                ZLog::Write(LOGLEVEL_WBXML, sprintf("MAPIProvider->setAppointment(): Parameter 'endtime' was not set, using value from MAPI %d (%s).", $appointment->endtime, gmstrftime("%Y%m%dT%H%M%SZ", $appointment->endtime)));
+            }
+        }
+        if (!isset($appointment->starttime) || !isset($appointment->endtime)) {
+            throw new StatusException("MAPIProvider->setAppointment(): Error, start and/or end time not set and can not be retrieved from MAPI.", SYNC_STATUS_SYNCCANNOTBECOMPLETED);
+        }
+
+        //calculate duration because without it some webaccess views are broken. duration is in min
+        $localstart = $this->getLocaltimeByTZ($appointment->starttime, $tz);
+        $localend = $this->getLocaltimeByTZ($appointment->endtime, $tz);
+        $duration = ($localend - $localstart)/60;
+
+        //nokia sends an yearly event with 0 mins duration but as all day event,
+        //so make it end next day
+        if ($appointment->starttime == $appointment->endtime && isset($appointment->alldayevent) && $appointment->alldayevent) {
+            $duration = 1440;
+            $appointment->endtime = $appointment->starttime + 24 * 60 * 60;
+            $localend = $localstart + 24 * 60 * 60;
+        }
+
         // is the transmitted UID OL compatible?
         // if not, encapsulate the transmitted uid
         $appointment->uid = Utils::GetOLUidFromICalUid($appointment->uid);
@@ -1212,28 +1245,12 @@ class MAPIProvider {
         $private = (isset($appointment->sensitivity) && $appointment->sensitivity >= SENSITIVITY_PRIVATE) ? true : false;
 
         // Set commonstart/commonend to start/end and remindertime to start, duration, private and cleanGlobalObjectId
-        if ($appointment->starttime && $appointment->endtime) {
-            $props[$appointmentprops["commonstart"]] = $appointment->starttime;
-            $props[$appointmentprops["commonend"]] = $appointment->endtime;
-
-            //calculate duration because without it some webaccess views are broken. duration is in min
-            $localstart = $this->getLocaltimeByTZ($appointment->starttime, $tz);
-            $localend = $this->getLocaltimeByTZ($appointment->endtime, $tz);
-            $duration = ($localend - $localstart)/60;
-
-            //nokia sends an yearly event with 0 mins duration but as all day event,
-            //so make it end next day
-            if ($appointment->starttime == $appointment->endtime && isset($appointment->alldayevent) && $appointment->alldayevent) {
-                $duration = 1440;
-                $appointment->endtime = $appointment->starttime + 24 * 60 * 60;
-                $localend = $localstart + 24 * 60 * 60;
-            }
-
-            $props[$appointmentprops["duration"]] = $duration;
-        }
+        $props[$appointmentprops["commonstart"]] = $appointment->starttime;
+        $props[$appointmentprops["commonend"]] = $appointment->endtime;
         $props[$appointmentprops["reminderstart"]] = $appointment->starttime;
         // Set reminder boolean to 'true' if reminder is set
         $props[$appointmentprops["reminderset"]] = isset($appointment->reminder) ? true : false;
+        $props[$appointmentprops["duration"]] = $duration;
         $props[$appointmentprops["private"]] = $private;
         $props[$appointmentprops["uid"]] = $appointment->uid;
         // Set named prop 8510, unknown property, but enables deleting a single occurrence of a recurring
@@ -1268,10 +1285,6 @@ class MAPIProvider {
 
             // set the recurrence type to that of the MAPI
             $props[$appointmentprops["recurrencetype"]] = $recur["recurrencetype"];
-
-            if (!isset($localstart) || !isset($localend)) {
-                throw new StatusException("MAPIProvider->setAppointment(): Error, recurring appointment needs a start and end time to be saved.", SYNC_STATUS_SYNCCANNOTBECOMPLETED);
-            }
 
             $starttime = $this->gmtime($localstart);
             $endtime = $this->gmtime($localend);
