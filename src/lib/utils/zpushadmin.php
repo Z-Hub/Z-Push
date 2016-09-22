@@ -202,7 +202,7 @@ class ZPushAdmin {
 
             // save device data
             try {
-                if ($device->IsNewDevice()) {
+                if ($device->IsNewDevice() || $device->GetData() === false) {
                     ZLog::Write(LOGLEVEL_ERROR, sprintf("ZPushAdmin::WipeDevice(): data of user '%s' not synchronized on device '%s'. Aborting.", $user, $devid));
                     return false;
                 }
@@ -422,9 +422,10 @@ class ZPushAdmin {
                 // remove hierarchcache
                 StateManager::UnLinkState($device, false);
 
-                ZPush::GetStateMachine()->SetState($device->GetData(), $devid, IStateMachine::DEVICEDATA);
-
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::ResyncDevice(): all folders synchronized to device '%s' of user '%s' marked to be re-synchronized.", $devid, $user));
+                if ($device->GetData() !== false) {
+                    ZPush::GetStateMachine()->SetState($device->GetData(), $devid, IStateMachine::DEVICEDATA);
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::ResyncDevice(): all folders synchronized to device '%s' of user '%s' marked to be re-synchronized.", $devid, $user));
+                }
             }
             catch (StateNotFoundException $e) {
                 ZLog::Write(LOGLEVEL_ERROR, sprintf("ZPushAdmin::ResyncDevice(): state for device '%s' of user '%s' can not be found or saved", $devid, $user));
@@ -552,9 +553,9 @@ class ZPushAdmin {
             }
 
             $status = $device->AddAdditionalFolder($add_store, $add_folderid, $add_name, $add_type, $add_flags);
-            if ($status)
+            if ($status && $device->GetData() !== false) {
                 ZPush::GetStateMachine()->SetState($device->GetData(), $devid, IStateMachine::DEVICEDATA);
-
+            }
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::AdditionalFolderAdd(): added folder '%s' to additional folders list of device '%s' of user '%s' with status: %s", $add_name, $devid, $user, Utils::PrintAsString($status)));
             return $status;
         }
@@ -601,9 +602,9 @@ class ZPushAdmin {
             }
 
             $status = $device->EditAdditionalFolder($add_folderid, $add_name, $add_flags);
-            if ($status)
+            if ($status  && $device->GetData() !== false) {
                 ZPush::GetStateMachine()->SetState($device->GetData(), $devid, IStateMachine::DEVICEDATA);
-
+            }
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::AdditionalFolderEdit(): updated folder '%s' in additional folders list of device '%s' of user '%s' with status: %s", $add_name, $devid, $user, Utils::PrintAsString($status)));
             return $status;
         }
@@ -642,9 +643,9 @@ class ZPushAdmin {
             }
 
             $status = $device->RemoveAdditionalFolder($add_folderid);
-            if ($status)
+            if ($status && $device->GetData() !== false) {
                 ZPush::GetStateMachine()->SetState($device->GetData(), $devid, IStateMachine::DEVICEDATA);
-
+            }
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::AdditionalFolderRemove(): removed folder '%s' in additional folders list of device '%s' of user '%s' with status: %s", $add_folderid, $devid, $user, Utils::PrintAsString($status)));
             return $status;
         }
@@ -953,9 +954,8 @@ class ZPushAdmin {
                             }
                         }
                     }
-                    $newData = $device->GetData();
-                    if ($newData) {
-                        $devicedata = $newData;
+                    if ($device->GetData() !== false) {
+                        $devicedata = $device->GetData();
                     }
                 }
                 if ($needsFixing) {
