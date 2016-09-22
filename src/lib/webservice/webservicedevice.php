@@ -235,7 +235,7 @@ class WebserviceDevice {
             ZPush::GetTopCollector()->AnnounceInformation(ZLog::GetLastMessage(LOGLEVEL_ERROR), true);
             throw new SoapFault("ERROR", ZLog::GetLastMessage(LOGLEVEL_ERROR));
         }
-        ZLog::Write(LOGLEVEL_INFO, sprintf("WebserviceDevice::AdditionalFolderEdit(): added folder for device '%s' of user '%s': %s", $deviceId, $user, Utils::PrintAsString($status)));
+        ZLog::Write(LOGLEVEL_INFO, sprintf("WebserviceDevice::AdditionalFolderEdit(): edited folder for device '%s' of user '%s': %s", $deviceId, $user, Utils::PrintAsString($status)));
         ZPush::GetTopCollector()->AnnounceInformation("Edited additional folder", true);
 
         return $status;
