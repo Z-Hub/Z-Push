@@ -717,7 +717,6 @@ class ZPushAdmin {
 
                     $devices = $devData->devices;
                     $knownUsers = array_keys($devData->devices);
-                    ZLog::Write(LOGLEVEL_DEBUG, print_r($devData,1),false);
 
                     foreach ($obsoleteUsers as $ouser) {
                         $lowerOUser = strtolower($ouser);
@@ -855,7 +854,7 @@ class ZPushAdmin {
         $nouuid = 0;
         $fixed = 0;
         $asdevices = ZPush::GetStateMachine()->GetAllDevices(false);
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::FixStatesHierarchyFolderData(): found %d devices", count($devices)));
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::FixStatesHierarchyFolderData(): found %d devices", count($asdevices)));
 
         foreach ($asdevices as $devid) {
             try {
@@ -919,5 +918,58 @@ class ZPushAdmin {
         }
         return array($devices, $seen, $fixed, $nouuid);
     }
+
+    /**
+     * Fixes potentially missing flags on additional folders.
+     *
+     * @access public
+     * @return array(seenDevices, devicesWithAdditionalFolders, fixedAdditionalFolders)
+     */
+    static public function FixStatesAdditionalFolderFlags() {
+        $devices = 0;
+        $devicesWithAddFolders = 0;
+        $fixed = 0;
+        $asdevices = ZPush::GetStateMachine()->GetAllDevices(false);
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::FixStatesAdditionalFolderFlags(): found %d devices", count($asdevices)));
+
+        foreach ($asdevices as $devid) {
+            try {
+                // get the device
+                $devicedata = ZPush::GetStateMachine()->GetState($devid, IStateMachine::DEVICEDATA);
+                $devices++;
+                $needsFixing = false;
+
+                foreach (self::ListUsers($devid) as $username) {
+                    $device = new ASDevice($devid, ASDevice::UNDEFINED, $username, ASDevice::UNDEFINED);
+                    $device->SetData($devicedata, false);
+
+                    $addFolders = $device->GetAdditionalFolders();
+                    if ($addFolders) {
+                        $devicesWithAddFolders++;
+                        foreach($addFolders as $df) {
+                            if (!isset($df['flags'])) {
+                                $device->EditAdditionalFolder($df['folderid'], $df['name'], 0);
+                                $needsFixing = true;
+                            }
+                        }
+                    }
+                    $newData = $device->GetData();
+                    if ($newData) {
+                        $devicedata = $newData;
+                    }
+                }
+                if ($needsFixing) {
+                    ZPush::GetStateMachine()->SetState($devicedata, $devid, IStateMachine::DEVICEDATA);
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::FixStatesAdditionalFolderFlags(): updated device '%s' because flags were fixed", $devid));
+                    $fixed++;
+                }
+            }
+            catch (StateNotFoundException $e) {
+                ZLog::Write(LOGLEVEL_ERROR, sprintf("ZPushAdmin::FixStatesAdditionalFolderFlags(): state for device '%s' can not be found", $devid));
+            }
+        }
+        return array($devices, $devicesWithAddFolders, $fixed);
+    }
+
 
 }

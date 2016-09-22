@@ -495,6 +495,11 @@ class DeviceManager {
     public function GetAdditionalUserSyncFolders() {
         $folders = array();
         foreach($this->device->GetAdditionalFolders() as $df) {
+            if (!isset($df['flags'])) {
+                $df['flags'] = 0;
+                ZLog::Write(LOGLEVEL_WARN, sprintf("DeviceManager->GetAdditionalUserSyncFolders(): Additional folder '%s' has no flags. Please run 'z-push-admin -a fixstates' to fix this issue.", $df['name']));
+            }
+
             $folder = $this->getAdditionalSyncFolderObject($df['store'], $df['folderid'], $df['name'], $df['type'], $df['flags'], DeviceManager::FLD_ORIGIN_SHARED);
             $folders[$folder->BackendId] = $folder;
         }
