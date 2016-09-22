@@ -1219,6 +1219,9 @@ class Sync extends RequestProcessor {
                 case SYNC_ADD:
                     self::$topCollector->AnnounceInformation(sprintf("Creating new message from mobile %d", $messageCount));
                     try {
+                        // mark the message as new message so SyncObject->Check() can differentiate
+                        $message->flags = SYNC_NEWMESSAGE;
+
                         // ignore sms messages
                         if ($foldertype == "SMS") {
                             ZLog::Write(LOGLEVEL_DEBUG, "SMS sync are not supported. Ignoring message.");
