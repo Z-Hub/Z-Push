@@ -201,7 +201,7 @@ class ZPushAdmin {
 
             // save device data
             try {
-                if ($device->IsNewDevice()) {
+                if ($device->IsNewDevice() || $device->GetData() === false) {
                     ZLog::Write(LOGLEVEL_ERROR, sprintf("ZPushAdmin::WipeDevice(): data of user '%s' not synchronized on device '%s'. Aborting.", $user, $devid));
                     return false;
                 }
@@ -421,9 +421,10 @@ class ZPushAdmin {
                 // remove hierarchcache
                 StateManager::UnLinkState($device, false);
 
-                ZPush::GetStateMachine()->SetState($device->GetData(), $devid, IStateMachine::DEVICEDATA);
-
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::ResyncDevice(): all folders synchronized to device '%s' of user '%s' marked to be re-synchronized.", $devid, $user));
+                if ($device->GetData() !== false) {
+                    ZPush::GetStateMachine()->SetState($device->GetData(), $devid, IStateMachine::DEVICEDATA);
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::ResyncDevice(): all folders synchronized to device '%s' of user '%s' marked to be re-synchronized.", $devid, $user));
+                }
             }
             catch (StateNotFoundException $e) {
                 ZLog::Write(LOGLEVEL_ERROR, sprintf("ZPushAdmin::ResyncDevice(): state for device '%s' of user '%s' can not be found or saved", $devid, $user));
