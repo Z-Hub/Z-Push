@@ -591,7 +591,7 @@ class MAPIProvider {
             if(isset($props[$meetingrequestproperties["goidtag"]])) {
                 // GlobalObjId support was removed in AS 16.0
                 if (Request::IsGlobalObjIdHexClient()) {
-                    $message->meetingrequest->globalobjid = bin2hex($props[$meetingrequestproperties["goidtag"]]);
+                    $message->meetingrequest->globalobjid = strtoupper(bin2hex($props[$meetingrequestproperties["goidtag"]]));
                 }
                 else {
                     $message->meetingrequest->globalobjid = base64_encode($props[$meetingrequestproperties["goidtag"]]);
