@@ -860,6 +860,12 @@ class ASDevice extends StateObject {
      * @return boolean
      */
     public function AddAdditionalFolder($store, $folderid, $name, $type, $flags) {
+        // check if a folderid and name were sent
+        if (!$folderid || !$name) {
+            ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->AddAdditionalFolder(): No valid folderid ('%s') or name ('%s') sent. Aborting. ", $folderid, $name));
+            return false;
+        }
+
         // check if type is of a additional user type
         if (!in_array($type, array(SYNC_FOLDER_TYPE_USER_CONTACT, SYNC_FOLDER_TYPE_USER_APPOINTMENT, SYNC_FOLDER_TYPE_USER_TASK, SYNC_FOLDER_TYPE_USER_MAIL, SYNC_FOLDER_TYPE_USER_NOTE, SYNC_FOLDER_TYPE_USER_JOURNAL))) {
             ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->AddAdditionalFolder(): folder can not be added because the specified type '%s' is not a permitted user type.", $type));
@@ -922,6 +928,12 @@ class ASDevice extends StateObject {
      * @return boolean
      */
     public function EditAdditionalFolder($folderid, $name, $flags) {
+        // check if a folderid and name were sent
+        if (!$folderid || !$name) {
+            ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->EditAdditionalFolder(): No valid folderid ('%s') or name ('%s') sent. Aborting. ", $folderid, $name));
+            return false;
+        }
+        
         // check if a folder with this ID is known
         if (!isset($this->additionalfolders[$folderid])) {
             ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->EditAdditionalFolder(): folder can not be edited because there is no folder known with this folder id: '%s'. Add the folder first.", $folderid));
@@ -961,6 +973,11 @@ class ASDevice extends StateObject {
      * @return boolean
      */
     public function RemoveAdditionalFolder($folderid) {
+        // check if a folderid were sent
+        if (!$folderid) {
+            ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->RemoveAdditionalFolder(): No valid folderid ('%s') sent. Aborting. ", $folderid));
+            return false;
+        }
         // check if a folder with this ID is known
         if (!isset($this->additionalfolders[$folderid])) {
             ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->RemoveAdditionalFolder(): folder can not be removed because there is no folder known with this folder id: '%s'", $folderid));
