@@ -452,7 +452,7 @@ class BackendKopano implements IBackend, ISearchProvider {
             // the 'X-Push-Sender-Name' header is not used
             if (preg_match("/^X-Push-Sender:\s(.*?)$/im", $sm->mime, $senderEmail)) {
                 $sendAsEmail = trim($senderEmail[1]);
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("SendMail(): Send-As '%s' requested by KOE", $sendAsEmail));
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->SendMail(): Send-As '%s' requested by KOE", $sendAsEmail));
                 $sm->mime =  preg_replace("/^From: .*?$/im", "From: ". $sendAsEmail, $sm->mime, 1);
                 $sendingAsSomeone = true;
             }
@@ -465,7 +465,7 @@ class BackendKopano implements IBackend, ISearchProvider {
                     if (isset($folders[$sm->source->folderid]) && ($folders[$sm->source->folderid]->Flags & DeviceManager::FLD_FLAGS_REPLYASUSER)) {
                         $sendAs = $this->resolveRecipientGAL($sharedUser, 1);
                         if (isset($sendAs[0])) {
-                            ZLog::Write(LOGLEVEL_DEBUG, sprintf("SendMail(): Server side Send-As activated for shared folder. Sending as '%s'.", $sendAs[0]->emailaddress));
+                            ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->SendMail(): Server side Send-As activated for shared folder. Sending as '%s'.", $sendAs[0]->emailaddress));
                             $sm->mime =  preg_replace("/^From: .*?$/im", "From: ". $sendAs[0]->emailaddress, $sm->mime, 1);
                             $sendingAsSomeone = true;
                         }
