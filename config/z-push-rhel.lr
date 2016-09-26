@@ -1,0 +1,6 @@
+/var/log/z-push/*.log {
+	size 1k
+	create apache apache
+	compress
+	rotate 4
+}
