@@ -417,7 +417,7 @@ class ImportChangesICS implements IImportChanges {
             }
 
             // KOE ZP-990: OL updates the deleted category which causes a race condition if more than one KOE is connected to that user
-            if(ZPush::GetDeviceManager()->IsKoe() && KOE_CAPABILITY_RECEIVEFLAGS && !isset($message->flag) && isset($message->categories)) {
+            if(ZPush::GetDeviceManager()->IsKoe() && KOE_CAPABILITY_RECEIVEFLAGS && $message instanceof SyncMail && !isset($message->flag) && isset($message->categories)) {
                 // check if the categories changed
                 $mapiCategories = $this->mapiprovider->GetMessageCategories($props[PR_PARENT_SOURCE_KEY], $props[PR_SOURCE_KEY]);
                 if( (empty($message->categories) && empty($mapiCategories)) ||
