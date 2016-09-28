@@ -257,7 +257,7 @@ class Kopano extends SyncWorker {
         $companies = mapi_zarafa_getcompanylist($this->store);
         if (is_array($companies)) {
             foreach($companies as $c) {
-                $names[$c['companyname']] = bin2hex($c['companyid']);
+                $names[trim($c['companyname'])] = bin2hex($c['companyid']);
             }
         }
         return $names;
@@ -636,7 +636,8 @@ class Kopano extends SyncWorker {
      * @return ressource
      */
     private function getRootFolder($store) {
-        $rootId = "root";
+        // stringify the store ressource
+        $rootId = bin2hex($store."!");
         if (!isset($this->folderCache[$rootId])) {
             $parentfentryid = false;
 
