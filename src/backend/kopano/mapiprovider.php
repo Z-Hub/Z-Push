@@ -280,7 +280,7 @@ class MAPIProvider {
             }
 
             //set attendee's status and type if they're available and if we are the organizer
-            $storeprops = $this->getStoreProps();
+            $storeprops = $this->GetStoreProps();
             if (isset($row[PR_RECIPIENT_TRACKSTATUS]) && $messageprops[$appointmentprops["representingentryid"]] == $storeprops[PR_MAILBOX_OWNER_ENTRYID])
                 $attendee->attendeestatus = $row[PR_RECIPIENT_TRACKSTATUS];
             if (isset($row[PR_RECIPIENT_TYPE]))
@@ -314,6 +314,20 @@ class MAPIProvider {
                 }
             }
             $message->responsetype = $messageprops[$appointmentprops["responsestatus"]];
+        }
+
+        // If it's an appointment which doesn't have any attendees, we have to make sure that
+        // the user is the owner or it will not work properly with android devices
+        // @see https://jira.z-hub.io/browse/ZP-1020
+        if(isset($messageprops[$appointmentprops["meetingstatus"]]) && $messageprops[$appointmentprops["meetingstatus"]] == olNonMeeting && empty($message->attendees)) {
+            $meinfo = mapi_zarafa_getuser_by_name($this->store, Request::GetAuthUser());
+
+            if (is_array($meinfo)) {
+                $message->organizeremail = w2u($meinfo["emailaddress"]);
+                $message->organizername = w2u($meinfo["fullname"]);
+                ZLog::Write(LOGLEVEL_DEBUG, "MAPIProvider->getAppointment(): setting ourself as the organizer for an appointment without attendees.");
+            }
+
         }
 
         if (!isset($message->nativebodytype)) $message->nativebodytype = $this->getNativeBodyType($messageprops);
@@ -574,8 +588,15 @@ class MAPIProvider {
             $props = $this->getProps($mapimessage, $meetingrequestproperties);
 
             // Get the GOID
-            if(isset($props[$meetingrequestproperties["goidtag"]]))
-                $message->meetingrequest->globalobjid = base64_encode($props[$meetingrequestproperties["goidtag"]]);
+            if(isset($props[$meetingrequestproperties["goidtag"]])) {
+                // GlobalObjId support was removed in AS 16.0
+                if (Request::IsGlobalObjIdHexClient()) {
+                    $message->meetingrequest->globalobjid = strtoupper(bin2hex($props[$meetingrequestproperties["goidtag"]]));
+                }
+                else {
+                    $message->meetingrequest->globalobjid = base64_encode($props[$meetingrequestproperties["goidtag"]]);
+                }
+            }
 
             // Set Timezone
             if(isset($props[$meetingrequestproperties["timezonetag"]]))
@@ -882,7 +903,7 @@ class MAPIProvider {
     public function GetFolder($folderprops) {
         $folder = new SyncFolder();
 
-        $storeprops = $this->getStoreProps();
+        $storeprops = $this->GetStoreProps();
 
         // For ZCP 7.0.x we need to retrieve more properties explicitly, see ZP-780
         if (isset($folderprops[PR_SOURCE_KEY]) && !isset($folderprops[PR_ENTRYID]) && !isset($folderprops[PR_CONTAINER_CLASS])) {
@@ -949,7 +970,7 @@ class MAPIProvider {
      * @return long
      */
     public function GetFolderType($entryid, $class = false) {
-        $storeprops = $this->getStoreProps();
+        $storeprops = $this->GetStoreProps();
         $inboxprops = $this->getInboxProps();
 
         if($entryid == $storeprops[PR_IPM_WASTEBASKET_ENTRYID])
@@ -1201,6 +1222,26 @@ class MAPIProvider {
         else
             $tz = false;
 
+        // start and end time may not be set - try to get them from the existing appointment for further calculation - see https://jira.z-hub.io/browse/ZP-983
+        if (!isset($appointment->starttime) || !isset($appointment->endtime)) {
+            $amapping = MAPIMapping::GetAppointmentMapping();
+            $amapping = $this->getPropIdsFromStrings($amapping);
+            $existingstartendpropsmap = array($amapping["starttime"], $amapping["endtime"]);
+            $existingstartendprops = $this->getProps($mapimessage, $existingstartendpropsmap);
+
+            if (isset($existingstartendprops[$amapping["starttime"]]) && !isset($appointment->starttime)) {
+                $appointment->starttime = $existingstartendprops[$amapping["starttime"]];
+                ZLog::Write(LOGLEVEL_WBXML, sprintf("MAPIProvider->setAppointment(): Parameter 'starttime' was not set, using value from MAPI %d (%s).", $appointment->starttime, gmstrftime("%Y%m%dT%H%M%SZ", $appointment->starttime)));
+            }
+            if (isset($existingstartendprops[$amapping["endtime"]]) && !isset($appointment->endtime)) {
+                $appointment->endtime = $existingstartendprops[$amapping["endtime"]];
+                ZLog::Write(LOGLEVEL_WBXML, sprintf("MAPIProvider->setAppointment(): Parameter 'endtime' was not set, using value from MAPI %d (%s).", $appointment->endtime, gmstrftime("%Y%m%dT%H%M%SZ", $appointment->endtime)));
+            }
+        }
+        if (!isset($appointment->starttime) || !isset($appointment->endtime)) {
+            throw new StatusException("MAPIProvider->setAppointment(): Error, start and/or end time not set and can not be retrieved from MAPI.", SYNC_STATUS_SYNCCANNOTBECOMPLETED);
+        }
+
         //calculate duration because without it some webaccess views are broken. duration is in min
         $localstart = $this->getLocaltimeByTZ($appointment->starttime, $tz);
         $localend = $this->getLocaltimeByTZ($appointment->endtime, $tz);
@@ -1374,7 +1415,7 @@ class MAPIProvider {
         $representingprops = $this->getProps($mapimessage, $p);
 
         if (!isset($representingprops[$appointmentprops["representingentryid"]])) {
-            // TODO use getStoreProps
+            // TODO use GetStoreProps
             $storeProps = mapi_getprops($this->store, array(PR_MAILBOX_OWNER_ENTRYID));
             $props[$appointmentprops["representingentryid"]] = $storeProps[PR_MAILBOX_OWNER_ENTRYID];
             $displayname = $this->getFullnameFromEntryID($storeProps[PR_MAILBOX_OWNER_ENTRYID]);
@@ -2557,6 +2598,15 @@ class MAPIProvider {
                     $bpReturnType != SYNC_BODYPREFERENCE_MIME &&
                     $message->asbody->estimatedDataSize > $bpo->GetTruncationSize()
                 ) {
+
+                // Truncated plaintext requests are used on iOS for the preview in the email list. All images and links should be removed - see https://jira.z-hub.io/browse/ZP-1025
+                if ($bpReturnType == SYNC_BODYPREFERENCE_PLAIN) {
+                    ZLog::Write(LOGLEVEL_DEBUG, "MAPIProvider->setMessageBody(): truncated plain-text body requested, stripping all links and images");
+                    // Get more data because of the filtering it's most probably going down in size. It's going to be truncated to the correct size below.
+                    $plainbody = stream_get_contents($message->asbody->data, $bpo->GetTruncationSize() * 3);
+                    $message->asbody->data = StringStreamWrapper::Open(preg_replace('/<http(s){0,1}:\/\/.*?>/i', '', $plainbody));
+                }
+
                 // truncate data stream
                 ftruncate($message->asbody->data, $bpo->GetTruncationSize());
                 $message->asbody->truncated = 1;
@@ -2764,9 +2814,9 @@ class MAPIProvider {
      * @access private
      * @return array
      */
-    private function getStoreProps() {
+    public function GetStoreProps() {
         if (!isset($this->storeProps) || empty($this->storeProps)) {
-            ZLog::Write(LOGLEVEL_DEBUG, "MAPIProvider->getStoreProps(): Getting store properties.");
+            ZLog::Write(LOGLEVEL_DEBUG, "MAPIProvider->GetStoreProps(): Getting store properties.");
             $this->storeProps = mapi_getprops($this->store, array(PR_IPM_SUBTREE_ENTRYID, PR_IPM_OUTBOX_ENTRYID, PR_IPM_WASTEBASKET_ENTRYID, PR_IPM_SENTMAIL_ENTRYID, PR_ENTRYID, PR_IPM_PUBLIC_FOLDERS_ENTRYID, PR_IPM_FAVORITES_ENTRYID, PR_MAILBOX_OWNER_ENTRYID));
             // make sure all properties are set
             if(!isset($this->storeProps[PR_IPM_WASTEBASKET_ENTRYID])) {

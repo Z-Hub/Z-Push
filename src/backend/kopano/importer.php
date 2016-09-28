@@ -393,7 +393,7 @@ class ImportChangesICS implements IImportChanges {
 
         // set the PR_SOURCE_KEY if available or mark it as new message
         if($id) {
-            list(, $sk) = MAPIUtils::SplitMessageId($id);
+            list(, $sk) = Utils::SplitMessageId($id);
             $props[PR_SOURCE_KEY] = hex2bin($sk);
 
             // on editing an existing message, check if it is in the synchronization interval
@@ -417,7 +417,7 @@ class ImportChangesICS implements IImportChanges {
             }
 
             // KOE ZP-990: OL updates the deleted category which causes a race condition if more than one KOE is connected to that user
-            if(ZPush::GetDeviceManager()->IsKoe() && KOE_CAPABILITY_RECEIVEFLAGS && !isset($message->flag) && isset($message->categories)) {
+            if(ZPush::GetDeviceManager()->IsKoe() && KOE_CAPABILITY_RECEIVEFLAGS && $message instanceof SyncMail && !isset($message->flag) && isset($message->categories)) {
                 // check if the categories changed
                 $mapiCategories = $this->mapiprovider->GetMessageCategories($props[PR_PARENT_SOURCE_KEY], $props[PR_SOURCE_KEY]);
                 if( (empty($message->categories) && empty($mapiCategories)) ||
@@ -456,7 +456,7 @@ class ImportChangesICS implements IImportChanges {
      * @return boolean
      */
     public function ImportMessageDeletion($id, $asSoftDelete = false) {
-        list(,$sk) = MAPIUtils::SplitMessageId($id);
+        list(,$sk) = Utils::SplitMessageId($id);
         // check if the message is in the current syncinterval
         if (!$this->isMessageInSyncInterval($sk))
             throw new StatusException(sprintf("ImportChangesICS->ImportMessageDeletion('%s'): Message is outside the sync interval and so far not deleted.", $id), SYNC_STATUS_OBJECTNOTFOUND);
@@ -490,7 +490,7 @@ class ImportChangesICS implements IImportChanges {
      * @throws StatusException
      */
     public function ImportMessageReadFlag($id, $flags) {
-        list($fsk,$sk) = MAPIUtils::SplitMessageId($id);
+        list($fsk,$sk) = Utils::SplitMessageId($id);
 
         // if $fsk is set, we convert it into a backend id.
         if ($fsk) {
@@ -556,7 +556,7 @@ class ImportChangesICS implements IImportChanges {
      * @throws StatusException
      */
     public function ImportMessageMove($id, $newfolder) {
-        list(,$sk) = MAPIUtils::SplitMessageId($id);
+        list(,$sk) = Utils::SplitMessageId($id);
         if (strtolower($newfolder) == strtolower(bin2hex($this->folderid)) )
             throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Error, source and destination are equal", $id, $newfolder), SYNC_MOVEITEMSSTATUS_SAMESOURCEANDDEST);
 

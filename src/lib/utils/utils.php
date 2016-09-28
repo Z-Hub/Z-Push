@@ -865,6 +865,9 @@ class Utils {
      * @return int
      */
     public static function GetBodyPreferenceBestMatch($bpTypes) {
+        if ($bpTypes === false) {
+            return SYNC_BODYPREFERENCE_PLAIN;
+        }
         // The best choice is RTF, then HTML and then MIME in order to save bandwidth
         // because MIME is a complete message including the headers and attachments
         if (in_array(SYNC_BODYPREFERENCE_RTF, $bpTypes))  return SYNC_BODYPREFERENCE_RTF;
@@ -1110,6 +1113,22 @@ class Utils {
         }
         ZLog::Write(LOGLEVEL_WARN, sprintf("Utils->GetFolderOriginFromId(): Unknown folder origin for folder with id '%s'", $fid));
         return 'unknown';
+    }
+
+    /**
+     * Splits the id into folder id and message id parts. A colon in the $id indicates
+     * that the id has folderid:messageid format.
+     *
+     * @param string            $id
+     *
+     * @access public
+     * @return array
+     */
+    public static function SplitMessageId($id) {
+        if (strpos($id, ':') !== false) {
+            return explode(':', $id);
+        }
+        return array(null, $id);
     }
 }
 
