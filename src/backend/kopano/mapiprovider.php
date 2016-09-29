@@ -754,9 +754,7 @@ class MAPIProvider {
                             $addrbook = $this->getAddressbook();
                             $stream = mapi_inetmapi_imtoinet($this->session, $addrbook, $embMessage, array('use_tnef' => -1));
                         }
-                        else {
-                            $stat = mapi_stream_stat($stream);
-                        }
+                        $stat = mapi_stream_stat($stream);
                         $attach->estimatedDataSize = $stat['cb'];
                     }
                     else {
