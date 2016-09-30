@@ -315,6 +315,8 @@
     define('KOE_CAPABILITY_NOTES', true);
     // Shared folder support
     define('KOE_CAPABILITY_SHAREDFOLDER', true);
+    // Send-As support for Outlook/KOE and mobiles
+    define('KOE_CAPABILITY_SENDAS', true);
 
     // To synchronize the GAB KOE, the GAB store and folderid need to be specified.
     // Use the gab-sync script to generate this data. The name needs to
