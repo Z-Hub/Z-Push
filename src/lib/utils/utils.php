@@ -1130,6 +1130,38 @@ class Utils {
         }
         return array(null, $id);
     }
+
+    /**
+     * Detects encoding of the input and converts it to UTF-8.
+     * This is currently only used for authorization header conversion.
+     *
+     * @param string      $data     input data
+     *
+     * @access public
+     * @return string               utf-8 encoded data
+     */
+    public static function ConvertAuthorizationToUTF8($data) {
+        $encoding = mb_detect_encoding($data, "UTF-8, ISO-8859-1");
+
+        if (!$encoding) {
+            $encoding = mb_detect_encoding($data, Utils::GetAvailableCharacterEncodings());
+            if ($encoding) {
+                ZLog::Write(LOGLEVEL_WARN,
+                        sprintf("Utils::ConvertAuthorizationToUTF8(): mb_detect_encoding detected '%s' charset. This charset is not in the default detect list. Please report it to Z-Push developers.",
+                                $encoding));
+            }
+            else {
+                ZLog::Write(LOGLEVEL_ERROR, "Utils::ConvertAuthorizationToUTF8(): mb_detect_encoding failed to detect the Authorization header charset. It's possible that user won't be able to login.");
+            }
+        }
+
+        if ($encoding && strtolower($encoding) != "utf-8") {
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("Utils::ConvertAuthorizationToUTF8(): mb_detect_encoding detected '%s' charset. Authorization header will be converted to UTF-8 from it.", $encoding));
+            return mb_convert_encoding($data, "UTF-8", $encoding);
+        }
+
+        return $data;
+    }
 }
 
 
