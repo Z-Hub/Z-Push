@@ -748,6 +748,12 @@ class MAPIProvider {
                     // android devices require attachment size in order to display an attachment properly
                     if (!isset($attachprops[PR_ATTACH_SIZE])) {
                         $stream = mapi_openpropertytostream($mapiattach, PR_ATTACH_DATA_BIN);
+                        // It's not possible to open some (embedded only?) messages, so we need to open the attachment object itself to get the data
+                        if (mapi_last_hresult()) {
+                            $embMessage = mapi_attach_openobj($mapiattach);
+                            $addrbook = $this->getAddressbook();
+                            $stream = mapi_inetmapi_imtoinet($this->session, $addrbook, $embMessage, array('use_tnef' => -1));
+                        }
                         $stat = mapi_stream_stat($stream);
                         $attach->estimatedDataSize = $stat['cb'];
                     }
