@@ -106,7 +106,9 @@ class ZPushAutodiscover {
 
         catch (AuthenticationRequiredException $ex) {
             if (isset($incomingXml)) {
-                ZLog::Write(LOGLEVEL_ERROR, sprintf("Unable to complete autodiscover because login failed for user with email '%s'", $incomingXml->Request->EMailAddress));
+                // log the failed login attemt e.g. for fail2ban
+                if (defined('LOGAUTHFAIL') && LOGAUTHFAIL != false)
+                    ZLog::Write(LOGLEVEL_WARN, sprintf("Unable to complete autodiscover because login failed for user with email '%s' from IP %s.", $incomingXml->Request->EMailAddress, $_SERVER["REMOTE_ADDR"]));
             }
             else {
                 ZLog::Write(LOGLEVEL_ERROR, sprintf("Unable to complete autodiscover incorrect request: '%s'", $ex->getMessage()));
