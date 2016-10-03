@@ -104,28 +104,42 @@ class ZPushAutodiscover {
             }
         }
 
-        catch (AuthenticationRequiredException $ex) {
-            if (isset($incomingXml)) {
-                // log the failed login attemt e.g. for fail2ban
-                if (defined('LOGAUTHFAIL') && LOGAUTHFAIL != false)
-                    ZLog::Write(LOGLEVEL_WARN, sprintf("Unable to complete autodiscover because login failed for user with email '%s' from IP %s.", $incomingXml->Request->EMailAddress, $_SERVER["REMOTE_ADDR"]));
+        catch (Exception $ex) {
+            // Extract any previous exception message for logging purpose.
+            $exclass = get_class($ex);
+            $exception_message = $ex->getMessage();
+            if($ex->getPrevious()){
+                do {
+                    $current_exception = $ex->getPrevious();
+                    $exception_message .= ' -> ' . $current_exception->getMessage();
+                } while($current_exception->getPrevious());
             }
-            else {
-                ZLog::Write(LOGLEVEL_ERROR, sprintf("Unable to complete autodiscover incorrect request: '%s'", $ex->getMessage()));
+
+            ZLog::Write(LOGLEVEL_FATAL, sprintf('Exception: (%s) - %s', $exclass, $exception_message));
+
+            if ($ex instanceof AuthenticationRequiredException) {
+                if (isset($incomingXml)) {
+                    // log the failed login attemt e.g. for fail2ban
+                    if (defined('LOGAUTHFAIL') && LOGAUTHFAIL != false)
+                        ZLog::Write(LOGLEVEL_WARN, sprintf("Unable to complete autodiscover because login failed for user with email '%s' from IP %s.", $incomingXml->Request->EMailAddress, $_SERVER["REMOTE_ADDR"]));
+                }
+                else {
+                    ZLog::Write(LOGLEVEL_ERROR, sprintf("Unable to complete autodiscover incorrect request: '%s'", $ex->getMessage()));
+                }
+                http_response_code(401);
+                header('WWW-Authenticate: Basic realm="ZPush"');
             }
-            http_response_code(401);
-            header('WWW-Authenticate: Basic realm="ZPush"');
-        }
-        catch (ZPushException $ex) {
-            ZLog::Write(LOGLEVEL_ERROR, sprintf("Unable to complete autodiscover because of ZPushException. Error: %s", $ex->getMessage()));
-            if(!headers_sent()) {
-                header('HTTP/1.1 '. $ex->getHTTPCodeString());
-                foreach ($ex->getHTTPHeaders() as $h) {
-                    header($h);
+            else if ($ex instanceof ZPushException) {
+                ZLog::Write(LOGLEVEL_ERROR, sprintf("Unable to complete autodiscover because of ZPushException. Error: %s", $ex->getMessage()));
+                if(!headers_sent()) {
+                    header('HTTP/1.1 '. $ex->getHTTPCodeString());
+                    foreach ($ex->getHTTPHeaders() as $h) {
+                        header($h);
+                    }
                 }
             }
+            $this->sendResponse($response);
         }
-        $this->sendResponse($response);
     }
 
     /**
