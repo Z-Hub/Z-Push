@@ -131,6 +131,15 @@ class PHPWrapper {
         $mapimessage = mapi_msgstore_openentry($this->store, $entryid);
         try {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("PHPWrapper->ImportMessageChange(): Getting message from MAPIProvider, sourcekey: '%s', parentsourcekey: '%s', entryid: '%s'", bin2hex($sourcekey), bin2hex($parentsourcekey), bin2hex($entryid)));
+
+            // do not send private messages from shared folders to the device
+            $sensitivity = mapi_getprops($mapimessage, array(PR_SENSITIVITY));
+            $folderOrigin = Utils::GetFolderOriginFromId(ZPush::GetDeviceManager()->GetFolderIdForBackendId(bin2hex($this->folderid)));
+            if ($folderOrigin != 'user' && isset($sensitivity[PR_SENSITIVITY]) && $sensitivity[PR_SENSITIVITY] >= SENSITIVITY_PRIVATE) {
+                ZLog::Write(LOGLEVEL_DEBUG, "PHPWrapper->ImportMessageChange(): ignoring private message from a shared folder");
+                return SYNC_E_IGNORE;
+            }
+
             $message = $this->mapiprovider->GetMessage($mapimessage, $this->contentparameters);
         }
         catch (SyncObjectBrokenException $mbe) {
