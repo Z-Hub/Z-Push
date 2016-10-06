@@ -588,8 +588,15 @@ class MAPIProvider {
             $props = $this->getProps($mapimessage, $meetingrequestproperties);
 
             // Get the GOID
-            if(isset($props[$meetingrequestproperties["goidtag"]]))
-                $message->meetingrequest->globalobjid = base64_encode($props[$meetingrequestproperties["goidtag"]]);
+            if(isset($props[$meetingrequestproperties["goidtag"]])) {
+                // GlobalObjId support was removed in AS 16.0
+                if (Request::IsGlobalObjIdHexClient()) {
+                    $message->meetingrequest->globalobjid = strtoupper(bin2hex($props[$meetingrequestproperties["goidtag"]]));
+                }
+                else {
+                    $message->meetingrequest->globalobjid = base64_encode($props[$meetingrequestproperties["goidtag"]]);
+                }
+            }
 
             // Set Timezone
             if(isset($props[$meetingrequestproperties["timezonetag"]]))
@@ -1184,6 +1191,26 @@ class MAPIProvider {
             $tz = $this->getTZFromSyncBlob(base64_decode($appointment->timezone));
         else
             $tz = false;
+
+        // start and end time may not be set - try to get them from the existing appointment for further calculation - see https://jira.z-hub.io/browse/ZP-983
+        if (!isset($appointment->starttime) || !isset($appointment->endtime)) {
+            $amapping = MAPIMapping::GetAppointmentMapping();
+            $amapping = $this->getPropIdsFromStrings($amapping);
+            $existingstartendpropsmap = array($amapping["starttime"], $amapping["endtime"]);
+            $existingstartendprops = $this->getProps($mapimessage, $existingstartendpropsmap);
+
+            if (isset($existingstartendprops[$amapping["starttime"]]) && !isset($appointment->starttime)) {
+                $appointment->starttime = $existingstartendprops[$amapping["starttime"]];
+                ZLog::Write(LOGLEVEL_WBXML, sprintf("MAPIProvider->setAppointment(): Parameter 'starttime' was not set, using value from MAPI %d (%s).", $appointment->starttime, gmstrftime("%Y%m%dT%H%M%SZ", $appointment->starttime)));
+            }
+            if (isset($existingstartendprops[$amapping["endtime"]]) && !isset($appointment->endtime)) {
+                $appointment->endtime = $existingstartendprops[$amapping["endtime"]];
+                ZLog::Write(LOGLEVEL_WBXML, sprintf("MAPIProvider->setAppointment(): Parameter 'endtime' was not set, using value from MAPI %d (%s).", $appointment->endtime, gmstrftime("%Y%m%dT%H%M%SZ", $appointment->endtime)));
+            }
+        }
+        if (!isset($appointment->starttime) || !isset($appointment->endtime)) {
+            throw new StatusException("MAPIProvider->setAppointment(): Error, start and/or end time not set and can not be retrieved from MAPI.", SYNC_STATUS_SYNCCANNOTBECOMPLETED);
+        }
 
         //calculate duration because without it some webaccess views are broken. duration is in min
         $localstart = $this->getLocaltimeByTZ($appointment->starttime, $tz);
@@ -2541,6 +2568,15 @@ class MAPIProvider {
                     $bpReturnType != SYNC_BODYPREFERENCE_MIME &&
                     $message->asbody->estimatedDataSize > $bpo->GetTruncationSize()
                 ) {
+
+                // Truncated plaintext requests are used on iOS for the preview in the email list. All images and links should be removed - see https://jira.z-hub.io/browse/ZP-1025
+                if ($bpReturnType == SYNC_BODYPREFERENCE_PLAIN) {
+                    ZLog::Write(LOGLEVEL_DEBUG, "MAPIProvider->setMessageBody(): truncated plain-text body requested, stripping all links and images");
+                    // Get more data because of the filtering it's most probably going down in size. It's going to be truncated to the correct size below.
+                    $plainbody = stream_get_contents($message->asbody->data, $bpo->GetTruncationSize() * 3);
+                    $message->asbody->data = StringStreamWrapper::Open(preg_replace('/<http(s){0,1}:\/\/.*?>/i', '', $plainbody));
+                }
+
                 // truncate data stream
                 ftruncate($message->asbody->data, $bpo->GetTruncationSize());
                 $message->asbody->truncated = 1;

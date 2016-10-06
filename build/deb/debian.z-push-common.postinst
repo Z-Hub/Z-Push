@@ -3,11 +3,16 @@
 #
 # see: dh_installdeb(1)
 
-set -e
-
 case "$1" in
     configure)
         /usr/local/sbin/z-push-admin -a fixstates
+        if [ $? -ne 0 ]; then
+            YELLOW='\033[0;33m'
+            NC='\033[0m' # No Color
+            echo -e "${YELLOW}When upgrading from an earlier version you need to run 'z-push-admin -a fixstates'.\n
+It seems the execution on setup has failed (see error above). Please fix the issue and run the command manually.\n
+More information at https://wiki.z-hub.io/x/R4Ea${NC}\n"
+        fi
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)

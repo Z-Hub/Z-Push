@@ -267,8 +267,8 @@ ln -s "%zpush_dir/z-push-top.php" "$b/%_bindir/z-push-top";
 mkdir -p "$b/%_localstatedir/lib/z-push";
 mkdir -p "$b/%_localstatedir/log/z-push";
 mkdir -p "$b/%_sysconfdir/logrotate.d";
-install -Dpm 644 config/z-push.lr \
-    "$b/%_sysconfdir/logrotate.d/"
+install -Dpm 644 config/z-push-rhel.lr \
+    "$b/%_sysconfdir/logrotate.d/z-push.lr"
 
 # CALDAV
 mv "$bdir/caldav/config.php" "$cdir/caldav.conf.php";

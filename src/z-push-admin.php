@@ -75,7 +75,8 @@ include_once(ZPUSH_CONFIG);
         ZPushAdminCLI::RunCommand();
     }
     catch (ZPushException $zpe) {
-        die(get_class($zpe) . ": ". $zpe->getMessage() . "\n");
+        fwrite(STDERR, get_class($zpe) . ": ". $zpe->getMessage() . "\n");
+        exit(1);
     }
 
 
@@ -741,6 +742,12 @@ class ZPushAdminCLI {
         echo "\tChecking for hierarchy folder data state: ";
         if (($stat = ZPushAdmin::FixStatesHierarchyFolderData()) !== false)
             printf("Devices: %d - Processed: %d - Fixed: %d - Device+User without hierarchy: %d\n",  $stat[0], $stat[1], $stat[2], $stat[3]);
+        else
+            echo ZLog::GetLastMessage(LOGLEVEL_ERROR) . "\n";
+
+        echo "\tChecking flags of shared folders: ";
+        if (($stat = ZPushAdmin::FixStatesAdditionalFolderFlags()) !== false)
+            printf("Devices: %d - Devices with additional folders: %d - Fixed: %d\n",  $stat[0], $stat[1], $stat[2]);
         else
             echo ZLog::GetLastMessage(LOGLEVEL_ERROR) . "\n";
     }

@@ -54,6 +54,7 @@ class SyncFolder extends SyncObject {
     public $Store;
     public $NoBackendFolder;
     public $BackendId;
+    public $Flags;
 
     function SyncFolder() {
         $mapping = array (
@@ -79,6 +80,10 @@ class SyncFolder extends SyncObject {
 
                     SYNC_FOLDERHIERARCHY_IGNORE_BACKENDID               => array (  self::STREAMER_VAR      => "BackendId",
                                                                                     self::STREAMER_TYPE     => self::STREAMER_TYPE_IGNORE),
+
+                    SYNC_FOLDERHIERARCHY_IGNORE_FLAGS                   => array (  self::STREAMER_VAR      => "Flags",
+                                                                                    self::STREAMER_TYPE     => self::STREAMER_TYPE_IGNORE),
+
         );
 
         parent::SyncObject($mapping);
