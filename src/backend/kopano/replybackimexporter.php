@@ -276,6 +276,16 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
                 ZLog::Write(LOGLEVEL_DEBUG, "ReplyBackImExporter->ImportMessageChange(): KOE patch item update. Ignoring incoming update.");
                 return true;
             }
+            // KOE ZP-990: OL updates the deleted category which causes a race condition if more than one KOE is connected to that user
+            if (KOE_CAPABILITY_RECEIVEFLAGS && $message instanceof SyncMail && !isset($message->flag) && isset($message->categories)) {
+                // check if the categories changed
+                $serverMessage = $this->getMessage($id, false);
+                if((empty($message->categories) && empty($serverMessage->categories)) ||
+                    (is_array($mapiCategories) && count(array_diff($mapiCategories, $message->categories)) == 0 && count(array_diff($message->categories, $mapiCategories)) == 0)) {
+                        ZLog::Write(LOGLEVEL_DEBUG, "ReplyBackImExporter->ImportMessageChange(): KOE update of flag categories. Ignoring incoming update.");
+                        return true;
+                }
+            }
         }
 
         // data is going to be dropped, inform the user
