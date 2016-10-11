@@ -270,10 +270,12 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
      * @return boolean
      */
     public function ImportMessageChange($id, $message) {
-        // Ignore incoming update events of KOE caused by PatchItem - ZP-1060
-        if ($id && $message instanceof SyncNote && !isset($message->asbody)) {
-            ZLog::Write(LOGLEVEL_DEBUG, "ReplyBackImExporter->ImportMessageChange(): KOE patch item update. Ignoring incoming update.");
-            return true;
+        if(ZPush::GetDeviceManager()->IsKoe()) {
+            // Ignore incoming update events of KOE caused by PatchItem - ZP-1060
+            if (KOE_CAPABILITY_NOTES && $id && $message instanceof SyncNote && !isset($message->asbody)) {
+                ZLog::Write(LOGLEVEL_DEBUG, "ReplyBackImExporter->ImportMessageChange(): KOE patch item update. Ignoring incoming update.");
+                return true;
+            }
         }
 
         // data is going to be dropped, inform the user
