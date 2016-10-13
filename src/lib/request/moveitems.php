@@ -88,6 +88,7 @@ class MoveItems extends RequestProcessor {
 
         $operationResults = array();
         $operationCounter = 0;
+        $operationTotal = count($moves);
         foreach($moves as $move) {
             $operationCounter++;
             self::$encoder->startTag(SYNC_MOVE_RESPONSE);
@@ -145,7 +146,7 @@ class MoveItems extends RequestProcessor {
             }
 
             if ($operationCounter % 10 == 0) {
-                self::$topCollector->AnnounceInformation(sprintf("Moved %d objects out of %d", $operationCounter, count($moves)));
+                self::$topCollector->AnnounceInformation(sprintf("Moved %d objects out of %d", $operationCounter, $operationTotal));
             }
 
             // save the operation result
@@ -164,7 +165,7 @@ class MoveItems extends RequestProcessor {
             self::$encoder->endTag();
         }
 
-        self::$topCollector->AnnounceInformation(sprintf("Moved %d - Codes", count($moves)), true);
+        self::$topCollector->AnnounceInformation(sprintf("Moved %d - Codes", $operationTotal), true);
         foreach ($operationResults as $status => $occurences) {
             self::$topCollector->AnnounceInformation(sprintf("%dx%d", $occurences, $status), true);
         }
