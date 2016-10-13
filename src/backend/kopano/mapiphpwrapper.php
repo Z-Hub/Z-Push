@@ -134,8 +134,8 @@ class PHPWrapper {
 
             // do not send private messages from shared folders to the device
             $sensitivity = mapi_getprops($mapimessage, array(PR_SENSITIVITY));
-            $folderOrigin = Utils::GetFolderOriginFromId(ZPush::GetDeviceManager()->GetFolderIdForBackendId(bin2hex($this->folderid)));
-            if ($folderOrigin != 'user' && isset($sensitivity[PR_SENSITIVITY]) && $sensitivity[PR_SENSITIVITY] >= SENSITIVITY_PRIVATE) {
+            $sharedUser = ZPush::GetAdditionalSyncFolderStore(bin2hex($this->folderid));
+            if ($sharedUser != false && $sharedUser != 'SYSTEM' && isset($sensitivity[PR_SENSITIVITY]) && $sensitivity[PR_SENSITIVITY] >= SENSITIVITY_PRIVATE) {
                 ZLog::Write(LOGLEVEL_DEBUG, "PHPWrapper->ImportMessageChange(): ignoring private message from a shared folder");
                 return SYNC_E_IGNORE;
             }
