@@ -121,6 +121,9 @@ class ZPushAdmin {
                 // get information about the folder synchronization status from SyncCollections
                 $folders = $device->GetAllFolderIds();
 
+                // indicate short folderids
+                $device->hasFolderIdMapping = $device->HasFolderIdMapping();
+
                 foreach ($folders as $folderid) {
                     $fstatus = $device->GetFolderSyncStatus($folderid);
 

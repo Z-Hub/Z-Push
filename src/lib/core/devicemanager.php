@@ -1001,6 +1001,13 @@ class DeviceManager {
         catch (StateNotFoundException $snfex) {
             $this->hierarchySyncRequired = true;
         }
+        catch (UnavailableException $uaex) {
+            // This is temporary and can be ignored e.g. in PING - see https://jira.z-hub.io/browse/ZP-1054
+            // If the hash was not available before we treat it like a StateNotFoundException.
+            if ($this->deviceHash === false) {
+                $this->hierarchySyncRequired = true;
+            }
+        }
         return true;
     }
 
