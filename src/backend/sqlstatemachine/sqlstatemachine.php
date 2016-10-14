@@ -160,7 +160,7 @@ class SqlStateMachine implements IStateMachine {
                 if ($errCode == 'HY000') {
                     throw new UnavailableException("SqlStateMachine->GetStateHash(): Database not available", $errCode, null, LOGLEVEL_WARN);
                 }
-                throw new StateNotFoundException("SqlStateMachine->GetStateHash(): Could not locate state with error code: ". $errCode);
+                throw new StateNotFoundException(sprintf("SqlStateMachine->GetStateHash(): Could not locate state with error code: %s", $errCode));
             }
             else {
                 // datetime->format("U") returns EPOCH
