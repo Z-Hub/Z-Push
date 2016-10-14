@@ -143,7 +143,7 @@ class SqlStateMachine implements IStateMachine {
      *
      * @access public
      * @return string
-     * @throws StateNotFoundException, StateInvalidException
+     * @throws StateNotFoundException, StateInvalidException, UnavailableException
      */
     public function GetStateHash($devid, $type, $key = null, $counter = false) {
         $hash = null;
@@ -155,8 +155,12 @@ class SqlStateMachine implements IStateMachine {
 
             $record = $sth->fetch(PDO::FETCH_ASSOC);
             if (!$record) {
+                $errCode = $sth->errorCode();
                 $this->clearConnection($this->dbh, $sth, $record);
-                throw new StateNotFoundException("SqlStateMachine->GetStateHash(): Could not locate state");
+                if ($errCode == 'HY000') {
+                    throw new UnavailableException("SqlStateMachine->GetStateHash(): Database not available", $errCode, null, LOGLEVEL_WARN);
+                }
+                throw new StateNotFoundException("SqlStateMachine->GetStateHash(): Could not locate state with error code: ". $errCode);
             }
             else {
                 // datetime->format("U") returns EPOCH
