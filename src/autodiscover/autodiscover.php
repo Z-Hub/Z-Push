@@ -138,8 +138,9 @@ class ZPushAutodiscover {
                     }
                 }
             }
-            $this->sendResponse($response);
         }
+
+        $this->sendResponse($response);
     }
 
     /**
