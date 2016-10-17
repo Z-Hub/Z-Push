@@ -25,7 +25,7 @@ The specification suggests several ways for client to contact the responsible
 server to receive additional information. Tests have shown, that basically all 
 mobile phones tested support only the most basic ways. These are sufficient for 
 almost all types of scenarios and are the ones implemented by Z-Push AutoDiscover. 
-Please refer to the Mobile Compatibility List (http://z-push.sf.net/compatibility) 
+Please refer to the Mobile Compatibility List (http://z-push.org/compatibility) 
 for an overview of supported and tested devices.
 The used email address is the key for the process. The client splits it up into 
 the local and domain part (before and after the @-sign). The client then tries 
