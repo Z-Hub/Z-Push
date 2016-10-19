@@ -92,7 +92,7 @@ class FileStateMachine implements IStateMachine {
      *
      * @access public
      * @return string
-     * @throws StateNotFoundException, StateInvalidException
+     * @throws StateNotFoundException, StateInvalidException, UnavailableException
      */
     public function GetStateHash($devid, $type, $key = false, $counter = false) {
         $filename = $this->getFullFilePath($devid, $type, $key, $counter);

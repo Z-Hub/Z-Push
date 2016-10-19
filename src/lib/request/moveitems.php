@@ -86,7 +86,11 @@ class MoveItems extends RequestProcessor {
 
         self::$encoder->startTag(SYNC_MOVE_MOVES);
 
+        $operationResults = array();
+        $operationCounter = 0;
+        $operationTotal = count($moves);
         foreach($moves as $move) {
+            $operationCounter++;
             self::$encoder->startTag(SYNC_MOVE_RESPONSE);
             self::$encoder->startTag(SYNC_MOVE_SRCMSGID);
             self::$encoder->content($move["srcmsgid"]);
@@ -141,7 +145,15 @@ class MoveItems extends RequestProcessor {
                     $status = $stex->getCode();
             }
 
-            self::$topCollector->AnnounceInformation(sprintf("Operation status: %s", $status), true);
+            if ($operationCounter % 10 == 0) {
+                self::$topCollector->AnnounceInformation(sprintf("Moved %d objects out of %d", $operationCounter, $operationTotal));
+            }
+
+            // save the operation result
+            if (!isset($operationResults[$status])) {
+                $operationResults[$status] = 0;
+            }
+            $operationResults[$status]++;
 
             self::$encoder->startTag(SYNC_MOVE_STATUS);
             self::$encoder->content($status);
@@ -152,6 +164,12 @@ class MoveItems extends RequestProcessor {
             self::$encoder->endTag();
             self::$encoder->endTag();
         }
+
+        self::$topCollector->AnnounceInformation(sprintf("Moved %d - Codes", $operationTotal), true);
+        foreach ($operationResults as $status => $occurences) {
+            self::$topCollector->AnnounceInformation(sprintf("%dx%d", $occurences, $status), true);
+        }
+
 
         self::$encoder->endTag();
         return true;
