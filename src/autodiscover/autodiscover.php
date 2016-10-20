@@ -182,21 +182,32 @@ class ZPushAutodiscover {
      * @return string $username
      */
     private function login($backend, $incomingXml) {
+        // don't even try to login if there is no PW set
+        if (!isset($_SERVER['PHP_AUTH_PW'])) {
+            throw new AuthenticationRequiredException("Access denied. No password provided.");
+        }
+
         // Determine the login name depending on the configuration: complete email address or
         // the local part only.
         if (USE_FULLEMAIL_FOR_LOGIN) {
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("Using the complete email address for login."));
             $username = $incomingXml->Request->EMailAddress;
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("Using the complete email address for login: '%s'", $username));
         }
-        else{
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("Using the username only for login."));
+        else {
             $username = Utils::GetLocalPartFromEmail($incomingXml->Request->EMailAddress);
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("Using the username only for login: '%s'", $username));
         }
 
-        if($backend->Logon($username, "", $_SERVER['PHP_AUTH_PW']) == false) {
+        // Mobile devices send Authorization header using UTF-8 charset. Outlook sends it using ISO-8859-1 encoding.
+        // For the successful authentication the user and password must be UTF-8 encoded. Try to determine which
+        // charset was sent by the client and convert it to UTF-8. See https://jira.z-hub.io/browse/ZP-864.
+        $username = Utils::ConvertAuthorizationToUTF8($username);
+        $password = Utils::ConvertAuthorizationToUTF8($_SERVER['PHP_AUTH_PW']);
+        if ($backend->Logon($username, "", $password) == false) {
             throw new AuthenticationRequiredException("Access denied. Username or password incorrect.");
         }
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAutodiscover->login() Using '%s' as the username.", $username));
+
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAutodiscover->login() successfull with '%s' as the username.", $username));
         return $username;
     }
 
