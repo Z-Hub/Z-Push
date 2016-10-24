@@ -1092,15 +1092,36 @@ class Utils {
     }
 
     /**
-     * Returns folder origin from its id.
+     * Returns folder origin identifier from its id.
      *
-     * @param string $fid
+     * @param string $folderid
+     *
+     * @access public
+     * @return string|boolean  matches values of DeviceManager::FLD_ORIGIN_*
+     */
+    public static function GetFolderOriginFromId($folderid) {
+        $origin = substr($folderid, 0, 1);
+        switch ($origin) {
+            case DeviceManager::FLD_ORIGIN_CONFIG:
+            case DeviceManager::FLD_ORIGIN_GAB:
+            case DeviceManager::FLD_ORIGIN_SHARED:
+            case DeviceManager::FLD_ORIGIN_USER:
+                return $origin;
+        }
+        ZLog::Write(LOGLEVEL_WARN, sprintf("Utils->GetFolderOriginFromId(): Unknown folder origin for folder with id '%s'", $folderid));
+        return false;
+    }
+
+    /**
+     * Returns folder origin as string from its id.
+     *
+     * @param string $folderid
      *
      * @access public
      * @return string
      */
-    public static function GetFolderOriginFromId($fid) {
-        $origin = substr($fid, 0, 1);
+    public static function GetFolderOriginStringFromId($folderid) {
+        $origin = substr($folderid, 0, 1);
         switch ($origin) {
             case DeviceManager::FLD_ORIGIN_CONFIG:
                 return 'configured';
@@ -1111,7 +1132,7 @@ class Utils {
             case DeviceManager::FLD_ORIGIN_USER:
                 return 'user';
         }
-        ZLog::Write(LOGLEVEL_WARN, sprintf("Utils->GetFolderOriginFromId(): Unknown folder origin for folder with id '%s'", $fid));
+        ZLog::Write(LOGLEVEL_WARN, sprintf("Utils->GetFolderOriginStringFromId(): Unknown folder origin for folder with id '%s'", $folderid));
         return 'unknown';
     }
 
