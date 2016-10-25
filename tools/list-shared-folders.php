@@ -64,7 +64,8 @@ define('ZPUSH_BASE_PATH', "/usr/share/z-push");
 
 try {
     if (php_sapi_name() != "cli") {
-        die("This script can only be called from the CLI.");
+        fwrite(STDERR, "This script can only be called from the CLI.\n");
+        exit(1);
     }
 
     if (!defined('ZPUSH_BASE_PATH') || !file_exists(ZPUSH_BASE_PATH . "/config.php")) {
@@ -108,5 +109,6 @@ try {
     }
 }
 catch (ZPushException $zpe) {
-    die(get_class($zpe) . ": ". $zpe->getMessage() . "\n");
+    fwrite(STDERR, get_class($zpe) . ": ". $zpe->getMessage() . "\n");
+    exit(1);
 }
