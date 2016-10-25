@@ -113,6 +113,10 @@ class ZPushAdmin {
                 ZLog::Write(LOGLEVEL_WARN, sprintf("ZPushAdmin::GetDeviceDetails(): device '%s' of user '%s' has invalid states. Please sync to solve this issue.", $devid, $user));
                 $device->SetDeviceError("Invalid states. Please force synchronization!");
             }
+            catch (StatusException $ste) {
+                ZLog::Write(LOGLEVEL_WARN, sprintf("ZPushAdmin::GetDeviceDetails(): device '%s' of user '%s' has status exceptions. Please sync to solve this issue.", $devid, $user));
+                $device->SetDeviceError("State exceptions. Please force synchronization or remove device to fix!");
+            }
 
             if ($sc) {
                 if ($sc->GetLastSyncTime())
