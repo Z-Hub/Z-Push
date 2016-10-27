@@ -4,10 +4,11 @@
 * Project   :   Z-Push
 * Descr     :   Class takes care of interprocess
 *               communicaton for different purposes
+*               using a backend implementing IIpcBackend
 *
 * Created   :   20.10.2011
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -45,35 +46,71 @@
 abstract class InterProcessData {
     const CLEANUPTIME = 1;
 
+    // Defines which IPC provider to load, first has preference
+    // if IPC_PROVIDER in the main config  is set, that class will be loaded
+    static private $providerLoadOrder = array(
+        'IpcSharedMemoryProvider' => 'backend/ipcsharedmemory/ipcsharedmemoryprovider.php',
+        'IpcMemcachedProvider'    => 'backend/ipcmemcached/ipcmemcachedprovider.php',
+    );
     static protected $devid;
     static protected $pid;
     static protected $user;
     static protected $start;
     protected $type;
     protected $allocate;
-    private $mutexid;
-    private $memid;
+    protected $provider_class;
+
+    /**
+     * @var IIpcProvider
+     */
+    private $ipcProvider;
 
     /**
      * Constructor
      *
      * @access public
      */
-    public function InterProcessData() {
+    public function __construct() {
         if (!isset($this->type) || !isset($this->allocate))
             throw new FatalNotImplementedException(sprintf("Class InterProcessData can not be initialized. Subclass %s did not initialize type and allocable memory.", get_class($this)));
 
-        if ($this->InitSharedMem())
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("%s(): Initialized mutexid %s and memid %s.", get_class($this), $this->mutexid, $this->memid));
+        $this->provider_class = defined('IPC_PROVIDER') ? IPC_PROVIDER : false;
+        if (!$this->provider_class) {
+            foreach(self::$providerLoadOrder as $provider => $file) {
+                if (file_exists(REAL_BASE_PATH . $file) && class_exists($provider)) {
+                    $this->provider_class = $provider;
+                    break;
+                }
+            }
+        }
+
+        try {
+            if (!$this->provider_class) {
+                throw new Exception("No IPC provider available");
+            }
+            // ZP-987: use an own mutex + storage key for each device on non-shared-memory IPC
+            // this method is not suitable for the TopCollector atm
+            if (!($this instanceof TopCollector) && $this->provider_class !== 'IpcSharedMemoryProvider') {
+                $this->type = Request::GetDeviceID(). "-". $this->type;
+            }
+            $this->ipcProvider = new $this->provider_class($this->type, $this->allocate, get_class($this));
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("%s initialised with IPC provider '%s' with type '%s'", get_class($this), $this->provider_class, $this->type));
+
+        }
+        catch (Exception $e) {
+            // ipcProvider could not initialise
+            ZLog::Write(LOGLEVEL_ERROR, sprintf("%s could not initialise IPC provider '%s': %s", get_class($this), $this->provider_class, $e->getMessage()));
+        }
+
     }
 
     /**
-     * Initializes internal parameters
+     * Initializes internal parameters.
      *
-     * @access public
+     * @access protected
      * @return boolean
      */
-    public function InitializeParams() {
+    protected function initializeParams() {
         if (!isset(self::$devid)) {
             self::$devid = Request::GetDeviceID();
             self::$pid = @getmypid();
@@ -84,113 +121,37 @@ abstract class InterProcessData {
     }
 
     /**
-     * Allocates shared memory
-     *
-     * @access private
-     * @return boolean
-     */
-    private function InitSharedMem() {
-        // shared mem general "turn off switch"
-        if (defined("USE_SHARED_MEM") && USE_SHARED_MEM === false) {
-            ZLog::Write(LOGLEVEL_INFO, "InterProcessData::InitSharedMem(): the usage of shared memory for Z-Push has been disabled. Check your config for 'USE_SHARED_MEM'.");
-            return false;
-        }
-
-        if (!function_exists('sem_get') || !function_exists('shm_attach') || !function_exists('sem_acquire')|| !function_exists('shm_get_var')) {
-            ZLog::Write(LOGLEVEL_INFO, "InterProcessData::InitSharedMem(): PHP libraries for the use shared memory are not available. Functionalities like z-push-top or loop detection are not available. Check your php packages.");
-            return false;
-        }
-
-        // Create mutex
-        $this->mutexid = @sem_get($this->type, 1);
-        if ($this->mutexid === false) {
-            ZLog::Write(LOGLEVEL_ERROR, "InterProcessData::InitSharedMem(): could not aquire semaphore");
-            return false;
-        }
-
-        // Attach shared memory
-        $this->memid = shm_attach($this->type+10, $this->allocate);
-        if ($this->memid === false) {
-            ZLog::Write(LOGLEVEL_ERROR, "InterProcessData::InitSharedMem(): could not attach shared memory");
-            @sem_remove($this->mutexid);
-            $this->mutexid = false;
-            return false;
-        }
-
-        // TODO mem cleanup has to be implemented
-        //$this->setInitialCleanTime();
-
-        return true;
-    }
-
-    /**
-     * Removes and detaches shared memory
-     *
-     * @access private
-     * @return boolean
-     */
-    private function RemoveSharedMem() {
-        if ((isset($this->mutexid) && $this->mutexid !== false) && (isset($this->memid) && $this->memid !== false)) {
-            @sem_acquire($this->mutexid);
-            $memid = $this->memid;
-            $this->memid = false;
-            @sem_release($this->mutexid);
-
-            @sem_remove($this->mutexid);
-            @shm_remove($memid);
-            @shm_detach($memid);
-
-            $this->mutexid = false;
-
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * Reinitializes shared memory by removing, detaching and re-allocating it
+     * Reinitializes the IPC data by removing, detaching and re-allocating it.
      *
      * @access public
      * @return boolean
      */
-    public function ReInitSharedMem() {
-        return ($this->RemoveSharedMem() && $this->InitSharedMem());
+    public function ReInitIPC() {
+        return $this->ipcProvider ? $this->ipcProvider->ReInitIPC() : false;
     }
 
     /**
-     * Cleans up the shared memory block
+     * Cleans up the IPC data block.
      *
      * @access public
      * @return boolean
      */
     public function Clean() {
-        $stat = false;
-
-        // exclusive block
-        if ($this->blockMutex()) {
-            $cleanuptime = ($this->hasData(1)) ? $this->getData(1) : false;
-
-            // TODO implement Shared Memory cleanup
-
-            $this->releaseMutex();
-        }
-        // end exclusive block
-
-        return $stat;
+        return $this->ipcProvider ? $this->ipcProvider->Clean() : false;
     }
 
     /**
-     * Indicates if the shared memory is active
+     * Indicates if the IPC is active.
      *
      * @access public
      * @return boolean
      */
     public function IsActive() {
-        return ((isset($this->mutexid) && $this->mutexid !== false) && (isset($this->memid) && $this->memid !== false));
+        return $this->ipcProvider ? $this->ipcProvider->IsActive() : false;
     }
 
     /**
-     * Blocks the class mutex
+     * Blocks the class mutex.
      * Method blocks until mutex is available!
      * ATTENTION: make sure that you *always* release a blocked mutex!
      *
@@ -198,28 +159,22 @@ abstract class InterProcessData {
      * @return boolean
      */
     protected function blockMutex() {
-        if ((isset($this->mutexid) && $this->mutexid !== false) && (isset($this->memid) && $this->memid !== false))
-            return @sem_acquire($this->mutexid);
-
-        return false;
+        return $this->ipcProvider ? $this->ipcProvider->BlockMutex() : false;
     }
 
     /**
-     * Releases the class mutex
-     * After the release other processes are able to block the mutex themselfs
+     * Releases the class mutex.
+     * After the release other processes are able to block the mutex themselves.
      *
      * @access protected
      * @return boolean
      */
     protected function releaseMutex() {
-        if ((isset($this->mutexid) && $this->mutexid !== false) && (isset($this->memid) && $this->memid !== false))
-            return @sem_release($this->mutexid);
-
-        return false;
+        return $this->ipcProvider ? $this->ipcProvider->ReleaseMutex() : false;
     }
 
     /**
-     * Indicates if the requested variable is available in shared memory
+     * Indicates if the requested variable is available in IPC data.
      *
      * @param int   $id     int indicating the variable
      *
@@ -227,19 +182,11 @@ abstract class InterProcessData {
      * @return boolean
      */
     protected function hasData($id = 2) {
-        if ((isset($this->mutexid) && $this->mutexid !== false) && (isset($this->memid) && $this->memid !== false)) {
-            if (function_exists("shm_has_var"))
-                return @shm_has_var($this->memid, $id);
-            else {
-                $some = $this->getData($id);
-                return isset($some);
-            }
-        }
-        return false;
+        return $this->ipcProvider ? $this->ipcProvider->HasData($id) : false;
     }
 
     /**
-     * Returns the requested variable from shared memory
+     * Returns the requested variable from IPC data.
      *
      * @param int   $id     int indicating the variable
      *
@@ -247,51 +194,20 @@ abstract class InterProcessData {
      * @return mixed
      */
     protected function getData($id = 2) {
-        if ((isset($this->mutexid) && $this->mutexid !== false) && (isset($this->memid) && $this->memid !== false))
-            return @shm_get_var($this->memid, $id);
-
-        return ;
+        return $this->ipcProvider ? $this->ipcProvider->GetData($id) : null;
     }
 
     /**
-     * Writes the transmitted variable to shared memory
+     * Writes the transmitted variable to IPC data.
      * Subclasses may never use an id < 2!
      *
-     * @param mixed $data   data which should be saved into shared memory
+     * @param mixed $data   data which should be saved into IPC data
      * @param int   $id     int indicating the variable (bigger than 2!)
      *
      * @access protected
      * @return boolean
      */
     protected function setData($data, $id = 2) {
-        if ((isset($this->mutexid) && $this->mutexid !== false) && (isset($this->memid) && $this->memid !== false))
-            return @shm_put_var($this->memid, $id, $data);
-
-        return false;
+        return $this->ipcProvider ? $this->ipcProvider->SetData($data, $id) : false;
     }
-
-    /**
-     * Sets the time when the shared memory block was created
-     *
-     * @access private
-     * @return boolean
-     */
-    private function setInitialCleanTime() {
-        $stat = false;
-
-        // exclusive block
-        if ($this->blockMutex()) {
-
-            if ($this->hasData(1) == false)
-                $stat = $this->setData(time(), 1);
-
-            $this->releaseMutex();
-        }
-        // end exclusive block
-
-        return $stat;
-    }
-
 }
-
-?>

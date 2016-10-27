@@ -64,4 +64,3 @@ class SyncSendMailSource extends SyncObject {
     }
 
 }
-?>

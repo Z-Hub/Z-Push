@@ -61,24 +61,18 @@ class GetAttachment extends RequestProcessor {
             $stream = $attachment->data;
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleGetAttachment(): attachment stream from backend: %s", $stream));
 
-            if ($stream == null)
+            // need to check for a resource here, as eg. feof('Error') === false and causing infinit loop in while!
+            if (!is_resource($stream))
                 throw new StatusException(sprintf("HandleGetAttachment(): No stream resource returned by backend for attachment: %s", $attname), SYNC_ITEMOPERATIONSSTATUS_INVALIDATT);
 
             header("Content-Type: application/octet-stream");
-            $l = 0;
-            while (!feof($stream)) {
-                $d = fgets($stream, 4096);
-                $l += strlen($d);
-                echo $d;
-
-                // announce an update every 100K
-                if (($l/1024) % 100 == 0)
-                    self::$topCollector->AnnounceInformation(sprintf("Streaming attachment: %d KB sent", round($l/1024)));
-            }
+            self::$topCollector->AnnounceInformation("Starting attachment streaming", true);
+            $l = fpassthru($stream);
             fclose($stream);
-            self::$topCollector->AnnounceInformation(sprintf("Streamed %d KB attachment", $l/1024), true);
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleGetAttachment(): attachment with %d KB sent to mobile", $l/1024));
-
+            if ($l === false)
+                throw new FatalException("HandleGetAttachment(): fpassthru === false !!!");
+            self::$topCollector->AnnounceInformation(sprintf("Streamed %d KB attachment", round($l/1024)), true);
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleGetAttachment(): attachment with %d KB sent to mobile", round($l/1024)));
         }
         catch (StatusException $s) {
             // StatusException already logged so we just need to pass it upwards to send a HTTP error
@@ -88,4 +82,3 @@ class GetAttachment extends RequestProcessor {
         return true;
     }
 }
-?>

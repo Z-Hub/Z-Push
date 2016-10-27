@@ -1,0 +1,10 @@
+{
+	"name": "z-push/z-push-dev",
+	"description": "Z-Push is an open-source application to synchronize ActiveSync compatible devices",
+	"time": "2015-09-02",
+	"homepage": "http://z-push.org/",
+	"license": "AGPL-3.0",
+	"require": {
+		"php": ">=5.4.0"
+	}
+}

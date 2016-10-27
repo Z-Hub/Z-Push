@@ -119,16 +119,15 @@ class ImportChangesDiff extends DiffState implements IImportChanges {
     }
 
     /**
-     * Imports a deletion. This may conflict if the local object has been modified
+     * Imports a deletion. This may conflict if the local object has been modified.
      *
      * @param string        $id
-     * @param SyncObject    $message
+     * @param boolean       $asSoftDelete   (opt) if true, the deletion is exported as "SoftDelete", else as "Remove" - default: false
      *
      * @access public
      * @return boolean
-     * @throws StatusException
      */
-    public function ImportMessageDeletion($id) {
+    public function ImportMessageDeletion($id, $asSoftDelete = false) {
         //do nothing if it is in a dummy folder
         if ($this->folderid == SYNC_FOLDER_TYPE_DUMMY)
             throw new StatusException(sprintf("ImportChangesDiff->ImportMessageDeletion('%s'): can not be done on a dummy folder", $id), SYNC_STATUS_SYNCCANNOTBECOMPLETED);
@@ -209,7 +208,7 @@ class ImportChangesDiff extends DiffState implements IImportChanges {
      * @param object        $folder     SyncFolder
      *
      * @access public
-     * @return string       id of the folder
+     * @return boolean/SyncObject           status/object with the ath least the serverid of the folder set
      * @throws StatusException
      */
     public function ImportFolderChange($folder) {
@@ -236,20 +235,22 @@ class ImportChangesDiff extends DiffState implements IImportChanges {
         if($stat)
             $this->updateState("change", $stat);
 
-        return $stat["id"];
+        $folder->serverid = $stat["id"];
+        return $folder;
     }
 
     /**
      * Imports a folder deletion
      *
-     * @param string        $id
-     * @param string        $parent id
+     * @param SyncFolder    $folder         at least "serverid" needs to be set
      *
      * @access public
      * @return int          SYNC_FOLDERHIERARCHY_STATUS
      * @throws StatusException
      */
-    public function ImportFolderDeletion($id, $parent = false) {
+    public function ImportFolderDeletion($folder) {
+        $id = $folder->serverid;
+        $parent = isset($folder->parentid) ? $folder->parentid : false;
         //do nothing if it is a dummy folder
         if ($parent == SYNC_FOLDER_TYPE_DUMMY)
             throw new StatusException(sprintf("ImportChangesDiff->ImportFolderDeletion('%s','%s'): can not be done on a dummy folder", $id, $parent), SYNC_FSSTATUS_SERVERERROR);
@@ -261,7 +262,7 @@ class ImportChangesDiff extends DiffState implements IImportChanges {
 
         $ret = $this->backend->DeleteFolder($id, $parent);
         if (!$ret)
-            throw new StatusException(sprintf("ImportChangesDiff->ImportFolderDeletion('%s','%s'): can not be done on a dummy folder", $id, $parent), SYNC_FSSTATUS_FOLDERDOESNOTEXIST);
+            throw new StatusException(sprintf("ImportChangesDiff->ImportFolderDeletion('%s','%s'): can not be deleted", $id, $parent), SYNC_FSSTATUS_FOLDERDOESNOTEXIST);
 
         $change = array();
         $change["id"] = $id;
@@ -271,5 +272,3 @@ class ImportChangesDiff extends DiffState implements IImportChanges {
         return true;
     }
 }
-
-?>

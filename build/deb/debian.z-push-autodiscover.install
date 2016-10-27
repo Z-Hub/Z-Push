@@ -1,0 +1,2 @@
+conftmp/autodiscover.conf.php etc/z-push/
+autodiscover            /usr/share/z-push/

@@ -63,7 +63,7 @@ class TopCollector extends InterProcessData {
         parent::__construct();
 
         // initialize params
-        $this->InitializeParams();
+        $this->initializeParams();
 
         $this->preserved = array();
         // static vars come from the parent class
@@ -132,6 +132,10 @@ class TopCollector extends InterProcessData {
      * @return boolean
      */
     public function AnnounceInformation($addinfo, $preserve = false, $terminating = false) {
+        if (defined('TOPCOLLECTOR_DISABLED') && constant('TOPCOLLECTOR_DISABLED') === true) {
+            return true;
+        }
+
         $this->latest["addinfo"] = $addinfo;
         $this->latest["update"] = time();
 
@@ -144,10 +148,10 @@ class TopCollector extends InterProcessData {
         if ($preserve)
             $this->preserved[] = $addinfo;
 
-        // exclusive block
-        if ($this->blockMutex()) {
-
-            if ($this->isEnabled()) {
+        if ($this->isEnabled()) {
+            $ok = false;
+            // exclusive block
+            if ($this->blockMutex()) {
                 $topdata = ($this->hasData(self::TOPDATA)) ? $this->getData(self::TOPDATA): array();
 
                 $this->checkArrayStructure($topdata);
@@ -155,16 +159,14 @@ class TopCollector extends InterProcessData {
                 // update
                 $topdata[self::$devid][self::$user][self::$pid] = $this->latest;
                 $ok = $this->setData($topdata, self::TOPDATA);
+                $this->releaseMutex();
             }
-            $this->releaseMutex();
+            // end exclusive block
+            if (!$ok) {
+                ZLog::Write(LOGLEVEL_WARN, "TopCollector::AnnounceInformation(): could not write to shared memory. Z-Push top will not display this data.");
+                return false;
+            }
         }
-        // end exclusive block
-
-        if ($this->isEnabled() === true && !$ok) {
-            ZLog::Write(LOGLEVEL_WARN, "TopCollector::AnnounceInformation(): could not write to shared memory. Z-Push top will not display this data.");
-            return false;
-        }
-
         return true;
     }
 
@@ -222,8 +224,9 @@ class TopCollector extends InterProcessData {
                         }
                     }
                 }
-                foreach ($toClear as $tc)
+                foreach ($toClear as $tc) {
                     unset($topdata[$tc[0]][$tc[1]][$tc[2]]);
+                }
             }
 
             $stat = $this->setData($topdata, self::TOPDATA);
@@ -261,6 +264,20 @@ class TopCollector extends InterProcessData {
     }
 
     /**
+     * Reinitializes the IPC data.
+     *
+     * @access public
+     * @return boolean
+     */
+    public function ReInitIPC() {
+        $status = parent::ReInitIPC();
+        if (!status) {
+            $this->SetData(array(), self::TOPDATA);
+        }
+        return $status;
+    }
+
+    /**
      * Indicates if top data should be saved or not
      * Returns true for 10 seconds after the latest CollectData()
      * SHOULD only be called with locked mutex!
@@ -295,5 +312,3 @@ class TopCollector extends InterProcessData {
             $topdata[self::$devid][self::$user][self::$pid] = array();
     }
 }
-
-?>

@@ -99,4 +99,3 @@ class WebserviceUsers {
         return $output;
     }
 }
-?>

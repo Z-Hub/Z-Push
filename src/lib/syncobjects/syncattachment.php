@@ -10,7 +10,7 @@
 *
 * Created   :   05.09.2011
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -56,7 +56,8 @@ class SyncAttachment extends SyncObject {
 
     function SyncAttachment() {
         $mapping = array(
-                    SYNC_POOMMAIL_ATTMETHOD                             => array (  self::STREAMER_VAR      => "attmethod"),
+                    SYNC_POOMMAIL_ATTMETHOD                             => array (  self::STREAMER_VAR      => "attmethod",
+                                                                                    self::STREAMER_RONOTIFY => true),
                     SYNC_POOMMAIL_ATTSIZE                               => array (  self::STREAMER_VAR      => "attsize",
                                                                                     self::STREAMER_CHECKS   => array(   self::STREAMER_CHECK_REQUIRED   => self::STREAMER_CHECK_SETZERO,
                                                                                                                         self::STREAMER_CHECK_CMPHIGHER  => -1 )),
@@ -68,10 +69,10 @@ class SyncAttachment extends SyncObject {
                                                                                     self::STREAMER_CHECKS   => array(   self::STREAMER_CHECK_REQUIRED   => self::STREAMER_CHECK_SETEMPTY)),
 
                     SYNC_POOMMAIL_ATTOID                                => array (  self::STREAMER_VAR      => "attoid"),
-                    SYNC_POOMMAIL_ATTREMOVED                            => array (  self::STREAMER_VAR      => "attremoved"),
+                    SYNC_POOMMAIL_ATTREMOVED                            => array (  self::STREAMER_VAR      => "attremoved",
+                                                                                    self::STREAMER_RONOTIFY => true),
                 );
 
         parent::SyncObject($mapping);
     }
 }
-?>

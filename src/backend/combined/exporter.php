@@ -49,6 +49,8 @@
 class ExportChangesCombined implements IExportChanges {
     private $backend;
     private $syncstates;
+    private $movestateSrc;
+    private $movestateDst;
     private $exporters;
     private $importer;
     private $importwraps;
@@ -56,6 +58,8 @@ class ExportChangesCombined implements IExportChanges {
     public function ExportChangesCombined(&$backend) {
         $this->backend =& $backend;
         $this->exporters = array();
+        $this->movestateSrc = false;
+        $this->movestateDst = false;
         ZLog::Write(LOGLEVEL_DEBUG, "ExportChangesCombined constructed");
     }
 
@@ -173,12 +177,53 @@ class ExportChangesCombined implements IExportChanges {
     public function InitializeExporter(&$importer) {
         ZLog::Write(LOGLEVEL_DEBUG, "ExportChangesCombined->InitializeExporter(...)");
         foreach ($this->exporters as $i => $e) {
-            if(!isset($this->_importwraps[$i])){
+            if(!isset($this->importwraps[$i])){
                 $this->importwraps[$i] = new ImportHierarchyChangesCombinedWrap($i, $this->backend, $importer);
             }
             $e->InitializeExporter($this->importwraps[$i]);
         }
         ZLog::Write(LOGLEVEL_DEBUG, "ExportChangesCombined->InitializeExporter(...) success");
     }
+
+    /**
+     * Sets the states from move operations.
+     * When src and dst state are set, a MOVE operation is being executed.
+     *
+     * @param mixed         $srcState
+     * @param mixed         (opt) $dstState, default: null
+     *
+     * @access public
+     * @return boolean
+     */
+    public function SetMoveStates($srcState, $dstState = null) {
+        ZLog::Write(LOGLEVEL_DEBUG, "ExportChangesCombined->SetMoveStates()");
+        // Set the move states equally to every sub exporter.
+        // By default they are false or null, we know that they've changed, if the exporter will return a different value.
+        foreach($this->exporters as $i => $e){
+            $e->SetMoveStates($srcState, $dstState);
+        }
+        // let's remember what we sent down
+        $this->movestateSrc = $srcState;
+        $this->movestateDst = $dstState;
+        ZLog::Write(LOGLEVEL_DEBUG, "ExportChangesCombined->SetMoveStates() success");
+    }
+
+    /**
+     * Gets the states of special move operations.
+     *
+     * @access public
+     * @return array(0 => $srcState, 1 => $dstState)
+    */
+    public function GetMoveStates() {
+        ZLog::Write(LOGLEVEL_DEBUG, "ExportChangesCombined->GetMoveStates()");
+        foreach($this->exporters as $i => $e){
+            list($srcState, $dstState) = $this->exporters[$i]->GetMoveStates();
+            if ($srcState != $this->movestateSrc || $dstState != $this->movestateDst) {
+                ZLog::Write(LOGLEVEL_DEBUG, "ExportChangesCombined->GetMoveStates() success (returned states from exporter $i)");
+                return array($srcState, $dstState);
+            }
+        }
+        ZLog::Write(LOGLEVEL_DEBUG, "ExportChangesCombined->GetMoveStates() success (no movestate)");
+        return false;
+    }
 }
-?>

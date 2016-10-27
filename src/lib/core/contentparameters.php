@@ -137,5 +137,3 @@ class ContentParameters extends StateObject {
         return true;
     }
 }
-
-?>

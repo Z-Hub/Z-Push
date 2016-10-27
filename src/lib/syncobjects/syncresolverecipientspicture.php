@@ -10,7 +10,7 @@
 *
 * Created   :   28.10.2012
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2013, 2015 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -45,22 +45,25 @@
 * Consult LICENSE file for details
 ************************************************/
 
-class SyncRRPicture extends SyncObject {
+class SyncResolveRecipientsPicture extends SyncObject {
     public $maxsize;
     public $maxpictures;
     public $status;
     public $data;
 
-    public function SyncRRPicture() {
-        $mapping = array (
-            SYNC_RESOLVERECIPIENTS_MAXSIZE                  => array (  self::STREAMER_VAR      => "maxsize"),
-            SYNC_RESOLVERECIPIENTS_MAXPICTURES              => array (  self::STREAMER_VAR      => "maxpictures"),
-            SYNC_RESOLVERECIPIENTS_STATUS                   => array (  self::STREAMER_VAR      => "status"),
-            SYNC_RESOLVERECIPIENTS_DATA                     => array (  self::STREAMER_VAR      => "data"),
-        );
+    public function SyncResolveRecipientsPicture() {
+        $mapping = array ();
+
+        if (Request::GetProtocolVersion() >= 14.1) {
+            $mapping[SYNC_RESOLVERECIPIENTS_MAXSIZE]        = array (  self::STREAMER_VAR      => "maxsize");
+            $mapping[SYNC_RESOLVERECIPIENTS_MAXPICTURES]    = array (  self::STREAMER_VAR      => "maxpictures");
+            $mapping[SYNC_RESOLVERECIPIENTS_STATUS]         = array (  self::STREAMER_VAR      => "status");
+            $mapping[SYNC_RESOLVERECIPIENTS_DATA]           = array (  self::STREAMER_VAR      => "data",
+                                                                       self::STREAMER_TYPE     => self::STREAMER_TYPE_STREAM_ASBASE64,
+                                                                     );
+        }
 
         parent::SyncObject($mapping);
     }
 
 }
-?>

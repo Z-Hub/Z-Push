@@ -81,6 +81,24 @@ interface IChanges {
      * @return string
      */
     public function GetState();
-}
 
-?>
+    /**
+     * Sets the states from move operations.
+     * When src and dst state are set, a MOVE operation is being executed.
+     *
+     * @param mixed         $srcState
+     * @param mixed         (opt) $dstState, default: null
+     *
+     * @access public
+     * @return boolean
+     */
+    public function SetMoveStates($srcState, $dstState = null);
+
+    /**
+     * Gets the states of special move operations.
+     *
+     * @access public
+     * @return array(0 => $srcState, 1 => $dstState)
+     */
+    public function GetMoveStates();
+}

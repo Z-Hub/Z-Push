@@ -51,15 +51,6 @@
 * Consult LICENSE file for details
 ************************************************/
 
-// default backend
-include_once('lib/default/backend.php');
-
-// DiffBackend components
-include_once('diffstate.php');
-include_once('importchangesdiff.php');
-include_once('exportchangesdiff.php');
-
-
 abstract class BackendDiff extends Backend {
     protected $store;
 
@@ -78,11 +69,12 @@ abstract class BackendDiff extends Backend {
      * @param string        $store              target store, could contain a "domain\user" value
      * @param boolean       $checkACLonly       if set to true, Setup() should just check ACLs
      * @param string        $folderid           if set, only ACLs on this folderid are relevant
+     * @param boolean       $readonly           if set, the folder needs at least read permissions
      *
      * @access public
      * @return boolean
      */
-    public function Setup($store, $checkACLonly = false, $folderid = false) {
+    public function Setup($store, $checkACLonly = false, $folderid = false, $readonly = false) {
         $this->store = $store;
 
         // we don't know if and how diff backends implement the "admin" check, but this will disable it for the webservice
@@ -375,4 +367,3 @@ abstract class BackendDiff extends Backend {
     public abstract function MoveMessage($folderid, $id, $newfolderid, $contentParameters);
 
 }
-?>

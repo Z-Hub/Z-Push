@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 from MAPI.Util import *
 from MAPI.Util.AddressBook import *

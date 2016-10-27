@@ -46,5 +46,3 @@
 // **********************
 
 define('VCARDDIR_DIR', '/home/%u/.kde/share/apps/kabc/stdvcf');
-
-?>

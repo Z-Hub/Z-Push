@@ -8,7 +8,7 @@
 *
 * Created   :   11.04.2011
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -53,13 +53,16 @@ class SyncParameters extends StateObject {
     const SMSOPTIONS = "SMS";
 
     private $synckeyChanged = false;
+    private $confirmationChanged = false;
     private $currentCPO = self::DEFAULTOPTIONS;
 
     protected $unsetdata = array(
                                     'uuid' => false,
                                     'uuidcounter' => false,
                                     'uuidnewcounter' => false,
+                                    'counterconfirmed' => false,
                                     'folderid' => false,
+                                    'backendfolderid' => false,
                                     'referencelifetime' => 10,
                                     'lastsynctime' => false,
                                     'referencepolicykey' => true,
@@ -71,6 +74,9 @@ class SyncParameters extends StateObject {
                                     'contentparameters' => array(),
                                     'foldersynctotal' => false,
                                     'foldersyncremaining' => false,
+                                    'folderstat' => false,
+                                    'folderstattimeout' => false,
+                                    'movestate' => false,
                                 );
 
     /**
@@ -118,6 +124,12 @@ class SyncParameters extends StateObject {
         // remove newSyncKey
         unset($this->uuidNewCounter);
 
+        // the counter has been requested (and that way confirmed)
+        if ($this->counterconfirmed == false) {
+            $this->counterconfirmed = true;
+            $this->confirmationChanged = true;
+        }
+
         return true;
     }
 
@@ -152,6 +164,8 @@ class SyncParameters extends StateObject {
             throw new FatalException("SyncParameters->SetNewSyncKey(): new SyncKey must have the same UUID as current SyncKey");
 
         $this->uuidNewCounter = $uuidNewCounter;
+        $this->counterconfirmed = false;
+        $this->confirmationChanged = true;
         $this->synckeyChanged = true;
     }
 
@@ -183,12 +197,14 @@ class SyncParameters extends StateObject {
      * When this is called the new key becomes the current key (if a new key is available).
      * The current key is then returned.
      *
+     * @param boolean $confirmedOnly    indicates if only confirmed states should be considered, default: false
+     *
      * @access public
      * @return string
      */
-    public function GetLatestSyncKey() {
-        // New becomes old
-        if ($this->HasUuidNewCounter()) {
+    public function GetLatestSyncKey($confirmedOnly = false) {
+        // New becomes old if available - if $confirmedOnly then the counter needs to be confirmed
+        if ($this->HasUuidNewCounter() && (($confirmedOnly && $this->counterconfirmed) || !$confirmedOnly)) {
             $this->uuidCounter = $this->uuidNewCounter;
             unset($this->uuidNewCounter);
         }
@@ -217,6 +233,20 @@ class SyncParameters extends StateObject {
         return true;
     }
 
+    /**
+     * Overwrite GetBackendFolderId() because on old profiles, this will not be set.
+     *
+     * @access public
+     * @return string
+     */
+    public function GetBackendFolderId() {
+        if ($this->backendfolderid) {
+            return $this->backendfolderid;
+        }
+        else {
+            return $this->GetFolderId();
+        }
+    }
 
     /**
      * CPO methods
@@ -269,9 +299,35 @@ class SyncParameters extends StateObject {
             ZLog::Write(LOGLEVEL_DEBUG, "SyncParameters->UseCPO(): removed existing DEFAULT CPO as it is obsolete");
         }
 
-        ZLOG::Write(LOGLEVEL_DEBUG, sprintf("SyncParameters->UseCPO('%s')", $options));
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncParameters->UseCPO('%s')", $options));
         $this->currentCPO = $options;
         $this->checkCPO($this->currentCPO);
+    }
+
+    /**
+     * Indicates if a exporter run is required. This is the case if the given folderstat is different from the saved one
+     * or when the expiration time expired.
+     *
+     * @param string $currentFolderStat
+     * @param boolean $doLog
+     *
+     * @access public
+     * @return boolean
+     */
+    public function IsExporterRunRequired($currentFolderStat, $doLog = false) {
+        // if the backend returned false as folderstat, we have to run the exporter
+        if ($currentFolderStat === false || $this->confirmationChanged)  {
+            $run = true;
+        }
+        else {
+            // check if the folderstat differs from the saved one or expired
+            $run = ! ($this->HasFolderStat() && $currentFolderStat === $this->GetFolderStat() && time() < $this->GetFolderStatTimeout());
+        }
+        if ($doLog) {
+            $expDate = ($this->HasFolderStatTimeout()) ? date('Y-m-d H:i:s', $this->GetFolderStatTimeout()) : "not set";
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncParameters->IsExporterRunRequired(): %s - current: %s - saved: %s - expiring: %s", Utils::PrintAsString($run), Utils::PrintAsString($currentFolderStat), Utils::PrintAsString($this->GetFolderStat()), $expDate));
+        }
+        return $run;
     }
 
     /**
@@ -415,4 +471,3 @@ class SyncParameters extends StateObject {
         return true;
     }
 }
-?>

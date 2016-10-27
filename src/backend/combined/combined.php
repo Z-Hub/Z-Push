@@ -49,19 +49,15 @@
 * Consult LICENSE file for details
 ************************************************/
 
-// default backend
-include_once('lib/default/backend.php');
-
 //include the CombinedBackend's own config file
 require_once("backend/combined/config.php");
-require_once("backend/combined/importer.php");
-require_once("backend/combined/exporter.php");
 
 class BackendCombined extends Backend implements ISearchProvider {
     public $config;
     public $backends;
     private $activeBackend;
     private $activeBackendID;
+    private $numberChangesSink;
     private $logon_done = false;
 
     /**
@@ -138,12 +134,13 @@ class BackendCombined extends Backend implements ISearchProvider {
      * @param string        $store              target store, could contain a "domain\user" value
      * @param boolean       $checkACLonly       if set to true, Setup() should just check ACLs
      * @param string        $folderid           if set, only ACLs on this folderid are relevant
+     * @param boolean       $readonly           if set, the folder needs at least read permissions
      *
      * @access public
      * @return boolean
      */
-    public function Setup($store, $checkACLonly = false, $folderid = false) {
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("Combined->Setup('%s', '%s', '%s')", $store, Utils::PrintAsString($checkACLonly), $folderid));
+    public function Setup($store, $checkACLonly = false, $folderid = false, $readonly = false) {
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("Combined->Setup('%s', '%s', '%s', '%s')", $store, Utils::PrintAsString($checkACLonly), $folderid, Utils::PrintAsString($readonly)));
         if(!is_array($this->backends)){
             return false;
         }
@@ -152,7 +149,7 @@ class BackendCombined extends Backend implements ISearchProvider {
             if(isset($this->config['backends'][$i]['users']) && isset($this->config['backends'][$i]['users'][$store]['username'])){
                 $u = $this->config['backends'][$i]['users'][$store]['username'];
             }
-            if($this->backends[$i]->Setup($u, $checkACLonly, $folderid) == false){
+            if($this->backends[$i]->Setup($u, $checkACLonly, $folderid, $readonly) == false){
                 ZLog::Write(LOGLEVEL_WARN, "Combined->Setup() failed");
                 return false;
             }
@@ -398,6 +395,93 @@ class BackendCombined extends Backend implements ISearchProvider {
 
 
     /**
+     * Indicates if the backend has a ChangesSink.
+     * A sink is an active notification mechanism which does not need polling.
+     *
+     * @access public
+     * @return boolean
+     */
+    public function HasChangesSink() {
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCombined->HasChangesSink()"));
+
+        $this->numberChangesSink = 0;
+
+        foreach ($this->backends as $i => $b) {
+            if ($this->backends[$i]->HasChangesSink()) {
+                $this->numberChangesSink++;
+            }
+        }
+
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCombined->HasChangesSink - Number ChangesSink found: %d", $this->numberChangesSink));
+
+        return true;
+    }
+
+    /**
+     * The folder should be considered by the sink.
+     * Folders which were not initialized should not result in a notification
+     * of IBacken->ChangesSink().
+     *
+     * @param string        $folderid
+     *
+     * @access public
+     * @return boolean      false if there is any problem with that folder
+     */
+     public function ChangesSinkInitialize($folderid) {
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCombined->ChangesSinkInitialize('%s')", $folderid));
+
+        $backend = $this->GetBackend($folderid);
+        if($backend === false) {
+            // if not backend is found we return true, we don't want this to cause an error
+            return true;
+        }
+
+        if ($backend->HasChangesSink()) {
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCombined->ChangesSinkInitialize('%s') is supported, initializing", $folderid));
+            return $backend->ChangesSinkInitialize($this->GetBackendFolder($folderid));
+        }
+
+        // if the backend doesn't support ChangesSink, we also return true so we don't get an error
+        return true;
+     }
+
+    /**
+     * The actual ChangesSink.
+     * For max. the $timeout value this method should block and if no changes
+     * are available return an empty array.
+     * If changes are available a list of folderids is expected.
+     *
+     * @param int           $timeout        max. amount of seconds to block
+     *
+     * @access public
+     * @return array
+     */
+    public function ChangesSink($timeout = 30) {
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCombined->ChangesSink(%d)", $timeout));
+
+        $notifications = array();
+        if ($this->numberChangesSink == 0) {
+            ZLog::Write(LOGLEVEL_DEBUG, "BackendCombined doesn't include any Sinkable backends");
+        } else {
+            $time_each = $timeout / $this->numberChangesSink;
+            foreach ($this->backends as $i => $b) {
+                if ($this->backends[$i]->HasChangesSink()) {
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCombined->ChangesSink - Calling in '%s' with %d", get_class($b), $time_each));
+
+                    $notifications_backend = $this->backends[$i]->ChangesSink($time_each);
+                    //preppend backend delimiter
+                    for ($c = 0; $c < count($notifications_backend); $c++) {
+                        $notifications_backend[$c] = $i . $this->config['delimiter'] . $notifications_backend[$c];
+                    }
+                    $notifications = array_merge($notifications, $notifications_backend);
+                }
+            }
+        }
+
+        return $notifications;
+    }
+
+    /**
      * Finds the correct backend for a folder
      *
      * @param string        $folderid       combinedid of the folder
@@ -445,20 +529,8 @@ class BackendCombined extends Backend implements ISearchProvider {
         $pos = strpos($folderid, $this->config['delimiter']);
         if($pos === false)
             return false;
-        return substr($folderid,0,$pos);
+        return substr($folderid, 0, $pos);
     }
-
-    /**
-     * Returns the BackendCombined as it implements the ISearchProvider interface
-     * This could be overwritten by the global configuration
-     *
-     * @access public
-     * @return object       Implementation of ISearchProvider
-     */
-    public function GetSearchProvider() {
-        return $this;
-    }
-
 
     /**
      * Indicates which AS version is supported by the backend.
@@ -476,6 +548,17 @@ class BackendCombined extends Backend implements ISearchProvider {
             }
         }
         return $version;
+    }
+
+    /**
+     * Returns the BackendCombined as it implements the ISearchProvider interface
+     * This could be overwritten by the global configuration
+     *
+     * @access public
+     * @return object       Implementation of ISearchProvider
+     */
+    public function GetSearchProvider() {
+        return $this;
     }
 
 
@@ -600,6 +683,4 @@ class BackendCombined extends Backend implements ISearchProvider {
 
         return false;
     }
-
 }
-?>

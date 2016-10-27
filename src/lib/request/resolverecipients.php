@@ -6,7 +6,7 @@
 *
 * Created   :   15.10.2012
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2013, 2015 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -64,7 +64,6 @@ class ResolveRecipients extends RequestProcessor {
 
         $resolveRecipients = self::$backend->ResolveRecipients($resolveRecipients);
 
-
         self::$encoder->startWBXML();
         self::$encoder->startTag(SYNC_RESOLVERECIPIENTS_RESOLVERECIPIENTS);
 
@@ -72,33 +71,34 @@ class ResolveRecipients extends RequestProcessor {
             self::$encoder->content($resolveRecipients->status);
             self::$encoder->endTag(); // SYNC_RESOLVERECIPIENTS_STATUS
 
+            if ($resolveRecipients->status == SYNC_COMMONSTATUS_SUCCESS && !empty($resolveRecipients->response)) {
+                foreach ($resolveRecipients->response as $i => $response) {
+                    self::$encoder->startTag(SYNC_RESOLVERECIPIENTS_RESPONSE);
+                        self::$encoder->startTag(SYNC_RESOLVERECIPIENTS_TO);
+                        self::$encoder->content($response->to);
+                        self::$encoder->endTag(); // SYNC_RESOLVERECIPIENTS_TO
 
-            foreach ($resolveRecipients->to as $i => $to) {
-                self::$encoder->startTag(SYNC_RESOLVERECIPIENTS_RESPONSE);
-                    self::$encoder->startTag(SYNC_RESOLVERECIPIENTS_TO);
-                    self::$encoder->content($to);
-                    self::$encoder->endTag(); // SYNC_RESOLVERECIPIENTS_TO
+                        self::$encoder->startTag(SYNC_RESOLVERECIPIENTS_STATUS);
+                        self::$encoder->content($response->status);
+                        self::$encoder->endTag(); // SYNC_RESOLVERECIPIENTS_STATUS
 
-                    self::$encoder->startTag(SYNC_RESOLVERECIPIENTS_STATUS);
-                    self::$encoder->content($resolveRecipients->status);
-                    self::$encoder->endTag();
+                        // do only if recipient is resolved
+                        if ($response->status != SYNC_RESOLVERECIPSSTATUS_RESPONSE_UNRESOLVEDRECIP && !empty($response->recipient)) {
+                            self::$encoder->startTag(SYNC_RESOLVERECIPIENTS_RECIPIENTCOUNT);
+                            self::$encoder->content(count($response->recipient));
+                            self::$encoder->endTag(); // SYNC_RESOLVERECIPIENTS_RECIPIENTCOUNT
 
-                    // do only if recipient is resolved
-                    if ($resolveRecipients->status != SYNC_RESOLVERECIPSSTATUS_RESPONSE_UNRESOLVEDRECIP) {
-                        self::$encoder->startTag(SYNC_RESOLVERECIPIENTS_RECIPIENTCOUNT);
-                        self::$encoder->content(count($resolveRecipients->recipient));
-                        self::$encoder->endTag(); // SYNC_RESOLVERECIPIENTS_RECIPIENTCOUNT
-
-                        self::$encoder->startTag(SYNC_RESOLVERECIPIENTS_RECIPIENT);
-                        $resolveRecipients->recipient[$i]->Encode(self::$encoder);
-                        self::$encoder->endTag(); // SYNC_RESOLVERECIPIENTS_RECIPIENT
-                    }
-
-                self::$encoder->endTag(); // SYNC_RESOLVERECIPIENTS_RESPONSE
+                            foreach ($response->recipient as $recipient) {
+                                self::$encoder->startTag(SYNC_RESOLVERECIPIENTS_RECIPIENT);
+                                $recipient->Encode(self::$encoder);
+                                self::$encoder->endTag(); // SYNC_RESOLVERECIPIENTS_RECIPIENT
+                            }
+                        }
+                    self::$encoder->endTag(); // SYNC_RESOLVERECIPIENTS_RESPONSE
+                }
             }
 
         self::$encoder->endTag(); // SYNC_RESOLVERECIPIENTS_RESOLVERECIPIENTS
         return true;
     }
 }
-?>

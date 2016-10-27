@@ -80,4 +80,3 @@ class Notify extends RequestProcessor {
         return true;
     }
 }
-?>

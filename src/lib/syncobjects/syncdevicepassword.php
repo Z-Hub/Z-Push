@@ -10,7 +10,7 @@
 *
 * Created   :   08.11.2011
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2013, 2015 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -51,7 +51,7 @@ class SyncDevicePassword extends SyncObject {
 
     public function SyncDevicePassword() {
         $mapping = array (
-            SYNC_SETTINGS_DEVICEPW                  => array (  self::STREAMER_VAR      => "password"),
+            SYNC_SETTINGS_PW                        => array (  self::STREAMER_VAR      => "password"),
 
             SYNC_SETTINGS_PROP_STATUS               => array (  self::STREAMER_VAR      => "Status",
                                                                 self::STREAMER_TYPE     => self::STREAMER_TYPE_IGNORE)
@@ -60,4 +60,3 @@ class SyncDevicePassword extends SyncObject {
         parent::SyncObject($mapping);
     }
 }
-?>

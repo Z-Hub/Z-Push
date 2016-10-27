@@ -1,0 +1,2 @@
+conftmp/galsearch-ldap.conf.php /etc/z-push/
+backend/searchldap            /usr/share/z-push/backend

@@ -65,4 +65,3 @@ class BodyPreference extends StateObject {
         return (count($this->data) > 0);
     }
 }
-?>

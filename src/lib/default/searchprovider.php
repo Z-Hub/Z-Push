@@ -122,4 +122,3 @@ class SearchProvider implements ISearchProvider{
         return true;
     }
 }
-?>
