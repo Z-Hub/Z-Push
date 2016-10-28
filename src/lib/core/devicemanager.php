@@ -730,7 +730,6 @@ class DeviceManager {
         $this->loadDeviceData();
 
         if ($this->loopdetection->ProcessLoopDetectionIsHierarchySyncAdvised()) {
-            ZLog::Write(LOGLEVEL_ERROR, "DeviceManager->IsHierarchySyncRequired(): jAAAAAAAAAAAAAAAAAAAAAA________A!!!!!!!!!!!!!!!!!");
             return true;
         }
 
