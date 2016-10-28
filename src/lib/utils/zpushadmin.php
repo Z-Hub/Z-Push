@@ -113,6 +113,10 @@ class ZPushAdmin {
                 ZLog::Write(LOGLEVEL_WARN, sprintf("ZPushAdmin::GetDeviceDetails(): device '%s' of user '%s' has invalid states. Please sync to solve this issue.", $devid, $user));
                 $device->SetDeviceError("Invalid states. Please force synchronization!");
             }
+            catch (StatusException $ste) {
+                ZLog::Write(LOGLEVEL_WARN, sprintf("ZPushAdmin::GetDeviceDetails(): device '%s' of user '%s' has status exceptions. Please sync to solve this issue.", $devid, $user));
+                $device->SetDeviceError("State exceptions. Please force synchronization or remove device to fix!");
+            }
 
             if ($sc) {
                 if ($sc->GetLastSyncTime())
@@ -496,7 +500,7 @@ class ZPushAdmin {
             foreach ($device->GetAdditionalFolders() as $folder) {
                 $syncfolderid = $device->GetFolderIdForBackendId($folder['folderid'], false, false, null);
                 $folder['syncfolderid'] = $syncfolderid;
-                $folder['origin'] = Utils::GetFolderOriginFromId($syncfolderid);
+                $folder['origin'] = Utils::GetFolderOriginStringFromId($syncfolderid);
                 $new_list[$folder['folderid']] = $folder;
             }
             foreach (ZPush::GetAdditionalSyncFolders() as $fid => $so) {
@@ -509,7 +513,7 @@ class ZPushAdmin {
                                         'syncfolderid' => $syncfolderid,
                                         'name' => $so->displayname,
                                         'type' => $so->type,
-                                        'origin' => Utils::GetFolderOriginFromId($syncfolderid),
+                                        'origin' => Utils::GetFolderOriginStringFromId($syncfolderid),
                                         'flags' => 0,           // static folders have no flags
                                     );
                 }

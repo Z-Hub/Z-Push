@@ -62,7 +62,7 @@ class Webservice {
             ZLog::Write(LOGLEVEL_INFO, sprintf("Webservice::HandleWebservice('%s'): user '%s' executing action for user '%s'", $commandCode, Request::GetAuthUser(), Request::GetGETUser()));
 
         // initialize non-wsdl soap server
-        $this->server = new SoapServer(null, array('uri' => "http://z-push.sf.net/webservice"));
+        $this->server = new SoapServer(null, array('uri' => "http://z-push.org/webservice"));
 
         // the webservice command is handled by its class
         if ($commandCode == ZPush::COMMAND_WEBSERVICE_DEVICE) {

@@ -254,25 +254,10 @@ class Request {
         // Mobile devices send Authorization header using UTF-8 charset. Outlook sends it using ISO-8859-1 encoding.
         // For the successful authentication the user and password must be UTF-8 encoded. Try to determine which
         // charset was sent by the client and convert it to UTF-8. See https://jira.z-hub.io/browse/ZP-864.
-        if (isset($_SERVER['PHP_AUTH_USER'])) {
-            $encoding = mb_detect_encoding(self::$authUser, "UTF-8, ISO-8859-1");
-            if (!$encoding) {
-                $encoding = mb_detect_encoding(self::$authUser, Utils::GetAvailableCharacterEncodings());
-                if ($encoding) {
-                    ZLog::Write(LOGLEVEL_WARN,
-                            sprintf("Request->ProcessHeaders(): mb_detect_encoding detected '%s' charset. This charset is not in the default detect list. Please report it to Z-Push developers.",
-                                    $encoding));
-                }
-                else {
-                    ZLog::Write(LOGLEVEL_ERROR, "Request->ProcessHeaders(): mb_detect_encoding failed to detect the Authorization header charset. It's possible that user won't be able to login.");
-                }
-            }
-            if ($encoding && strtolower($encoding) != "utf-8") {
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("Request->ProcessHeaders(): mb_detect_encoding detected '%s' charset. Authorization header will be converted to UTF-8 from it.", $encoding));
-                self::$authUser = mb_convert_encoding(self::$authUser, "UTF-8", $encoding);
-                self::$authPassword = mb_convert_encoding(self::$authPassword, "UTF-8", $encoding);
-            }
-        }
+        if (isset(self::$authUser))
+          self::$authUser = Utils::ConvertAuthorizationToUTF8(self::$authUser);
+        if (isset(self::$authPassword))
+          self::$authPassword = Utils::ConvertAuthorizationToUTF8(self::$authPassword);
     }
 
     /**
