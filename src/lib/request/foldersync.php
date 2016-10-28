@@ -256,6 +256,9 @@ class FolderSync extends RequestProcessor {
                 self::$encoder->endTag();
                 self::$topCollector->AnnounceInformation(sprintf("Outgoing %d folders",$changeCount), true);
 
+                if ($changeCount == 0) {
+                    self::$deviceManager->CheckFolderData();
+                }
                 // everything fine, save the sync state for the next time
                 if ($synckey == $newsynckey) {
                     self::$deviceManager->GetStateManager()->SetSyncState($newsynckey, $newsyncstate);
