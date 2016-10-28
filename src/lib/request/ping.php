@@ -73,6 +73,11 @@ class Ping extends RequestProcessor {
                 $pingstatus = SYNC_PINGSTATUS_FAILINGPARAMS;
                 self::$topCollector->AnnounceInformation("StateInvalidException: require PingParameters", true);
             }
+            elseif (self::$deviceManager->IsHierarchySyncRequired()) {
+                // we could be in a looping  - see LoopDetection->ProcessLoopDetectionIsHierarchySyncAdvised()
+                $pingstatus = SYNC_PINGSTATUS_FOLDERHIERSYNCREQUIRED;
+                self::$topCollector->AnnounceInformation("Potential loop detection: require HierarchySync", true);
+            }
             else {
                 // we do not have a ping status for this, but SyncCollections should have generated fake changes for the folders which are broken
                 $fakechanges = $sc->GetChangedFolderIds();
@@ -231,6 +236,7 @@ class Ping extends RequestProcessor {
                         self::$encoder->endTag();
                         if (empty($fakechanges))
                             self::$topCollector->AnnounceInformation(sprintf("Found change in %s", $sc->GetCollection($folderid)->GetContentClass()), true);
+                        self::$deviceManager->AnnounceProcessStatus($folderid, SYNC_PINGSTATUS_CHANGES);
                     }
                 }
                 self::$encoder->endTag();

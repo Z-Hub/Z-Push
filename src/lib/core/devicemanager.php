@@ -729,6 +729,11 @@ class DeviceManager {
     public function IsHierarchySyncRequired() {
         $this->loadDeviceData();
 
+        if ($this->loopdetection->ProcessLoopDetectionIsHierarchySyncAdvised()) {
+            ZLog::Write(LOGLEVEL_ERROR, "DeviceManager->IsHierarchySyncRequired(): jAAAAAAAAAAAAAAAAAAAAAA________A!!!!!!!!!!!!!!!!!");
+            return true;
+        }
+
         // if the hash of the additional folders changed, we have to sync the hierarchy
         if ($this->additionalFoldersHash != $this->getAdditionalFoldersHash()) {
             $this->hierarchySyncRequired = true;
@@ -839,6 +844,32 @@ class DeviceManager {
      */
     public function SetHeartbeatStateIntegrity($folderid, $uuid, $counter) {
         return $this->loopdetection->SetSyncStateUsage($folderid, $uuid, $counter);
+    }
+
+    /**
+     * Checks the data integrity of the data in the hierarchy cache and the data of the content data (synchronized folders).
+     * If a folder is deleted, the sync states could still be on the server (and being loaded by PING) while
+     * the folder is not being synchronized anymore. See also https://jira.z-hub.io/browse/ZP-1077
+     *
+     * @access public
+     * @return boolean
+     */
+    public function CheckFolderData() {
+        ZLog::Write(LOGLEVEL_DEBUG, "DeviceManager->CheckFolderData() checking integrity of hierarchy cache with synchronized folders");
+
+        $hc = $this->device->GetHierarchyCache();
+        $notInCache = array();
+        foreach ($this->device->GetAllFolderIds() as $folderid) {
+            $uuid = $this->device->GetFolderUUID($folderid);
+            if ($uuid) {
+                // has a UUID but is not in the cache?! This is deleted, remove the states.
+                if (! $hc->GetFolder($folderid)) {
+                    ZLog::Write(LOGLEVEL_WARN, sprintf("DeviceManager->CheckFolderData(): Folder '%s' has sync states but is not in the hierarchy cache. Removing states.", $folderid));
+                    StateManager::UnLinkState($this->device, $folderid);
+                }
+            }
+        }
+        return true;
     }
 
     /**
