@@ -45,7 +45,7 @@ class SimpleMutex extends InterProcessData {
     /**
      * Constructor
      */
-    public function SimpleMutex() {
+    public function __construct() {
         // initialize super parameters
         $this->allocate = 64;
         $this->type = 5173;

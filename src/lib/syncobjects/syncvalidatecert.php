@@ -51,7 +51,7 @@ class SyncValidateCert extends SyncObject {
     public $checkCRL;
     public $Status;
 
-    public function SyncValidateCert() {
+    public function __construct() {
         $mapping = array (
             SYNC_VALIDATECERT_CERTIFICATECHAIN  => array (  self::STREAMER_VAR      => "certificatechain",
                                                             self::STREAMER_ARRAY    => SYNC_VALIDATECERT_CERTIFICATE),
@@ -65,7 +65,7 @@ class SyncValidateCert extends SyncObject {
                                                             self::STREAMER_TYPE     => self::STREAMER_TYPE_IGNORE)
         );
 
-        parent::SyncObject($mapping);
+        parent::__construct($mapping);
     }
 
 }

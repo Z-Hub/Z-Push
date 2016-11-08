@@ -51,7 +51,7 @@ class SyncResolveRecipientsAvailability extends SyncObject {
     public $status;
     public $mergedfreebusy;
 
-    public function SyncResolveRecipientsAvailability() {
+    public function __construct() {
         $mapping = array ();
 
         if (Request::GetProtocolVersion() >= 14.0) {
@@ -61,7 +61,7 @@ class SyncResolveRecipientsAvailability extends SyncObject {
             $mapping[SYNC_RESOLVERECIPIENTS_MERGEDFREEBUSY] = array (  self::STREAMER_VAR      => "mergedfreebusy");
         }
 
-        parent::SyncObject($mapping);
+        parent::__construct($mapping);
     }
 
 }

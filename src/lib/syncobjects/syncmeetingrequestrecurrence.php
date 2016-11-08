@@ -58,7 +58,7 @@ class SyncMeetingRequestRecurrence extends SyncObject {
     public $monthofyear;
     public $calendartype;
 
-    function SyncMeetingRequestRecurrence() {
+    function __construct() {
         $mapping = array (
                     // Recurrence type
                     // 0 = Recurs daily
@@ -119,6 +119,6 @@ class SyncMeetingRequestRecurrence extends SyncObject {
             $mapping[SYNC_POOMMAIL2_CALENDARTYPE]                       = array (   self::STREAMER_VAR      => "calendartype");
         }
 
-        parent::SyncObject($mapping);
+        parent::__construct($mapping);
     }
 }

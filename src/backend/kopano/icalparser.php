@@ -54,7 +54,7 @@ class ICalParser{
      *
      * @access public
      */
-    public function ICalParser(&$store, &$props){
+    public function __construct(&$store, &$props){
          $this->props = $props;
     }
 

@@ -52,7 +52,7 @@ class SyncResolveRecipientsOptions extends SyncObject {
     public $availability;
     public $picture;
 
-    public function SyncResolveRecipientsOptions() {
+    public function __construct() {
         $mapping = array (
             SYNC_RESOLVERECIPIENTS_CERTIFICATERETRIEVAL     => array (  self::STREAMER_VAR      => "certificateretrieval"),
             SYNC_RESOLVERECIPIENTS_MAXCERTIFICATES          => array (  self::STREAMER_VAR      => "maxcertificates"),
@@ -65,7 +65,7 @@ class SyncResolveRecipientsOptions extends SyncObject {
                                                                         self::STREAMER_TYPE     => "SyncResolveRecipientsPicture"),
         );
 
-        parent::SyncObject($mapping);
+        parent::__construct($mapping);
     }
 
 }

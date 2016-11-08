@@ -74,7 +74,7 @@ class PHPWrapper {
      * @access public
      * @return
      */
-    public function PHPWrapper($session, $store, $importer, $folderid) {
+    public function __construct($session, $store, $importer, $folderid) {
         $this->importer = &$importer;
         $this->store = $store;
         $this->mapiprovider = new MAPIProvider($session, $this->store);
@@ -120,7 +120,7 @@ class PHPWrapper {
      * @access public
      * @return long
      */
-    public function ImportMessageChange($props, $flags, &$retmapimessage) {
+    public function ImportMessageChange($props, $flags, $retmapimessage) {
         $sourcekey = $props[PR_SOURCE_KEY];
         $parentsourcekey = $props[PR_PARENT_SOURCE_KEY];
         $entryid = mapi_msgstore_entryidfromsourcekey($this->store, $parentsourcekey, $sourcekey);

@@ -64,7 +64,7 @@ class SyncMeetingRequest extends SyncObject {
     public $globalobjid;
     public $disallownewtimeproposal;
 
-    function SyncMeetingRequest() {
+    function __construct() {
         $mapping = array (
                     SYNC_POOMMAIL_ALLDAYEVENT                           => array (  self::STREAMER_VAR      => "alldayevent",
                                                                                     self::STREAMER_CHECKS   => array(   self::STREAMER_CHECK_ZEROORONE  => self::STREAMER_CHECK_SETZERO)),
@@ -136,6 +136,6 @@ class SyncMeetingRequest extends SyncObject {
                                                                                     self::STREAMER_CHECKS   => array(   self::STREAMER_CHECK_REQUIRED   => self::STREAMER_CHECK_SETZERO,
                                                                                     self::STREAMER_CHECK_ONEVALUEOF => array(0,1)  ));
                 }
-        parent::SyncObject($mapping);
+        parent::__construct($mapping);
     }
 }

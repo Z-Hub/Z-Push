@@ -51,7 +51,7 @@ class SyncResolveRecipientsPicture extends SyncObject {
     public $status;
     public $data;
 
-    public function SyncResolveRecipientsPicture() {
+    public function __construct() {
         $mapping = array ();
 
         if (Request::GetProtocolVersion() >= 14.1) {
@@ -63,7 +63,7 @@ class SyncResolveRecipientsPicture extends SyncObject {
                                                                      );
         }
 
-        parent::SyncObject($mapping);
+        parent::__construct($mapping);
     }
 
 }

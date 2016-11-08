@@ -75,7 +75,7 @@ class ExportChangesICS implements IExportChanges{
      * @access public
      * @throws StatusException
      */
-    public function ExportChangesICS($session, $store, $folderid = false) {
+    public function __construct($session, $store, $folderid = false) {
         // Open a hierarchy or a contents exporter depending on whether a folderid was specified
         $this->session = $session;
         $this->folderid = $folderid;

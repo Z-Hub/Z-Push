@@ -95,7 +95,7 @@ class ASDevice extends StateObject {
      * @access public
      * @return
      */
-    public function ASDevice($devid, $devicetype, $getuser, $useragent) {
+    public function __construct($devid, $devicetype, $getuser, $useragent) {
         $this->deviceid = $devid;
         $this->devicetype = $devicetype;
         list ($this->deviceuser, $this->domain) =  Utils::SplitDomainUser($getuser);

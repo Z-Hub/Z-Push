@@ -69,7 +69,7 @@ class SyncNote extends SyncObject {
     public $subject;
     public $Color;
 
-    function SyncNote() {
+    function __construct() {
         $mapping = array(
                     SYNC_AIRSYNCBASE_BODY                               => array (  self::STREAMER_VAR      => "asbody",
                                                                                     self::STREAMER_TYPE     => "SyncBaseBody",
@@ -93,7 +93,7 @@ class SyncNote extends SyncObject {
                                                                                     self::STREAMER_TYPE     => self::STREAMER_TYPE_IGNORE),
                 );
 
-        parent::SyncObject($mapping);
+        parent::__construct($mapping);
     }
 
     /**

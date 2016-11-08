@@ -76,7 +76,7 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
      * @access public
      * @throws StatusException
      */
-    public function ReplyBackImExporter($session, $store, $folderid) {
+    public function __construct($session, $store, $folderid) {
         $this->session = $session;
         $this->store = $store;
         $this->folderid = $folderid;

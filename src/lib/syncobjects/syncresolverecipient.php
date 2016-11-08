@@ -54,7 +54,7 @@ class SyncResolveRecipient extends SyncObject {
     public $picture;
     public $id;
 
-    public function SyncResolveRecipient() {
+    public function __construct() {
         $mapping = array (
             SYNC_RESOLVERECIPIENTS_TYPE                     => array (  self::STREAMER_VAR      => "type"),
             SYNC_RESOLVERECIPIENTS_DISPLAYNAME              => array (  self::STREAMER_VAR      => "displayname"),
@@ -74,7 +74,7 @@ class SyncResolveRecipient extends SyncObject {
                                                                        self::STREAMER_TYPE     => "SyncResolveRecipientsPicture");
         }
 
-        parent::SyncObject($mapping);
+        parent::__construct($mapping);
     }
 
 }

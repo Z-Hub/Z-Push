@@ -54,7 +54,7 @@ class ImportChangesDiff extends DiffState implements IImportChanges {
      * @access public
      * @throws StatusException
      */
-    public function ImportChangesDiff($backend, $folderid = false) {
+    public function __construct($backend, $folderid = false) {
         $this->backend = $backend;
         $this->folderid = $folderid;
     }

@@ -70,7 +70,7 @@ class BackendCardDAV extends BackendDiff implements ISearchProvider {
      * Constructor
      *
      */
-    public function BackendCardDAV() {
+    public function __construct() {
         if (!function_exists("curl_init")) {
             throw new FatalException("BackendCardDAV(): php-curl is not found", 0, null, LOGLEVEL_FATAL);
         }

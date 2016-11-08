@@ -88,7 +88,7 @@ class SyncMail extends SyncObject {
     public $sender;
     public $categories;
 
-    function SyncMail() {
+    function __construct() {
         $mapping = array (
                     SYNC_POOMMAIL_TO                                    => array (  self::STREAMER_VAR      => "to",
                                                                                     self::STREAMER_TYPE     => self::STREAMER_TYPE_COMMA_SEPARATED,
@@ -204,6 +204,6 @@ class SyncMail extends SyncObject {
             //TODO bodypart, accountid, rightsmanagementlicense
         }
 
-        parent::SyncObject($mapping);
+        parent::__construct($mapping);
     }
 }
