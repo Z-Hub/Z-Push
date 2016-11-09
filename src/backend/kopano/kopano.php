@@ -353,6 +353,7 @@ class BackendKopano implements IBackend, ISearchProvider {
 
         $hierarchy =  mapi_folder_gethierarchytable($rootfolder, CONVENIENT_DEPTH);
         $rows = mapi_table_queryallrows($hierarchy, array(PR_DISPLAY_NAME, PR_PARENT_ENTRYID, PR_ENTRYID, PR_SOURCE_KEY, PR_PARENT_SOURCE_KEY, PR_CONTAINER_CLASS, PR_ATTR_HIDDEN, PR_EXTENDED_FOLDER_FLAGS, PR_FOLDER_TYPE));
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendKopano->GetHierarchy(): fetched %d folders from MAPI", count($rows)));
 
         foreach ($rows as $row) {
             // do not display hidden and search folders
@@ -368,6 +369,7 @@ class BackendKopano implements IBackend, ISearchProvider {
             }
         }
 
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendKopano->GetHierarchy(): processed %d folders, starting parent remap", count($folders)));
         // reloop the folders to make sure all parentids are mapped correctly
         $dm = ZPush::GetDeviceManager();
         foreach ($folders as $folder) {
