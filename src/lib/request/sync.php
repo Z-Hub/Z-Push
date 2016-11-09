@@ -916,6 +916,7 @@ class Sync extends RequestProcessor {
         // final top announcement for a multi-folder sync
         if ($sc->GetCollectionCount() > 1) {
             self::$topCollector->AnnounceInformation($this->getMultiFolderInfoLine($sc->GetCollectionCount()), true);
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleSync: Processed %d folders", $sc->GetCollectionCount()));
         }
 
         return true;
