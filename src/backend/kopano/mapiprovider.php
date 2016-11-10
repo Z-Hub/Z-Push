@@ -1659,6 +1659,9 @@ class MAPIProvider {
             //Also add dates to $recur
             $recur["duedate"] = $task->duedate;
             $recur["complete"] = (isset($task->complete) && $task->complete) ? 1 : 0;
+            if (isset($task->datecompleted)) {
+                $recur["datecompleted"] = $task->datecompleted;
+            }
             $recurrence->setRecurrence($recur);
         }
 
