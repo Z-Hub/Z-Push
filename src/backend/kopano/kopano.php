@@ -361,11 +361,15 @@ class BackendKopano implements IBackend, ISearchProvider {
                 (isset($row[PR_FOLDER_TYPE]) && $row[PR_FOLDER_TYPE] == FOLDER_SEARCH) ||
                 // for SYSTEM user $row[PR_PARENT_SOURCE_KEY] == $rootfolderprops[PR_SOURCE_KEY] is true, but we need those folders
                 (isset($row[PR_PARENT_SOURCE_KEY]) && $row[PR_PARENT_SOURCE_KEY] == $rootfolderprops[PR_SOURCE_KEY] && strtoupper($this->storeName) != "SYSTEM")) {
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendKopano->GetHierarchy(): ignoring folder '%s' as it's a hidden/search/root folder", (isset($row[PR_DISPLAY_NAME]) ? $row[PR_DISPLAY_NAME] : "unknown")));
                     continue;
             }
             $folder = $mapiprovider->GetFolder($row);
             if ($folder) {
                 $folders[] = $folder;
+            }
+            else {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendKopano->GetHierarchy(): ignoring folder '%s' as MAPIProvider->GetFolder() did not return a SyncFolder object", (isset($row[PR_DISPLAY_NAME]) ? $row[PR_DISPLAY_NAME] : "unknown")));
             }
         }
 
