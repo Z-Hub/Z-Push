@@ -500,7 +500,7 @@ class ZPushAdmin {
             foreach ($device->GetAdditionalFolders() as $folder) {
                 $syncfolderid = $device->GetFolderIdForBackendId($folder['folderid'], false, false, null);
                 $folder['syncfolderid'] = $syncfolderid;
-                $folder['origin'] = Utils::GetFolderOriginStringFromId($syncfolderid);
+                $folder['origin'] = ($syncfolderid !== $folder['folderid'])?Utils::GetFolderOriginStringFromId($syncfolderid):'unknown';
                 $new_list[$folder['folderid']] = $folder;
             }
             foreach (ZPush::GetAdditionalSyncFolders() as $fid => $so) {
@@ -513,7 +513,7 @@ class ZPushAdmin {
                                         'syncfolderid' => $syncfolderid,
                                         'name' => $so->displayname,
                                         'type' => $so->type,
-                                        'origin' => Utils::GetFolderOriginStringFromId($syncfolderid),
+                                        'origin' => ($syncfolderid !== $fid)?Utils::GetFolderOriginStringFromId($syncfolderid):'unknown',
                                         'flags' => 0,           // static folders have no flags
                                     );
                 }
@@ -658,6 +658,55 @@ class ZPushAdmin {
         }
         catch (StateNotFoundException $e) {
             ZLog::Write(LOGLEVEL_ERROR, sprintf("ZPushAdmin::AdditionalFolderRemove(): state for device '%s' of user '%s' can not be found or saved", $devid, $user));
+            return false;
+        }
+        return false;
+    }
+
+    /**
+     * Sets a list of additional folders of one store to the given device and user.
+     * If there are additional folders for this store, that are not in the list they will be removed.
+     *
+     * @param string    $user           user of the device.
+     * @param string    $devid          device id of where the folder should be set.
+     * @param string    $set_store      the store where this folder is located, e.g. "SYSTEM" (for public folder) or an username/email address.
+     * @param array     $set_folders    a list of folders to be set for this user. Other existing additional folders (that are not in this list)
+     *                                  will be removed. The list is an array containing folders, where each folder is an array with the following keys:
+     *                                  'folderid'  (string) the folder id of the additional folder.
+     *                                  'parentid'  (string) the folderid of the parent folder. If no parent folder is set or the parent folder is not defined, '0' (main folder) is used.
+     *                                  'name'      (string) the name of the additional folder (has to be unique for all folders on the device).
+     *                                  'type'      (string) AS foldertype of SYNC_FOLDER_TYPE_USER_*
+     *                                  'flags'     (int)    Additional flags, like DeviceManager::FLD_FLAGS_REPLYASUSER
+     *
+     * @access public
+     * @return boolean
+     */
+    static public function AdditionalFolderSetList($user, $devid, $set_store, $set_folders) {
+        // load device data
+        $device = new ASDevice($devid, ASDevice::UNDEFINED, $user, ASDevice::UNDEFINED);
+        try {
+            // set device data
+            $device->SetData(ZPush::GetStateMachine()->GetState($devid, IStateMachine::DEVICEDATA), false);
+            // get the last hierarchy counter
+            $spa = ZPush::GetStateMachine()->GetState($devid, IStateMachine::FOLDERDATA, $device->GetFolderUUID());
+            list($uuid, $counter) = StateManager::ParseStateKey($spa->GetSyncKey());
+            // instantiate hierarchycache
+            $device->SetHierarchyCache(ZPush::GetStateMachine()->GetState($devid, IStateMachine::HIERARCHY, $device->GetFolderUUID(), $counter, false));
+
+            if ($device->IsNewDevice()) {
+                ZLog::Write(LOGLEVEL_ERROR, sprintf("ZPushAdmin::AdditionalFolderSetList(): data of user '%s' not synchronized on device '%s'. Aborting.", $user, $devid));
+                return false;
+            }
+
+            $status = $device->SetAdditionalFolderList($set_store, $set_folders);
+            if ($status && $device->GetData() !== false) {
+                ZPush::GetStateMachine()->SetState($device->GetData(), $devid, IStateMachine::DEVICEDATA);
+            }
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::AdditionalFolderSetList(): added '%s' folders of '%s' to additional folders list of device '%s' of user '%s' with status: %s", count($set_folders), $set_store, $devid, $user, Utils::PrintAsString($status)));
+            return $status;
+        }
+        catch (StateNotFoundException $e) {
+            ZLog::Write(LOGLEVEL_ERROR, sprintf("ZPushAdmin::AdditionalFolderSetList(): state for device '%s' of user '%s' can not be found or saved", $devid, $user));
             return false;
         }
         return false;
