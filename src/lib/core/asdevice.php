@@ -855,6 +855,7 @@ class ASDevice extends StateObject {
      * @param string    $name       the name of the additional folder (has to be unique for all folders on the device).
      * @param string    $type       AS foldertype of SYNC_FOLDER_TYPE_USER_*
      * @param int       $flags      Additional flags, like DeviceManager::FLD_FLAGS_REPLYASUSER
+     * //TODO document $parentid and $checkDups (or remove this)
      *
      * @access public
      * @return boolean
@@ -995,37 +996,37 @@ class ASDevice extends StateObject {
      * Sets a list of additional folders of one store to the device.
      * If there are additional folders for the set_store, that are not in the list they will be removed.
      *
-     * @param string    $set_store      the store where this folder is located, e.g. "SYSTEM" (for public folder) or an username/email address.
-     * @param array     $set_folders    a list of folders to be set for this user. Other existing additional folders (that are not in this list)
-     *                                  will be removed. The list is an array containing folders, where each folder is an array with the following keys:
-     *                                  'folderid'  (string) the folder id of the additional folder.
-     *                                  'parentid'  (string) the folderid of the parent folder. If no parent folder is set or the parent folder is not defined, '0' (main folder) is used.
-     *                                  'name'      (string) the name of the additional folder (has to be unique for all folders on the device).
-     *                                  'type'      (string) AS foldertype of SYNC_FOLDER_TYPE_USER_*
-     *                                  'flags'     (int)    Additional flags, like DeviceManager::FLD_FLAGS_REPLYASUSER
+     * @param string    $store      the store where this folder is located, e.g. "SYSTEM" (for public folder) or an username/email address.
+     * @param array     $folders    a list of folders to be set for this user. Other existing additional folders (that are not in this list)
+     *                              will be removed. The list is an array containing folders, where each folder is an array with the following keys:
+     *                              'folderid'  (string) the folder id of the additional folder.
+     *                              'parentid'  (string) the folderid of the parent folder. If no parent folder is set or the parent folder is not defined, '0' (main folder) is used.
+     *                              'name'      (string) the name of the additional folder (has to be unique for all folders on the device).
+     *                              'type'      (string) AS foldertype of SYNC_FOLDER_TYPE_USER_*
+     *                              'flags'     (int)    Additional flags, like DeviceManager::FLD_FLAGS_REPLYASUSER
      *
      * @access public
      * @return boolean
      */
-    public function SetAdditionalFolderList($set_store, $set_folders) {
+    public function SetAdditionalFolderList($store, $folders) {
         // remove all folders already shared for this store
         $newAF = array();
         $noDupsCheck = array();
         foreach($this->additionalfolders as $keepFolder) {
-            if ($keepFolder['store'] !== $set_store) {
+            if ($keepFolder['store'] !== $store) {
                 $newAF[] = $keepFolder;
             }
             else {
                 $noDupsCheck[$keepFolder['folderid']] = true;
             }
         }
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ASDevice->SetAdditionalFolderList(): cleared additional folder lists of store '%s', total %d folders, kept %d and removed %d", $set_store, count($this->additionalfolders), count($newAF), count(array_keys($noDupsCheck))));
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ASDevice->SetAdditionalFolderList(): cleared additional folder lists of store '%s', total %d folders, kept %d and removed %d", $store, count($this->additionalfolders), count($newAF), count($noDupsCheck)));
         // set remaining additional folders
         $this->additionalfolders = $newAF;
 
         // low level add
-        foreach($set_folders as $f) {
-            $status = $this->AddAdditionalFolder($set_store, $f['folderid'], $f['name'], $f['type'], $f['flags'], $f['parentid'], !isset($noDupsCheck[$f['folderid']]));
+        foreach($folders as $f) {
+            $status = $this->AddAdditionalFolder($store, $f['folderid'], $f['name'], $f['type'], $f['flags'], $f['parentid'], !isset($noDupsCheck[$f['folderid']]));
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("ASDevice->SetAdditionalFolderList(): set folder '%s' in additional folders list with status: %s", $f['name'], Utils::PrintAsString($status)));
             // break if a folder can not be added
             if (!$status) {

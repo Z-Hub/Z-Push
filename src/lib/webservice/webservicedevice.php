@@ -295,7 +295,7 @@ class WebserviceDevice {
             $folder['folderid'] = preg_replace("/[^A-Za-z0-9]/", "", $folder['folderid']);
             $folder['parentid'] = preg_replace("/[^A-Za-z0-9]/", "", $folder['parentid']);
             $folder['type'] = preg_replace("/[^0-9]/", "", $folder['type']);
-            $folder['flags'] = preg_replace("/type/", "", $folder['flags']);
+            $folder['flags'] = preg_replace("/[^0-9]/", "", $folder['flags']);
         });
 
         $status = ZPushAdmin::AdditionalFolderSetList($user, $deviceId, $set_store, $set_folders);
