@@ -290,7 +290,7 @@ class WebserviceDevice {
             if (!isset($folder['folderid']))    $folder['folderid'] = "";
             if (!isset($folder['parentid']))    $folder['parentid'] = "0";
             if (!isset($folder['type']))        $folder['type'] = SYNC_FOLDER_TYPE_USER_MAIL;
-            if (!isset($folder['folderid']))    $folder['folderid'] = "";
+            if (!isset($folder['flags']))       $folder['flags'] = 0;
 
             $folder['folderid'] = preg_replace("/[^A-Za-z0-9]/", "", $folder['folderid']);
             $folder['parentid'] = preg_replace("/[^A-Za-z0-9]/", "", $folder['parentid']);
