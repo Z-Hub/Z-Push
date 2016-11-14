@@ -500,7 +500,7 @@ class ZPushAdmin {
             foreach ($device->GetAdditionalFolders() as $folder) {
                 $syncfolderid = $device->GetFolderIdForBackendId($folder['folderid'], false, false, null);
                 $folder['syncfolderid'] = $syncfolderid;
-                $folder['origin'] = Utils::GetFolderOriginStringFromId($syncfolderid);
+                $folder['origin'] = ($syncfolderid !== $folder['folderid'])?Utils::GetFolderOriginStringFromId($syncfolderid):'unknown';
                 $new_list[$folder['folderid']] = $folder;
             }
             foreach (ZPush::GetAdditionalSyncFolders() as $fid => $so) {
@@ -513,7 +513,7 @@ class ZPushAdmin {
                                         'syncfolderid' => $syncfolderid,
                                         'name' => $so->displayname,
                                         'type' => $so->type,
-                                        'origin' => Utils::GetFolderOriginStringFromId($syncfolderid),
+                                        'origin' => ($syncfolderid !== $fid)?Utils::GetFolderOriginStringFromId($syncfolderid):'unknown',
                                         'flags' => 0,           // static folders have no flags
                                     );
                 }
