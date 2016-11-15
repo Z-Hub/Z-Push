@@ -1041,7 +1041,7 @@ class ASDevice extends StateObject {
      * Generates the AS folder hash from the backend folder id, type and name.
      *
      * @param string    $backendid              Backend folder id
-     * @param string    $folderOrigin             Folder type is one of   'U' (user)
+     * @param string    $folderOrigin           Folder type is one of   'U' (user)
      *                                                                  'C' (configured)
      *                                                                  'S' (shared)
      *                                                                  'G' (global address book)
@@ -1057,7 +1057,7 @@ class ASDevice extends StateObject {
         $cnt = 0;
         // Collision avoiding. Append an increasing number to the string to hash
         // until there aren't any collisions. Probably a smaller number is also sufficient.
-        while (isset($this->contentData[$folderId]) && $cnt < 10000) {
+        while ((isset($this->contentData[$folderId]) || in_array($folderId, $this->backend2folderidCache, true)) && $cnt < 10000) {
             $folderId = substr($folderOrigin . dechex(crc32($backendid . $folderName . $cnt++)), 0, 6);
             ZLog::Write(LOGLEVEL_WARN, sprintf("ASDevice->generateFolderHash(): collision avoiding nr %05d. Generated hash: '%s'", $cnt, $folderId));
         }
