@@ -57,7 +57,7 @@ class SyncDeviceInformation extends SyncObject {
     public $enableoutboundsms; //14.0
     public $Status;
 
-    public function SyncDeviceInformation() {
+    public function __construct() {
         $mapping = array (
             SYNC_SETTINGS_MODEL                         => array (  self::STREAMER_VAR      => "model"),
             SYNC_SETTINGS_IMEI                          => array (  self::STREAMER_VAR      => "imei"),
@@ -79,6 +79,6 @@ class SyncDeviceInformation extends SyncObject {
             $mapping[SYNC_SETTINGS_ENABLEOUTBOUNDSMS]   = array (   self::STREAMER_VAR       => "enableoutboundsms");
         }
 
-        parent::SyncObject($mapping);
+        parent::__construct($mapping);
     }
 }

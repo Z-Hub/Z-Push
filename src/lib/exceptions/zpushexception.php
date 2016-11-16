@@ -48,7 +48,7 @@ class ZPushException extends Exception {
     protected $httpHeaders = array();
     protected $showLegal = true;
 
-    public function ZPushException($message = "", $code = 0, $previous = NULL, $logLevel = false) {
+    public function __construct($message = "", $code = 0, $previous = NULL, $logLevel = false) {
         if (! $message)
             $message = $this->httpReturnMessage;
 

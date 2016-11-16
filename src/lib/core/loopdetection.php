@@ -62,7 +62,7 @@ class LoopDetection extends InterProcessData {
      *
      * @access public
      */
-    public function LoopDetection() {
+    public function __construct() {
         // initialize super parameters
         $this->allocate = 1024000; // 1 MB
         $this->type = 1337;
@@ -162,6 +162,7 @@ class LoopDetection extends InterProcessData {
      * @return boolean
      */
     public function ProcessLoopDetectionAddStatus($folderid, $status) {
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("LoopDetection->ProcessLoopDetectionAddStatus: '%s' with status %d", $folderid?$folderid:'hierarchy', $status));
         // generate entry if not already there
         self::GetProcessEntry();
 
@@ -193,6 +194,73 @@ class LoopDetection extends InterProcessData {
     }
 
     /**
+     * Indicates if a simple Hierarchy sync should be done after Ping.
+     *
+     * When trying to sync a non existing folder, Sync will return Status 12.
+     * This should trigger a hierarchy sync by the client, but this is not always done.
+     * Clients continue trying to Ping, which fails as well and triggers a Sync again.
+     * This goes on forever, like here: https://jira.z-hub.io/browse/ZP-1077
+     *
+     * Ping could indicate to perform a FolderSync as well after a few Sync/Ping cycles.
+     *
+     * @access public
+     * @return boolean
+     *
+     */
+    public function ProcessLoopDetectionIsHierarchySyncAdvised() {
+        $me = self::GetProcessEntry();
+        if ($me['cc'] !== ZPush::COMMAND_PING) {
+            return false;
+        }
+
+        $loopingFolders = array();
+
+        $lookback = self::$start - 600; // look at the last 5 min
+        foreach ($this->getProcessStack() as $se) {
+            if ($se['time'] > $lookback && $se['time'] < (self::$start-1)) {
+                // look for sync command
+                if (isset($se['stat']) && ($se['cc'] == ZPush::COMMAND_SYNC || $se['cc'] == ZPush::COMMAND_PING)) {
+                    foreach($se['stat'] as $key => $value) {
+                        // we only care about hierarchy errors of this folder
+                        if ($se['cc'] == ZPush::COMMAND_SYNC) {
+                            if ($value == SYNC_STATUS_FOLDERHIERARCHYCHANGED) {
+                                ZLog::Write(LOGLEVEL_DEBUG, sprintf("LoopDetection->ProcessLoopDetectionIsHierarchySyncAdvised(): seen Sync command with Exception or folderid '%s' and code '%s'", $key, $value ));
+                            }
+                        }
+                        if (!isset($loopingFolders[$key])) {
+                            $loopingFolders[$key] = array(ZPush::COMMAND_SYNC => array(), ZPush::COMMAND_PING => array());
+                        }
+                        if (!isset($loopingFolders[$key][$se['cc']][$value])) {
+                            $loopingFolders[$key][$se['cc']][$value] = 0;
+                        }
+                        $loopingFolders[$key][$se['cc']][$value]++;
+                    }
+                }
+            }
+        }
+
+        $filtered = array();
+        foreach ($loopingFolders as $fid => $data) {
+            // Ping is constantly generating changes for this folder
+            if (isset($data[ZPush::COMMAND_PING][SYNC_PINGSTATUS_CHANGES]) && $data[ZPush::COMMAND_PING][SYNC_PINGSTATUS_CHANGES] >= 3) {
+                // but the Sync request is not treating it (not being requested)
+                if (count($data[ZPush::COMMAND_SYNC]) == 0) {
+                    ZLog::Write(LOGLEVEL_INFO, sprintf("LoopDetection->ProcessLoopDetectionIsHierarchySyncAdvised(): Ping loop of folderid '%s' detected that is not being synchronized.", $fid));
+                    return true;
+                }
+                // Sync is executed, but a foldersync should be executed (hierarchy errors)
+                if (isset($data[ZPush::COMMAND_SYNC][SYNC_STATUS_FOLDERHIERARCHYCHANGED]) &&
+                        $data[ZPush::COMMAND_SYNC][SYNC_STATUS_FOLDERHIERARCHYCHANGED] > 3 ) {
+                    ZLog::Write(LOGLEVEL_INFO, sprintf("LoopDetection->ProcessLoopDetectionIsHierarchySyncAdvised(): Sync(with error)/Ping loop of folderid '%s' detected.", $fid));
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Indicates if a full Hierarchy Resync is necessary
      *
      * In some occasions the mobile tries to sync a folder with an invalid/not-existing ID.
@@ -220,6 +288,11 @@ class LoopDetection extends InterProcessData {
                 // look for sync command
                 if (isset($se['stat']) && ($se['cc'] == ZPush::COMMAND_SYNC || $se['cc'] == ZPush::COMMAND_PING)) {
                     foreach($se['stat'] as $key => $value) {
+                        // don't count PING with changes on a folder or sync with success
+                        if (($se['cc'] == ZPush::COMMAND_PING && $value == SYNC_PINGSTATUS_CHANGES) ||
+                            ($se['cc'] == ZPush::COMMAND_SYNC && $value == SYNC_STATUS_SUCCESS) ) {
+                            continue;
+                        }
                         if (!isset($seenFailed[$key]))
                             $seenFailed[$key] = 0;
                         $seenFailed[$key]++;

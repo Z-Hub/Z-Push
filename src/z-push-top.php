@@ -127,7 +127,7 @@ class ZPushTop {
      *
      * @access public
      */
-    public function ZPushTop() {
+    public function __construct() {
         $this->starttime = time();
         $this->currenttime = time();
         $this->action = "";

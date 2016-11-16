@@ -53,7 +53,7 @@ class SyncOOFMessage extends SyncObject {
     public $replymessage;
     public $bodytype;
 
-    public function SyncOOFMessage() {
+    public function __construct() {
         $mapping = array (
             //only one of the following 3 apply types will be available
             SYNC_SETTINGS_APPLIESTOINTERVAL             => array (  self::STREAMER_VAR      => "appliesToInternal",
@@ -74,7 +74,7 @@ class SyncOOFMessage extends SyncObject {
 
         );
 
-        parent::SyncObject($mapping);
+        parent::__construct($mapping);
     }
 
 }

@@ -131,7 +131,7 @@ class Meetingrequest {
      * - Sending meeting requests to resources, resource availability checking and resource freebusy updates
      */
 
-    function Meetingrequest($store, $message, $session = false, $enableDirectBooking = true)
+    function __construct($store, $message, $session = false, $enableDirectBooking = true)
     {
         $this->store = $store;
         $this->message = $message;

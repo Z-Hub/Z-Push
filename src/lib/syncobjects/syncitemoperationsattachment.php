@@ -48,7 +48,7 @@ class SyncItemOperationsAttachment extends SyncObject {
     public $contenttype;
     public $data;
 
-    function SyncItemOperationsAttachment() {
+    function __construct() {
         $mapping = array(
             SYNC_AIRSYNCBASE_CONTENTTYPE                        => array (  self::STREAMER_VAR      => "contenttype"),
             SYNC_ITEMOPERATIONS_DATA                            => array (  self::STREAMER_VAR      => "data",
@@ -56,6 +56,6 @@ class SyncItemOperationsAttachment extends SyncObject {
                                                                             self::STREAMER_PROP     => self::STREAMER_TYPE_MULTIPART),
         );
 
-        parent::SyncObject($mapping);
+        parent::__construct($mapping);
     }
 }

@@ -52,7 +52,7 @@ class SyncSendMailSource extends SyncObject {
     public $longid;
     public $instanceid;
 
-    function SyncSendMailSource() {
+    function __construct() {
         $mapping = array (
                     SYNC_COMPOSEMAIL_FOLDERID                             => array (  self::STREAMER_VAR      => "folderid"),
                     SYNC_COMPOSEMAIL_ITEMID                               => array (  self::STREAMER_VAR      => "itemid"),
@@ -60,7 +60,7 @@ class SyncSendMailSource extends SyncObject {
                     SYNC_COMPOSEMAIL_INSTANCEID                           => array (  self::STREAMER_VAR      => "instanceid"),
         );
 
-        parent::SyncObject($mapping);
+        parent::__construct($mapping);
     }
 
 }
