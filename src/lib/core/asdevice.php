@@ -880,7 +880,7 @@ class ASDevice extends StateObject {
             return false;
         }
 
-        // check if a folder with that Name is already in the list and that it's parent exists
+        // check if a folder with that Name is already in the list and that its parent exists
         $parentFound = false;
         foreach ($this->additionalfolders as $k => $folder) {
             // TODO: this parentid check should go into fixstates!
@@ -895,7 +895,7 @@ class ASDevice extends StateObject {
             }
         }
         if ($parentid != '0' && !$parentFound) {
-            ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->AddAdditionalFolder(): folder can not be added because the parent folder '%s' can not be found: '%s'", $parentid, $folderid));
+            ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->AddAdditionalFolder(): folder '%s' ('%s') can not be added because the parent folder '%s' can not be found'", $name, $folderid, $parentid));
             return false;
         }
 
@@ -1068,7 +1068,7 @@ class ASDevice extends StateObject {
         if (!empty($toOrder)) {
             $s = "";
             foreach($toOrder as $f) {
-                $s .= sprintf("'%s'(%s) ", $f['name'], $f['folderid']);
+                $s .= sprintf("'%s'('%s') ", $f['name'], $f['folderid']);
             }
             ZLog::Write(LOGLEVEL_ERROR, "ASDevice->SetAdditionalFolderList(): cannot proceed as these folders have invalid parentids (not found): ". $s);
             return false;
