@@ -1032,7 +1032,7 @@ class ASDevice extends StateObject {
         $noDupsCheck = array();
         foreach($this->additionalfolders as $keepFolder) {
             if ($keepFolder['store'] !== $store) {
-                $newAF[] = $keepFolder;
+                $newAF[$keepFolder['folderid']] = $keepFolder;
             }
             else {
                 $noDupsCheck[$keepFolder['folderid']] = true;
