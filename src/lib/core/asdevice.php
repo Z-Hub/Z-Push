@@ -880,7 +880,7 @@ class ASDevice extends StateObject {
             return false;
         }
 
-        // check if a folder with that Name is already in the list and that it's parent exists
+        // check if a folder with that Name is already in the list and that its parent exists
         $parentFound = false;
         foreach ($this->additionalfolders as $k => $folder) {
             // TODO: this parentid check should go into fixstates!
@@ -895,7 +895,7 @@ class ASDevice extends StateObject {
             }
         }
         if ($parentid != '0' && !$parentFound) {
-            ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->AddAdditionalFolder(): folder can not be added because the parent folder '%s' can not be found: '%s'", $parentid, $folderid));
+            ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->AddAdditionalFolder(): folder '%s' ('%s') can not be added because the parent folder '%s' can not be found'", $name, $folderid, $parentid));
             return false;
         }
 
@@ -1032,7 +1032,7 @@ class ASDevice extends StateObject {
         $noDupsCheck = array();
         foreach($this->additionalfolders as $keepFolder) {
             if ($keepFolder['store'] !== $store) {
-                $newAF[] = $keepFolder;
+                $newAF[$keepFolder['folderid']] = $keepFolder;
             }
             else {
                 $noDupsCheck[$keepFolder['folderid']] = true;
@@ -1068,7 +1068,7 @@ class ASDevice extends StateObject {
         if (!empty($toOrder)) {
             $s = "";
             foreach($toOrder as $f) {
-                $s .= sprintf("'%s'(%s) ", $f['name'], $f['folderid']);
+                $s .= sprintf("'%s'('%s') ", $f['name'], $f['folderid']);
             }
             ZLog::Write(LOGLEVEL_ERROR, "ASDevice->SetAdditionalFolderList(): cannot proceed as these folders have invalid parentids (not found): ". $s);
             return false;
@@ -1093,17 +1093,21 @@ class ASDevice extends StateObject {
      * @param string $parentid          the parentid to start with, if not set '0' (main folders) is used.
      */
     private function orderAdditionalFoldersHierarchically(&$toOrderFolders, &$orderedFolders, $parentid = '0') {
+        $stepInto = array();
         // loop through the remaining folders that need to be ordered
         foreach($toOrderFolders as $folder) {
             // move folders with the matching parentid to the ordered array
             if ($folder['parentid'] == $parentid) {
+                echo "found.. \n";
                 $fid = $folder['folderid'];
                 $orderedFolders[$fid] = $folder;
                 unset($toOrderFolders[$fid]);
-                reset($toOrderFolders);
-                // call recursively to move/order the leaves as well
-                $this->orderAdditionalFoldersHierarchically($toOrderFolders, $orderedFolders, $fid);
+                $stepInto[] = $fid;
             }
+        }
+        // call recursively to move/order the leaves as well
+        foreach($stepInto as $fid) {
+            $this->orderAdditionalFoldersHierarchically($toOrderFolders, $orderedFolders, $fid);
         }
     }
 
