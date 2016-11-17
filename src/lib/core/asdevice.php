@@ -1093,17 +1093,21 @@ class ASDevice extends StateObject {
      * @param string $parentid          the parentid to start with, if not set '0' (main folders) is used.
      */
     private function orderAdditionalFoldersHierarchically(&$toOrderFolders, &$orderedFolders, $parentid = '0') {
+        $stepInto = array();
         // loop through the remaining folders that need to be ordered
         foreach($toOrderFolders as $folder) {
             // move folders with the matching parentid to the ordered array
             if ($folder['parentid'] == $parentid) {
+                echo "found.. \n";
                 $fid = $folder['folderid'];
                 $orderedFolders[$fid] = $folder;
                 unset($toOrderFolders[$fid]);
-                reset($toOrderFolders);
-                // call recursively to move/order the leaves as well
-                $this->orderAdditionalFoldersHierarchically($toOrderFolders, $orderedFolders, $fid);
+                $stepInto[] = $fid;
             }
+        }
+        // call recursively to move/order the leaves as well
+        foreach($stepInto as $fid) {
+            $this->orderAdditionalFoldersHierarchically($toOrderFolders, $orderedFolders, $fid);
         }
     }
 
