@@ -272,6 +272,13 @@
     define('SYNC_TIMEOUT_MEDIUM_DEVICETYPES', "SAMSUNGGTI");
     define('SYNC_TIMEOUT_LONG_DEVICETYPES',   "iPod, iPad, iPhone, WP, WindowsOutlook");
 
+    // The delay in second the device should wait whenever the service is unavailable
+    // A service is unavailable whenever z-push sends a 503 http code. This can be accomplished
+    // by throwing the ServiceUnavailableException.
+    // It is up to the device to respect or not this directive so even if this option is set,
+    // the device might not wait the time.
+    define('RETRY_AFTER_DELAY', 300);
+
 /**********************************************************************************
  *  Backend settings
  */

@@ -344,6 +344,13 @@ class ZPush {
             throw new FatalMisconfigurationException("The PING_HIGHER_BOUND_LIFETIME value must be greater or equal to PING_LOWER_BOUND_LIFETIME.");
         }
 
+        if (!defined('RETRY_AFTER_DELAY')) {
+            define('RETRY_AFTER_DELAY', 300);
+        }
+        elseif (RETRY_AFTER_DELAY !== false && !is_int(RETRY_AFTER_DELAY) || RETRY_AFTER_DELAY < 0) {
+            throw new FatalMisconfigurationException("The RETRY_AFTER_DELAY value must be 'false' or a number greater than 0.");
+        }
+
         // Check KOE flags
         if (!defined('KOE_CAPABILITY_GAB')) {
             define('KOE_CAPABILITY_GAB', false);
