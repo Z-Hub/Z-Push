@@ -589,8 +589,10 @@ class MAPIProvider {
 
             // Get the GOID
             if(isset($props[$meetingrequestproperties["goidtag"]])) {
+                $req = new Meetingrequest($this->store, $mapimessage, $this->session);
+                $items = $req->findCalendarItems($props[$meetingrequestproperties["goidtag"]]);
                 // GlobalObjId support was removed in AS 16.0
-                if (Request::IsGlobalObjIdHexClient()) {
+                if (Request::IsGlobalObjIdHexClient() && !empty($items)) {
                     $message->meetingrequest->globalobjid = strtoupper(bin2hex($props[$meetingrequestproperties["goidtag"]]));
                 }
                 else {
@@ -689,7 +691,9 @@ class MAPIProvider {
                 // check if we are not sending the MR so we can process it - ZP-581
                 $cuser = ZPush::GetBackend()->GetUserDetails(ZPush::GetBackend()->GetCurrentUsername());
                 if(isset($cuser["emailaddress"]) && $cuser["emailaddress"] != $fromaddr) {
-                    $req = new Meetingrequest($this->store, $mapimessage, $this->session);
+                    if (!isset($req)) {
+                        $req = new Meetingrequest($this->store, $mapimessage, $this->session);
+                    }
                     if ($req->isMeetingRequestResponse()) {
                         $req->processMeetingRequestResponse();
                     }
