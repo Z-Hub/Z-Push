@@ -50,6 +50,7 @@ include_once('mapi/mapicode.php');
 include_once('mapi/mapiguid.php');
 
 define('PR_EMS_AB_THUMBNAIL_PHOTO', mapi_prop_tag(PT_BINARY, 0x8C9E));
+define('PR_EC_AB_HIDDEN ', mapi_prop_tag(PT_BOOLEAN, 0x67A7));
 
 class Kopano extends SyncWorker {
     const NAME = "Z-Push Kopano GAB Sync";
@@ -284,9 +285,15 @@ class Kopano extends SyncWorker {
                                                             PR_INITIALS,
                                                             PR_LANGUAGE,
                                                             PR_EMS_AB_THUMBNAIL_PHOTO,
+                                                            PR_EC_AB_HIDDEN,
                                                             PR_DISPLAY_TYPE_EX
                                                     ));
         foreach ($gabentries as $entry) {
+            // ignore hidden entries
+            if ($entry[PR_EC_AB_HIDDEN]) {
+                continue;
+            }
+
             $a = new GABEntry();
             $a->type = GABEntry::CONTACT;
             $a->memberOf = array();
