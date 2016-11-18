@@ -736,7 +736,6 @@ class SyncCollections implements Iterator {
       */
      private function countHierarchyChange($exportChanges = false) {
          $folderid = false;
-         $spa = $this->GetCollection($folderid);
 
          // Check with device manager if the hierarchy should be reloaded.
          // New additional folders are loaded here.

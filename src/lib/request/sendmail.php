@@ -52,7 +52,6 @@ class SendMail extends RequestProcessor {
      * @return boolean
      */
     public function Handle($commandCode) {
-        $status = SYNC_COMMONSTATUS_SUCCESS;
         $sm = new SyncSendMail();
 
         $reply = $forward = $parent = $sendmail = $smartreply = $smartforward = false;
@@ -141,6 +140,7 @@ class SendMail extends RequestProcessor {
 
         self::$topCollector->AnnounceInformation(sprintf("SendMail(): Sending email with %d bytes", strlen($sm->mime)), true);
 
+        $statusMessage = '';
         try {
             $status = self::$backend->SendMail($sm);
         }

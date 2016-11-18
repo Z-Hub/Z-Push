@@ -133,14 +133,16 @@ class ZPushAdmin {
 
                     if ($fstatus !== false && isset($fstatus[ASDevice::FOLDERSYNCSTATUS])) {
                         $spa = $sc->GetCollection($folderid);
-                        $total = $spa->GetFolderSyncTotal();
-                        $todo = $spa->GetFolderSyncRemaining();
-                        $fstatus['status'] = ($fstatus[ASDevice::FOLDERSYNCSTATUS] == 1)?'Initialized':'Synchronizing';
-                        $fstatus['total'] = $total;
-                        $fstatus['done'] = $total - $todo;
-                        $fstatus['todo'] = $todo;
+                        if ($spa) {
+                            $total = $spa->GetFolderSyncTotal();
+                            $todo = $spa->GetFolderSyncRemaining();
+                            $fstatus['status'] = ($fstatus[ASDevice::FOLDERSYNCSTATUS] == 1) ? 'Initialized' : 'Synchronizing';
+                            $fstatus['total'] = $total;
+                            $fstatus['done'] = $total - $todo;
+                            $fstatus['todo'] = $todo;
 
-                        $device->SetFolderSyncStatus($folderid, $fstatus);
+                            $device->SetFolderSyncStatus($folderid, $fstatus);
+                        }
                     }
                 }
             }
