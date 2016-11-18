@@ -481,8 +481,12 @@ class DeviceManager {
                 $df['flags'] = 0;
                 ZLog::Write(LOGLEVEL_WARN, sprintf("DeviceManager->GetAdditionalUserSyncFolders(): Additional folder '%s' has no flags. Please run 'z-push-admin -a fixstates' to fix this issue.", $df['name']));
             }
+            if (!isset($df['parentid'])) {
+                $df['parentid'] = '0';
+                ZLog::Write(LOGLEVEL_WARN, sprintf("DeviceManager->GetAdditionalUserSyncFolders(): Additional folder '%s' has no parentid. // TODO FIX: Please run 'z-push-admin -a fixstates' to fix this issue.", $df['name']));
+            }
 
-            $folder = $this->getAdditionalSyncFolderObject($df['store'], $df['folderid'], $df['name'], $df['type'], $df['flags'], DeviceManager::FLD_ORIGIN_SHARED);
+            $folder = $this->getAdditionalSyncFolderObject($df['store'], $df['folderid'], $df['parentid'], $df['name'], $df['type'], $df['flags'], DeviceManager::FLD_ORIGIN_SHARED);
             $folders[$folder->BackendId] = $folder;
         }
 
@@ -490,7 +494,7 @@ class DeviceManager {
         if (KOE_CAPABILITY_GAB && $this->IsKoe() && KOE_GAB_STORE != "" && KOE_GAB_NAME != "") {
             // if KOE_GAB_FOLDERID is set, use it
             if (KOE_GAB_FOLDERID != "") {
-                $folder = $this->getAdditionalSyncFolderObject(KOE_GAB_STORE, KOE_GAB_FOLDERID, KOE_GAB_NAME, SYNC_FOLDER_TYPE_USER_APPOINTMENT, 0, DeviceManager::FLD_ORIGIN_GAB);
+                $folder = $this->getAdditionalSyncFolderObject(KOE_GAB_STORE, KOE_GAB_FOLDERID, '0', KOE_GAB_NAME, SYNC_FOLDER_TYPE_USER_APPOINTMENT, 0, DeviceManager::FLD_ORIGIN_GAB);
                 $folders[$folder->BackendId] = $folder;
             }
             else {
@@ -507,7 +511,7 @@ class DeviceManager {
                     }
 
                     if ($backendGabId) {
-                        $folders[$backendGabId] = $this->getAdditionalSyncFolderObject(KOE_GAB_STORE, $backendGabId, KOE_GAB_NAME, SYNC_FOLDER_TYPE_USER_APPOINTMENT, 0, DeviceManager::FLD_ORIGIN_GAB);
+                        $folders[$backendGabId] = $this->getAdditionalSyncFolderObject(KOE_GAB_STORE, $backendGabId, '0', KOE_GAB_NAME, SYNC_FOLDER_TYPE_USER_APPOINTMENT, 0, DeviceManager::FLD_ORIGIN_GAB);
                     }
                 }
             }
@@ -1173,11 +1177,11 @@ class DeviceManager {
      * @access private
      * @returns SyncFolder
      */
-    private function getAdditionalSyncFolderObject($store, $folderid, $name, $type, $flags, $folderOrigin) {
+    private function getAdditionalSyncFolderObject($store, $folderid, $parentid, $name, $type, $flags, $folderOrigin) {
         $folder = new SyncFolder();
         $folder->BackendId = $folderid;
         $folder->serverid = $this->GetFolderIdForBackendId($folder->BackendId, true, $folderOrigin, $name);
-        $folder->parentid = 0;                  // only top folders are supported
+        $folder->parentid = $this->GetFolderIdForBackendId($parentid);
         $folder->displayname = $name;
         $folder->type = $type;
         // save store as custom property which is not streamed directly to the device

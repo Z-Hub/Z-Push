@@ -247,4 +247,47 @@ class WebserviceDevice {
 
         return $status;
     }
+
+    /**
+     * Sets a list of additional folders of one store to the given device and the Request::GetGETUser().
+     * If there are additional folders for this store, that are not in the list they will be removed.
+     *
+     * @param string    $deviceId       device id the folder should be added to.
+     * @param string    $set_store      the store where this folder is located, e.g. "SYSTEM" (for public folder) or an username/email address.
+     * @param array     $set_folders    a list of folders to be set for this user. Other existing additional folders (that are not in this list)
+     *                                  will be removed. The list is an array containing folders, where each folder is an array with the following keys:
+     *                                  'folderid'  (string) the folder id of the additional folder.
+     *                                  'parentid'  (string) the folderid of the parent folder. If no parent folder is set or the parent folder is not defined, '0' (main folder) is used.
+     *                                  'name'      (string) the name of the additional folder (has to be unique for all folders on the device).
+     *                                  'type'      (string) AS foldertype of SYNC_FOLDER_TYPE_USER_*
+     *                                  'flags'     (int)    Additional flags, like DeviceManager::FLD_FLAGS_REPLYASUSER
+     *
+     * @access public
+     * @return boolean
+     */
+    public function AdditionalFolderSetList($deviceId, $set_store, $set_folders) {
+        $user = Request::GetGETUser();
+        $deviceId = preg_replace("/[^A-Za-z0-9]/", "", $deviceId);
+        array_walk($set_folders, function(&$folder) {
+            if (!isset($folder['folderid']))    $folder['folderid'] = "";
+            if (!isset($folder['parentid']))    $folder['parentid'] = "0";
+            if (!isset($folder['type']))        $folder['type'] = SYNC_FOLDER_TYPE_USER_MAIL;
+            if (!isset($folder['flags']))       $folder['flags'] = 0;
+
+            $folder['folderid'] = preg_replace("/[^A-Za-z0-9]/", "", $folder['folderid']);
+            $folder['parentid'] = preg_replace("/[^A-Za-z0-9]/", "", $folder['parentid']);
+            $folder['type'] = preg_replace("/[^0-9]/", "", $folder['type']);
+            $folder['flags'] = preg_replace("/[^0-9]/", "", $folder['flags']);
+        });
+
+        $status = ZPushAdmin::AdditionalFolderSetList($user, $deviceId, $set_store, $set_folders);
+        if (!$status) {
+            ZPush::GetTopCollector()->AnnounceInformation(ZLog::GetLastMessage(LOGLEVEL_ERROR), true);
+            throw new SoapFault("ERROR", ZLog::GetLastMessage(LOGLEVEL_ERROR));
+        }
+        ZLog::Write(LOGLEVEL_INFO, sprintf("WebserviceDevice::AdditionalFolderSetList(): set '%d' folders for device '%s' of user '%s': %s", count($set_folders), $deviceId, $user, Utils::PrintAsString($status)));
+        ZPush::GetTopCollector()->AnnounceInformation("Set additional folders", true);
+
+        return $status;
+    }
 }

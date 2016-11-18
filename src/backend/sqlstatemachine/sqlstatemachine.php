@@ -66,7 +66,7 @@ class SqlStateMachine implements IStateMachine {
             throw new FatalMisconfigurationException("SqlStateMachine(): missing configuration for the state sql. Check STATE_SQL_* values in the configuration.");
         }
 
-        if (!preg_match('/[0-9a-zA-Z$_]+/', STATE_SQL_DATABASE)) {
+        if (!preg_match('/^[0-9a-zA-Z$_]+$/', STATE_SQL_DATABASE)) {
             throw new FatalMisconfigurationException(sprintf("SqlStateMachine(): invalid database name '%s'. The name may contain ASCII 7bit letters, numbers and the '$' and '_' signs. Please change your configuration.", STATE_SQL_DATABASE));
         }
 

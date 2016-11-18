@@ -129,7 +129,7 @@ abstract class SyncObject extends Streamer {
             }
             else {
                 if (isset($this->$val) && isset($odo->$val)) {
-                    if ($this->$val != $odo->$val){
+                    if ($this->$val !== $odo->$val){
                         ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncObject->equals() false on field '%s': '%s' != '%s'", $val, Utils::PrintAsString($this->$val), Utils::PrintAsString($odo->$val)));
                         return false;
                     }
