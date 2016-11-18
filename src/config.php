@@ -342,7 +342,7 @@
  *
  *  This feature is supported only by certain devices, like iPhones.
  *  Check the compatibility list for supported devices:
- *      http://z-push.sf.net/compatibility
+ *      http://z-push.org/compatibility
  *
  *  To synchronize a folder, add a section setting all parameters as below:
  *      store:      the ressource where the folder is located.
