@@ -347,7 +347,7 @@ class ZPush {
         if (!defined('RETRY_AFTER_DELAY')) {
             define('RETRY_AFTER_DELAY', 300);
         }
-        elseif (RETRY_AFTER_DELAY !== false && !is_int(RETRY_AFTER_DELAY) || RETRY_AFTER_DELAY < 0) {
+        elseif (RETRY_AFTER_DELAY !== false && (!is_int(RETRY_AFTER_DELAY) || RETRY_AFTER_DELAY < 1))  {
             throw new FatalMisconfigurationException("The RETRY_AFTER_DELAY value must be 'false' or a number greater than 0.");
         }
 
@@ -463,7 +463,7 @@ class ZPush {
 
             if (ZPush::$stateMachine->GetStateVersion() !== ZPush::GetLatestStateVersion()) {
                 if (class_exists("TopCollector")) self::GetTopCollector()->AnnounceInformation("Run migration script!", true);
-                throw new HTTPReturnCodeException(sprintf("The state version available to the %s is not the latest version - please run the state upgrade script. See release notes for more information.", get_class(ZPush::$stateMachine), 503));
+                throw new ServiceUnavailableException(sprintf("The state version available to the %s is not the latest version - please run the state upgrade script. See release notes for more information.", get_class(ZPush::$stateMachine)));
             }
         }
         return ZPush::$stateMachine;

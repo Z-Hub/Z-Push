@@ -2,7 +2,7 @@
 /***********************************************
  * File      :   serviceunavailableexception.php
  * Project   :   Z-Push
- * Descr     :   Exception sending a '503 Service Unavailable' to the mobile
+ * Descr     :   Exception sending a '503 Service Unavailable' to the mobile.
  *
  * Created   :   09.08.2016
  *
@@ -46,7 +46,7 @@ class ServiceUnavailableException extends HTTPReturnCodeException {
 	protected $httpReturnCode = HTTP_CODE_503;
 	protected $httpReturnMessage = "Service Unavailable";
 	protected $httpHeaders = array();
-	protected $showLegal = true;
+	protected $showLegal = false;
 
 	public function __construct($message = "", $code = 0, $previous = NULL, $logLevel = false) {
 		parent::__construct($message, $code, $previous, $logLevel);
