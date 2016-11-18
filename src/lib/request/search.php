@@ -290,7 +290,7 @@ class Search extends RequestProcessor {
         }
         $searchprovider->Disconnect();
 
-        self::$topCollector->AnnounceInformation(sprintf("'%s' search found %d results", $searchname, $rows['searchtotal']), true);
+        self::$topCollector->AnnounceInformation(sprintf("'%s' search found %d results", $searchname, (isset($rows['searchtotal']) ? $rows['searchtotal'] : 0) ), true);
 
         self::$encoder->startWBXML();
         self::$encoder->startTag(SYNC_SEARCH_SEARCH);

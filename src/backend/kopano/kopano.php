@@ -158,7 +158,7 @@ class BackendKopano implements IBackend, ISearchProvider {
             if (mapi_last_hresult()) {
                 ZLog::Write(LOGLEVEL_ERROR, sprintf("KopanoBackend->Logon(): login failed with error code: 0x%X", mapi_last_hresult()));
                 if (mapi_last_hresult() == MAPI_E_NETWORK_ERROR)
-                    throw new HTTPReturnCodeException("Error connecting to KC (login)", 503, null, LOGLEVEL_INFO);
+                    throw new ServiceUnavailableException("Error connecting to KC (login)");
             }
         }
         catch (MAPIException $ex) {
@@ -175,7 +175,7 @@ class BackendKopano implements IBackend, ISearchProvider {
         $this->defaultstore = $this->openMessageStore($this->mainUser);
 
         if (mapi_last_hresult() == MAPI_E_FAILONEPROVIDER)
-            throw new HTTPReturnCodeException("Error connecting to KC (open store)", 503, null, LOGLEVEL_INFO);
+            throw new ServiceUnavailableException("Error connecting to KC (open store)");
 
         if($this->defaultstore === false)
             throw new AuthenticationRequiredException(sprintf("KopanoBackend->Logon(): User '%s' has no default store", $user));

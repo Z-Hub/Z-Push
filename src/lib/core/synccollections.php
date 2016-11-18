@@ -422,11 +422,16 @@ class SyncCollections implements Iterator {
      * previousily set or saved in a collection
      *
      * @access public
-     * @return int                  returns 600 as default if nothing set or not available
+     * @return int                  returns PING_HIGHER_BOUND_LIFETIME as default if nothing set or not available.
+     *                              If PING_HIGHER_BOUND_LIFETIME is not set, returns 600.
      */
     public function GetLifetime() {
-        if (!isset( $this->refLifetime) || $this->refLifetime === false)
+        if (!isset($this->refLifetime) || $this->refLifetime === false) {
+            if (PING_HIGHER_BOUND_LIFETIME !== false) {
+                return PING_HIGHER_BOUND_LIFETIME;
+            }
             return 600;
+        }
 
         return $this->refLifetime;
     }
@@ -717,7 +722,6 @@ class SyncCollections implements Iterator {
       */
      private function countHierarchyChange($exportChanges = false) {
          $folderid = false;
-         $spa = $this->GetCollection($folderid);
 
          // Check with device manager if the hierarchy should be reloaded.
          // New additional folders are loaded here.

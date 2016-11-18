@@ -923,11 +923,13 @@ class ASDevice extends StateObject {
      * @param string    $folderid   the folder id of the additional folder.
      * @param string    $name       the name of the additional folder (has to be unique for all folders on the device).
      * @param int       $flags      Additional flags, like DeviceManager::FLD_FLAGS_REPLYASUSER
+     * @param string    $parentid   the parentid of this folder.
+     * @param boolean   $checkDups  indicates if duplicate names and ids should be verified. Default: true
      *
      * @access public
      * @return boolean
      */
-    public function EditAdditionalFolder($folderid, $name, $flags) {
+    public function EditAdditionalFolder($folderid, $name, $flags, $parentid = 0, $checkDups = true) {
         // check if a folderid and name were sent
         if (!$folderid || !$name) {
             ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->EditAdditionalFolder(): No valid folderid ('%s') or name ('%s') sent. Aborting. ", $folderid, $name));
@@ -949,11 +951,15 @@ class ASDevice extends StateObject {
         }
 
         // check if a folder with the new name is already known on the device (regular folder)
-        foreach($this->GetHierarchyCache()->ExportFolders() as $syncedFolderid => $folder) {
-            // $folder is a SyncFolder object here
-            if ($folder->displayname == $name && $folderid !== $folder->BackendId && $folderid !== $syncedFolderid) {
-                ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->EditAdditionalFolder(): folder can not be edited because there is already a folder with the same name synchronized: '%s'", $folderid));
-                return false;
+        if ($checkDups) {
+            // in order to check for the parent-ids we need a shortid
+            $parentShortId = $this->GetFolderIdForBackendId($parentid, false, null, null);
+            foreach($this->GetHierarchyCache()->ExportFolders() as $syncedFolderid => $folder) {
+                // $folder is a SyncFolder object here
+                if ($folder->displayname == $name && $folderid !== $folder->BackendId && $folderid !== $syncedFolderid && ($folder->parentid == $parentid || $folder->parentid == $parentShortId)) {
+                    ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->EditAdditionalFolder(): folder can not be edited because there is already a folder with the same name synchronized: '%s'", $folderid));
+                    return false;
+                }
             }
         }
 
@@ -961,6 +967,7 @@ class ASDevice extends StateObject {
         $af = $this->additionalfolders;
         $af[$folderid]['name'] = $name;
         $af[$folderid]['flags'] = $flags;
+        $af[$folderid]['parentid'] = $parentid;
         $this->additionalfolders = $af;
 
         return true;
