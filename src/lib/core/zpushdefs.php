@@ -1002,6 +1002,7 @@ define("HTTP_CODE_200", 200);
 define("HTTP_CODE_401", 401);
 define("HTTP_CODE_449", 449);
 define("HTTP_CODE_500", 500);
+define("HTTP_CODE_503", 503);
 
 define("WINDOW_SIZE_MAX", 512);
 

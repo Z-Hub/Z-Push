@@ -57,7 +57,7 @@ class ExportChangesDiff extends DiffState implements IExportChanges{
      * @access public
      * @throws StatusException
      */
-    public function ExportChangesDiff($backend, $folderid) {
+    public function __construct($backend, $folderid) {
         $this->backend = $backend;
         $this->folderid = $folderid;
     }

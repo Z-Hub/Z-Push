@@ -62,7 +62,7 @@ class WBXMLEncoder extends WBXMLDefs {
     private $multipart; // the content is multipart
     private $bodyparts;
 
-    public function WBXMLEncoder($output, $multipart = false) {
+    public function __construct($output, $multipart = false) {
         $this->log = @constant('WBXML_DEBUG') === true;
 
         $this->_out = $output;

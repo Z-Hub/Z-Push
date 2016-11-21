@@ -209,11 +209,6 @@ class ZPush {
             throw new FatalException("The configured PHP version is too old. Please make sure at least PHP 5.4 is used.");
         }
 
-        // TODO remove for ZP-804
-        if (version_compare(phpversion(), '7.0.0', '>=')) {
-            throw new FatalException("The configured PHP version is too new. PHP 7 is not yet supported. We are working on it!");
-        }
-
         // some basic checks
         if (!defined('BASE_PATH'))
             throw new FatalMisconfigurationException("The BASE_PATH is not configured. Check if the config.php file is in place.");
@@ -349,6 +344,13 @@ class ZPush {
             throw new FatalMisconfigurationException("The PING_HIGHER_BOUND_LIFETIME value must be greater or equal to PING_LOWER_BOUND_LIFETIME.");
         }
 
+        if (!defined('RETRY_AFTER_DELAY')) {
+            define('RETRY_AFTER_DELAY', 300);
+        }
+        elseif (RETRY_AFTER_DELAY !== false && (!is_int(RETRY_AFTER_DELAY) || RETRY_AFTER_DELAY < 1))  {
+            throw new FatalMisconfigurationException("The RETRY_AFTER_DELAY value must be 'false' or a number greater than 0.");
+        }
+
         // Check KOE flags
         if (!defined('KOE_CAPABILITY_GAB')) {
             define('KOE_CAPABILITY_GAB', false);
@@ -461,7 +463,7 @@ class ZPush {
 
             if (ZPush::$stateMachine->GetStateVersion() !== ZPush::GetLatestStateVersion()) {
                 if (class_exists("TopCollector")) self::GetTopCollector()->AnnounceInformation("Run migration script!", true);
-                throw new HTTPReturnCodeException(sprintf("The state version available to the %s is not the latest version - please run the state upgrade script. See release notes for more information.", get_class(ZPush::$stateMachine), 503));
+                throw new ServiceUnavailableException(sprintf("The state version available to the %s is not the latest version - please run the state upgrade script. See release notes for more information.", get_class(ZPush::$stateMachine)));
             }
         }
         return ZPush::$stateMachine;

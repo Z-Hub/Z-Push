@@ -68,7 +68,7 @@ class FreeBusyPublish {
      */
 
 
-    function FreeBusyPublish($session, $store, $calendar, $entryid)
+    function __construct($session, $store, $calendar, $entryid)
     {
         $properties["entryid"] = PR_ENTRYID;
         $properties["parent_entryid"] = PR_PARENT_ENTRYID;

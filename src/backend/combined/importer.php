@@ -55,7 +55,7 @@ class ImportChangesCombined implements IImportChanges {
      *
      * @access public
      */
-    public function ImportChangesCombined(&$backend, $folderid = false, $icc = false) {
+    public function __construct(&$backend, $folderid = false, $icc = false) {
         $this->backend = $backend;
         $this->folderid = $folderid;
         $this->icc = &$icc;
@@ -346,8 +346,8 @@ class ImportHierarchyChangesCombinedWrap {
      *
      * @access public
      */
-    public function ImportHierarchyChangesCombinedWrap($backendid, &$backend, &$ihc) {
-        ZLog::Write(LOGLEVEL_DEBUG, "ImportHierarchyChangesCombinedWrap->ImportHierarchyChangesCombinedWrap('$backendid',...)");
+    public function __construct($backendid, &$backend, &$ihc) {
+        ZLog::Write(LOGLEVEL_DEBUG, "ImportHierarchyChangesCombinedWrap->__construct('$backendid',...)");
         $this->backendid = $backendid;
         $this->backend =& $backend;
         $this->ihc = &$ihc;

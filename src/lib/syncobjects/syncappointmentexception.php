@@ -50,8 +50,8 @@ class SyncAppointmentException extends SyncAppointment {
     public $deleted;
     public $exceptionstarttime;
 
-    function SyncAppointmentException() {
-        parent::SyncAppointment();
+    function __construct() {
+        parent::__construct();
 
         $this->mapping += array(
                     SYNC_POOMCAL_DELETED                                => array (  self::STREAMER_VAR      => "deleted",

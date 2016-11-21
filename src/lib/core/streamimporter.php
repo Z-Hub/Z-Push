@@ -56,7 +56,7 @@ class ImportChangesStream implements IImportChanges {
      *
      * @access public
      */
-    public function ImportChangesStream(&$encoder, $class) {
+    public function __construct(&$encoder, $class) {
         $this->encoder = &$encoder;
         $this->objclass = $class;
         $this->classAsString = (is_object($class))?get_class($class):'';

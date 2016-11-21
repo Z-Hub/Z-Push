@@ -104,7 +104,7 @@ class StateMigrator20xto210 {
     /**
      * Constructor
      */
-    public function StateMigrator20xto210() {
+    public function __construct() {
         $this->sm = false;
     }
 

@@ -747,6 +747,7 @@ class Sync extends RequestProcessor {
         // global status
         // SYNC_COMMONSTATUS_* start with values from 101
         if ($status != SYNC_COMMONSTATUS_SUCCESS && ($status == SYNC_STATUS_FOLDERHIERARCHYCHANGED || $status > 100)) {
+            self::$deviceManager->AnnounceProcessStatus($folderid, $status);
             $this->sendStartTags();
             self::$encoder->startTag(SYNC_STATUS);
                 self::$encoder->content($status);
@@ -854,6 +855,7 @@ class Sync extends RequestProcessor {
                             self::$topCollector->AnnounceInformation(sprintf("StatusException code: %d", $status), $this->singleFolder);
                             $this->saveMultiFolderInfo("exception", "StatusException");
                         }
+                        self::$deviceManager->AnnounceProcessStatus($spa->GetFolderId(), $status);
                     }
                 }
             }
@@ -914,6 +916,7 @@ class Sync extends RequestProcessor {
         // final top announcement for a multi-folder sync
         if ($sc->GetCollectionCount() > 1) {
             self::$topCollector->AnnounceInformation($this->getMultiFolderInfoLine($sc->GetCollectionCount()), true);
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleSync: Processed %d folders", $sc->GetCollectionCount()));
         }
 
         return true;

@@ -82,7 +82,7 @@ class SyncParameters extends StateObject {
     /**
      * SyncParameters constructor
      */
-    public function SyncParameters() {
+    public function __construct() {
         // initialize ContentParameters for the current option
         $this->checkCPO();
     }

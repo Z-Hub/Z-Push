@@ -82,7 +82,7 @@ class DeviceManager {
      *
      * @access public
      */
-    public function DeviceManager() {
+    public function __construct() {
         $this->statemachine = ZPush::GetStateMachine();
         $this->deviceHash = false;
         $this->devid = Request::GetDeviceID();
@@ -499,8 +499,12 @@ class DeviceManager {
                 $df['flags'] = 0;
                 ZLog::Write(LOGLEVEL_WARN, sprintf("DeviceManager->GetAdditionalUserSyncFolders(): Additional folder '%s' has no flags. Please run 'z-push-admin -a fixstates' to fix this issue.", $df['name']));
             }
+            if (!isset($df['parentid'])) {
+                $df['parentid'] = '0';
+                ZLog::Write(LOGLEVEL_WARN, sprintf("DeviceManager->GetAdditionalUserSyncFolders(): Additional folder '%s' has no parentid. // TODO FIX: Please run 'z-push-admin -a fixstates' to fix this issue.", $df['name']));
+            }
 
-            $folder = $this->getAdditionalSyncFolderObject($df['store'], $df['folderid'], $df['name'], $df['type'], $df['flags'], DeviceManager::FLD_ORIGIN_SHARED);
+            $folder = $this->getAdditionalSyncFolderObject($df['store'], $df['folderid'], $df['parentid'], $df['name'], $df['type'], $df['flags'], DeviceManager::FLD_ORIGIN_SHARED);
             $folders[$folder->BackendId] = $folder;
         }
 
@@ -508,7 +512,7 @@ class DeviceManager {
         if (KOE_CAPABILITY_GAB && $this->IsKoe() && KOE_GAB_STORE != "" && KOE_GAB_NAME != "") {
             // if KOE_GAB_FOLDERID is set, use it
             if (KOE_GAB_FOLDERID != "") {
-                $folder = $this->getAdditionalSyncFolderObject(KOE_GAB_STORE, KOE_GAB_FOLDERID, KOE_GAB_NAME, SYNC_FOLDER_TYPE_USER_APPOINTMENT, 0, DeviceManager::FLD_ORIGIN_GAB);
+                $folder = $this->getAdditionalSyncFolderObject(KOE_GAB_STORE, KOE_GAB_FOLDERID, '0', KOE_GAB_NAME, SYNC_FOLDER_TYPE_USER_APPOINTMENT, 0, DeviceManager::FLD_ORIGIN_GAB);
                 $folders[$folder->BackendId] = $folder;
             }
             else {
@@ -525,7 +529,7 @@ class DeviceManager {
                     }
 
                     if ($backendGabId) {
-                        $folders[$backendGabId] = $this->getAdditionalSyncFolderObject(KOE_GAB_STORE, $backendGabId, KOE_GAB_NAME, SYNC_FOLDER_TYPE_USER_APPOINTMENT, 0, DeviceManager::FLD_ORIGIN_GAB);
+                        $folders[$backendGabId] = $this->getAdditionalSyncFolderObject(KOE_GAB_STORE, $backendGabId, '0', KOE_GAB_NAME, SYNC_FOLDER_TYPE_USER_APPOINTMENT, 0, DeviceManager::FLD_ORIGIN_GAB);
                     }
                 }
             }
@@ -729,6 +733,10 @@ class DeviceManager {
     public function IsHierarchySyncRequired() {
         $this->loadDeviceData();
 
+        if ($this->loopdetection->ProcessLoopDetectionIsHierarchySyncAdvised()) {
+            return true;
+        }
+
         // if the hash of the additional folders changed, we have to sync the hierarchy
         if ($this->additionalFoldersHash != $this->getAdditionalFoldersHash()) {
             $this->hierarchySyncRequired = true;
@@ -839,6 +847,32 @@ class DeviceManager {
      */
     public function SetHeartbeatStateIntegrity($folderid, $uuid, $counter) {
         return $this->loopdetection->SetSyncStateUsage($folderid, $uuid, $counter);
+    }
+
+    /**
+     * Checks the data integrity of the data in the hierarchy cache and the data of the content data (synchronized folders).
+     * If a folder is deleted, the sync states could still be on the server (and being loaded by PING) while
+     * the folder is not being synchronized anymore. See also https://jira.z-hub.io/browse/ZP-1077
+     *
+     * @access public
+     * @return boolean
+     */
+    public function CheckFolderData() {
+        ZLog::Write(LOGLEVEL_DEBUG, "DeviceManager->CheckFolderData() checking integrity of hierarchy cache with synchronized folders");
+
+        $hc = $this->device->GetHierarchyCache();
+        $notInCache = array();
+        foreach ($this->device->GetAllFolderIds() as $folderid) {
+            $uuid = $this->device->GetFolderUUID($folderid);
+            if ($uuid) {
+                // has a UUID but is not in the cache?! This is deleted, remove the states.
+                if (! $hc->GetFolder($folderid)) {
+                    ZLog::Write(LOGLEVEL_WARN, sprintf("DeviceManager->CheckFolderData(): Folder '%s' has sync states but is not in the hierarchy cache. Removing states.", $folderid));
+                    StateManager::UnLinkState($this->device, $folderid);
+                }
+            }
+        }
+        return true;
     }
 
     /**
@@ -1161,11 +1195,11 @@ class DeviceManager {
      * @access private
      * @returns SyncFolder
      */
-    private function getAdditionalSyncFolderObject($store, $folderid, $name, $type, $flags, $folderOrigin) {
+    private function getAdditionalSyncFolderObject($store, $folderid, $parentid, $name, $type, $flags, $folderOrigin) {
         $folder = new SyncFolder();
         $folder->BackendId = $folderid;
         $folder->serverid = $this->GetFolderIdForBackendId($folder->BackendId, true, $folderOrigin, $name);
-        $folder->parentid = 0;                  // only top folders are supported
+        $folder->parentid = $this->GetFolderIdForBackendId($parentid);
         $folder->displayname = $name;
         $folder->type = $type;
         // save store as custom property which is not streamed directly to the device

@@ -119,6 +119,7 @@ class ComposerStaticInitd6749fc2fb9944bbe86b2b7d79a7852f
         'Search' => __DIR__ . '/../..' . '/lib/request/search.php',
         'SearchProvider' => __DIR__ . '/../..' . '/lib/default/searchprovider.php',
         'SendMail' => __DIR__ . '/../..' . '/lib/request/sendmail.php',
+        'ServiceUnavailableException' => __DIR__ . '/../..' . '/lib/exceptions/serviceunavailableexception.php',
         'Settings' => __DIR__ . '/../..' . '/lib/request/settings.php',
         'SimpleMutex' => __DIR__ . '/../..' . '/lib/default/simplemutex.php',
         'SqlStateMachine' => __DIR__ . '/../..' . '/backend/sqlstatemachine/sqlstatemachine.php',

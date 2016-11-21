@@ -99,7 +99,7 @@ class iCalProp {
    *
    * @param string $propstring The string from the iCalendar which contains this property.
    */
-  function iCalProp( $propstring = null ) {
+  function __construct( $propstring = null ) {
     $this->name = "";
     $this->content = "";
     $this->parameters = array();
@@ -353,7 +353,7 @@ class iCalComponent {
   /**
   * A basic constructor
   */
-  function iCalComponent( $content = null ) {
+  function __construct( $content = null ) {
     $this->type = "";
     $this->properties = array();
     $this->components = array();
@@ -1008,7 +1008,7 @@ class iCalendar {  // DEPRECATED
   * then that will be parsed into the iCalendar object.  Otherwise the array elements
   * are converted into properties of the iCalendar object directly.
   */
-  function iCalendar( $args ) {
+  function __construct( $args ) {
     global $c;
 
     deprecated('iCalendar::iCalendar');

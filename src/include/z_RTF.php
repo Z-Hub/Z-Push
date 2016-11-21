@@ -158,7 +158,7 @@ class rtf {
     );
 
 
-    function rtf() {
+    function __construct() {
         $this->rtf_len = 0;
         $this->rtf = '';
 

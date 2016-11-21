@@ -55,7 +55,7 @@ class ExportChangesCombined implements IExportChanges {
     private $importer;
     private $importwraps;
 
-    public function ExportChangesCombined(&$backend) {
+    public function __construct(&$backend) {
         $this->backend =& $backend;
         $this->exporters = array();
         $this->movestateSrc = false;

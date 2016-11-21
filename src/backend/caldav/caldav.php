@@ -61,7 +61,7 @@ class BackendCalDAV extends BackendDiff {
     /**
      * Constructor
      */
-    public function BackendCalDAV() {
+    public function __construct() {
         if (!function_exists("curl_init")) {
             throw new FatalException("BackendCalDAV(): php-curl is not found", 0, null, LOGLEVEL_FATAL);
         }
