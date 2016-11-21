@@ -134,8 +134,10 @@ class ExportChangesICS implements IExportChanges{
             }
         }
 
-        if($this->flags & BACKEND_DISCARD_DATA)
+        if($this->flags & BACKEND_DISCARD_DATA) {
             $this->exporterflags |= SYNC_CATCHUP;
+            $this->exporterflags |= SYNC_STATE_READONLY;
+        }
 
         // Put the state information in a stream that can be used by ICS
         $stream = mapi_stream_create();
@@ -305,6 +307,11 @@ class ExportChangesICS implements IExportChanges{
      * @return array
      */
     public function Synchronize() {
+        if ($this->flags & BACKEND_DISCARD_DATA) {
+            ZLog::Write(LOGLEVEL_WARN, 'ExportChangesICS->Synchronize(): not supported in combination with the BACKEND_DISCARD_DATA flag.');
+            return false;
+        }
+
         if ($this->exporter) {
             return mapi_exportchanges_synchronize($this->exporter);
         }
