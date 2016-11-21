@@ -201,19 +201,17 @@ class Utils {
      * @return boolean installed version is superior to the checked string
      */
     static public function CheckMapiExtVersion($version = "") {
+        if (!extension_loaded("mapi")) {
+            return false;
+        }
         // compare build number if requested
         if (preg_match('/^\d+$/', $version) && strlen($version) > 3) {
             $vs = preg_split('/-/', phpversion("mapi"));
             return ($version <= $vs[1]);
         }
-
-        if (extension_loaded("mapi")){
-            if (version_compare(phpversion("mapi"), $version) == -1){
-                return false;
-            }
-        }
-        else
+        if (version_compare(phpversion("mapi"), $version) == -1){
             return false;
+        }
 
         return true;
     }
