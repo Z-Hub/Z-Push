@@ -74,8 +74,10 @@ include_once(ZPUSH_CONFIG);
             throw new AuthenticationRequiredException("Access denied. Please send authorisation information");
 
         // Stop here if this is an OPTIONS request
-        if (Request::IsMethodOPTIONS())
+        if (Request::IsMethodOPTIONS()) {
+            RequestProcessor::Authenticate();
             throw new NoPostRequestException("Options request", NoPostRequestException::OPTIONS_REQUEST);
+        }
 
         ZPush::CheckAdvancedConfig();
 
