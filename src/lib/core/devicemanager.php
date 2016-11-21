@@ -14,25 +14,7 @@
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -499,8 +481,12 @@ class DeviceManager {
                 $df['flags'] = 0;
                 ZLog::Write(LOGLEVEL_WARN, sprintf("DeviceManager->GetAdditionalUserSyncFolders(): Additional folder '%s' has no flags. Please run 'z-push-admin -a fixstates' to fix this issue.", $df['name']));
             }
+            if (!isset($df['parentid'])) {
+                $df['parentid'] = '0';
+                ZLog::Write(LOGLEVEL_WARN, sprintf("DeviceManager->GetAdditionalUserSyncFolders(): Additional folder '%s' has no parentid. // TODO FIX: Please run 'z-push-admin -a fixstates' to fix this issue.", $df['name']));
+            }
 
-            $folder = $this->getAdditionalSyncFolderObject($df['store'], $df['folderid'], $df['name'], $df['type'], $df['flags'], DeviceManager::FLD_ORIGIN_SHARED);
+            $folder = $this->getAdditionalSyncFolderObject($df['store'], $df['folderid'], $df['parentid'], $df['name'], $df['type'], $df['flags'], DeviceManager::FLD_ORIGIN_SHARED);
             $folders[$folder->BackendId] = $folder;
         }
 
@@ -508,7 +494,7 @@ class DeviceManager {
         if (KOE_CAPABILITY_GAB && $this->IsKoe() && KOE_GAB_STORE != "" && KOE_GAB_NAME != "") {
             // if KOE_GAB_FOLDERID is set, use it
             if (KOE_GAB_FOLDERID != "") {
-                $folder = $this->getAdditionalSyncFolderObject(KOE_GAB_STORE, KOE_GAB_FOLDERID, KOE_GAB_NAME, SYNC_FOLDER_TYPE_USER_APPOINTMENT, 0, DeviceManager::FLD_ORIGIN_GAB);
+                $folder = $this->getAdditionalSyncFolderObject(KOE_GAB_STORE, KOE_GAB_FOLDERID, '0', KOE_GAB_NAME, SYNC_FOLDER_TYPE_USER_APPOINTMENT, 0, DeviceManager::FLD_ORIGIN_GAB);
                 $folders[$folder->BackendId] = $folder;
             }
             else {
@@ -525,7 +511,7 @@ class DeviceManager {
                     }
 
                     if ($backendGabId) {
-                        $folders[$backendGabId] = $this->getAdditionalSyncFolderObject(KOE_GAB_STORE, $backendGabId, KOE_GAB_NAME, SYNC_FOLDER_TYPE_USER_APPOINTMENT, 0, DeviceManager::FLD_ORIGIN_GAB);
+                        $folders[$backendGabId] = $this->getAdditionalSyncFolderObject(KOE_GAB_STORE, $backendGabId, '0', KOE_GAB_NAME, SYNC_FOLDER_TYPE_USER_APPOINTMENT, 0, DeviceManager::FLD_ORIGIN_GAB);
                     }
                 }
             }
@@ -1191,11 +1177,11 @@ class DeviceManager {
      * @access private
      * @returns SyncFolder
      */
-    private function getAdditionalSyncFolderObject($store, $folderid, $name, $type, $flags, $folderOrigin) {
+    private function getAdditionalSyncFolderObject($store, $folderid, $parentid, $name, $type, $flags, $folderOrigin) {
         $folder = new SyncFolder();
         $folder->BackendId = $folderid;
         $folder->serverid = $this->GetFolderIdForBackendId($folder->BackendId, true, $folderOrigin, $name);
-        $folder->parentid = 0;                  // only top folders are supported
+        $folder->parentid = $this->GetFolderIdForBackendId($parentid);
         $folder->displayname = $name;
         $folder->type = $type;
         // save store as custom property which is not streamed directly to the device

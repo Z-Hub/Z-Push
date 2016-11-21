@@ -13,25 +13,7 @@
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -176,7 +158,7 @@ class BackendKopano implements IBackend, ISearchProvider {
             if (mapi_last_hresult()) {
                 ZLog::Write(LOGLEVEL_ERROR, sprintf("KopanoBackend->Logon(): login failed with error code: 0x%X", mapi_last_hresult()));
                 if (mapi_last_hresult() == MAPI_E_NETWORK_ERROR)
-                    throw new HTTPReturnCodeException("Error connecting to KC (login)", 503, null, LOGLEVEL_INFO);
+                    throw new ServiceUnavailableException("Error connecting to KC (login)");
             }
         }
         catch (MAPIException $ex) {
@@ -193,7 +175,7 @@ class BackendKopano implements IBackend, ISearchProvider {
         $this->defaultstore = $this->openMessageStore($this->mainUser);
 
         if (mapi_last_hresult() == MAPI_E_FAILONEPROVIDER)
-            throw new HTTPReturnCodeException("Error connecting to KC (open store)", 503, null, LOGLEVEL_INFO);
+            throw new ServiceUnavailableException("Error connecting to KC (open store)");
 
         if($this->defaultstore === false)
             throw new AuthenticationRequiredException(sprintf("KopanoBackend->Logon(): User '%s' has no default store", $user));

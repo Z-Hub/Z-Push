@@ -1,10 +1,10 @@
 <?php
 /***********************************************
-* File      :   nohierarchycacheavailableexception.php
+* File      :   serviceunavailableexception.php
 * Project   :   Z-Push
-* Descr     :   Indicates that the HierarchyException is not available.
+* Descr     :   Exception sending a '503 Service Unavailable' to the mobile.
 *
-* Created   :   06.02.2012
+* Created   :   09.08.2016
 *
 * Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
@@ -23,4 +23,17 @@
 * Consult LICENSE file for details
 ************************************************/
 
-class NoHierarchyCacheAvailableException extends StateNotFoundException {}
+class ServiceUnavailableException extends HTTPReturnCodeException {
+	protected $defaultLogLevel = LOGLEVEL_INFO;
+	protected $httpReturnCode = HTTP_CODE_503;
+	protected $httpReturnMessage = "Service Unavailable";
+	protected $httpHeaders = array();
+	protected $showLegal = false;
+
+	public function __construct($message = "", $code = 0, $previous = NULL, $logLevel = false) {
+		parent::__construct($message, $code, $previous, $logLevel);
+		if (RETRY_AFTER_DELAY !== false) {
+			$this->httpHeaders[] = 'Retry-After: ' . RETRY_AFTER_DELAY;
+		}
+	}
+}

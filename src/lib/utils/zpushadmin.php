@@ -10,25 +10,7 @@
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -133,14 +115,16 @@ class ZPushAdmin {
 
                     if ($fstatus !== false && isset($fstatus[ASDevice::FOLDERSYNCSTATUS])) {
                         $spa = $sc->GetCollection($folderid);
-                        $total = $spa->GetFolderSyncTotal();
-                        $todo = $spa->GetFolderSyncRemaining();
-                        $fstatus['status'] = ($fstatus[ASDevice::FOLDERSYNCSTATUS] == 1)?'Initialized':'Synchronizing';
-                        $fstatus['total'] = $total;
-                        $fstatus['done'] = $total - $todo;
-                        $fstatus['todo'] = $todo;
+                        if ($spa) {
+                            $total = $spa->GetFolderSyncTotal();
+                            $todo = $spa->GetFolderSyncRemaining();
+                            $fstatus['status'] = ($fstatus[ASDevice::FOLDERSYNCSTATUS] == 1) ? 'Initialized' : 'Synchronizing';
+                            $fstatus['total'] = $total;
+                            $fstatus['done'] = $total - $todo;
+                            $fstatus['todo'] = $todo;
 
-                        $device->SetFolderSyncStatus($folderid, $fstatus);
+                            $device->SetFolderSyncStatus($folderid, $fstatus);
+                        }
                     }
                 }
             }
@@ -977,17 +961,17 @@ class ZPushAdmin {
     }
 
     /**
-     * Fixes potentially missing flags on additional folders.
+     * Fixes missing flags or parentids on additional folders.
      *
      * @access public
      * @return array(seenDevices, devicesWithAdditionalFolders, fixedAdditionalFolders)
      */
-    static public function FixStatesAdditionalFolderFlags() {
+    static public function FixStatesAdditionalFolders() {
         $devices = 0;
         $devicesWithAddFolders = 0;
         $fixed = 0;
         $asdevices = ZPush::GetStateMachine()->GetAllDevices(false);
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::FixStatesAdditionalFolderFlags(): found %d devices", count($asdevices)));
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::FixStatesAdditionalFolders(): found %d devices", count($asdevices)));
 
         foreach ($asdevices as $devid) {
             try {
@@ -1004,8 +988,14 @@ class ZPushAdmin {
                     if ($addFolders) {
                         $devicesWithAddFolders++;
                         foreach($addFolders as $df) {
-                            if (!isset($df['flags'])) {
-                                $device->EditAdditionalFolder($df['folderid'], $df['name'], 0);
+                            if (!isset($df['flags']) || !isset($df['parentid']) ) {
+                                if (!isset($df['flags'])) {
+                                    $df['flags'] = 0;
+                                }
+                                if (!isset($df['parentid'])) {
+                                    $df['parentid'] = 0;
+                                }
+                                $device->EditAdditionalFolder($df['folderid'], $df['name'], $df['flags'], $df['parentid']);
                                 $needsFixing = true;
                             }
                         }
@@ -1016,12 +1006,12 @@ class ZPushAdmin {
                 }
                 if ($needsFixing) {
                     ZPush::GetStateMachine()->SetState($devicedata, $devid, IStateMachine::DEVICEDATA);
-                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::FixStatesAdditionalFolderFlags(): updated device '%s' because flags were fixed", $devid));
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::FixStatesAdditionalFolders(): updated device '%s' because flags or parentids were fixed", $devid));
                     $fixed++;
                 }
             }
             catch (StateNotFoundException $e) {
-                ZLog::Write(LOGLEVEL_ERROR, sprintf("ZPushAdmin::FixStatesAdditionalFolderFlags(): state for device '%s' can not be found", $devid));
+                ZLog::Write(LOGLEVEL_ERROR, sprintf("ZPushAdmin::FixStatesAdditionalFolders(): state for device '%s' can not be found", $devid));
             }
         }
         return array($devices, $devicesWithAddFolders, $fixed);
