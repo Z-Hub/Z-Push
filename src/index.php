@@ -51,9 +51,15 @@ include_once(ZPUSH_CONFIG);
                 sprintf("cmd='%s' devType='%s' devId='%s' getUser='%s' from='%s' version='%s' method='%s'",
                         Request::GetCommand(), Request::GetDeviceType(), Request::GetDeviceID(), Request::GetGETUser(), Request::GetRemoteAddr(), @constant('ZPUSH_VERSION'), Request::GetMethod() ));
 
+        // always request the authorization header
+        if (! Request::HasAuthenticationInfo() || !Request::GetGETUser())
+            throw new AuthenticationRequiredException("Access denied. Please send authorisation information");
+
         // Stop here if this is an OPTIONS request
-        if (Request::IsMethodOPTIONS())
+        if (Request::IsMethodOPTIONS()) {
+            RequestProcessor::Authenticate();
             throw new NoPostRequestException("Options request", NoPostRequestException::OPTIONS_REQUEST);
+        }
 
         ZPush::CheckAdvancedConfig();
 
@@ -66,10 +72,6 @@ include_once(ZPUSH_CONFIG);
 
         // Load the backend
         $backend = ZPush::GetBackend();
-
-        // always request the authorization header
-        if (! Request::HasAuthenticationInfo() || !Request::GetGETUser())
-            throw new AuthenticationRequiredException("Access denied. Please send authorisation information");
 
         // check the provisioning information
         if (PROVISIONING === true && Request::IsMethodPOST() && ZPush::CommandNeedsProvisioning(Request::GetCommandCode()) &&
@@ -180,7 +182,12 @@ include_once(ZPUSH_CONFIG);
         }
 
         if ($ex instanceof AuthenticationRequiredException) {
-            ZPush::PrintZPushLegal($exclass, sprintf('<pre>%s</pre>',$ex->getMessage()));
+            // Only print ZPush legal message for GET requests because
+            // some devices send unauthorized OPTIONS requests
+            // and don't expect anything in the response body
+            if (Request::IsMethodGET()) {
+                ZPush::PrintZPushLegal($exclass, sprintf('<pre>%s</pre>',$ex->getMessage()));
+            }
 
             // log the failed login attemt e.g. for fail2ban
             if (defined('LOGAUTHFAIL') && LOGAUTHFAIL != false)
