@@ -10,25 +10,7 @@
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -40,7 +22,6 @@
 *
 * Consult LICENSE file for details
 ************************************************/
-
 
 class ZPush {
     const UNAUTHENTICATED = 1;
@@ -97,6 +78,7 @@ class ZPush {
     // Webservice commands
     const COMMAND_WEBSERVICE_DEVICE = -100;
     const COMMAND_WEBSERVICE_USERS = -101;
+    const COMMAND_WEBSERVICE_INFO = -102;
 
     // Latest supported State version
     const STATE_VERSION = IStateMachine::STATEVERSION_02;
@@ -145,6 +127,7 @@ class ZPush {
 
                     self::COMMAND_WEBSERVICE_DEVICE => array(self::REQUESTHANDLER => "Webservice", self::PLAININPUT, self::NOACTIVESYNCCOMMAND, self::WEBSERVICECOMMAND),
                     self::COMMAND_WEBSERVICE_USERS  => array(self::REQUESTHANDLER => "Webservice", self::PLAININPUT, self::NOACTIVESYNCCOMMAND, self::WEBSERVICECOMMAND),
+                    self::COMMAND_WEBSERVICE_INFO   => array(self::REQUESTHANDLER => "Webservice", self::PLAININPUT, self::NOACTIVESYNCCOMMAND, self::WEBSERVICECOMMAND),
             );
 
 
@@ -205,11 +188,6 @@ class ZPush {
         // check the php version
         if (version_compare(phpversion(),'5.4.0') < 0) {
             throw new FatalException("The configured PHP version is too old. Please make sure at least PHP 5.4 is used.");
-        }
-
-        // TODO remove for ZP-804
-        if (version_compare(phpversion(), '7.0.0', '>=')) {
-            throw new FatalException("The configured PHP version is too new. PHP 7 is not yet supported. We are working on it!");
         }
 
         // some basic checks
@@ -347,6 +325,13 @@ class ZPush {
             throw new FatalMisconfigurationException("The PING_HIGHER_BOUND_LIFETIME value must be greater or equal to PING_LOWER_BOUND_LIFETIME.");
         }
 
+        if (!defined('RETRY_AFTER_DELAY')) {
+            define('RETRY_AFTER_DELAY', 300);
+        }
+        elseif (RETRY_AFTER_DELAY !== false && (!is_int(RETRY_AFTER_DELAY) || RETRY_AFTER_DELAY < 1))  {
+            throw new FatalMisconfigurationException("The RETRY_AFTER_DELAY value must be 'false' or a number greater than 0.");
+        }
+
         // Check KOE flags
         if (!defined('KOE_CAPABILITY_GAB')) {
             define('KOE_CAPABILITY_GAB', false);
@@ -365,6 +350,9 @@ class ZPush {
         }
         if (!defined('KOE_CAPABILITY_NOTES')) {
             define('KOE_CAPABILITY_NOTES', false);
+        }
+        if (!defined('KOE_CAPABILITY_SHAREDFOLDER')) {
+            define('KOE_CAPABILITY_SHAREDFOLDER', false);
         }
         if (!defined('KOE_GAB_FOLDERID')) {
             define('KOE_GAB_FOLDERID', '');
@@ -410,7 +398,6 @@ class ZPush {
                 // save store as custom property which is not streamed directly to the device
                 $folder->NoBackendFolder = true;
                 $folder->Store = $af['store'];
-                $folder->ReadOnly = $af['readonly'];
 
                 self::$addSyncFolders[$folder->BackendId] = $folder;
             }
@@ -457,7 +444,7 @@ class ZPush {
 
             if (ZPush::$stateMachine->GetStateVersion() !== ZPush::GetLatestStateVersion()) {
                 if (class_exists("TopCollector")) self::GetTopCollector()->AnnounceInformation("Run migration script!", true);
-                throw new HTTPReturnCodeException(sprintf("The state version available to the %s is not the latest version - please run the state upgrade script. See release notes for more information.", get_class(ZPush::$stateMachine), 503));
+                throw new ServiceUnavailableException(sprintf("The state version available to the %s is not the latest version - please run the state upgrade script. See release notes for more information.", get_class(ZPush::$stateMachine)));
             }
         }
         return ZPush::$stateMachine;
@@ -577,6 +564,8 @@ class ZPush {
     static public function GetBackend() {
         // if the backend is not yet loaded, load backend drivers and instantiate it
         if (!isset(ZPush::$backend)) {
+            $isIbar = false;
+
             // Initialize our backend
             $ourBackend = @constant('BACKEND_PROVIDER');
 
@@ -594,12 +583,19 @@ class ZPush {
             }
             elseif (!class_exists($ourBackend)) {
                 spl_autoload_register('\ZPush::IncludeBackend');
+                $isIbar = true;
+                ZLog::Write(LOGLEVEL_DEBUG, "ZPush::GetBackend(): autoload register ZPush::IncludeBackend");
             }
 
             if (class_exists($ourBackend))
                 ZPush::$backend = new $ourBackend();
             else
                 throw new FatalMisconfigurationException(sprintf("Backend provider '%s' can not be loaded. Check configuration!", $ourBackend));
+
+            if ($isIbar) {
+                spl_autoload_unregister('\ZPush::IncludeBackend');
+                ZLog::Write(LOGLEVEL_DEBUG, "ZPush::GetBackend(): autoload unregister ZPush::IncludeBackend");
+            }
         }
         return ZPush::$backend;
     }

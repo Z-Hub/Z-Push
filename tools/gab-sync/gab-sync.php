@@ -1,4 +1,4 @@
-#!/usr/bin/php
+#!/usr/bin/env php
 <?php
 /***********************************************
 * File      :   gab-sync.php
@@ -70,7 +70,8 @@ include_once(SYNC_CONFIG);
         GabSyncCLI::RunCommand();
     }
     catch (Exception $ex) {
-        die(get_class($ex) . ": ". $ex->getMessage() . PHP_EOL);
+        fwrite(STDERR, get_class($ex) . ": ". $ex->getMessage() . PHP_EOL);
+        exit(1);
     }
 
 

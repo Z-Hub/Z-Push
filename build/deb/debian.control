@@ -1,0 +1,109 @@
+Source: z-push
+Section: web
+Priority: extra
+Maintainer: Sebastian Kummer <sebastian@z-push.org>
+Build-Depends: debhelper (>= 8.0.0)
+Standards-Version: 3.9.4
+Homepage: http://z-push.org
+
+Package: z-push-common
+Architecture: all
+Depends: ${misc:Depends}, php5 (>= 5.4) | php (>= 5.4) , php5-cli | php-cli, php-soap, ${dist:Depends}
+Conflicts: d-push, z-push
+Replaces: d-push, z-push
+Description: open source implementation of the ActiveSync protocol
+ Z-Push is an implementation of the ActiveSync protocol which is used
+ 'over-the-air' for multi platform ActiveSync devices, including Windows 
+ Phone, Apple iPhone and iPad, Android, Blackberry 10 devices and 
+ MS Outlook 2013 and later. With Z-Push any groupware can be connected 
+ and synchronized with these devices.
+
+Package: z-push-backend-caldav
+Architecture: all
+Depends: ${misc:Depends}, z-push-common (= ${binary:Version}), php-curl | php5-curl, libawl-php
+Description: Z-Push caldav backend
+ Backend for Z-Push, that adds the ability to connect to a caldav server
+
+Package: z-push-backend-carddav
+Architecture: all
+Depends: ${misc:Depends}, z-push-common (= ${binary:Version}), php-curl | php5-curl, php5-xsl | php-xml
+Description: Z-Push carddav backend
+ Backend for Z-Push, that adds the ability to connect to a carddav server
+
+Package: z-push-backend-combined
+Architecture: all
+Depends: ${misc:Depends}, z-push-common (= ${binary:Version})
+Description: Z-Push combined backend
+ Backend for Z-Push, that adds the ability to combine backends
+
+Package: z-push-backend-imap
+Architecture: all
+Depends: ${misc:Depends}, z-push-common (= ${binary:Version}), php-imap | php5-imap
+Description: Z-Push imap backend
+ Backend for Z-Push, that adds the ability to connect to a imap server
+
+Package: z-push-backend-ldap
+Architecture: all
+Depends: ${misc:Depends}, z-push-common (= ${binary:Version}), php-ldap | php5-ldap
+Description: Z-Push ldap backend
+ Backend for Z-Push, that adds the ability to connect to a ldap server
+
+Package: z-push-backend-kopano
+Architecture: all
+Depends: ${misc:Depends}, z-push-common (= ${binary:Version}), php5-mapi | php7-mapi
+Description: Z-Push Kopano backend
+ Backend for Z-Push, that adds the ability to connect to a Kopano server
+
+Package: z-push-kopano
+Architecture: all
+Depends: ${misc:Depends}, z-push-common (= ${binary:Version}), z-push-backend-kopano (= ${binary:Version}), z-push-ipc-sharedmemory (= ${binary:Version})
+Description: Z-Push for Kopano
+ Z-Push for Kopano meta package
+
+Package: z-push-kopano-gabsync
+Architecture: all
+Depends: ${misc:Depends}, php5-mapi | php7-mapi
+Description: GAB sync for Kopano
+ Synchronizes a the global address book for the Kopano Outlook Extension
+
+Package: z-push-ipc-sharedmemory
+Architecture: all
+Depends: ${misc:Depends}, z-push-common (= ${binary:Version})
+Description: Z-Push ipc shared memory provider
+ Provider for Z-Push, that adds the ability to use ipc shared memory
+
+Package: z-push-ipc-memcached
+Architecture: all
+Depends: ${misc:Depends}, z-push-common (= ${binary:Version}), php-memcached | php5-memcached
+Description: Z-Push ipc memcached provider
+ Provider for Z-Push, that adds the ability to use ipc memcached
+
+Package: z-push-backend-galsearch-ldap
+Architecture: all
+Depends: ${misc:Depends}, z-push-common (= ${binary:Version}), php-ldap | php5-ldap
+Description: Z-Push searchldap backend
+ Backend for Z-Push, that adds the ability to search a ldap server
+
+Package: z-push-state-sql
+Architecture: all
+Depends: ${misc:Depends}, z-push-common (= ${binary:Version}), php-mysql | php5-mysql
+Description: Z-Push mysql state backend
+ Backend for Z-Push, that adds the ability to save states in a mysql database
+
+Package: z-push-autodiscover
+Architecture: all
+Depends: ${misc:Depends}, z-push-common (= ${binary:Version}), z-push-backend-caldav | z-push-backend-carddav | z-push-backend-combined | z-push-backend-imap | z-push-backend-ldap | z-push-backend-kopano
+Description: Z-Push autodiscover
+ Autodiscover for Z-Push backends
+
+Package: z-push-config-apache
+Architecture: all
+Depends: ${misc:Depends}, z-push-common (= ${binary:Version}), apache2, libapache2-mod-php | libapache2-mod-php5
+Description: Z-Push apache configuration
+ Z-push apache configuration files
+
+Package: z-push-config-apache-autodiscover
+Architecture: all
+Depends: ${misc:Depends}, z-push-autodiscover (= ${binary:Version}), apache2, libapache2-mod-php | libapache2-mod-php5
+Description: Z-Push autodiscover apache configuration
+ Z-push autodiscover apache configuration files

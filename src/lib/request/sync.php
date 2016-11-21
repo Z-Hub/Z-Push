@@ -10,25 +10,7 @@
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -747,10 +729,12 @@ class Sync extends RequestProcessor {
         // global status
         // SYNC_COMMONSTATUS_* start with values from 101
         if ($status != SYNC_COMMONSTATUS_SUCCESS && ($status == SYNC_STATUS_FOLDERHIERARCHYCHANGED || $status > 100)) {
+            self::$deviceManager->AnnounceProcessStatus($folderid, $status);
             $this->sendStartTags();
             self::$encoder->startTag(SYNC_STATUS);
                 self::$encoder->content($status);
             self::$encoder->endTag();
+            self::$encoder->endTag(); // SYNC_SYNCHRONIZE
             return true;
         }
 
@@ -853,6 +837,7 @@ class Sync extends RequestProcessor {
                             self::$topCollector->AnnounceInformation(sprintf("StatusException code: %d", $status), $this->singleFolder);
                             $this->saveMultiFolderInfo("exception", "StatusException");
                         }
+                        self::$deviceManager->AnnounceProcessStatus($spa->GetFolderId(), $status);
                     }
                 }
             }
@@ -891,6 +876,7 @@ class Sync extends RequestProcessor {
                 self::$encoder->startTag(SYNC_STATUS);
                 self::$encoder->content($status);
                 self::$encoder->endTag();
+                self::$encoder->endTag(); // SYNC_SYNCHRONIZE
                 return true;
             }
 
@@ -912,6 +898,7 @@ class Sync extends RequestProcessor {
         // final top announcement for a multi-folder sync
         if ($sc->GetCollectionCount() > 1) {
             self::$topCollector->AnnounceInformation($this->getMultiFolderInfoLine($sc->GetCollectionCount()), true);
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleSync: Processed %d folders", $sc->GetCollectionCount()));
         }
 
         return true;
@@ -1443,6 +1430,9 @@ class Sync extends RequestProcessor {
                 case SYNC_ADD:
                     self::$topCollector->AnnounceInformation(sprintf("Creating new message from mobile %d", $messageCount));
                     try {
+                        // mark the message as new message so SyncObject->Check() can differentiate
+                        $message->flags = SYNC_NEWMESSAGE;
+
                         // ignore sms messages
                         if ($foldertype == "SMS") {
                             ZLog::Write(LOGLEVEL_DEBUG, "SMS sync are not supported. Ignoring message.");

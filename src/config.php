@@ -10,25 +10,7 @@
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -272,6 +254,14 @@
     define('SYNC_TIMEOUT_MEDIUM_DEVICETYPES', "SAMSUNGGTI");
     define('SYNC_TIMEOUT_LONG_DEVICETYPES',   "iPod, iPad, iPhone, WP, WindowsOutlook");
 
+    // Time in seconds the device should wait whenever the service is unavailable,
+    // e.g. when a backend service is unavailable.
+    // Z-Push sends a "Retry-After" header in the response with the here defined value.
+    // It is up to the device to respect or not this directive so even if this option is set,
+    // the device might not wait requested time frame.
+    // Number of seconds before retry, to disable set to: false
+    define('RETRY_AFTER_DELAY', 300);
+
 /**********************************************************************************
  *  Backend settings
  */
@@ -313,6 +303,10 @@
     define('KOE_CAPABILITY_OOFTIMES', true);
     // Notes support
     define('KOE_CAPABILITY_NOTES', true);
+    // Shared folder support
+    define('KOE_CAPABILITY_SHAREDFOLDER', true);
+    // Send-As support for Outlook/KOE and mobiles
+    define('KOE_CAPABILITY_SENDAS', true);
 
     // To synchronize the GAB KOE, the GAB store and folderid need to be specified.
     // Use the gab-sync script to generate this data. The name needs to
@@ -330,7 +324,7 @@
  *
  *  This feature is supported only by certain devices, like iPhones.
  *  Check the compatibility list for supported devices:
- *      http://z-push.sf.net/compatibility
+ *      http://z-push.org/compatibility
  *
  *  To synchronize a folder, add a section setting all parameters as below:
  *      store:      the ressource where the folder is located.
@@ -343,8 +337,6 @@
  *                      SYNC_FOLDER_TYPE_USER_TASK
  *                      SYNC_FOLDER_TYPE_USER_MAIL
  *                      SYNC_FOLDER_TYPE_USER_NOTE
- *      readonly:   indicates if the folder should be opened read-only.
- *                  If set to false, full writing permissions are required.
  *
  *  Additional notes:
  *  - on Kopano systems use backend/kopano/listfolders.php script to get a list
@@ -352,11 +344,6 @@
  *
  *  - all Z-Push users must have at least reading permissions so the configured
  *    folders can be synchronized to the mobile. Else they are ignored.
- *
- *  - if read-only is set to 'false' only users with full permissions (secretary
- *    rights) are able to change entries. For all others, the changes will be
- *    discarted and overwritten with data from the server. Check backend
- *    compatibility and configuration for this feature.
  *
  *  - this feature is only partly suitable for multi-tenancy environments,
  *    as ALL users from ALL tenents need access to the configured store & folder.
@@ -377,7 +364,6 @@
             'folderid'  => "",
             'name'      => "Public Contacts",
             'type'      => SYNC_FOLDER_TYPE_USER_CONTACT,
-            'readonly'  => false,
         ),
 */
     );

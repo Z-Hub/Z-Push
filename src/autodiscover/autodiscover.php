@@ -6,29 +6,11 @@
 *
 * Created   :   14.05.2014
 *
-* Copyright 2007 - 2014 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -104,25 +86,42 @@ class ZPushAutodiscover {
             }
         }
 
-        catch (AuthenticationRequiredException $ex) {
-            if (isset($incomingXml)) {
-                ZLog::Write(LOGLEVEL_ERROR, sprintf("Unable to complete autodiscover because login failed for user with email '%s'", $incomingXml->Request->EMailAddress));
+        catch (Exception $ex) {
+            // Extract any previous exception message for logging purpose.
+            $exclass = get_class($ex);
+            $exception_message = $ex->getMessage();
+            if($ex->getPrevious()){
+                do {
+                    $current_exception = $ex->getPrevious();
+                    $exception_message .= ' -> ' . $current_exception->getMessage();
+                } while($current_exception->getPrevious());
             }
-            else {
-                ZLog::Write(LOGLEVEL_ERROR, sprintf("Unable to complete autodiscover incorrect request: '%s'", $ex->getMessage()));
+
+            ZLog::Write(LOGLEVEL_FATAL, sprintf('Exception: (%s) - %s', $exclass, $exception_message));
+
+            if ($ex instanceof AuthenticationRequiredException) {
+                if (isset($incomingXml)) {
+                    // log the failed login attemt e.g. for fail2ban
+                    if (defined('LOGAUTHFAIL') && LOGAUTHFAIL != false)
+                        ZLog::Write(LOGLEVEL_WARN, sprintf("Unable to complete autodiscover because login failed for user with email '%s' from IP %s.", $incomingXml->Request->EMailAddress, $_SERVER["REMOTE_ADDR"]));
+                }
+                else {
+                    ZLog::Write(LOGLEVEL_ERROR, sprintf("Unable to complete autodiscover incorrect request: '%s'", $ex->getMessage()));
+                }
+                http_response_code(401);
+                header('WWW-Authenticate: Basic realm="ZPush"');
             }
-            http_response_code(401);
-            header('WWW-Authenticate: Basic realm="ZPush"');
-        }
-        catch (ZPushException $ex) {
-            ZLog::Write(LOGLEVEL_ERROR, sprintf("Unable to complete autodiscover because of ZPushException. Error: %s", $ex->getMessage()));
-            if(!headers_sent()) {
-                header('HTTP/1.1 '. $ex->getHTTPCodeString());
-                foreach ($ex->getHTTPHeaders() as $h) {
-                    header($h);
+            else if ($ex instanceof ZPushException) {
+                ZLog::Write(LOGLEVEL_ERROR, sprintf("Unable to complete autodiscover because of ZPushException. Error: %s", $ex->getMessage()));
+                if(!headers_sent()) {
+                    header('HTTP/1.1 '. $ex->getHTTPCodeString());
+                    foreach ($ex->getHTTPHeaders() as $h) {
+                        header($h);
+                    }
                 }
             }
         }
+
         $this->sendResponse($response);
     }
 
@@ -182,21 +181,32 @@ class ZPushAutodiscover {
      * @return string $username
      */
     private function login($backend, $incomingXml) {
+        // don't even try to login if there is no PW set
+        if (!isset($_SERVER['PHP_AUTH_PW'])) {
+            throw new AuthenticationRequiredException("Access denied. No password provided.");
+        }
+
         // Determine the login name depending on the configuration: complete email address or
         // the local part only.
         if (USE_FULLEMAIL_FOR_LOGIN) {
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("Using the complete email address for login."));
             $username = $incomingXml->Request->EMailAddress;
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("Using the complete email address for login: '%s'", $username));
         }
-        else{
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("Using the username only for login."));
+        else {
             $username = Utils::GetLocalPartFromEmail($incomingXml->Request->EMailAddress);
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("Using the username only for login: '%s'", $username));
         }
 
-        if($backend->Logon($username, "", $_SERVER['PHP_AUTH_PW']) == false) {
+        // Mobile devices send Authorization header using UTF-8 charset. Outlook sends it using ISO-8859-1 encoding.
+        // For the successful authentication the user and password must be UTF-8 encoded. Try to determine which
+        // charset was sent by the client and convert it to UTF-8. See https://jira.z-hub.io/browse/ZP-864.
+        $username = Utils::ConvertAuthorizationToUTF8($username);
+        $password = Utils::ConvertAuthorizationToUTF8($_SERVER['PHP_AUTH_PW']);
+        if ($backend->Logon($username, "", $password) == false) {
             throw new AuthenticationRequiredException("Access denied. Username or password incorrect.");
         }
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAutodiscover->login() Using '%s' as the username.", $username));
+
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAutodiscover->login() successfull with '%s' as the username.", $username));
         return $username;
     }
 

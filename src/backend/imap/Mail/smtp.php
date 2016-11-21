@@ -238,7 +238,7 @@ class Mail_smtp extends Mail {
             $this->addServiceExtensionParameter('XVERP', is_bool($params['verp']) ? null : $params['verp']);
         }
 
-        register_shutdown_function(array(&$this, '_Mail_smtp'));
+        register_shutdown_function(array($this, '_Mail_smtp'));
     }
 
     /**
@@ -377,13 +377,13 @@ class Mail_smtp extends Mail {
      * @since  1.2.0
      * @access public
      */
-    function &getSMTPObject()
+    function getSMTPObject()
     {
         if (is_object($this->_smtp) !== false) {
             return $this->_smtp;
         }
 
-        $this->_smtp = &new Net_SMTP($this->host,
+        $this->_smtp = new Net_SMTP($this->host,
                                      $this->port,
                                      $this->localhost,
                                      $this->pipelining,

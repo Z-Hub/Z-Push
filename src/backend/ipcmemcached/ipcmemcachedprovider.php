@@ -12,25 +12,7 @@
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -47,6 +29,7 @@ require_once("backend/ipcmemcached/config.php");
 
 class IpcMemcachedProvider implements IIpcProvider {
     protected $type;
+    private $typeMutex;
     private $maxWaitCycles;
     private $logWaitCycles;
     private $isDownUntil;
@@ -70,6 +53,7 @@ class IpcMemcachedProvider implements IIpcProvider {
      */
     public function __construct($type, $allocate, $class) {
         $this->type = $type;
+        $this->typeMutex = $type . "MX";
         $this->maxWaitCycles = round(MEMCACHED_MUTEX_TIMEOUT * 1000 / MEMCACHED_BLOCK_WAIT)+1;
         $this->logWaitCycles = round($this->maxWaitCycles/5);
 
@@ -181,20 +165,20 @@ class IpcMemcachedProvider implements IIpcProvider {
         }
 
         $n = 0;
-        while(!$this->memcached->add($this->type+10, true, MEMCACHED_MUTEX_TIMEOUT)) {
+        while(!$this->memcached->add($this->typeMutex, true, MEMCACHED_MUTEX_TIMEOUT)) {
             if (++$n % $this->logWaitCycles == 0) {
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("IpcMemcachedProvider->BlockMutex() waiting to aquire mutex for type: %s ", $this->type));
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("IpcMemcachedProvider->BlockMutex() waiting to aquire mutex for type: %s ", $this->typeMutex));
             }
             // wait before retrying
             usleep(MEMCACHED_BLOCK_WAIT * 1000);
             if ($n > $this->maxWaitCycles) {
-                ZLog::Write(LOGLEVEL_ERROR, sprintf("IpcMemcachedProvider->BlockMutex() could not aquire mutex for type: %s. Check memcache service!", $this->type));
+                ZLog::Write(LOGLEVEL_ERROR, sprintf("IpcMemcachedProvider->BlockMutex() could not aquire mutex for type: %s. Check memcache service!", $this->typeMutex));
                 $this->markAsDown();
                 return false;
             }
         }
         if ($n*MEMCACHED_BLOCK_WAIT > 50) {
-            ZLog::Write(LOGLEVEL_WARN, sprintf("IpcMemcachedProvider->BlockMutex() mutex aquired after waiting for %sms for type: %s", ($n*MEMCACHED_BLOCK_WAIT), $this->type));
+            ZLog::Write(LOGLEVEL_WARN, sprintf("IpcMemcachedProvider->BlockMutex() mutex aquired after waiting for %sms for type: %s", ($n*MEMCACHED_BLOCK_WAIT), $this->typeMutex));
         }
         return true;
     }
@@ -207,7 +191,7 @@ class IpcMemcachedProvider implements IIpcProvider {
      * @return boolean
      */
     public function ReleaseMutex() {
-        return $this->memcached->delete($this->type+10);
+        return $this->memcached->delete($this->typeMutex);
     }
 
     /**
@@ -265,7 +249,7 @@ class IpcMemcachedProvider implements IIpcProvider {
                 return $timestamp;
             }
             else {
-                unlink(MEMCACHED_DOWN_LOCK_FILE);
+                @unlink(MEMCACHED_DOWN_LOCK_FILE);
             }
         }
         return 0;

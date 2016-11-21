@@ -1,0 +1,2 @@
+conftmp/ldap.conf.php /etc/z-push/
+backend/ldap            /usr/share/z-push/backend/

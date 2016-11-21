@@ -1,0 +1,2 @@
+conftmp/gabsync.conf.php /etc/z-push/
+tools/gab-sync            /usr/share/z-push/tools/

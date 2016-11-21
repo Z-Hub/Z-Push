@@ -1,0 +1,4 @@
+usr/share/z-push/backend
+var/lib/z-push
+var/log/z-push
+

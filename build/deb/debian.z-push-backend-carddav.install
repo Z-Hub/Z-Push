@@ -1,0 +1,2 @@
+conftmp/carddav.conf.php /etc/z-push/
+backend/carddav            /usr/share/z-push/backend/

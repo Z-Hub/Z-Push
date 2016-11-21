@@ -1,0 +1,13 @@
+#!/bin/sh
+# postrm script for z-push-config-apache
+
+set -e
+
+if type a2disconf >/dev/null 2>/dev/null; then
+  a2disconf z-push-autodiscover || true
+  service apache2 reload || true
+fi
+
+#DEBHELPER#
+
+exit 0

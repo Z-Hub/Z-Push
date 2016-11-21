@@ -1,0 +1,30 @@
+z-push (1.0.0-1) unstable; urgency=low
+
+    Upgrading from z-push 2.0 versions
+
+    * Upgrade your z-push files to the new version
+    * Mobiles which connect will receive a temporary synchronization error
+      (only visible if you explicitly click "refresh" on the mobiles)
+    * Run the upgrade script located in the tools folder. The files
+      distributed by us contain a correct configuration of this script to
+      access the config file and locate the state files. If your file
+      locations are different, please check the path settings in the top of
+      the migration script.
+    * After running the migration script, mobiles will continue
+      synchronizing without any re-synchronization
+
+    Upgrading from z-push 1.X versions
+
+    The easiest way to upgrade is to follow the steps for a new installation.
+    The states of z-push 1.X are not compatible and there is no upgrade path,
+    but as this version implements a fully automatic resynchronisation of
+    devices it should not affect the users and work without the user
+    interaction.
+
+    Since all devices will start a full resyncronisation after the upgrade it
+    is recommended to do the upgrade during a period with low traffic.
+
+    This version offers improved logging facilities, so please review your
+    configuration with respect to this.
+
+ -- Michael Kromer <mike@zarafa.com>  Sat, 02 Aug 2014 00:38:49 +0200

@@ -6,29 +6,11 @@
 *
 * Created   :   16.02.2012
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -86,7 +68,11 @@ class MoveItems extends RequestProcessor {
 
         self::$encoder->startTag(SYNC_MOVE_MOVES);
 
+        $operationResults = array();
+        $operationCounter = 0;
+        $operationTotal = count($moves);
         foreach($moves as $move) {
+            $operationCounter++;
             self::$encoder->startTag(SYNC_MOVE_RESPONSE);
             self::$encoder->startTag(SYNC_MOVE_SRCMSGID);
             self::$encoder->content($move["srcmsgid"]);
@@ -141,7 +127,15 @@ class MoveItems extends RequestProcessor {
                     $status = $stex->getCode();
             }
 
-            self::$topCollector->AnnounceInformation(sprintf("Operation status: %s", $status), true);
+            if ($operationCounter % 10 == 0) {
+                self::$topCollector->AnnounceInformation(sprintf("Moved %d objects out of %d", $operationCounter, $operationTotal));
+            }
+
+            // save the operation result
+            if (!isset($operationResults[$status])) {
+                $operationResults[$status] = 0;
+            }
+            $operationResults[$status]++;
 
             self::$encoder->startTag(SYNC_MOVE_STATUS);
             self::$encoder->content($status);
@@ -152,6 +146,12 @@ class MoveItems extends RequestProcessor {
             self::$encoder->endTag();
             self::$encoder->endTag();
         }
+
+        self::$topCollector->AnnounceInformation(sprintf("Moved %d - Codes", $operationTotal), true);
+        foreach ($operationResults as $status => $occurences) {
+            self::$topCollector->AnnounceInformation(sprintf("%dx%d", $occurences, $status), true);
+        }
+
 
         self::$encoder->endTag();
         return true;

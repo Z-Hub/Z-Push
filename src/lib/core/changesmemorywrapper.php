@@ -6,29 +6,11 @@
 *
 * Created   :   18.08.2011
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -40,7 +22,6 @@
 *
 * Consult LICENSE file for details
 ************************************************/
-
 
 class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IExportChanges {
     const CHANGE = 1;
@@ -58,10 +39,10 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
      * @access public
      * @return
      */
-    public function ChangesMemoryWrapper() {
+    public function __construct() {
         $this->changes = array();
         $this->step = 0;
-        parent::HierarchyCache();
+        parent::__construct();
     }
 
     /**
@@ -78,7 +59,8 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
             foreach($state as $addKey => $addFolder) {
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("ChangesMemoryWrapper->Config(AdditionalFolders) : process folder '%s'", $addFolder->displayname));
                 if (isset($addFolder->NoBackendFolder) && $addFolder->NoBackendFolder == true) {
-                    $hasRights = ZPush::GetBackend()->Setup($addFolder->Store, true, $addFolder->BackendId, $addFolder->ReadOnly);
+                    // check rights for readonly access only
+                    $hasRights = ZPush::GetBackend()->Setup($addFolder->Store, true, $addFolder->BackendId, true);
                     // delete the folder on the device
                     if (! $hasRights) {
                         // delete the folder only if it was an additional folder before, else ignore it
@@ -251,7 +233,6 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
                 // The Zarafa/Kopano HierarchyExporter exports all kinds of changes for folders (e.g. update no. of unread messages in a folder).
                 // These changes are not relevant for the mobiles, as something changes but the relevant displayname and parentid
                 // stay the same. These changes will be dropped and are not sent!
-                $cacheFolder = $this->GetFolder($folder->serverid);
                 if ($folder->equals($this->GetFolder($folder->serverid))) {
                     ZLog::Write(LOGLEVEL_DEBUG, sprintf("ChangesMemoryWrapper->ImportFolderChange(): Change for folder '%s' will not be sent as modification is not relevant.", $folder->displayname));
                     return false;

@@ -11,25 +11,7 @@
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -254,25 +236,10 @@ class Request {
         // Mobile devices send Authorization header using UTF-8 charset. Outlook sends it using ISO-8859-1 encoding.
         // For the successful authentication the user and password must be UTF-8 encoded. Try to determine which
         // charset was sent by the client and convert it to UTF-8. See https://jira.z-hub.io/browse/ZP-864.
-        if (isset($_SERVER['PHP_AUTH_USER'])) {
-            $encoding = mb_detect_encoding(self::$authUser, "UTF-8, ISO-8859-1");
-            if (!$encoding) {
-                $encoding = mb_detect_encoding(self::$authUser, Utils::GetAvailableCharacterEncodings());
-                if ($encoding) {
-                    ZLog::Write(LOGLEVEL_WARN,
-                            sprintf("Request->ProcessHeaders(): mb_detect_encoding detected '%s' charset. This charset is not in the default detect list. Please report it to Z-Push developers.",
-                                    $encoding));
-                }
-                else {
-                    ZLog::Write(LOGLEVEL_ERROR, "Request->ProcessHeaders(): mb_detect_encoding failed to detect the Authorization header charset. It's possible that user won't be able to login.");
-                }
-            }
-            if ($encoding && strtolower($encoding) != "utf-8") {
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("Request->ProcessHeaders(): mb_detect_encoding detected '%s' charset. Authorization header will be converted to UTF-8 from it.", $encoding));
-                self::$authUser = mb_convert_encoding(self::$authUser, "UTF-8", $encoding);
-                self::$authPassword = mb_convert_encoding(self::$authPassword, "UTF-8", $encoding);
-            }
-        }
+        if (isset(self::$authUser))
+          self::$authUser = Utils::ConvertAuthorizationToUTF8(self::$authUser);
+        if (isset(self::$authPassword))
+          self::$authPassword = Utils::ConvertAuthorizationToUTF8(self::$authPassword);
     }
 
     /**
@@ -654,6 +621,32 @@ class Request {
         return (time() - $_SERVER["REQUEST_TIME"]) >= self::GetExpectedConnectionTimeout();
     }
 
+    /**
+     * Checks the device type if it expects the globalobjid in meeting requests encoded as hex.
+     * If it's not the case, globalobjid will be base64 encoded.
+     *
+     * WindowsOutlook and iOS device since 9.3 (?) version expect globalobjid to be hex encoded.
+     * @see https://jira.z-hub.io/projects/ZP/issues/ZP-1013
+     *
+     * @access public
+     * @return boolean
+     */
+    static public function IsGlobalObjIdHexClient() {
+        switch (self::GetDeviceType()) {
+            case "WindowsOutlook":
+                ZLog::Write(LOGLEVEL_DEBUG, "Request->IsGlobalObjIdHexClient(): WindowsOutlook");
+                return true;
+            case "iPod":
+            case "iPad":
+            case "iPhone":
+                $matches = array();
+                if (preg_match("/^Apple-.*?\/(\d{4})\./", self::GetUserAgent(), $matches) && isset($matches[1]) && $matches[1] >= 1305) {
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("Request->IsGlobalObjIdHexClient(): %s->%s", self::GetDeviceType(), self::GetUserAgent()));
+                    return true;
+                }
+        }
+        return false;
+    }
     /**----------------------------------------------------------------------------------------------------------
      * Private stuff
      */

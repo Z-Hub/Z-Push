@@ -75,7 +75,7 @@ abstract class SyncWorker {
      *  - gets all GAB entries
      *  - sorts them into chunks
      *  - serializes the chunk
-     *  - sends it to SetChunkData() to be written
+     *  - sends it to setChunkData() to be written
      *  - shows some stats
      *
      * @param string $targetGab the gab name id that should be synchronized, if not set 'default' or all are used.
@@ -86,7 +86,7 @@ abstract class SyncWorker {
      */
     public function Sync($targetGab = false, $doWrite = true) {
         // gets a list of GABs
-        $gabs = $this->GetGABs();
+        $gabs = $this->getGABs();
 
         if (empty($gabs)) {
             if($targetGab) {
@@ -117,15 +117,19 @@ abstract class SyncWorker {
     private function doSync($gabId = null, $gabName = 'default', $doWrite = true) {
         // get the folderid of the hidden folder - will be created if not yet available
         $folderid = $this->getFolderId($gabId, $gabName, $doWrite);
+        if ($folderid === false) {
+            $this->Log(sprintf("Aborting %sGAB sync to store '%s'%s. Store not found or create not possible.", (!$doWrite?"simulated ":""), HIDDEN_FOLDERSTORE, ($gabId?" of '".$gabName."'":"")));
+            return;
+        }
 
         $this->Log(sprintf("Starting %sGAB sync to store '%s' %s on id '%s'", (!$doWrite?"simulated ":""), HIDDEN_FOLDERSTORE, ($gabId?"of '".$gabName."'":""), $folderid));
 
         // remove all messages that do not match the current $chunkType
         if ($doWrite)
-            $this->ClearAllNotCurrentChunkType($folderid, $gabId, $gabName);
+            $this->clearAllNotCurrentChunkType($folderid, $gabId, $gabName);
 
         // get all GAB entries
-        $gab = $this->GetGAB(false, $gabId, $gabName);
+        $gab = $this->getGAB(false, $gabId, $gabName);
 
         // build the chunks
         $chunks = array();
@@ -170,7 +174,7 @@ abstract class SyncWorker {
             if ($doWrite) {
                 $chunkName = $this->chunkType . "/". $chunkId;
                 $chunkCRC = md5($chunkData);
-                $this->SetChunkData($folderid, $chunkName, $amountEntries, $chunkData, $chunkCRC, $gabId, $gabName);
+                $this->setChunkData($folderid, $chunkName, $amountEntries, $chunkData, $chunkCRC, $gabId, $gabName);
             }
         }
 
@@ -200,7 +204,7 @@ abstract class SyncWorker {
         $this->Log(sprintf("Sync-one: %s = '%s'%s", UNIQUEID, $uniqueId, ($targetGab) ? " of '".$targetGab."'":''));
 
         // gets a list of GABs
-        $gabs = $this->GetGABs();
+        $gabs = $this->getGABs();
 
         if (empty($gabs)) {
             if($targetGab) {
@@ -221,7 +225,7 @@ abstract class SyncWorker {
         }
 
         // search for the entry in the GAB
-        $entries = $this->GetGAB($uniqueId, $gabId, $gabName);
+        $entries = $this->getGAB($uniqueId, $gabId, $gabName);
 
         // if an entry is found, update the chunk
         // if the entry is NOT found, we should remove it from the chunk (entry deleted)
@@ -241,7 +245,7 @@ abstract class SyncWorker {
         $folderid = $this->getFolderId($gabId, $gabName);
         $chunkId = $this->calculateChunkId($key);
         $chunkName = $this->chunkType . "/". $chunkId;
-        $chunkdata = $this->GetChunkData($folderid, $chunkName, $gabId, $gabName);
+        $chunkdata = $this->getChunkData($folderid, $chunkName, $gabId, $gabName);
         $chunk = json_decode($chunkdata, true);
 
         // update or remove the entry
@@ -269,7 +273,7 @@ abstract class SyncWorker {
 
         // update the chunk data
         $chunkCRC = md5($chunkData);
-        $status = $this->SetChunkData($folderid, $chunkName, $amountEntries, $chunkData, $chunkCRC, $gabId, $gabName);
+        $status = $this->setChunkData($folderid, $chunkName, $amountEntries, $chunkData, $chunkCRC, $gabId, $gabName);
         if ($status) {
             $this->Log("Success!");
         }
@@ -286,7 +290,7 @@ abstract class SyncWorker {
      */
     public function ClearAll($targetGab) {
         // gets a list of GABs
-        $gabs = $this->GetGABs();
+        $gabs = $this->getGABs();
 
         if (empty($gabs)) {
             if($targetGab) {
@@ -315,13 +319,13 @@ abstract class SyncWorker {
      * @return boolean
      */
     private function doClearAll($gabId = null, $gabName = 'default') {
-        $folderid = $this->GetHiddenFolderId($gabId, $gabName);
+        $folderid = $this->getHiddenFolderId($gabId, $gabName);
         if (!$folderid) {
             $this->Log(sprintf("Could not locate folder in '%s'. Aborting.", $gabName));
             return false;
         }
 
-        $status = $this->ClearFolderContents($folderid, $gabId, $gabName);
+        $status = $this->clearFolderContents($folderid, $gabId, $gabName);
         if ($status) {
             $this->Log(sprintf("Success for '%s'!", $gabName));
         }
@@ -339,7 +343,7 @@ abstract class SyncWorker {
      */
     public function DeleteAll($targetGab) {
         // gets a list of GABs
-        $gabs = $this->GetGABs();
+        $gabs = $this->getGABs();
 
         if (empty($gabs)) {
             if($targetGab) {
@@ -368,14 +372,14 @@ abstract class SyncWorker {
      * @return boolean
      */
     private function doDeleteAll($gabId = null, $gabName = 'default') {
-        $folderid = $this->GetHiddenFolderId($gabId, $gabName);
+        $folderid = $this->getHiddenFolderId($gabId, $gabName);
         if (!$folderid) {
             $this->Log(sprintf("Could not locate folder in '%s'", $gabName));
             return false;
         }
-        $emptystatus = $this->ClearFolderContents($folderid, $gabId, $gabName);
+        $emptystatus = $this->clearFolderContents($folderid, $gabId, $gabName);
         if ($emptystatus) {
-            $status = $this->DeleteHiddenFolder($folderid, $gabId, $gabName);
+            $status = $this->deleteHiddenFolder($folderid, $gabId, $gabName);
             if ($status) {
                 $this->Log(sprintf("Success for '%s'!", $gabName));
                 return true;
@@ -422,10 +426,10 @@ abstract class SyncWorker {
      * @return string
      */
     protected function getFolderId($gabId = null, $gabName = 'default', $doCreate = true) {
-        $id = $this->GetHiddenFolderId($gabId, $gabName);
+        $id = $this->getHiddenFolderId($gabId, $gabName);
         if (!$id) {
             if ($doCreate)
-                $id = $this->CreateHiddenFolder($gabId, $gabName);
+                $id = $this->createHiddenFolder($gabId, $gabName);
             else
                 $id = "<does not yet exist>";
         }
@@ -478,7 +482,7 @@ abstract class SyncWorker {
      * @access protected
      * @return boolean
      */
-    protected abstract function CreateHiddenFolder($gabId = null, $gabName = 'default');
+    protected abstract function createHiddenFolder($gabId = null, $gabName = 'default');
 
     /**
      * Deletes the hidden folder.
@@ -490,7 +494,7 @@ abstract class SyncWorker {
      * @access protected
      * @return boolean
      */
-    protected abstract function DeleteHiddenFolder($folderid, $gabId = null, $gabName = 'default');
+    protected abstract function deleteHiddenFolder($folderid, $gabId = null, $gabName = 'default');
 
     /**
      * Returns the internal identifier (folder-id) of the hidden folder.
@@ -501,7 +505,7 @@ abstract class SyncWorker {
      * @access protected
      * @return string
     */
-    protected abstract function GetHiddenFolderId($gabId = null, $gabName = 'default');
+    protected abstract function getHiddenFolderId($gabId = null, $gabName = 'default');
 
     /**
      * Removes all messages that have not the same chunkType (chunk configuration changed!).
@@ -513,7 +517,7 @@ abstract class SyncWorker {
      * @access protected
      * @return boolean
      */
-    protected abstract function ClearFolderContents($folderid, $gabId = null, $gabName = 'default');
+    protected abstract function clearFolderContents($folderid, $gabId = null, $gabName = 'default');
 
     /**
      * Removes all messages that do not match the current ChunkType.
@@ -525,15 +529,15 @@ abstract class SyncWorker {
      * @access protected
      * @return boolean
      */
-    protected abstract function ClearAllNotCurrentChunkType($folderid, $gabId = null, $gabName = 'default');
+    protected abstract function clearAllNotCurrentChunkType($folderid, $gabId = null, $gabName = 'default');
 
     /**
-     * Returns a list of Global Address Books with their name and ids.
+     * Returns a list of Global Address Books with their names and ids.
      *
      * @access protected
      * @return array
      */
-    protected abstract function GetGABs();
+    protected abstract function getGABs();
 
     /**
      * Returns a list with all GAB entries or a single entry specified by $uniqueId.
@@ -549,7 +553,7 @@ abstract class SyncWorker {
      * @access protected
      * @return array of GABEntry
      */
-    protected abstract function GetGAB($uniqueId = false, $gabId = null, $gabName = 'default');
+    protected abstract function getGAB($uniqueId = false, $gabId = null, $gabName = 'default');
 
     /**
      * Returns the chunk data of the chunkId of the hidden folder.
@@ -564,7 +568,7 @@ abstract class SyncWorker {
      * @access protected
      * @return json string
      */
-    protected abstract function GetChunkData($folderid, $chunkName, $gabId = null, $gabName = 'default');
+    protected abstract function getChunkData($folderid, $chunkName, $gabId = null, $gabName = 'default');
 
     /**
      * Updates the chunk data in the hidden folder if it changed.
@@ -583,5 +587,5 @@ abstract class SyncWorker {
      * @access protected
      * @return boolean
      */
-    protected abstract function SetChunkData($folderid, $chunkName, $amountEntries, $chunkData, $chunkCRC, $gabId = null, $gabName = 'default');
+    protected abstract function setChunkData($folderid, $chunkName, $amountEntries, $chunkData, $chunkCRC, $gabId = null, $gabName = 'default');
 }

@@ -18,25 +18,7 @@
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -48,7 +30,6 @@
 *
 * Consult LICENSE file for details
 ************************************************/
-
 
 class SyncCollections implements Iterator {
     const ERROR_NO_COLLECTIONS = 1;
@@ -100,7 +81,7 @@ class SyncCollections implements Iterator {
     /**
      * Constructor
      */
-    public function SyncCollections() {
+    public function __construct() {
     }
 
     /**
@@ -441,11 +422,16 @@ class SyncCollections implements Iterator {
      * previousily set or saved in a collection
      *
      * @access public
-     * @return int                  returns 600 as default if nothing set or not available
+     * @return int                  returns PING_HIGHER_BOUND_LIFETIME as default if nothing set or not available.
+     *                              If PING_HIGHER_BOUND_LIFETIME is not set, returns 600.
      */
     public function GetLifetime() {
-        if (!isset( $this->refLifetime) || $this->refLifetime === false)
+        if (!isset($this->refLifetime) || $this->refLifetime === false) {
+            if (PING_HIGHER_BOUND_LIFETIME !== false) {
+                return PING_HIGHER_BOUND_LIFETIME;
+            }
             return 600;
+        }
 
         return $this->refLifetime;
     }
@@ -679,11 +665,14 @@ class SyncCollections implements Iterator {
             return false;
         }
 
-        // prevent ZP-623 by checking if the states have been used before, if so force a sync on this folder
-        if (ZPush::GetDeviceManager()->CheckHearbeatStateIntegrity($spa->GetFolderId(), $spa->GetUuid(), $spa->GetUuidCounter())) {
-            ZLog::Write(LOGLEVEL_DEBUG, "SyncCollections->CountChange(): Cannot verify changes for state as it was already used. Forcing sync of folder.");
-            $this->changes[$folderid] = 1;
-            return true;
+        // Prevent ZP-623 by checking if the states have been used before, if so force a sync on this folder.
+        // ZCP/KC 7.2.3 and newer support SYNC_STATE_READONLY so this behaviour is not required (see ZP-968).
+        if (!Utils::CheckMapiExtVersion('7.2.3')) {
+            if (ZPush::GetDeviceManager()->CheckHearbeatStateIntegrity($spa->GetFolderId(), $spa->GetUuid(), $spa->GetUuidCounter())) {
+                ZLog::Write(LOGLEVEL_DEBUG, "SyncCollections->CountChange(): Cannot verify changes for state as it was already used. Forcing sync of folder.");
+                $this->changes[$folderid] = 1;
+                return true;
+            }
         }
 
         $backendFolderId = ZPush::GetDeviceManager()->GetBackendIdForFolderId($folderid);
@@ -736,7 +725,6 @@ class SyncCollections implements Iterator {
       */
      private function countHierarchyChange($exportChanges = false) {
          $folderid = false;
-         $spa = $this->GetCollection($folderid);
 
          // Check with device manager if the hierarchy should be reloaded.
          // New additional folders are loaded here.

@@ -17,25 +17,7 @@
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License, version 3,
- * as published by the Free Software Foundation with the following additional
- * term according to sec. 7:
- *
- * According to sec. 7 of the GNU Affero General Public License, version 3,
- * the terms of the AGPL are supplemented with the following terms:
- *
- * "Zarafa" is a registered trademark of Zarafa B.V.
- * "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
- * The licensing of the Program under the AGPL does not imply a trademark license.
- * Therefore any rights, title and interest in our trademarks remain entirely with us.
- *
- * However, if you propagate an unmodified version of the Program you are
- * allowed to use the term "Z-Push" to indicate that you distribute the Program.
- * Furthermore you may use our trademarks where it is necessary to indicate
- * the intended purpose of a product or service provided you use it in accordance
- * with honest practices in industrial or commercial matters.
- * If you want to propagate modified versions of the Program under the name "Z-Push",
- * you may only do so if you have a written permission by Zarafa Deutschland GmbH
- * (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -122,7 +104,7 @@ class KopanoChangesWrapper implements IImportChanges, IExportChanges {
      * @access public
      * @throws StatusException
      */
-    public function KopanoChangesWrapper($session, $store, $folderid, $ownFolder) {
+    public function __construct($session, $store, $folderid, $ownFolder) {
         $this->preparedAs = null;
         $this->session = $session;
         $this->store = $store;
@@ -397,7 +379,10 @@ class KopanoChangesWrapper implements IImportChanges, IExportChanges {
         // When we setup the $current importer, we didn't know what we needed to do, so we look only at the src folder for permissions.
         // Now the $newfolder could be read only as well. So we need to check it's permissions and then switch to a ReplyBackImExporter if it's r/o.
         if (!$this->isReplyBackExporter()) {
-            if (!self::$backend->HasSecretaryACLs($this->store, $newfolder)) {
+
+            // check if the user has permissions on the destination folder
+            $dststore = self::$backend->GetMAPIStoreForFolderId(ZPush::GetAdditionalSyncFolderStore($newfolder), $newfolder);
+            if (!self::$backend->HasSecretaryACLs($dststore, $newfolder)) {
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoChangesWrapper->ImportMessageMove(): destination folderid '%s' is missing permissions. Switching to ReplyBackImExporter.", Utils::PrintAsString($newfolder)));
                 $this->replyback = $this->getReplyBackImExporter();
                 $this->current = $this->replyback;

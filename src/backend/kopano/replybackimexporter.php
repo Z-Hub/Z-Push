@@ -13,25 +13,7 @@
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -76,7 +58,7 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
      * @access public
      * @throws StatusException
      */
-    public function ReplyBackImExporter($session, $store, $folderid) {
+    public function __construct($session, $store, $folderid) {
         $this->session = $session;
         $this->store = $store;
         $this->folderid = $folderid;
@@ -270,6 +252,24 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
      * @return boolean
      */
     public function ImportMessageChange($id, $message) {
+        if(ZPush::GetDeviceManager()->IsKoe()) {
+            // Ignore incoming update events of KOE caused by PatchItem - ZP-1060
+            if (KOE_CAPABILITY_NOTES && $id && $message instanceof SyncNote && !isset($message->asbody)) {
+                ZLog::Write(LOGLEVEL_DEBUG, "ReplyBackImExporter->ImportMessageChange(): KOE patch item update. Ignoring incoming update.");
+                return true;
+            }
+            // KOE ZP-990: OL updates the deleted category which causes a race condition if more than one KOE is connected to that user
+            if (KOE_CAPABILITY_RECEIVEFLAGS && $message instanceof SyncMail && !isset($message->flag) && isset($message->categories)) {
+                // check if the categories changed
+                $serverMessage = $this->getMessage($id, false);
+                if((empty($message->categories) && empty($serverMessage->categories)) ||
+                    (is_array($mapiCategories) && count(array_diff($mapiCategories, $message->categories)) == 0 && count(array_diff($message->categories, $mapiCategories)) == 0)) {
+                        ZLog::Write(LOGLEVEL_DEBUG, "ReplyBackImExporter->ImportMessageChange(): KOE update of flag categories. Ignoring incoming update.");
+                        return true;
+                }
+            }
+        }
+
         // data is going to be dropped, inform the user
         if (@constant('READ_ONLY_NOTIFY_LOST_DATA')) {
             try {
@@ -449,20 +449,19 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
         }
         $message = false;
 
-        list($fsk, $sk) = MAPIUtils::SplitMessageId($id);
+        list($fsk, $sk) = Utils::SplitMessageId($id);
 
         $sourcekey = hex2bin($sk);
         $parentsourcekey = hex2bin(ZPush::GetDeviceManager()->GetBackendIdForFolderId($fsk));
+        // Backwards compatibility for old style folder ids
+        if (empty($parentsourcekey)) {
+            $parentsourcekey = $this->folderid;
+        }
         $entryid = mapi_msgstore_entryidfromsourcekey($this->store, $parentsourcekey, $sourcekey);
 
         if(!$entryid) {
             ZLog::Write(LOGLEVEL_INFO, sprintf("ReplyBackImExporter->getMessage(): Couldn't retrieve message from MAPIProvider, sourcekey: '%s', parentsourcekey: '%s'", bin2hex($sourcekey), bin2hex($parentsourcekey), bin2hex($entryid)));
-            if ($announceErrors) {
-                return $status;
-            }
-            else {
-                return false;
-            }
+            return false;
         }
 
         $mapimessage = mapi_msgstore_openentry($this->store, $entryid);
@@ -484,8 +483,7 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
                     }
                     ZPush::GetDeviceManager()->AnnounceIgnoredMessage(false, $brokenSO->id, $brokenSO);
                 }
-                // tell MAPI to ignore the message
-                return $status;
+                return false;
             }
         }
         return $message;

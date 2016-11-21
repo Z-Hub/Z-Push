@@ -9,29 +9,11 @@
 *
 * Created   :   20.10.2011
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -56,7 +38,7 @@ class TopCollector extends InterProcessData {
      *
      * @access public
      */
-    public function TopCollector() {
+    public function __construct() {
         // initialize super parameters
         $this->allocate = 2097152; // 2 MB
         $this->type = 20;
@@ -132,6 +114,10 @@ class TopCollector extends InterProcessData {
      * @return boolean
      */
     public function AnnounceInformation($addinfo, $preserve = false, $terminating = false) {
+        if (defined('TOPCOLLECTOR_DISABLED') && constant('TOPCOLLECTOR_DISABLED') === true) {
+            return true;
+        }
+
         $this->latest["addinfo"] = $addinfo;
         $this->latest["update"] = time();
 
@@ -144,10 +130,10 @@ class TopCollector extends InterProcessData {
         if ($preserve)
             $this->preserved[] = $addinfo;
 
-        // exclusive block
-        if ($this->blockMutex()) {
-
-            if ($this->isEnabled()) {
+        if ($this->isEnabled()) {
+            $ok = false;
+            // exclusive block
+            if ($this->blockMutex()) {
                 $topdata = ($this->hasData(self::TOPDATA)) ? $this->getData(self::TOPDATA): array();
 
                 $this->checkArrayStructure($topdata);
@@ -155,16 +141,14 @@ class TopCollector extends InterProcessData {
                 // update
                 $topdata[self::$devid][self::$user][self::$pid] = $this->latest;
                 $ok = $this->setData($topdata, self::TOPDATA);
+                $this->releaseMutex();
             }
-            $this->releaseMutex();
+            // end exclusive block
+            if (!$ok) {
+                ZLog::Write(LOGLEVEL_WARN, "TopCollector::AnnounceInformation(): could not write to shared memory. Z-Push top will not display this data.");
+                return false;
+            }
         }
-        // end exclusive block
-
-        if ($this->isEnabled() === true && !$ok) {
-            ZLog::Write(LOGLEVEL_WARN, "TopCollector::AnnounceInformation(): could not write to shared memory. Z-Push top will not display this data.");
-            return false;
-        }
-
         return true;
     }
 
