@@ -733,7 +733,7 @@ class MAPIProvider {
                     }
                     // android devices require attachment size in order to display an attachment properly
                     if (!isset($attachprops[PR_ATTACH_SIZE])) {
-                        $stream = mapi_openpropertytostream($mapiattach, PR_ATTACH_DATA_BIN);
+                        $stream = mapi_openproperty($mapiattach, PR_ATTACH_DATA_BIN, IID_IStream, 0, 0);
                         // It's not possible to open some (embedded only?) messages, so we need to open the attachment object itself to get the data
                         if (mapi_last_hresult()) {
                             $embMessage = mapi_attach_openobj($mapiattach);
