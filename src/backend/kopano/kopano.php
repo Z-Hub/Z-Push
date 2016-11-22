@@ -730,7 +730,7 @@ class BackendKopano implements IBackend, ISearchProvider {
             $attachment->contenttype = "message/rfc822";
         }
         else
-            $stream = mapi_openpropertytostream($attach, PR_ATTACH_DATA_BIN);
+            $stream = mapi_openproperty($attach, PR_ATTACH_DATA_BIN, IID_IStream, 0, 0);
 
         if(!$stream)
             throw new StatusException(sprintf("KopanoBackend->GetAttachmentData('%s'): Error, unable to open attachment data stream: 0x%X", $attname, mapi_last_hresult()), SYNC_ITEMOPERATIONSSTATUS_INVALIDATT);
