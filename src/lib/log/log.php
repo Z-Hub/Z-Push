@@ -74,6 +74,8 @@ abstract class Log {
     }
 
     /**
+     * Returns the current user.
+     *
      * @access public
      * @return string
      */
@@ -82,15 +84,20 @@ abstract class Log {
     }
 
     /**
+     * Sets the current user.
+     *
      * @param string $value
      *
      * @access public
+     * @return void
      */
     public function SetUser($value) {
         $this->user = $value;
     }
 
     /**
+     * Returns the current authenticated user.
+     *
      * @access public
      * @return string
      */
@@ -99,9 +106,12 @@ abstract class Log {
     }
 
     /**
+     * Sets the current authenticated user.
+     *
      * @param string $value
      *
      * @access public
+     * @return void
      */
     public function SetAuthUser($value) {
         $this->isAuthUserInSpecialLogUsers = false;
@@ -128,6 +138,8 @@ abstract class Log {
     }
 
     /**
+     * Returns the current device id.
+     *
      * @access public
      * @return string
      */
@@ -136,15 +148,20 @@ abstract class Log {
     }
 
     /**
+     * Sets the current device id.
+     *
      * @param string $value
      *
      * @access public
+     * @return void
      */
     public function SetDevid($value) {
         $this->devid = $value;
     }
 
     /**
+     * Returns the current PID (as string).
+     *
      * @access public
      * @return string
      */
@@ -153,15 +170,20 @@ abstract class Log {
     }
 
     /**
+     * Sets the current PID.
+     *
      * @param string $value
      *
      * @access public
+     * @return void
      */
     public function SetPidstr($value) {
         $this->pidstr = $value;
     }
 
     /**
+     * Indicates if special log users are known.
+     *
      * @access public
      * @return bool True if we do have to log some specific user. False otherwise.
      */
@@ -170,6 +192,8 @@ abstract class Log {
     }
 
     /**
+     * Indicates if the user is in the special log users.
+     *
      * @param string $user
      *
      * @access public
@@ -187,6 +211,8 @@ abstract class Log {
     }
 
     /**
+     * Returns the current special log users array.
+     *
      * @access public
      * @return array
      */
@@ -195,13 +221,29 @@ abstract class Log {
     }
 
     /**
+     * Sets the current special log users array.
+     *
      * @param array $value
      *
      * @access public
+     * @return void
      */
     public function SetSpecialLogUsers(array $value) {
         $this->isUserInSpecialLogUsers = array(); // reset cache
         $this->specialLogUsers = $value;
+    }
+
+    /**
+     * If called, the current user should get an extra log-file.
+     *
+     * If called until the user is authenticated (e.g. at the end of IBackend->Logon()) all
+     * messages logged until then will also be logged in the user file.
+     *
+     * @access public
+     * @return void
+     */
+    public function SpecialLogUser() {
+        $this->isAuthUserInSpecialLogUsers = true;
     }
 
     /**
@@ -218,9 +260,14 @@ abstract class Log {
         if ($loglevel <= LOGLEVEL) {
             $this->Write($loglevel, $message);
         }
-        if ($loglevel <= LOGUSERLEVEL && $this->IsAuthUserInSpecialLogUsers()) {
-            if (RequestProcessor::isUserAuthenticated()) {
-                // something was logged before the user was authenticated, write this to the log
+        if ($loglevel <= LOGUSERLEVEL) {
+            // cache log messages for unauthenticated users
+            if (!RequestProcessor::isUserAuthenticated()) {
+                $this->unauthMessageCache[] = array($loglevel, $message);
+            }
+            // user is authenticated now
+            elseif ($this->IsAuthUserInSpecialLogUsers()) {
+                // something was logged before the user was authenticated and cached write it to the log
                 if (!empty($this->unauthMessageCache)) {
                     foreach ($this->unauthMessageCache as $authcache) {
                         $this->WriteForUser($authcache[0], $authcache[1]);
@@ -245,17 +292,6 @@ abstract class Log {
      * @return void
      */
     public function AfterInitialize() {
-    }
-
-    /**
-     * Set user log-file relative to log directory.
-     *
-     * @param string $value
-     *
-     * @access public
-     * @return void
-     */
-    public function SetLogToUserFile($value) {
     }
 
     /**
@@ -297,20 +333,23 @@ abstract class Log {
     }
 
     /**
+     * Writes a log message to the general log.
+     *
      * @param int $loglevel
      * @param string $message
      *
-     * @access public
-     * @return null
+     * @access protected
+     * @return void
      */
     abstract protected function Write($loglevel, $message);
 
     /**
+     * Writes a log message to the user specific log.
      * @param int $loglevel
      * @param string $message
      *
      * @access public
-     * @return null
+     * @return void
      */
     abstract public function WriteForUser($loglevel, $message);
 }

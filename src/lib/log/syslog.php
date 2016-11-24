@@ -84,6 +84,14 @@ class Syslog extends Log {
         }
     }
 
+    /**
+     * Constructor.
+     * Sets configured values if no parameters are given.     *
+     *
+     * @param string $program_name
+     * @param string $host
+     * @param string $port
+     */
     public function __construct($program_name = null, $host = null, $port = null) {
         parent::__construct();
 
@@ -104,7 +112,6 @@ class Syslog extends Log {
      * @return string
      */
     protected function GenerateProgramName() {
-
         // @TODO Use another mechanism than debug_backtrace to determine to origin of the log
         $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
         // Shift the "syslog.php" entry.
@@ -166,11 +173,19 @@ class Syslog extends Log {
         return $log;
     }
 
-
     //
     // Implementation of Log
     //
 
+    /**
+     * Writes a log message to the general log.
+     *
+     * @param int $loglevel
+     * @param string $message
+     *
+     * @access protected
+     * @return void
+     */
     protected function Write($loglevel, $message) {
         if ($this->GetHost() && $this->GetPort()) {
             $sock = socket_create(AF_INET, SOCK_DGRAM, SOL_UDP);
@@ -191,6 +206,13 @@ class Syslog extends Log {
         }
     }
 
+    /**
+     * This function is used as an event for log implementer.
+     * It happens when the a call to the Log function is finished.
+     *
+     * @access protected
+     * @return void
+     */
     public function WriteForUser($loglevel, $message) {
         $this->Write(LOGLEVEL_DEBUG, $message); // Always pass the logleveldebug so it uses syslog level LOG_DEBUG
     }

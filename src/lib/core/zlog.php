@@ -46,20 +46,9 @@ class ZLog {
         if (!defined('LOGLEVEL'))
             define('LOGLEVEL', LOGLEVEL_OFF);
 
-        self::RequestHeader();
+        $logger = self::getLogger();
 
         return true;
-    }
-
-    /**
-     * Write request header to log
-     */
-    static protected function RequestHeader() {
-        self::Write(LOGLEVEL_DEBUG,"-------- Start");
-        self::Write(LOGLEVEL_DEBUG,
-            sprintf("cmd='%s' devType='%s' devId='%s' getUser='%s' from='%s' version='%s' method='%s'",
-                Request::GetCommand(), Request::GetDeviceType(), Request::GetDeviceID(), Request::GetGETUser(),
-                Request::GetRemoteAddr(), @constant('ZPUSH_VERSION'), Request::GetMethod()));
     }
 
     /**
@@ -126,42 +115,16 @@ class ZLog {
     }
 
     /**
-     * Set given users, so they get an extra log-file.
+     * If called, the authenticated current user gets an extra log-file.
      *
-     * Depending on when you call that function, instead of defining users in config.php,
-     * you might not get all log-messages.
-     * Setting it eg. in Login method of backend misses Start and cmd='***' lines.
+     * If called until the user is authenticated (e.g. at the end of IBackend->Logon()) all log
+     * messages that happened until this point will also be logged.
      *
-     * @param array $users
-     */
-    static public function SetSpecialLogUsers($users) {
-        self::getLogger()->SetSpecialLogUsers($users);
-    }
-
-    /**
-     * Enable device specific logging for a given device to $devId.log.
-     *
-     * If logger does not support setting a specific file, logging will happen
-     * as if enabled for the user of the device.
-     *
-     * @param string $devId
      * @access public
-     *
      * @return void
      */
-    public function EnableDeviceLog($devId) {
-        global $specialLogUsers; // This variable comes from the configuration file (config.php)
-
-        $logger = self::getLogger();
-        if (strtolower($devId) === $logger->GetDevid()) {
-            if (!in_array($logger->GetAuthUser(), $specialLogUsers)) {
-                $specialLogUsers[] = $logger->GetAuthUser();
-            }
-            $logger->SetSpecialLogUsers($specialLogUsers);
-            $logger->SetLogToUserFile(preg_replace('/[^a-z0-9]/', '_', $logger->GetDevid()).'.log');
-
-            self::RequestHeader();
-        }
+    static public function SpecialLogUser() {
+        self::getLogger()->SpecialLogUser();
     }
 
     /**

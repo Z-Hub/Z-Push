@@ -22,6 +22,7 @@
  *
  * Consult LICENSE file for details
  ************************************************/
+
 class FileLog extends Log {
 
     /**
@@ -43,7 +44,7 @@ class FileLog extends Log {
      */
     private function getLogToUserFile() {
         if ($this->log_to_user_file === false) {
-            $this->SetLogToUserFile(preg_replace('/[^a-z0-9]/', '_', strtolower($this->GetAuthUser())) . '.log');
+            $this->setLogToUserFile(preg_replace('/[^a-z0-9]/', '_', strtolower($this->GetAuthUser())) . '.log');
         }
         return $this->log_to_user_file;
     }
@@ -53,10 +54,10 @@ class FileLog extends Log {
      *
      * @param string $value
      *
-     * @access public
+     * @access private
      * @return void
      */
-    public function SetLogToUserFile($value) {
+    private function setLogToUserFile($value) {
         $this->log_to_user_file = $value;
     }
 
@@ -82,6 +83,15 @@ class FileLog extends Log {
     // Implementation of Log
     //
 
+    /**
+     * Writes a log message to the general log.
+     *
+     * @param int $loglevel
+     * @param string $message
+     *
+     * @access protected
+     * @return void
+     */
     protected function Write($loglevel, $message) {
         $data = $this->buildLogString($loglevel, $message) . PHP_EOL;
         @file_put_contents(LOGFILE, $data, FILE_APPEND);
@@ -91,11 +101,26 @@ class FileLog extends Log {
         }
     }
 
+    /**
+     * Writes a log message to the user specific log.
+     * @param int $loglevel
+     * @param string $message
+     *
+     * @access public
+     * @return void
+     */
     public function WriteForUser($loglevel, $message) {
         $data = $this->buildLogString($loglevel, $message) . PHP_EOL;
         @file_put_contents(LOGFILEDIR . $this->getLogToUserFile(), $data, FILE_APPEND);
     }
 
+    /**
+     * This function is used as an event for log implementer.
+     * It happens when the a call to the Log function is finished.
+     *
+     * @access protected
+     * @return void
+     */
     protected function afterLog($loglevel, $message) {
         if (($loglevel & LOGLEVEL_FATAL) || ($loglevel & LOGLEVEL_ERROR)) {
             $data = $this->buildLogString($loglevel, $message) . PHP_EOL;
