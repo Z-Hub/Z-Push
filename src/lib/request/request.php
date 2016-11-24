@@ -37,6 +37,7 @@ class Request {
     const NUMBERSDOT_ONLY = 5;
     const HEX_EXTENDED = 6;
     const ISO8601 = 7;
+    const HEX_EXTENDED2 = 8;
 
     /**
      * Command parameters for base64 encoded requests (AS >= 12.1)
@@ -108,11 +109,11 @@ class Request {
         if(isset($_GET["DeviceType"]))
             self::$devtype = self::filterEvilInput($_GET["DeviceType"], self::LETTERS_ONLY);
         if (isset($_GET["AttachmentName"]))
-            self::$attachmentName = self::filterEvilInput($_GET["AttachmentName"], self::HEX_EXTENDED);
+            self::$attachmentName = self::filterEvilInput($_GET["AttachmentName"], self::HEX_EXTENDED2);
         if (isset($_GET["CollectionId"]))
-            self::$collectionId = self::filterEvilInput($_GET["CollectionId"], self::HEX_ONLY);
+            self::$collectionId = self::filterEvilInput($_GET["CollectionId"], self::HEX_EXTENDED2);
         if (isset($_GET["ItemId"]))
-            self::$itemId = self::filterEvilInput($_GET["ItemId"], self::HEX_ONLY);
+            self::$itemId = self::filterEvilInput($_GET["ItemId"], self::HEX_EXTENDED2);
         if (isset($_GET["SaveInSent"]) && $_GET["SaveInSent"] == "T")
             self::$saveInSent = true;
 
@@ -148,13 +149,13 @@ class Request {
                 self::$asProtocolVersion = self::filterEvilInput($query['ProtVer'], self::NUMBERS_ONLY) / 10;
 
             if (isset($query[self::COMMANDPARAM_ATTACHMENTNAME]))
-                self::$attachmentName = self::filterEvilInput($query[self::COMMANDPARAM_ATTACHMENTNAME], self::HEX_EXTENDED);
+                self::$attachmentName = self::filterEvilInput($query[self::COMMANDPARAM_ATTACHMENTNAME], self::HEX_EXTENDED2);
 
             if (isset($query[self::COMMANDPARAM_COLLECTIONID]))
-                self::$collectionId = self::filterEvilInput($query[self::COMMANDPARAM_COLLECTIONID], self::HEX_ONLY);
+                self::$collectionId = self::filterEvilInput($query[self::COMMANDPARAM_COLLECTIONID], self::HEX_EXTENDED2);
 
             if (isset($query[self::COMMANDPARAM_ITEMID]))
-                self::$itemId = self::filterEvilInput($query[self::COMMANDPARAM_ITEMID], self::HEX_ONLY);
+                self::$itemId = self::filterEvilInput($query[self::COMMANDPARAM_ITEMID], self::HEX_EXTENDED2);
 
             if (isset($query[self::COMMANDPARAM_OPTIONS]) && (ord($query[self::COMMANDPARAM_OPTIONS]) & self::COMMANDPARAM_OPTIONS_SAVEINSENT))
                 self::$saveInSent = true;
@@ -669,6 +670,7 @@ class Request {
         else if ($filter == self::NUMBERS_ONLY)       $re = "/[^0-9]/";
         else if ($filter == self::NUMBERSDOT_ONLY)    $re = "/[^0-9\.]/";
         else if ($filter == self::HEX_EXTENDED)       $re = "/[^A-Fa-f0-9\:]/";
+        else if ($filter == self::HEX_EXTENDED2)      $re = "/[^A-Fa-f0-9\:USG]/"; // Folder origin constants from DeviceManager::FLD_ORIGIN_* (C already hex)
         else if ($filter == self::ISO8601)            $re = "/[^\d{8}T\d{6}Z]/";
 
         return ($re) ? preg_replace($re, $replacevalue, $input) : '';
