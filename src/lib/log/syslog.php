@@ -86,7 +86,7 @@ class Syslog extends Log {
 
     /**
      * Constructor.
-     * Sets configured values if no parameters are given.     *
+     * Sets configured values if no parameters are given.
      *
      * @param string $program_name
      * @param string $host
@@ -210,7 +210,7 @@ class Syslog extends Log {
      * This function is used as an event for log implementer.
      * It happens when the a call to the Log function is finished.
      *
-     * @access protected
+     * @access public
      * @return void
      */
     public function WriteForUser($loglevel, $message) {
