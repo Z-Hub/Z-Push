@@ -50,7 +50,7 @@ include_once('mapi/mapicode.php');
 include_once('mapi/mapiguid.php');
 
 define('PR_EMS_AB_THUMBNAIL_PHOTO', mapi_prop_tag(PT_BINARY, 0x8C9E));
-define('PR_EC_AB_HIDDEN ', mapi_prop_tag(PT_BOOLEAN, 0x67A7));
+define('PR_EC_AB_HIDDEN', mapi_prop_tag(PT_BOOLEAN, 0x67A7));
 
 class Kopano extends SyncWorker {
     const NAME = "Z-Push Kopano GAB Sync";
@@ -263,7 +263,6 @@ class Kopano extends SyncWorker {
             }
         }
 
-
         $gabentries = mapi_table_queryallrows($table, array(PR_ENTRYID,
                                                             PR_ACCOUNT,
                                                             PR_DISPLAY_NAME,
@@ -290,7 +289,8 @@ class Kopano extends SyncWorker {
                                                     ));
         foreach ($gabentries as $entry) {
             // ignore hidden entries
-            if ($entry[PR_EC_AB_HIDDEN]) {
+            if (isset($entry[PR_EC_AB_HIDDEN]) && $entry[PR_EC_AB_HIDDEN]) {
+                echo "------------hidden: ". $entry[PR_ACCOUNT]."\n";
                 continue;
             }
 
