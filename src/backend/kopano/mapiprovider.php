@@ -316,8 +316,9 @@ class MAPIProvider {
             $message->nativebodytype = $this->getNativeBodyType($messageprops);
         }
         elseif ($message->nativebodytype == SYNC_BODYPREFERENCE_UNDEFINED) {
-            ZLog::Write(LOGLEVEL_INFO, "MAPIProvider->getAppointment(): native body type is undefined. Set it to SYNC_BODYPREFERENCE_PLAIN.");
-            $message->nativebodytype = SYNC_BODYPREFERENCE_PLAIN;
+            $nbt = $this->getNativeBodyType($messageprops);
+            ZLog::Write(LOGLEVEL_INFO, sprintf("MAPIProvider->getAppointment(): native body type is undefined. Set it to %d.", $nbt));
+            $message->nativebodytype = $nbt;
         }
 
         // If the user is working from a location other than the office the busystatus should be interpreted as free.
