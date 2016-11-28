@@ -49,7 +49,12 @@ include_once('mapi/mapitags.php');
 include_once('mapi/mapicode.php');
 include_once('mapi/mapiguid.php');
 
-define('PR_EMS_AB_THUMBNAIL_PHOTO', mapi_prop_tag(PT_BINARY, 0x8C9E));
+if (!defined('PR_EMS_AB_THUMBNAIL_PHOTO')) {
+    define('PR_EMS_AB_THUMBNAIL_PHOTO', mapi_prop_tag(PT_BINARY, 0x8C9E));
+}
+if (!defined('PR_EC_AB_HIDDEN')) {
+    define('PR_EC_AB_HIDDEN', mapi_prop_tag(PT_BOOLEAN, 0x67A7));
+}
 
 class Kopano extends SyncWorker {
     const NAME = "Z-Push Kopano GAB Sync";
@@ -355,6 +360,7 @@ class Kopano extends SyncWorker {
                                                             PR_INITIALS,
                                                             PR_LANGUAGE,
                                                             PR_EMS_AB_THUMBNAIL_PHOTO,
+                                                            PR_EC_AB_HIDDEN,
                                                             PR_DISPLAY_TYPE_EX
                                                     ));
         foreach ($gabentries as $entry) {
@@ -362,6 +368,12 @@ class Kopano extends SyncWorker {
             if (strtoupper($entry[PR_DISPLAY_NAME]) == "SYSTEM") {
                 continue;
             }
+            // ignore hidden entries
+            if (isset($entry[PR_EC_AB_HIDDEN]) && $entry[PR_EC_AB_HIDDEN]) {
+                $this->Log(sprintf("Kopano->GetGAB(): Ignoring user '%s' as account is hidden", $entry[PR_ACCOUNT]));
+                continue;
+            }
+
             $a = new GABEntry();
             $a->type = GABEntry::CONTACT;
             $a->memberOf = array();
