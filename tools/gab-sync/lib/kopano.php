@@ -49,8 +49,12 @@ include_once('mapi/mapitags.php');
 include_once('mapi/mapicode.php');
 include_once('mapi/mapiguid.php');
 
-define('PR_EMS_AB_THUMBNAIL_PHOTO', mapi_prop_tag(PT_BINARY, 0x8C9E));
-define('PR_EC_AB_HIDDEN', mapi_prop_tag(PT_BOOLEAN, 0x67A7));
+if (!defined('PR_EMS_AB_THUMBNAIL_PHOTO')) {
+    define('PR_EMS_AB_THUMBNAIL_PHOTO', mapi_prop_tag(PT_BINARY, 0x8C9E));
+}
+if (!defined('PR_EC_AB_HIDDEN')) {
+    define('PR_EC_AB_HIDDEN', mapi_prop_tag(PT_BOOLEAN, 0x67A7));
+}
 
 class Kopano extends SyncWorker {
     const NAME = "Z-Push Kopano GAB Sync";
