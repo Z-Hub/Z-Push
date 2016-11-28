@@ -290,7 +290,7 @@ class Kopano extends SyncWorker {
         foreach ($gabentries as $entry) {
             // ignore hidden entries
             if (isset($entry[PR_EC_AB_HIDDEN]) && $entry[PR_EC_AB_HIDDEN]) {
-                echo "------------hidden: ". $entry[PR_ACCOUNT]."\n";
+                $this->Log(sprintf("Kopano->GetGAB(): Ignoring user '%s' as account is hidden", $entry[PR_ACCOUNT]));
                 continue;
             }
 
