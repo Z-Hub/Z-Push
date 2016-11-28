@@ -183,6 +183,11 @@ include_once('version.php');
             header("X-Z-Push-Version: ". @constant('ZPUSH_VERSION'));
         }
 
+        // don't accept connections from Outlook via ActiveSync - https://jira.z-hub.io/browse/ZP-1099
+        if (Request::GetDeviceType() == "WindowsOutlook") {
+            throw new HTTPReturnCodeException("Using Outlook via ActiveSync with Z-Push 2.2.x is not possible, please upgrade to Z-Push 2.3: https://wiki.z-hub.io/x/R4Ea", 503, null, LOGLEVEL_FATAL);
+        }
+
         // announce the supported AS versions (if not already sent to device)
         if (ZPush::GetDeviceManager()->AnnounceASVersion()) {
             $versions = ZPush::GetSupportedProtocolVersions(true);
