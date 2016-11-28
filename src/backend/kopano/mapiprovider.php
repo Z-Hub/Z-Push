@@ -312,7 +312,14 @@ class MAPIProvider {
 
         }
 
-        if (!isset($message->nativebodytype)) $message->nativebodytype = $this->getNativeBodyType($messageprops);
+        if (!isset($message->nativebodytype)) {
+            $message->nativebodytype = $this->getNativeBodyType($messageprops);
+        }
+        elseif ($message->nativebodytype == SYNC_BODYPREFERENCE_UNDEFINED) {
+            $nbt = $this->getNativeBodyType($messageprops);
+            ZLog::Write(LOGLEVEL_INFO, sprintf("MAPIProvider->getAppointment(): native body type is undefined. Set it to %d.", $nbt));
+            $message->nativebodytype = $nbt;
+        }
 
         // If the user is working from a location other than the office the busystatus should be interpreted as free.
         if (isset($message->busystatus) && $message->busystatus == fbWorkingElsewhere) {
