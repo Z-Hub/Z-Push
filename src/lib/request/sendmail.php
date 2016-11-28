@@ -10,25 +10,7 @@
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -52,7 +34,6 @@ class SendMail extends RequestProcessor {
      * @return boolean
      */
     public function Handle($commandCode) {
-        $status = SYNC_COMMONSTATUS_SUCCESS;
         $sm = new SyncSendMail();
 
         $reply = $forward = $parent = $sendmail = $smartreply = $smartforward = false;
@@ -90,7 +71,7 @@ class SendMail extends RequestProcessor {
 
         // KOE ZO-6: grep for the KOE header and set flags accordingly.
         // The header has the values verb/message-source-key/folder-source-key
-        if (KOE_CAPABILITY_SENDFLAGS && preg_match("/X-Push-Flags: (\d{3})\/([\da-f]+)\/([\da-f]+)/i", $sm->mime, $ol_flags)) {
+        if (KOE_CAPABILITY_SENDFLAGS && preg_match("/X-Push-Flags: (\d{3})\/([a-z0-9:]+)\/([a-z0-9]+)/i", $sm->mime, $ol_flags)) {
             // "reply" and "reply-all" are handled as "reply"
             if ($ol_flags[1] == 102 || $ol_flags[1] == 103) {
                 $reply = true;
@@ -124,7 +105,10 @@ class SendMail extends RequestProcessor {
             if (isset($sm->source->folderid)) {
                 $sm->source->folderid = self::$deviceManager->GetBackendIdForFolderId($sm->source->folderid);
             }
-
+            if (isset($sm->source->itemid)) {
+                list(, $sk) = Utils::SplitMessageId($sm->source->itemid);
+                $sm->source->itemid = $sk;
+            }
             // replyflag and forward flags are actually only for the correct icon.
             // Even if they are a part of SyncSendMail object, they won't be streamed.
             if ($smartreply || $reply)
@@ -138,6 +122,7 @@ class SendMail extends RequestProcessor {
 
         self::$topCollector->AnnounceInformation(sprintf("SendMail(): Sending email with %d bytes", strlen($sm->mime)), true);
 
+        $statusMessage = '';
         try {
             $status = self::$backend->SendMail($sm);
         }

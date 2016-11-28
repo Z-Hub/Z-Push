@@ -14,25 +14,7 @@
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -60,6 +42,8 @@ class DeviceManager {
     const FLD_ORIGIN_SHARED = "S";
     const FLD_ORIGIN_GAB = "G";
 
+    const FLD_FLAGS_REPLYASUSER = 1;
+
     private $device;
     private $deviceHash;
     private $saveDevice;
@@ -80,7 +64,7 @@ class DeviceManager {
      *
      * @access public
      */
-    public function DeviceManager() {
+    public function __construct() {
         $this->statemachine = ZPush::GetStateMachine();
         $this->deviceHash = false;
         $this->devid = Request::GetDeviceID();
@@ -307,12 +291,14 @@ class DeviceManager {
     /**
      * Builds a Provisioning SyncObject with policies
      *
+     * @param boolean   $logPolicies  optional, determines if the policies and values should be logged. Default: false
+     *
      * @access public
      * @return SyncProvisioning
      */
-    public function GetProvisioningObject() {
+    public function GetProvisioningObject($logPolicies = false) {
         $policyName = $this->getPolicyName();
-        $p = SyncProvisioning::GetObjectWithPolicies($this->getProvisioningPolicies($policyName));
+        $p = SyncProvisioning::GetObjectWithPolicies($this->getProvisioningPolicies($policyName), $logPolicies);
         $p->PolicyName = $policyName;
         return $p;
     }
@@ -491,7 +477,16 @@ class DeviceManager {
     public function GetAdditionalUserSyncFolders() {
         $folders = array();
         foreach($this->device->GetAdditionalFolders() as $df) {
-            $folder = $this->getAdditionalSyncFolder($df['store'], $df['folderid'], $df['name'], $df['type'], $df['readonly'], DeviceManager::FLD_ORIGIN_SHARED);
+            if (!isset($df['flags'])) {
+                $df['flags'] = 0;
+                ZLog::Write(LOGLEVEL_WARN, sprintf("DeviceManager->GetAdditionalUserSyncFolders(): Additional folder '%s' has no flags. Please run 'z-push-admin -a fixstates' to fix this issue.", $df['name']));
+            }
+            if (!isset($df['parentid'])) {
+                $df['parentid'] = '0';
+                ZLog::Write(LOGLEVEL_WARN, sprintf("DeviceManager->GetAdditionalUserSyncFolders(): Additional folder '%s' has no parentid. // TODO FIX: Please run 'z-push-admin -a fixstates' to fix this issue.", $df['name']));
+            }
+
+            $folder = $this->getAdditionalSyncFolderObject($df['store'], $df['folderid'], $df['parentid'], $df['name'], $df['type'], $df['flags'], DeviceManager::FLD_ORIGIN_SHARED);
             $folders[$folder->BackendId] = $folder;
         }
 
@@ -499,7 +494,7 @@ class DeviceManager {
         if (KOE_CAPABILITY_GAB && $this->IsKoe() && KOE_GAB_STORE != "" && KOE_GAB_NAME != "") {
             // if KOE_GAB_FOLDERID is set, use it
             if (KOE_GAB_FOLDERID != "") {
-                $folder = $this->getAdditionalSyncFolder(KOE_GAB_STORE, KOE_GAB_FOLDERID, KOE_GAB_NAME, SYNC_FOLDER_TYPE_USER_APPOINTMENT, true, DeviceManager::FLD_ORIGIN_GAB);
+                $folder = $this->getAdditionalSyncFolderObject(KOE_GAB_STORE, KOE_GAB_FOLDERID, '0', KOE_GAB_NAME, SYNC_FOLDER_TYPE_USER_APPOINTMENT, 0, DeviceManager::FLD_ORIGIN_GAB);
                 $folders[$folder->BackendId] = $folder;
             }
             else {
@@ -515,7 +510,9 @@ class DeviceManager {
                         $this->device->SetKoeGabBackendFolderId($backendGabId);
                     }
 
-                    $folders[$backendGabId] = $this->getAdditionalSyncFolder(KOE_GAB_STORE, $backendGabId, KOE_GAB_NAME, SYNC_FOLDER_TYPE_USER_APPOINTMENT, true, DeviceManager::FLD_ORIGIN_GAB);
+                    if ($backendGabId) {
+                        $folders[$backendGabId] = $this->getAdditionalSyncFolderObject(KOE_GAB_STORE, $backendGabId, '0', KOE_GAB_NAME, SYNC_FOLDER_TYPE_USER_APPOINTMENT, 0, DeviceManager::FLD_ORIGIN_GAB);
+                    }
                 }
             }
         }
@@ -718,6 +715,10 @@ class DeviceManager {
     public function IsHierarchySyncRequired() {
         $this->loadDeviceData();
 
+        if ($this->loopdetection->ProcessLoopDetectionIsHierarchySyncAdvised()) {
+            return true;
+        }
+
         // if the hash of the additional folders changed, we have to sync the hierarchy
         if ($this->additionalFoldersHash != $this->getAdditionalFoldersHash()) {
             $this->hierarchySyncRequired = true;
@@ -828,6 +829,32 @@ class DeviceManager {
      */
     public function SetHeartbeatStateIntegrity($folderid, $uuid, $counter) {
         return $this->loopdetection->SetSyncStateUsage($folderid, $uuid, $counter);
+    }
+
+    /**
+     * Checks the data integrity of the data in the hierarchy cache and the data of the content data (synchronized folders).
+     * If a folder is deleted, the sync states could still be on the server (and being loaded by PING) while
+     * the folder is not being synchronized anymore. See also https://jira.z-hub.io/browse/ZP-1077
+     *
+     * @access public
+     * @return boolean
+     */
+    public function CheckFolderData() {
+        ZLog::Write(LOGLEVEL_DEBUG, "DeviceManager->CheckFolderData() checking integrity of hierarchy cache with synchronized folders");
+
+        $hc = $this->device->GetHierarchyCache();
+        $notInCache = array();
+        foreach ($this->device->GetAllFolderIds() as $folderid) {
+            $uuid = $this->device->GetFolderUUID($folderid);
+            if ($uuid) {
+                // has a UUID but is not in the cache?! This is deleted, remove the states.
+                if (! $hc->GetFolder($folderid)) {
+                    ZLog::Write(LOGLEVEL_WARN, sprintf("DeviceManager->CheckFolderData(): Folder '%s' has sync states but is not in the hierarchy cache. Removing states.", $folderid));
+                    StateManager::UnLinkState($this->device, $folderid);
+                }
+            }
+        }
+        return true;
     }
 
     /**
@@ -990,6 +1017,13 @@ class DeviceManager {
         catch (StateNotFoundException $snfex) {
             $this->hierarchySyncRequired = true;
         }
+        catch (UnavailableException $uaex) {
+            // This is temporary and can be ignored e.g. in PING - see https://jira.z-hub.io/browse/ZP-1054
+            // If the hash was not available before we treat it like a StateNotFoundException.
+            if ($this->deviceHash === false) {
+                $this->hierarchySyncRequired = true;
+            }
+        }
         return true;
     }
 
@@ -1109,6 +1143,11 @@ class DeviceManager {
             return $policies[ASDevice::DEFAULTPOLICYNAME];
         }
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("DeviceManager->getProvisioningPolicies(): loaded '%s' policy.", $policyName));
+
+        // Always load default policies, so that if a policy extends a default policy it doesn't have to copy all the values
+        if ($policyName != ASDevice::DEFAULTPOLICYNAME) {
+            $policies[$policyName] = array_replace_recursive($policies[ASDevice::DEFAULTPOLICYNAME], $policies[$policyName]);
+        }
         return $policies[$policyName];
     }
 
@@ -1132,23 +1171,23 @@ class DeviceManager {
      * @param string    $folderid
      * @param string    $name
      * @param int       $type
-     * @param boolean   $readonly
+     * @param int       $flags
      * @param string    $folderOrigin
      *
      * @access private
      * @returns SyncFolder
      */
-    private function getAdditionalSyncFolder($store, $folderid, $name, $type, $readonly, $folderOrigin) {
+    private function getAdditionalSyncFolderObject($store, $folderid, $parentid, $name, $type, $flags, $folderOrigin) {
         $folder = new SyncFolder();
         $folder->BackendId = $folderid;
         $folder->serverid = $this->GetFolderIdForBackendId($folder->BackendId, true, $folderOrigin, $name);
-        $folder->parentid = 0;                  // only top folders are supported
+        $folder->parentid = $this->GetFolderIdForBackendId($parentid);
         $folder->displayname = $name;
         $folder->type = $type;
         // save store as custom property which is not streamed directly to the device
         $folder->NoBackendFolder = true;
         $folder->Store = $store;
-        $folder->ReadOnly = $readonly;
+        $folder->Flags = $flags;
 
         return $folder;
     }

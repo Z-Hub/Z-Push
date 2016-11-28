@@ -18,29 +18,11 @@
 *
 * Created   :   02.01.2012
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -82,7 +64,7 @@ interface IStateMachine {
      *
      * @access public
      * @return string
-     * @throws StateNotFoundException, StateInvalidException
+     * @throws StateNotFoundException, StateInvalidException, UnavailableException
      */
     public function GetStateHash($devid, $type, $key = false, $counter = false);
 
@@ -119,20 +101,22 @@ interface IStateMachine {
     public function SetState($state, $devid, $type, $key = false, $counter = false);
 
     /**
-     * Cleans up all older states
-     * If called with a $counter, all states previous state counter can be removed
-     * If called without $counter, all keys (independently from the counter) can be removed
+     * Cleans up all older states.
+     * If called with a $counter, all states previous state counter can be removed.
+     * If additionally the $thisCounterOnly flag is true, only that specific counter will be removed.
+     * If called without $counter, all keys (independently from the counter) can be removed.
      *
      * @param string    $devid              the device id
      * @param string    $type               the state type
      * @param string    $key
      * @param string    $counter            (opt)
+     * @param string    $thisCounterOnly    (opt) if provided, the exact counter only will be removed
      *
      * @access public
      * @return
      * @throws StateInvalidException
      */
-    public function CleanStates($devid, $type, $key, $counter = false);
+    public function CleanStates($devid, $type, $key, $counter = false, $thisCounterOnly = false);
 
     /**
      * Links a user to a device

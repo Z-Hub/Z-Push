@@ -18,25 +18,7 @@
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -48,7 +30,6 @@
 *
 * Consult LICENSE file for details
 ************************************************/
-
 
 class SyncCollections implements Iterator {
     const ERROR_NO_COLLECTIONS = 1;
@@ -100,7 +81,7 @@ class SyncCollections implements Iterator {
     /**
      * Constructor
      */
-    public function SyncCollections() {
+    public function __construct() {
     }
 
     /**
@@ -183,8 +164,14 @@ class SyncCollections implements Iterator {
 
             // TODO remove resync of folders for < Z-Push 2 beta4 users
             // this forces a resync of all states previous to Z-Push 2 beta4
-            if (! $spa instanceof SyncParameters)
+            if (! $spa instanceof SyncParameters) {
                 throw new StateInvalidException("Saved state are not of type SyncParameters");
+            }
+
+            if ($spa->GetUuidCounter() == 0) {
+                ZLog::Write(LOGLEVEL_DEBUG, "SyncCollections->LoadCollection(): Found collection with move state only, ignoring.");
+                return true;
+            }
         }
         catch (StateInvalidException $sive) {
             // in case there is something wrong with the state, just stop here
@@ -435,11 +422,16 @@ class SyncCollections implements Iterator {
      * previousily set or saved in a collection
      *
      * @access public
-     * @return int                  returns 600 as default if nothing set or not available
+     * @return int                  returns PING_HIGHER_BOUND_LIFETIME as default if nothing set or not available.
+     *                              If PING_HIGHER_BOUND_LIFETIME is not set, returns 600.
      */
     public function GetLifetime() {
-        if (!isset( $this->refLifetime) || $this->refLifetime === false)
+        if (!isset($this->refLifetime) || $this->refLifetime === false) {
+            if (PING_HIGHER_BOUND_LIFETIME !== false) {
+                return PING_HIGHER_BOUND_LIFETIME;
+            }
             return 600;
+        }
 
         return $this->refLifetime;
     }
@@ -476,9 +468,12 @@ class SyncCollections implements Iterator {
             if ($onlyPingable && $spa->GetPingableFlag() !== true || ! $folderid)
                 continue;
 
-            if (!isset($classes[$spa->GetContentClass()]))
-                $classes[$spa->GetContentClass()] = 0;
-            $classes[$spa->GetContentClass()] += 1;
+            // the class name will be overwritten for KOE-GAB
+            $class = $this->getPingClass($spa);
+
+            if (!isset($classes[$class]))
+                $classes[$class] = 0;
+            $classes[$class] += 1;
         }
         if (empty($classes))
             $checkClasses = "policies only";
@@ -585,25 +580,28 @@ class SyncCollections implements Iterator {
 
                 $validNotifications = false;
                 foreach ($notifications as $backendFolderId) {
-                    // the backend will notify on the backend folderid
-                    $folderid = ZPush::GetDeviceManager()->GetFolderIdForBackendId($backendFolderId);
-
                     // Check hierarchy notifications
-                    if ($folderid === IBackend::HIERARCHYNOTIFICATION) {
+                    if ($backendFolderId === IBackend::HIERARCHYNOTIFICATION) {
                         // wait two seconds before validating this notification, because it could potentially be made by the mobile and we need some time to update the states.
                         sleep(2);
                         // check received hierarchy notifications by exporting
-                        if ($this->countHierarchyChange(true))
+                        if ($this->countHierarchyChange(true)) {
                             throw new StatusException("SyncCollections->CheckForChanges(): HierarchySync required.", self::HIERARCHY_CHANGED);
-                    }
-                    // check if the notification on the folder is within our filter
-                    else if ($this->CountChange($folderid)) {
-                        ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->CheckForChanges(): Notification received on folder '%s'", $folderid));
-                        $validNotifications = true;
-                        $this->waitingTime = time()-$started;
+                        }
                     }
                     else {
-                        ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->CheckForChanges(): Notification received on folder '%s', but it is not relevant", $folderid));
+                        // the backend will notify on the backend folderid
+                        $folderid = ZPush::GetDeviceManager()->GetFolderIdForBackendId($backendFolderId);
+
+                        // check if the notification on the folder is within our filter
+                        if ($this->CountChange($folderid)) {
+                            ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->CheckForChanges(): Notification received on folder '%s'", $folderid));
+                            $validNotifications = true;
+                            $this->waitingTime = time()-$started;
+                        }
+                        else {
+                            ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->CheckForChanges(): Notification received on folder '%s', but it is not relevant", $folderid));
+                        }
                     }
                 }
                 if ($validNotifications)
@@ -667,11 +665,14 @@ class SyncCollections implements Iterator {
             return false;
         }
 
-        // prevent ZP-623 by checking if the states have been used before, if so force a sync on this folder
-        if (ZPush::GetDeviceManager()->CheckHearbeatStateIntegrity($spa->GetFolderId(), $spa->GetUuid(), $spa->GetUuidCounter())) {
-            ZLog::Write(LOGLEVEL_DEBUG, "SyncCollections->CountChange(): Cannot verify changes for state as it was already used. Forcing sync of folder.");
-            $this->changes[$folderid] = 1;
-            return true;
+        // Prevent ZP-623 by checking if the states have been used before, if so force a sync on this folder.
+        // ZCP/KC 7.2.3 and newer support SYNC_STATE_READONLY so this behaviour is not required (see ZP-968).
+        if (!Utils::CheckMapiExtVersion('7.2.3')) {
+            if (ZPush::GetDeviceManager()->CheckHearbeatStateIntegrity($spa->GetFolderId(), $spa->GetUuid(), $spa->GetUuidCounter())) {
+                ZLog::Write(LOGLEVEL_DEBUG, "SyncCollections->CountChange(): Cannot verify changes for state as it was already used. Forcing sync of folder.");
+                $this->changes[$folderid] = 1;
+                return true;
+            }
         }
 
         $backendFolderId = ZPush::GetDeviceManager()->GetBackendIdForFolderId($folderid);
@@ -724,7 +725,6 @@ class SyncCollections implements Iterator {
       */
      private function countHierarchyChange($exportChanges = false) {
          $folderid = false;
-         $spa = $this->GetCollection($folderid);
 
          // Check with device manager if the hierarchy should be reloaded.
          // New additional folders are loaded here.
@@ -809,6 +809,22 @@ class SyncCollections implements Iterator {
     }
 
     /**
+     * Returns how the current folder should be called in the PING comment.
+     *
+     * @param SyncParameters $spa
+     *
+     * @access public
+     * @return string
+     */
+    private function getPingClass($spa) {
+        $class = $spa->GetContentClass();
+        if ($class == "Calendar" && strpos($spa->GetFolderId(), DeviceManager::FLD_ORIGIN_GAB) === 0) {
+            $class = "GAB";
+        }
+        return $class;
+    }
+
+    /**
      * Simple Iterator Interface implementation to traverse through collections
      */
 
@@ -859,7 +875,7 @@ class SyncCollections implements Iterator {
      * @return boolean
      */
     public function valid() {
-        return (key($this->collections) !== null && key($this->collections) !== false);
+        return (key($this->collections) != null && key($this->collections) != false);
     }
 
     /**

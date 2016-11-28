@@ -1,0 +1,3 @@
+conftmp/state-sql.conf.php /etc/z-push/
+backend/sqlstatemachine            /usr/share/z-push/backend/
+tools/migrate-filestates-to-db.php        /usr/share/z-push/tools/

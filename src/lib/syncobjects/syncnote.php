@@ -10,29 +10,11 @@
 *
 * Created   :   16.01.2012
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -44,7 +26,6 @@
 *
 * Consult LICENSE file for details
 ************************************************/
-
 
 class SyncNote extends SyncObject {
     // Outlook transports note colors as categories
@@ -69,26 +50,31 @@ class SyncNote extends SyncObject {
     public $subject;
     public $Color;
 
-    function SyncNote() {
+    function __construct() {
         $mapping = array(
                     SYNC_AIRSYNCBASE_BODY                               => array (  self::STREAMER_VAR      => "asbody",
-                                                                                    self::STREAMER_TYPE     => "SyncBaseBody"),
+                                                                                    self::STREAMER_TYPE     => "SyncBaseBody",
+                                                                                    self::STREAMER_RONOTIFY => true),
 
                     SYNC_NOTES_CATEGORIES                               => array (  self::STREAMER_VAR      => "categories",
-                                                                                    self::STREAMER_ARRAY    => SYNC_NOTES_CATEGORY),
+                                                                                    self::STREAMER_ARRAY    => SYNC_NOTES_CATEGORY,
+                                                                                    self::STREAMER_RONOTIFY => true),
 
                     SYNC_NOTES_LASTMODIFIEDDATE                         => array (  self::STREAMER_VAR      => "lastmodified",
-                                                                                    self::STREAMER_TYPE     => self::STREAMER_TYPE_DATE),
+                                                                                    self::STREAMER_TYPE     => self::STREAMER_TYPE_DATE,
+                                                                                    self::STREAMER_RONOTIFY => true),
 
-                    SYNC_NOTES_MESSAGECLASS                             => array (  self::STREAMER_VAR      => "messageclass"),
+                    SYNC_NOTES_MESSAGECLASS                             => array (  self::STREAMER_VAR      => "messageclass",
+                                                                                    self::STREAMER_RONOTIFY => true),
 
-                    SYNC_NOTES_SUBJECT                                  => array (  self::STREAMER_VAR      => "subject"),
+                    SYNC_NOTES_SUBJECT                                  => array (  self::STREAMER_VAR      => "subject",
+                                                                                    self::STREAMER_RONOTIFY => true),
 
                     SYNC_NOTES_IGNORE_COLOR                             => array (  self::STREAMER_VAR      => "Color",
                                                                                     self::STREAMER_TYPE     => self::STREAMER_TYPE_IGNORE),
                 );
 
-        parent::SyncObject($mapping);
+        parent::__construct($mapping);
     }
 
     /**
@@ -127,11 +113,12 @@ class SyncNote extends SyncObject {
         // is a color other than yellow set
         if (isset($this->Color) && $this->Color != 3 && $this->Color > -1 && $this->Color < 5) {
             // check existing categories - do not rewrite category if the category is already a supported or unsupported color
-            if (!empty($this->categories) &&
-                    (!empty(array_intersect($this->categories, array_values(self::$unsupportedColors))) ||
-                     !empty(array_intersect($this->categories, array_values(self::$colors))) )) {
-
+            if (!empty($this->categories)) {
+                $insecUnsupp = array_intersect($this->categories, array_values(self::$unsupportedColors));
+                $insecColors = array_intersect($this->categories, array_values(self::$colors));
+                if (!empty($insecUnsupp) || !empty($insecColors)) {
                     return false;
+                }
             }
             if(!isset($this->categories)) {
                 $this->categories = array();

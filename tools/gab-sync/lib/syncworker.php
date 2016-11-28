@@ -58,12 +58,14 @@ abstract class SyncWorker {
     /**
      * Simulates the synchronization, showing statistics but without touching any data.
      *
+     * @param string $targetGab
+     *
      * @access public
      * @return void
      */
-    public function Simulate() {
+    public function Simulate($targetGab) {
         $this->Log("Simulating the synchronization. NO DATA IS GOING TO BE WRITTEN.".PHP_EOL);
-        $this->Sync(false);
+        $this->Sync($targetGab, false);
     }
 
     /**
@@ -73,25 +75,61 @@ abstract class SyncWorker {
      *  - gets all GAB entries
      *  - sorts them into chunks
      *  - serializes the chunk
-     *  - sends it to SetChunkData() to be written
+     *  - sends it to setChunkData() to be written
      *  - shows some stats
      *
+     * @param string $targetGab the gab name id that should be synchronized, if not set 'default' or all are used.
      * @param string $doWrite   if set to false, no data will be written (simulated mode). Default: true.
+     *
      * @access public
      * @return void
      */
-    public function Sync($doWrite = true) {
-        // get the folderid of the hidden folder - will be created if not yet available
-        $folderid = $this->getFolderId($doWrite);
+    public function Sync($targetGab = false, $doWrite = true) {
+        // gets a list of GABs
+        $gabs = $this->getGABs();
 
-        $this->Log(sprintf("Starting %sGAB sync to store '%s' on id '%s'", (!$doWrite?"simulated ":""), HIDDEN_FOLDERSTORE, $folderid));
+        if (empty($gabs)) {
+            if($targetGab) {
+                $this->Terminate("Multiple GABs not found, target should not be set. Aborting.");
+            }
+            // no multi-GABs, just go default
+            $this->doSync(null, 'default', $doWrite);
+        }
+        else {
+            foreach($gabs as $gabName => $gabId) {
+                if (!$targetGab || $targetGab == $gabName || $targetGab == $gabId) {
+                    $this->doSync($gabId, $gabName, $doWrite);
+                }
+            }
+        }
+    }
+
+    /**
+     * Performs the actual synchronization for a single GAB.
+     *
+     * @param string $gabId     the id of the gab to be synchronized. If not set (null) the default gab is synchronized.
+     * @param string $gabName   the name of the gab to be synchronized. If not set (null) the default gab is synchronized.
+     * @param string $doWrite   if set to false, no data will be written (simulated mode). Default: true.
+     *
+     * @access private
+     * @return void
+     */
+    private function doSync($gabId = null, $gabName = 'default', $doWrite = true) {
+        // get the folderid of the hidden folder - will be created if not yet available
+        $folderid = $this->getFolderId($gabId, $gabName, $doWrite);
+        if ($folderid === false) {
+            $this->Log(sprintf("Aborting %sGAB sync to store '%s'%s. Store not found or create not possible.", (!$doWrite?"simulated ":""), HIDDEN_FOLDERSTORE, ($gabId?" of '".$gabName."'":"")));
+            return;
+        }
+
+        $this->Log(sprintf("Starting %sGAB sync to store '%s' %s on id '%s'", (!$doWrite?"simulated ":""), HIDDEN_FOLDERSTORE, ($gabId?"of '".$gabName."'":""), $folderid));
 
         // remove all messages that do not match the current $chunkType
         if ($doWrite)
-            $this->ClearAllNotCurrentChunkType($folderid);
+            $this->clearAllNotCurrentChunkType($folderid, $gabId, $gabName);
 
         // get all GAB entries
-        $gab = $this->GetGAB();
+        $gab = $this->getGAB(false, $gabId, $gabName);
 
         // build the chunks
         $chunks = array();
@@ -136,7 +174,7 @@ abstract class SyncWorker {
             if ($doWrite) {
                 $chunkName = $this->chunkType . "/". $chunkId;
                 $chunkCRC = md5($chunkData);
-                $this->SetChunkData($folderid, $chunkName, $amountEntries, $chunkData, $chunkCRC);
+                $this->setChunkData($folderid, $chunkName, $amountEntries, $chunkData, $chunkCRC, $gabId, $gabName);
             }
         }
 
@@ -157,15 +195,37 @@ abstract class SyncWorker {
      * Updates a single entry of the GAB in the respective chunk.
      *
      * @param string $uniqueId
+     * @param string $targetGab
      *
      * @access public
      * @return void
      */
-    public function SyncOne($uniqueId) {
-        $this->Log(sprintf("Sync-one: %s = '%s'", UNIQUEID, $uniqueId));
+    public function SyncOne($uniqueId, $targetGab) {
+        $this->Log(sprintf("Sync-one: %s = '%s'%s", UNIQUEID, $uniqueId, ($targetGab) ? " of '".$targetGab."'":''));
+
+        // gets a list of GABs
+        $gabs = $this->getGABs();
+
+        if (empty($gabs)) {
+            if($targetGab) {
+                $this->Terminate("Multiple GABs not found, target should not be set. Aborting.");
+            }
+            // default case, no multi-GABs, just go default
+            $gabId = null;
+            $gabName = 'default';
+        }
+        else {
+            foreach($gabs as $testGabName => $testGabId) {
+                if ($targetGab == $testGabName || $targetGab == $testGabId) {
+                    $gabId = $testGabId;
+                    $gabName = $testGabName;
+                    break;
+                }
+            }
+        }
 
         // search for the entry in the GAB
-        $entries = $this->GetGAB($uniqueId);
+        $entries = $this->getGAB($uniqueId, $gabId, $gabName);
 
         // if an entry is found, update the chunk
         // if the entry is NOT found, we should remove it from the chunk (entry deleted)
@@ -182,10 +242,10 @@ abstract class SyncWorker {
         }
 
         // get the data for the chunkId
-        $folderid = $this->getFolderId();
+        $folderid = $this->getFolderId($gabId, $gabName);
         $chunkId = $this->calculateChunkId($key);
         $chunkName = $this->chunkType . "/". $chunkId;
-        $chunkdata = $this->GetChunkData($folderid, $chunkName);
+        $chunkdata = $this->getChunkData($folderid, $chunkName, $gabId, $gabName);
         $chunk = json_decode($chunkdata, true);
 
         // update or remove the entry
@@ -213,50 +273,119 @@ abstract class SyncWorker {
 
         // update the chunk data
         $chunkCRC = md5($chunkData);
-        $status = $this->SetChunkData($folderid, $chunkName, $amountEntries, $chunkData, $chunkCRC);
+        $status = $this->setChunkData($folderid, $chunkName, $amountEntries, $chunkData, $chunkCRC, $gabId, $gabName);
         if ($status) {
             $this->Log("Success!");
         }
     }
 
     /**
-     * Clears all data from the hidden folder (without removing it).
+     * Clears all data from the hidden folder (without removing it) for a target GAB.
      * This will cause a serverside clearing of all user gabs.
+     *
+     * @param string $targetGab     A gab where the data should be cleared. If not set, it's 'default' or all.
      *
      * @access public
      * @return void
      */
-    public function ClearAll() {
-        $folderid = $this->GetHiddenFolderId();
+    public function ClearAll($targetGab) {
+        // gets a list of GABs
+        $gabs = $this->getGABs();
+
+        if (empty($gabs)) {
+            if($targetGab) {
+                $this->Terminate("Multiple GABs not found, target should not be set. Aborting.");
+            }
+            // no multi-GABs, just go default
+            $this->doClearAll(null, 'default');
+        }
+        else {
+            foreach($gabs as $gabName => $gabId) {
+                if (!$targetGab || $targetGab == $gabName || $targetGab == $gabId) {
+                    $this->doClearAll($gabId, $gabName);
+                }
+            }
+        }
+    }
+
+    /**
+     * Clears all data from the hidden folder (without removing it) for a specific gabId and gabName.
+     * This will cause a serverside clearing of all user gabs.
+     *
+     * @param string $gabId         the id of the gab where the hidden folder should be searched. If not set (null) the default gab is used.
+     * @param string $gabName       the name of the gab where the hidden folder should be searched. If not set (null) the default gab is used.
+     *
+     * @access private
+     * @return boolean
+     */
+    private function doClearAll($gabId = null, $gabName = 'default') {
+        $folderid = $this->getHiddenFolderId($gabId, $gabName);
         if (!$folderid) {
-            $this->Terminate("Could not locate folder. Aborting.");
+            $this->Log(sprintf("Could not locate folder in '%s'. Aborting.", $gabName));
+            return false;
         }
 
-        $status = $this->ClearFolderContents($folderid);
+        $status = $this->clearFolderContents($folderid, $gabId, $gabName);
         if ($status) {
-            $this->Log("Success!");
+            $this->Log(sprintf("Success for '%s'!", $gabName));
         }
+        return !!$status;
     }
 
     /**
      * Clears all data from the hidden folder and removes it.
      * This will cause a serverside clearing of all user gabs and a synchronization stop.
      *
+     * @param string $targetGab     A gab where the data should be cleared. If not set, it's 'default' or all.
+     *
      * @access public
      * @return void
      */
-    public function DeleteAll() {
-        $folderid = $this->GetHiddenFolderId();
-        if (!$folderid) {
-            $this->Terminate("Could not locate folder. Aborting.");
+    public function DeleteAll($targetGab) {
+        // gets a list of GABs
+        $gabs = $this->getGABs();
+
+        if (empty($gabs)) {
+            if($targetGab) {
+                $this->Terminate("Multiple GABs not found, target should not be set. Aborting.");
+            }
+            // no multi-GABs, just go default
+            $this->doDeleteAll(null, 'default');
         }
-        $emptystatus = $this->ClearFolderContents($folderid);
-        if ($emptystatus) {
-            $status = $this->DeleteHiddenFolder($folderid);
-            if ($status) {
-                $this->Log("Success!");
+        else {
+            foreach($gabs as $gabName => $gabId) {
+                if (!$targetGab || $targetGab == $gabName || $targetGab == $gabId) {
+                    $this->doDeleteAll($gabId, $gabName);
+                }
             }
         }
+    }
+
+    /**
+     * Clears all data from the hidden folder and removes it for the gab id and Name.
+     * This will cause a serverside clearing of all user gabs and a synchronization stop.
+     *
+     * @param string $gabId         the id of the gab where the hidden folder should be searched. If not set (null) the default gab is used.
+     * @param string $gabName       the name of the gab where the hidden folder should be searched. If not set (null) the default gab is used.
+     *
+     * @access private
+     * @return boolean
+     */
+    private function doDeleteAll($gabId = null, $gabName = 'default') {
+        $folderid = $this->getHiddenFolderId($gabId, $gabName);
+        if (!$folderid) {
+            $this->Log(sprintf("Could not locate folder in '%s'", $gabName));
+            return false;
+        }
+        $emptystatus = $this->clearFolderContents($folderid, $gabId, $gabName);
+        if ($emptystatus) {
+            $status = $this->deleteHiddenFolder($folderid, $gabId, $gabName);
+            if ($status) {
+                $this->Log(sprintf("Success for '%s'!", $gabName));
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -289,16 +418,18 @@ abstract class SyncWorker {
      * Gets the ID of the hidden folder. If $doCreate is true (or not set) the
      * folder will be created if it does not yet exist.
      *
+     * @param string $gabId         the id of the gab where the hidden folder should be searched. If not set (null) the default gab is used.
+     * @param string $gabName       the name of the gab where the hidden folder should be searched. If not set (null) the default gab is used.
      * @param boolean $doCreate     Creates the folder if it does not exist, default: true
      *
      * @access protected
      * @return string
      */
-    protected function getFolderId($doCreate = true) {
-        $id = $this->GetHiddenFolderId();
+    protected function getFolderId($gabId = null, $gabName = 'default', $doCreate = true) {
+        $id = $this->getHiddenFolderId($gabId, $gabName);
         if (!$id) {
             if ($doCreate)
-                $id = $this->CreateHiddenFolder();
+                $id = $this->createHiddenFolder($gabId, $gabName);
             else
                 $id = "<does not yet exist>";
         }
@@ -345,61 +476,84 @@ abstract class SyncWorker {
     /**
      * Creates the hidden folder.
      *
+     * @param string $gabId         the id of the gab where the hidden folder should be created. If not set (null) the default gab is used.
+     * @param string $gabName       the name of the gab where the hidden folder should be created. If not set (null) the default gab is used.
+     *
      * @access protected
      * @return boolean
      */
-    protected abstract function CreateHiddenFolder();
+    protected abstract function createHiddenFolder($gabId = null, $gabName = 'default');
 
     /**
      * Deletes the hidden folder.
      *
      * @param string $folderid
+     * @param string $gabId         the id of the gab where the hidden folder should be searched. If not set (null) the default gab is used.
+     * @param string $gabName       the name of the gab where the hidden folder should be searched. If not set (null) the default gab is used.
      *
      * @access protected
      * @return boolean
      */
-    protected abstract function DeleteHiddenFolder($folderid);
+    protected abstract function deleteHiddenFolder($folderid, $gabId = null, $gabName = 'default');
 
     /**
      * Returns the internal identifier (folder-id) of the hidden folder.
      *
+     * @param string $gabId         the id of the gab where the hidden folder should be searched. If not set (null) the default gab is used.
+     * @param string $gabName       the name of the gab where the hidden folder should be searched. If not set (null) the default gab is used.
+     *
      * @access protected
      * @return string
     */
-    protected abstract function GetHiddenFolderId();
+    protected abstract function getHiddenFolderId($gabId = null, $gabName = 'default');
 
     /**
-     * Removes all messages that have not the same chunkType (chunk configuration changed!)
+     * Removes all messages that have not the same chunkType (chunk configuration changed!).
      *
      * @param string $folderid
+     * @param string $gabId         the id of the gab where the hidden folder should be cleared. If not set (null) the default gab is used.
+     * @param string $gabName       the name of the gab where the hidden folder should be cleared. If not set (null) the default gab is used.
      *
      * @access protected
      * @return boolean
      */
-    protected abstract function ClearFolderContents($folderid);
+    protected abstract function clearFolderContents($folderid, $gabId = null, $gabName = 'default');
 
     /**
      * Removes all messages that do not match the current ChunkType.
      *
      * @param string $folderid
+     * @param string $gabId         the id of the gab where the hidden folder should be cleared. If not set (null) the default gab is used.
+     * @param string $gabName       the name of the gab where the hidden folder should be cleared. If not set (null) the default gab is used.
      *
      * @access protected
      * @return boolean
      */
-    protected abstract function ClearAllNotCurrentChunkType($folderid);
+    protected abstract function clearAllNotCurrentChunkType($folderid, $gabId = null, $gabName = 'default');
+
+    /**
+     * Returns a list of Global Address Books with their names and ids.
+     *
+     * @access protected
+     * @return array
+     */
+    protected abstract function getGABs();
 
     /**
      * Returns a list with all GAB entries or a single entry specified by $uniqueId.
      * The search for that single entry is done using the configured UNIQUEID parameter.
+     * If no entry is found for a $uniqueId an empty array() must be returned.
      *
      * @param string $uniqueId      A value to be found in the configured UNIQUEID.
      *                              If set, only one item is returned. If false or not set, the entire GAB is returned.
      *                              Default: false
+     * @param string $gabId         Id that uniquely identifies the GAB. If not set or null the default GAB is assumed.
+     * @param string $gabName       String that uniquely identifies the GAB. If not set the default GAB is assumed.
      *
      * @access protected
      * @return array of GABEntry
      */
-    protected abstract function GetGAB($uniqueId = false);
+    protected abstract function getGAB($uniqueId = false, $gabId = null, $gabName = 'default');
 
     /**
      * Returns the chunk data of the chunkId of the hidden folder.
@@ -407,11 +561,14 @@ abstract class SyncWorker {
      * @param string    $folderid
      * @param string    $chunkName      The name of the chunk (used to find the chunk message).
      *                                  The name is saved in the 'subject' of the chunk message.
+     * @param string    $gabId          Id that uniquely identifies the GAB. If not set or null the default GAB is assumed.
+     * @param string    $gabName        String that uniquely identifies the GAB. If not set the default GAB is assumed.
+     *
      *
      * @access protected
      * @return json string
      */
-    protected abstract function GetChunkData($folderid, $chunkName);
+    protected abstract function getChunkData($folderid, $chunkName, $gabId = null, $gabName = 'default');
 
     /**
      * Updates the chunk data in the hidden folder if it changed.
@@ -424,9 +581,11 @@ abstract class SyncWorker {
      * @param string    $chunkData      The data containing all the data.
      * @param string    $chunkCRC       A checksum of the chunk data. To be saved in the 'location' of
      *                                  the chunk message. Used to identify changed chunks.
+     * @param string    $gabId          Id that uniquely identifies the GAB. If not set or null the default GAB is assumed.
+     * @param string    $gabName        String that uniquely identifies the GAB. If not set the default GAB is assumed.
      *
      * @access protected
      * @return boolean
      */
-    protected abstract function SetChunkData($folderid, $chunkName, $amountEntries, $chunkData, $chunkCRC);
+    protected abstract function setChunkData($folderid, $chunkName, $amountEntries, $chunkData, $chunkCRC, $gabId = null, $gabName = 'default');
 }

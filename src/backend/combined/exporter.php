@@ -6,29 +6,11 @@
 *
 * Created   :   11.05.2010
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -49,13 +31,17 @@
 class ExportChangesCombined implements IExportChanges {
     private $backend;
     private $syncstates;
+    private $movestateSrc;
+    private $movestateDst;
     private $exporters;
     private $importer;
     private $importwraps;
 
-    public function ExportChangesCombined(&$backend) {
+    public function __construct(&$backend) {
         $this->backend =& $backend;
         $this->exporters = array();
+        $this->movestateSrc = false;
+        $this->movestateDst = false;
         ZLog::Write(LOGLEVEL_DEBUG, "ExportChangesCombined constructed");
     }
 
@@ -179,5 +165,47 @@ class ExportChangesCombined implements IExportChanges {
             $e->InitializeExporter($this->importwraps[$i]);
         }
         ZLog::Write(LOGLEVEL_DEBUG, "ExportChangesCombined->InitializeExporter(...) success");
+    }
+
+    /**
+     * Sets the states from move operations.
+     * When src and dst state are set, a MOVE operation is being executed.
+     *
+     * @param mixed         $srcState
+     * @param mixed         (opt) $dstState, default: null
+     *
+     * @access public
+     * @return boolean
+     */
+    public function SetMoveStates($srcState, $dstState = null) {
+        ZLog::Write(LOGLEVEL_DEBUG, "ExportChangesCombined->SetMoveStates()");
+        // Set the move states equally to every sub exporter.
+        // By default they are false or null, we know that they've changed, if the exporter will return a different value.
+        foreach($this->exporters as $i => $e){
+            $e->SetMoveStates($srcState, $dstState);
+        }
+        // let's remember what we sent down
+        $this->movestateSrc = $srcState;
+        $this->movestateDst = $dstState;
+        ZLog::Write(LOGLEVEL_DEBUG, "ExportChangesCombined->SetMoveStates() success");
+    }
+
+    /**
+     * Gets the states of special move operations.
+     *
+     * @access public
+     * @return array(0 => $srcState, 1 => $dstState)
+    */
+    public function GetMoveStates() {
+        ZLog::Write(LOGLEVEL_DEBUG, "ExportChangesCombined->GetMoveStates()");
+        foreach($this->exporters as $i => $e){
+            list($srcState, $dstState) = $this->exporters[$i]->GetMoveStates();
+            if ($srcState != $this->movestateSrc || $dstState != $this->movestateDst) {
+                ZLog::Write(LOGLEVEL_DEBUG, "ExportChangesCombined->GetMoveStates() success (returned states from exporter $i)");
+                return array($srcState, $dstState);
+            }
+        }
+        ZLog::Write(LOGLEVEL_DEBUG, "ExportChangesCombined->GetMoveStates() success (no movestate)");
+        return false;
     }
 }

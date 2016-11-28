@@ -16,25 +16,7 @@
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -86,7 +68,7 @@ class ImportChangesICS implements IImportChanges {
      * @access public
      * @throws StatusException
      */
-    public function ImportChangesICS($session, $store, $folderid = false) {
+    public function __construct($session, $store, $folderid = false) {
         $this->session = $session;
         $this->store = $store;
         $this->folderid = $folderid;
@@ -123,13 +105,12 @@ class ImportChangesICS implements IImportChanges {
 
         $this->mapiprovider = new MAPIProvider($this->session, $this->store);
 
-        if ($folderid)
+        if ($folderid) {
             $this->importer = mapi_openproperty($folder, PR_COLLECTOR, IID_IExchangeImportContentsChanges, 0 , 0);
-        else
+        }
+        else {
             $this->importer = mapi_openproperty($folder, PR_COLLECTOR, IID_IExchangeImportHierarchyChanges, 0 , 0);
-
-        // TODO remove this log output in 2.3.X
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ImportChangesICS: prefix:'%s'", $this->prefix));
+        }
     }
 
     /**
@@ -394,7 +375,7 @@ class ImportChangesICS implements IImportChanges {
 
         // set the PR_SOURCE_KEY if available or mark it as new message
         if($id) {
-            list(, $sk) = MAPIUtils::SplitMessageId($id);
+            list(, $sk) = Utils::SplitMessageId($id);
             $props[PR_SOURCE_KEY] = hex2bin($sk);
 
             // on editing an existing message, check if it is in the synchronization interval
@@ -416,6 +397,18 @@ class ImportChangesICS implements IImportChanges {
                 ZLog::Write(LOGLEVEL_INFO, sprintf("ImportChangesICS->ImportMessageChange('%s','%s'): Conflict detected. Data from PIM will be dropped! Object was deleted on server.", $id, get_class($message)));
                 return false;
             }
+
+            // KOE ZP-990: OL updates the deleted category which causes a race condition if more than one KOE is connected to that user
+            if(ZPush::GetDeviceManager()->IsKoe() && KOE_CAPABILITY_RECEIVEFLAGS && $message instanceof SyncMail && !isset($message->flag) && isset($message->categories)) {
+                // check if the categories changed
+                $mapiCategories = $this->mapiprovider->GetMessageCategories($props[PR_PARENT_SOURCE_KEY], $props[PR_SOURCE_KEY]);
+                if( (empty($message->categories) && empty($mapiCategories)) ||
+                    (is_array($mapiCategories) && count(array_diff($mapiCategories, $message->categories)) == 0 && count(array_diff($message->categories, $mapiCategories)) == 0)) {
+                    ZLog::Write(LOGLEVEL_DEBUG, "ImportChangesICS->ImportMessageChange(): KOE update of flag categories. Ignoring incoming update.");
+                    return $id;
+                }
+            }
+
         }
         else
             $flags = SYNC_NEW_MESSAGE;
@@ -445,7 +438,7 @@ class ImportChangesICS implements IImportChanges {
      * @return boolean
      */
     public function ImportMessageDeletion($id, $asSoftDelete = false) {
-        list(,$sk) = MAPIUtils::SplitMessageId($id);
+        list(,$sk) = Utils::SplitMessageId($id);
         // check if the message is in the current syncinterval
         if (!$this->isMessageInSyncInterval($sk))
             throw new StatusException(sprintf("ImportChangesICS->ImportMessageDeletion('%s'): Message is outside the sync interval and so far not deleted.", $id), SYNC_STATUS_OBJECTNOTFOUND);
@@ -479,7 +472,7 @@ class ImportChangesICS implements IImportChanges {
      * @throws StatusException
      */
     public function ImportMessageReadFlag($id, $flags) {
-        list($fsk,$sk) = MAPIUtils::SplitMessageId($id);
+        list($fsk,$sk) = Utils::SplitMessageId($id);
 
         // if $fsk is set, we convert it into a backend id.
         if ($fsk) {
@@ -545,24 +538,27 @@ class ImportChangesICS implements IImportChanges {
      * @throws StatusException
      */
     public function ImportMessageMove($id, $newfolder) {
-        list(,$sk) = MAPIUtils::SplitMessageId($id);
+        list(,$sk) = Utils::SplitMessageId($id);
         if (strtolower($newfolder) == strtolower(bin2hex($this->folderid)) )
             throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Error, source and destination are equal", $id, $newfolder), SYNC_MOVEITEMSSTATUS_SAMESOURCEANDDEST);
 
         // Get the entryid of the message we're moving
         $entryid = mapi_msgstore_entryidfromsourcekey($this->store, $this->folderid, hex2bin($sk));
-        if(!$entryid)
-            throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Error, unable to resolve source message id", $sk, $newfolder), SYNC_MOVEITEMSSTATUS_INVALIDSOURCEID);
+        $srcmessage = false;
 
-        //open the source message
-        $srcmessage = mapi_msgstore_openentry($this->store, $entryid);
-        if (!$srcmessage) {
+        if ($entryid) {
+            //open the source message
+            $srcmessage = mapi_msgstore_openentry($this->store, $entryid);
+        }
+
+        if(!$entryid || !$srcmessage) {
             $code = SYNC_MOVEITEMSSTATUS_INVALIDSOURCEID;
             // if we move to the trash and the source message is not found, we can also just tell the mobile that we successfully moved to avoid errors (ZP-624)
             if ($newfolder == ZPush::GetBackend()->GetWasteBasket()) {
                 $code = SYNC_MOVEITEMSSTATUS_SUCCESS;
             }
-            throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Error, unable to open source message: 0x%X", $sk, $newfolder, mapi_last_hresult()), $code);
+            $errorCase = !$entryid ? "resolve source message id" : "open source message";
+            throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Error, unable to %s: 0x%X", $sk, $newfolder, $errorCase, mapi_last_hresult()), $code);
         }
 
         // check if the source message is in the current syncinterval
@@ -609,8 +605,15 @@ class ImportChangesICS implements IImportChanges {
             throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Error, delete of source message failed: 0x%X. Possible duplicates.", $sk, $newfolder, mapi_last_hresult()), SYNC_MOVEITEMSSTATUS_SOURCEORDESTLOCKED);
 
         $sourcekeyprops = mapi_getprops($newmessage, array (PR_SOURCE_KEY));
-        if (isset($sourcekeyprops[PR_SOURCE_KEY]) && $sourcekeyprops[PR_SOURCE_KEY])
-            return $this->prefix . bin2hex($sourcekeyprops[PR_SOURCE_KEY]);
+        if (isset($sourcekeyprops[PR_SOURCE_KEY]) && $sourcekeyprops[PR_SOURCE_KEY]) {
+            $prefix = "";
+            // prepend the destination short folderid, if it exists
+            $destShortId = ZPush::GetDeviceManager()->GetFolderIdForBackendId($newfolder);
+            if ($destShortId !== $newfolder) {
+                $prefix = $destShortId .":";
+            }
+            return $prefix . bin2hex($sourcekeyprops[PR_SOURCE_KEY]);
+        }
 
         return false;
     }

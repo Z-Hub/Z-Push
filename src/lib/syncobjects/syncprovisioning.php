@@ -14,25 +14,7 @@
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -44,7 +26,6 @@
 *
 * Consult LICENSE file for details
 ************************************************/
-
 
 class SyncProvisioning extends SyncObject {
     //AS 12.0, 12.1 and 14.0 props
@@ -97,7 +78,7 @@ class SyncProvisioning extends SyncObject {
     // policy name used with the policies; not part of ActiveSync
     public $PolicyName;
 
-    function SyncProvisioning() {
+    function __construct() {
         $mapping = array (
                     SYNC_PROVISION_DEVPWENABLED                         => array (  self::STREAMER_VAR      => "devpwenabled",
                                                                                     self::STREAMER_CHECKS   => array(   self::STREAMER_CHECK_ONEVALUEOF => array(0,1) )),
@@ -239,18 +220,19 @@ class SyncProvisioning extends SyncObject {
             );
         }
 
-        parent::SyncObject($mapping);
+        parent::__construct($mapping);
     }
 
     /**
      * Loads provisioning policies into a SyncProvisioning object.
      *
-     * @param array     $policies - array with policies' names and values
+     * @param array     $policies     array with policies' names and values
+     * @param boolean   $logPolicies  optional, determines if the policies and values should be logged. Default: false
      *
      * @access public
      * @return void
      */
-    public function Load($policies = array()) {
+    public function Load($policies = array(), $logPolicies = false) {
         $this->LoadDefaultPolicies();
 
         $streamerVars = $this->GetStreamerVars();
@@ -259,7 +241,9 @@ class SyncProvisioning extends SyncObject {
                 ZLog::Write(LOGLEVEL_INFO, sprintf("Policy '%s' not supported by the device, ignoring", $p));
                 continue;
             }
-            ZLog::Write(LOGLEVEL_WBXML, sprintf("Policy '%s' enforced with: %s (%s)", $p, (is_array($v)) ? Utils::PrintAsString(implode(',', $v)) : Utils::PrintAsString($v), gettype($v)));
+            if ($logPolicies) {
+                ZLog::Write(LOGLEVEL_WBXML, sprintf("Policy '%s' enforced with: %s (%s)", $p, (is_array($v)) ? Utils::PrintAsString(implode(',', $v)) : Utils::PrintAsString($v), gettype($v)));
+            }
             $this->$p = (is_array($v) && empty($v)) ? array() : $v;
         }
     }
@@ -332,12 +316,15 @@ class SyncProvisioning extends SyncObject {
     /**
      * Returns the SyncProvisioning instance.
      *
+     * @param array     $policies     array with policies' names and values
+     * @param boolean   $logPolicies  optional, determines if the policies and values should be logged. Default: false
+     *
      * @access public
      * @return SyncProvisioning
      */
-    public static function GetObjectWithPolicies($policies = array()) {
+    public static function GetObjectWithPolicies($policies = array(), $logPolicies = false) {
         $p = new SyncProvisioning();
-        $p->Load($policies);
+        $p->Load($policies, $logPolicies);
         return $p;
     }
 }

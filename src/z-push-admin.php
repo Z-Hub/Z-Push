@@ -1,4 +1,4 @@
-#!/usr/bin/php
+#!/usr/bin/env php
 <?php
 /***********************************************
 * File      :   z-push-admin.php
@@ -9,29 +9,11 @@
 *
 * Created   :   14.05.2010
 *
-* Copyright 2007 - 2015 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -75,7 +57,8 @@ include_once(ZPUSH_CONFIG);
         ZPushAdminCLI::RunCommand();
     }
     catch (ZPushException $zpe) {
-        die(get_class($zpe) . ": ". $zpe->getMessage() . "\n");
+        fwrite(STDERR, get_class($zpe) . ": ". $zpe->getMessage() . "\n");
+        exit(1);
     }
 
 
@@ -101,6 +84,7 @@ class ZPushAdminCLI {
     const TYPE_OPTION_TASK = "task";
     const TYPE_OPTION_NOTE = "note";
     const TYPE_OPTION_HIERARCHY = "hierarchy";
+    const TYPE_OPTION_GAB = "gab";
 
     static private $command;
     static private $user = false;
@@ -115,9 +99,9 @@ class ZPushAdminCLI {
      * @access public
      */
     static public function UsageInstructions() {
-        $types = "'".self::TYPE_OPTION_EMAIL."', '".self::TYPE_OPTION_CALENDAR."', '".self::TYPE_OPTION_CONTACT."', '".self::TYPE_OPTION_TASK."' or '".self::TYPE_OPTION_NOTE."'";
         return  "Usage:\n\tz-push-admin.php -a ACTION [options]\n\n" .
-                "Parameters:\n\t-a list/wipe/remove/resync/clearloop\n\t[-u] username\n\t[-d] deviceid\n\n" .
+                "Parameters:\n\t-a list/lastsync/wipe/remove/resync/clearloop/fixstates\n\t[-u] username\n\t[-d] deviceid\n" .
+                "\t[-t] type\tthe following types are available: '".self::TYPE_OPTION_EMAIL."', '".self::TYPE_OPTION_CALENDAR."', '".self::TYPE_OPTION_CONTACT."', '".self::TYPE_OPTION_TASK."', '".self::TYPE_OPTION_NOTE."', '".self::TYPE_OPTION_HIERARCHY."' of '".self::TYPE_OPTION_GAB."' (for KOE) or a folder id.\n\n" .
                 "Actions:\n" .
                 "\tlist\t\t\t\t\t Lists all devices and synchronized users\n" .
                 "\tlist -u USER\t\t\t\t Lists all devices of user USER\n" .
@@ -130,9 +114,9 @@ class ZPushAdminCLI {
                 "\tremove -d DEVICE\t\t\t Removes all state data of all users synchronized on device DEVICE\n" .
                 "\tremove -u USER -d DEVICE\t\t Removes all related state data of device DEVICE of user USER\n" .
                 "\tresync -u USER -d DEVICE\t\t Resynchronizes all data of device DEVICE of user USER\n" .
-                "\tresync -t TYPE \t\t\t\t Resynchronizes all folders of type $types for all devices and users.\n" .
-                "\tresync -t TYPE -u USER \t\t\t Resynchronizes all folders of type $types for the user USER.\n" .
-                "\tresync -t TYPE -u USER -d DEVICE\t Resynchronizes all folders of type $types for a specified device and user.\n" .
+                "\tresync -t TYPE \t\t\t\t Resynchronizes all folders of type (possible values above) for all devices and users.\n" .
+                "\tresync -t TYPE -u USER \t\t\t Resynchronizes all folders of type (possible values above) for the user USER.\n" .
+                "\tresync -t TYPE -u USER -d DEVICE\t Resynchronizes all folders of type (possible values above) for a specified device and user.\n" .
                 "\tresync -t FOLDERID -u USER\t\t Resynchronize the specified folder id only. The USER should be specified for better performance.\n" .
                 "\tresync -t hierarchy -u USER -d DEVICE\t Resynchronize the folder hierarchy data for an optional USER and optional DEVICE.\n" .
                 "\tclearloop\t\t\t\t Clears system wide loop detection data\n" .
@@ -200,11 +184,13 @@ class ZPushAdminCLI {
                 self::$type !== self::TYPE_OPTION_TASK &&
                 self::$type !== self::TYPE_OPTION_NOTE &&
                 self::$type !== self::TYPE_OPTION_HIERARCHY &&
+                self::$type !== self::TYPE_OPTION_GAB &&
+                strlen(self::$type) !== 6 &&       // like U1f38d
                 strlen(self::$type) !== 44 &&
                 strlen(self::$type) !== 48) {
                     self::$errormessage = "Wrong 'type'. Possible values are: ".
-                        "'".self::TYPE_OPTION_EMAIL."', '".self::TYPE_OPTION_CALENDAR."', '".self::TYPE_OPTION_CONTACT."', '".self::TYPE_OPTION_TASK."', '".self::TYPE_OPTION_NOTE."', ".self::TYPE_OPTION_HIERARCHY."' ".
-                        "or a 44 or 48 byte long folder id (as hex).";
+                        "'".self::TYPE_OPTION_EMAIL."', '".self::TYPE_OPTION_CALENDAR."', '".self::TYPE_OPTION_CONTACT."', '".self::TYPE_OPTION_TASK."', '".self::TYPE_OPTION_NOTE."', '".self::TYPE_OPTION_HIERARCHY."', '".self::TYPE_OPTION_GAB."' ".
+                        "or a 6, 44 or 48 byte long folder id (as hex).";
                     return;
                 }
         }
@@ -438,7 +424,7 @@ class ZPushAdminCLI {
             echo "\tno devices found\n";
         else {
             echo "All known devices and users and their last synchronization time\n\n";
-            echo str_pad("Device id", 36). str_pad("Synchronized user", 31)."Last sync time\n";
+            echo str_pad("Device id", 36) . str_pad("Synchronized user", 31) . str_pad("Last sync time", 20) . "Short Ids\n";
             echo "-----------------------------------------------------------------------------------------------------\n";
         }
 
@@ -446,7 +432,9 @@ class ZPushAdminCLI {
             $users = ZPushAdmin::ListUsers($deviceId);
             foreach ($users as $user) {
                 $device = ZPushAdmin::GetDeviceDetails($deviceId, $user);
-                echo str_pad($deviceId, 36) . str_pad($user, 30) . " " . ($device->GetLastSyncTime() ? strftime("%Y-%m-%d %H:%M", $device->GetLastSyncTime()) : "never") . "\n";
+                $lastsync = $device->GetLastSyncTime() ? strftime("%Y-%m-%d %H:%M", $device->GetLastSyncTime()) : "never";
+                $hasShortFolderIds = $device->HasFolderIdMapping() ? "Yes":"No";
+                echo str_pad($deviceId, 36) . str_pad($user, 30) . " " . str_pad($lastsync, 20) . $hasShortFolderIds . "\n";
             }
         }
     }
@@ -630,9 +618,27 @@ class ZPushAdminCLI {
         }
 
         $folders = array();
+        $searchFor = $type;
+        // get the KOE gab folderid
+        if ($type == self::TYPE_OPTION_GAB) {
+            if (@constant('KOE_GAB_FOLDERID') !== '') {
+                $gab = KOE_GAB_FOLDERID;
+            }
+            else {
+                $gab = $device->GetKoeGabBackendFolderId();
+            }
+            if (!$gab) {
+                printf("Could not find KOE GAB folderid for device '%s' of user '%s'\n", $deviceId, $user);
+                return false;
+            }
+            $searchFor = $gab;
+        }
+        // potential long ids are converted to folderids here, incl. the gab id
+        $searchFor = strtolower($device->GetFolderIdForBackendId($searchFor, false, false, null));
+
         foreach ($device->GetAllFolderIds() as $folderid) {
             // if  submitting a folderid as type to resync a specific folder.
-            if ($folderid == $type || $device->GetFolderBackendId($folderid) === $type) {
+            if (strtolower($folderid) === $searchFor) {
                 printf("Found and resynching requested folderid '%s' on device '%s' of user '%s'\n", $folderid, $deviceId, $user);
                 $folders[] = $folderid;
                 break;
@@ -643,26 +649,26 @@ class ZPushAdminCLI {
                 switch($foldertype) {
                     case SYNC_FOLDER_TYPE_APPOINTMENT:
                     case SYNC_FOLDER_TYPE_USER_APPOINTMENT:
-                        if ($type == "calendar")
+                        if ($searchFor == "calendar")
                             $folders[] = $folderid;
                         break;
                     case SYNC_FOLDER_TYPE_CONTACT:
                     case SYNC_FOLDER_TYPE_USER_CONTACT:
-                        if ($type == "contact")
+                        if ($searchFor == "contact")
                             $folders[] = $folderid;
                         break;
                     case SYNC_FOLDER_TYPE_TASK:
                     case SYNC_FOLDER_TYPE_USER_TASK:
-                        if ($type == "task")
+                        if ($searchFor == "task")
                             $folders[] = $folderid;
                         break;
                     case SYNC_FOLDER_TYPE_NOTE:
                     case SYNC_FOLDER_TYPE_USER_NOTE:
-                        if ($type == "note")
+                        if ($searchFor == "note")
                             $folders[] = $folderid;
                         break;
                     default:
-                        if ($type == "email")
+                        if ($searchFor == "email")
                             $folders[] = $folderid;
                         break;
                 }
@@ -670,7 +676,7 @@ class ZPushAdminCLI {
         }
 
         $stat = ZPushAdmin::ResyncFolder($user, $deviceId, $folders);
-        echo sprintf("Resync of %d folders of type %s on device '%s' of user '%s': %s\n", count($folders), $type, $deviceId, $user, ($stat)?'Requested':ZLog::GetLastMessage(LOGLEVEL_ERROR));
+        echo sprintf("Resync of %d folders of type '%s' on device '%s' of user '%s': %s\n", count($folders), $type, $deviceId, $user, ($stat)?'Requested':ZLog::GetLastMessage(LOGLEVEL_ERROR));
     }
 
     /**
@@ -720,6 +726,12 @@ class ZPushAdminCLI {
             printf("Devices: %d - Processed: %d - Fixed: %d - Device+User without hierarchy: %d\n",  $stat[0], $stat[1], $stat[2], $stat[3]);
         else
             echo ZLog::GetLastMessage(LOGLEVEL_ERROR) . "\n";
+
+        echo "\tChecking flags of shared folders: ";
+        if (($stat = ZPushAdmin::FixStatesAdditionalFolders()) !== false)
+            printf("Devices: %d - Devices with additional folders: %d - Fixed: %d\n",  $stat[0], $stat[1], $stat[2]);
+        else
+            echo ZLog::GetLastMessage(LOGLEVEL_ERROR) . "\n";
     }
 
     /**
@@ -748,10 +760,17 @@ class ZPushAdminCLI {
             if ($device->GetFolderUUID($folderid)) {
                 $synchedFolders++;
                 $type = $device->GetFolderType($folderid);
+                $folder = $device->GetHierarchyCache()->GetFolder($folderid);
+                $name = $folder ? $folder->displayname : "unknown";
                 switch($type) {
                     case SYNC_FOLDER_TYPE_APPOINTMENT:
                     case SYNC_FOLDER_TYPE_USER_APPOINTMENT:
-                        $gentype = "Calendars";
+                        if (KOE_GAB_NAME != "" && $name == KOE_GAB_NAME) {
+                            $gentype = "GAB";
+                        }
+                        else {
+                            $gentype = "Calendars";
+                        }
                         break;
                     case SYNC_FOLDER_TYPE_CONTACT:
                     case SYNC_FOLDER_TYPE_USER_CONTACT:
@@ -776,8 +795,7 @@ class ZPushAdminCLI {
                 // set the folder name for all folders which are not fully synchronized yet
                 $fstatus = $device->GetFolderSyncStatus($folderid);
                 if ($fstatus !== false && is_array($fstatus)) {
-                    // TODO would be nice if we could see the real name of the folder, right now we use the folder type as name
-                    $fstatus['name'] = $gentype;
+                    $fstatus['name'] = $name ? $name : $gentype;
                     $device->SetFolderSyncStatus($folderid, $fstatus);
                     $syncedFoldersInProgress++;
                 }
@@ -819,6 +837,7 @@ class ZPushAdminCLI {
         echo "First sync:\t\t". strftime("%Y-%m-%d %H:%M", $device->GetFirstSyncTime()) ."\n";
         echo "Last sync:\t\t". ($device->GetLastSyncTime() ? strftime("%Y-%m-%d %H:%M", $device->GetLastSyncTime()) : "never")."\n";
         echo "Total folders:\t\t". count($folders). "\n";
+        echo "Short folder Ids:\t". ($device->HasFolderIdMapping() ? "Yes":"No") ."\n";
         echo "Synchronized folders:\t". $synchedFolders;
         if ($syncedFoldersInProgress > 0)
             echo " (". $syncedFoldersInProgress. " in progress)";
@@ -834,7 +853,10 @@ class ZPushAdminCLI {
                         $percent = round($d['done']*100/$d['total']);
                         $status = sprintf("Status: %s%d%% (%d/%d)", ($percent < 10)?" ":"", $percent, $d['done'], $d['total']);
                     }
-                    printf("\tFolder: %s%s Sync: %s    %s\n", $d['name'], str_repeat(" ", 12-strlen($d['name'])), $d['status'], $status);
+                    if (strlen($d['name']) > 20) {
+                        $d['name'] = substr($d['name'], 0, 18) . "..";
+                    }
+                    printf("\tFolder: %s Sync: %s %s\n", str_pad($d['name'], 20), str_pad($d['status'], 13), $status);
                 }
             }
         }

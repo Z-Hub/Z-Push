@@ -1,0 +1,2 @@
+conftmp/caldav.conf.php /etc/z-push/
+backend/caldav            /usr/share/z-push/backend

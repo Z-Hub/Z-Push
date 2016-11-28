@@ -68,6 +68,7 @@
  *
  * used "old" method of checking if called statically, as this is deprecated between php 5.0.0 and 5.3.0
  *   (isStatic of decode() around line 215)
+ * Changed constructor name to __construct
  */
 
 /**
@@ -178,7 +179,7 @@ class Mail_mimeDecode
      * @param string The input to decode
      * @access public
      */
-    function Mail_mimeDecode($input)
+    function __construct($input)
     {
         list($header, $body)   = $this->_splitBodyHeader($input);
 
