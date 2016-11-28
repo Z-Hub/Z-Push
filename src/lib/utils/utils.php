@@ -580,6 +580,7 @@ class Utils {
          *                      variable    - value of the parameter
          *
          */
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("Utils::DecodeBase64URI(): decoding base64 query string: %s", $query));
         $decoded = base64_decode($query);
         $devIdLength = ord($decoded[4]); //device ID length
         $polKeyLength = ord($decoded[5+$devIdLength]); //policy key length
