@@ -364,6 +364,10 @@ class Kopano extends SyncWorker {
                                                             PR_DISPLAY_TYPE_EX
                                                     ));
         foreach ($gabentries as $entry) {
+            // do not add SYSTEM user to the GAB
+            if (strtoupper($entry[PR_DISPLAY_NAME]) == "SYSTEM") {
+                continue;
+            }
             // ignore hidden entries
             if (isset($entry[PR_EC_AB_HIDDEN]) && $entry[PR_EC_AB_HIDDEN]) {
                 $this->Log(sprintf("Kopano->GetGAB(): Ignoring user '%s' as account is hidden", $entry[PR_ACCOUNT]));
