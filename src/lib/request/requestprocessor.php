@@ -117,7 +117,7 @@ abstract class RequestProcessor {
         }
 
         // also log WBXML in happy case
-        if (@constant('WBXML_DEBUG') === true) {
+        if (ZLog::IsWbxmlDebugEnabled()) {
             ZLog::Write(LOGLEVEL_WBXML, "WBXML-IN : ". Request::GetInputAsBase64(), false);
         }
     }

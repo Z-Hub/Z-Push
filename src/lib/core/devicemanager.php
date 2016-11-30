@@ -37,6 +37,7 @@ class DeviceManager {
     const FLD_SYNC_INPROGRESS = 2;
     const FLD_SYNC_COMPLETED = 4;
 
+    // new types need to be added to Request::HEX_EXTENDED2 filter
     const FLD_ORIGIN_USER = "U";
     const FLD_ORIGIN_CONFIG = "C";
     const FLD_ORIGIN_SHARED = "S";

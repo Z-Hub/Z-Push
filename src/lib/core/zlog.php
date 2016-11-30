@@ -33,14 +33,12 @@ class ZLog {
     static private $logger = null;
 
     /**
-     * Initializes the logging
+     * Initializes the logging.
      *
      * @access public
      * @return boolean
      */
     static public function Initialize() {
-        $logger = self::getLogger();
-
         // define some constants for the logging
         if (!defined('LOGUSERLEVEL'))
             define('LOGUSERLEVEL', LOGLEVEL_OFF);
@@ -48,26 +46,30 @@ class ZLog {
         if (!defined('LOGLEVEL'))
             define('LOGLEVEL', LOGLEVEL_OFF);
 
-        if (!defined('WBXML_DEBUG')) {
-            // define the WBXML_DEBUG mode on user basis depending on the configurations
-            if (LOGLEVEL >= LOGLEVEL_WBXML || (LOGUSERLEVEL >= LOGLEVEL_WBXML && $logger->HasSpecialLogUsers()))
-                define('WBXML_DEBUG', true);
-            else
-                define('WBXML_DEBUG', false);
-        }
+        $logger = self::getLogger();
 
         return true;
     }
 
     /**
-     * Writes a log line
+     * Check if WBXML logging is enabled in current LOG(USER)LEVEL.
+     *
+     * @access public
+     * @return boolean
+     */
+    static public function IsWbxmlDebugEnabled() {
+        return LOGLEVEL >= LOGLEVEL_WBXML || (LOGUSERLEVEL >= LOGLEVEL_WBXML && self::getLogger()->HasSpecialLogUsers());
+    }
+
+    /**
+     * Writes a log line.
      *
      * @param int       $loglevel           one of the defined LOGLEVELS
      * @param string    $message
      * @param boolean   $truncate           indicate if the message should be truncated, default true
      *
      * @access public
-     * @return
+     * @return void
      */
     static public function Write($loglevel, $message, $truncate = true) {
         // truncate messages longer than 10 KB
@@ -91,7 +93,7 @@ class ZLog {
     }
 
     /**
-     * Returns logged information about the WBXML stack
+     * Returns logged information about the WBXML stack.
      *
      * @access public
      * @return string
@@ -101,7 +103,7 @@ class ZLog {
     }
 
     /**
-     * Returns the last message logged for a log level
+     * Returns the last message logged for a log level.
      *
      * @param int       $loglevel           one of the defined LOGLEVELS
      *
@@ -110,6 +112,19 @@ class ZLog {
      */
     static public function GetLastMessage($loglevel) {
         return (isset(self::$lastLogs[$loglevel]))?self::$lastLogs[$loglevel]:false;
+    }
+
+    /**
+     * If called, the authenticated current user gets an extra log-file.
+     *
+     * If called until the user is authenticated (e.g. at the end of IBackend->Logon()) all log
+     * messages that happened until this point will also be logged.
+     *
+     * @access public
+     * @return void
+     */
+    static public function SpecialLogUser() {
+        self::getLogger()->SpecialLogUser();
     }
 
     /**
@@ -152,9 +167,6 @@ class ZLog {
 /**----------------------------------------------------------------------------------------------------------
  * Legacy debug stuff
  */
-
-// E_DEPRECATED only available since PHP 5.3.0
-if (!defined('E_DEPRECATED')) define(E_DEPRECATED, 8192);
 
 // TODO review error handler
 function zpush_error_handler($errno, $errstr, $errfile, $errline, $errcontext) {
