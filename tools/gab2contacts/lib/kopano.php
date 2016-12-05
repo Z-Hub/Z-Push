@@ -107,7 +107,7 @@ class Kopano extends ContactWorker {
         $companies = mapi_zarafa_getcompanylist($this->store);
         if (is_array($companies)) {
             foreach($companies as $c) {
-                $names[$c['companyname']] = bin2hex($c['companyid']);
+                $names[trim($c['companyname'])] = bin2hex($c['companyid']);
             }
         }
         return $names;

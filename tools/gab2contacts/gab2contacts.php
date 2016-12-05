@@ -76,7 +76,8 @@ define('PATH_TO_ZPUSH', '../../src/');
         GAB2ContactsCLI::RunCommand();
     }
     catch (Exception $ex) {
-        die(get_class($ex) . ": ". $ex->getMessage() . PHP_EOL);
+        fwrite(STDERR, get_class($ex) . ": ". $ex->getMessage() . PHP_EOL);
+        exit(1);
     }
 
 
