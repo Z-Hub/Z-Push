@@ -50,8 +50,15 @@ include_once(PATH_TO_ZPUSH .'backend/kopano/mapi/mapicode.php');
 include_once(PATH_TO_ZPUSH .'backend/kopano/mapi/mapiguid.php');
 include_once(PATH_TO_ZPUSH .'lib/utils/utils.php');
 
-define('PR_EMS_AB_THUMBNAIL_PHOTO', mapi_prop_tag(PT_BINARY, 0x8C9E));
-define('STORE_SUPPORTS_UNICODE', true);
+if (!defined('PR_EMS_AB_THUMBNAIL_PHOTO')) {
+    define('PR_EMS_AB_THUMBNAIL_PHOTO', mapi_prop_tag(PT_BINARY, 0x8C9E));
+}
+if (!defined('PR_EC_AB_HIDDEN')) {
+    define('PR_EC_AB_HIDDEN', mapi_prop_tag(PT_BOOLEAN, 0x67A7));
+}
+if (!defined('STORE_SUPPORTS_UNICODE')) {
+    define('STORE_SUPPORTS_UNICODE', true);
+}
 
 class Kopano extends ContactWorker {
     const NAME = "Z-Push GAB2Contacts";
@@ -179,6 +186,7 @@ class Kopano extends ContactWorker {
                 PR_ORGANIZATIONAL_ID_NUMBER,
                 PR_DISPLAY_TYPE_EX,                     // fetch so we are able to ignore ROOM and EQUIPMENT
                 PR_DISPLAY_NAME,                        // we want to look at it
+                PR_EC_AB_HIDDEN,
                 /* not mappable
                 PR_BUSINESS_ADDRESS_POST_OFFICE_BOX,
                 PR_INITIALS,
@@ -218,6 +226,11 @@ class Kopano extends ContactWorker {
             }
             // ignore EQUIPMENT
             elseif (isset($entry[PR_DISPLAY_TYPE_EX]) && $entry[PR_DISPLAY_TYPE_EX] ==  DT_EQUIPMENT) {
+                $ignored++;
+                continue;
+            }
+            // ignore hidden entries
+            elseif (isset($entry[PR_EC_AB_HIDDEN]) && $entry[PR_EC_AB_HIDDEN]) {
                 $ignored++;
                 continue;
             }
