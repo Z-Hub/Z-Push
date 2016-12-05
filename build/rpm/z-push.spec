@@ -307,6 +307,7 @@ cp -a tools/gab-sync "$b/%zpush_dir/tools/"
 mv "$b/%zpush_dir/tools/gab-sync/config.php" "$cdir/gabsync.conf.php";
 ln -s "%_sysconfdir/z-push/gabsync.conf.php" "$b/%zpush_dir/tools/gab-sync/config.php";
 
+mkdir -p "$b/%zpush_dir/tools"
 cp -a tools/gab2contacts "$b/%zpush_dir/tools/"
 mv "$b/%zpush_dir/tools/gab2contacts/config.php" "$cdir/gab2contacts.conf.php";
 ln -s "%_sysconfdir/z-push/gab2contacts.conf.php" "$b/%zpush_dir/tools/gab2contacts/config.php";
@@ -384,6 +385,7 @@ install -Dpm 644 config/apache2/z-push-autodiscover.conf \
 %exclude %zpush_dir/autodiscover
 %exclude %zpush_dir/tools/migrate-filestates-to-db.php
 %exclude %zpush_dir/tools/gab-sync
+%exclude %zpush_dir/tools/gab2contacts
 %zpush_dir/
 %doc src/LICENSE
 
