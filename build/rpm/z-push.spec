@@ -134,6 +134,14 @@ Requires:   php-mapi
 %description -n %name-kopano-gabsync
 Synchronizes a Kopano global address book
 
+%package -n %name-kopano-gab2contacts
+Summary:    GAB sync into a contacts folder for Kopano
+Group:      Productivity/Networking/Email/Utilities
+Requires:   php-mapi
+
+%description -n %name-kopano-gab2contacts
+Synchronizes a Kopano global address book into a contacts folder
+
 # IPC SHARED MEMORY
 %package -n %name-ipc-sharedmemory
 Summary:    Z-Push ipc shared memory provider
@@ -298,6 +306,10 @@ mkdir -p "$b/%zpush_dir/tools"
 cp -a tools/gab-sync "$b/%zpush_dir/tools/"
 mv "$b/%zpush_dir/tools/gab-sync/config.php" "$cdir/gabsync.conf.php";
 ln -s "%_sysconfdir/z-push/gabsync.conf.php" "$b/%zpush_dir/tools/gab-sync/config.php";
+
+cp -a tools/gab2contacts "$b/%zpush_dir/tools/"
+mv "$b/%zpush_dir/tools/gab2contacts/config.php" "$cdir/gab2contacts.conf.php";
+ln -s "%_sysconfdir/z-push/gab2contacts.conf.php" "$b/%zpush_dir/tools/gab2contacts/config.php";
 
 # MEMCACHED
 mv "$bdir/ipcmemcached/config.php" "$cdir/memcached.conf.php";
@@ -474,6 +486,18 @@ install -Dpm 644 config/apache2/z-push-autodiscover.conf \
     %config(noreplace) %attr(0640,root,www) %_sysconfdir/z-push/gabsync.conf.php
 %else
     %config(noreplace) %attr(0640,root,apache) %_sysconfdir/z-push/gabsync.conf.php
+%endif
+
+%files -n %name-kopano-gab2contacts
+%defattr(-, root, root)
+%dir %zpush_dir/tools
+%dir %zpush_dir/tools/gab2contacts
+%zpush_dir/tools/gab2contacts/
+%dir %_sysconfdir/z-push
+%if 0%{?suse_version}
+    %config(noreplace) %attr(0640,root,www) %_sysconfdir/z-push/gab2contacts.conf.php
+%else
+    %config(noreplace) %attr(0640,root,apache) %_sysconfdir/z-push/gab2contacts.conf.php
 %endif
 
 %files -n %name-kopano

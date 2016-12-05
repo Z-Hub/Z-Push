@@ -1,0 +1,2 @@
+etc/z-push/gab2contacts.conf.php usr/share/z-push/tools/gab2contacts/config.php
+usr/share/z-push/tools/gab2contacts/gab2contacts.php /usr/local/sbin/z-push-gab2contacts
