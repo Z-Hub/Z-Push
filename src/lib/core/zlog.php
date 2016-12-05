@@ -6,29 +6,11 @@
 *
 * Created   :   01.10.2007
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -51,14 +33,12 @@ class ZLog {
     static private $logger = null;
 
     /**
-     * Initializes the logging
+     * Initializes the logging.
      *
      * @access public
      * @return boolean
      */
     static public function Initialize() {
-        $logger = self::getLogger();
-
         // define some constants for the logging
         if (!defined('LOGUSERLEVEL'))
             define('LOGUSERLEVEL', LOGLEVEL_OFF);
@@ -66,26 +46,30 @@ class ZLog {
         if (!defined('LOGLEVEL'))
             define('LOGLEVEL', LOGLEVEL_OFF);
 
-        if (!defined('WBXML_DEBUG')) {
-            // define the WBXML_DEBUG mode on user basis depending on the configurations
-            if (LOGLEVEL >= LOGLEVEL_WBXML || (LOGUSERLEVEL >= LOGLEVEL_WBXML && $logger->HasSpecialLogUsers()))
-                define('WBXML_DEBUG', true);
-            else
-                define('WBXML_DEBUG', false);
-        }
+        $logger = self::getLogger();
 
         return true;
     }
 
     /**
-     * Writes a log line
+     * Check if WBXML logging is enabled in current LOG(USER)LEVEL.
+     *
+     * @access public
+     * @return boolean
+     */
+    static public function IsWbxmlDebugEnabled() {
+        return LOGLEVEL >= LOGLEVEL_WBXML || (LOGUSERLEVEL >= LOGLEVEL_WBXML && self::getLogger()->HasSpecialLogUsers());
+    }
+
+    /**
+     * Writes a log line.
      *
      * @param int       $loglevel           one of the defined LOGLEVELS
      * @param string    $message
      * @param boolean   $truncate           indicate if the message should be truncated, default true
      *
      * @access public
-     * @return
+     * @return void
      */
     static public function Write($loglevel, $message, $truncate = true) {
         // truncate messages longer than 10 KB
@@ -109,7 +93,7 @@ class ZLog {
     }
 
     /**
-     * Returns logged information about the WBXML stack
+     * Returns logged information about the WBXML stack.
      *
      * @access public
      * @return string
@@ -119,7 +103,7 @@ class ZLog {
     }
 
     /**
-     * Returns the last message logged for a log level
+     * Returns the last message logged for a log level.
      *
      * @param int       $loglevel           one of the defined LOGLEVELS
      *
@@ -128,6 +112,19 @@ class ZLog {
      */
     static public function GetLastMessage($loglevel) {
         return (isset(self::$lastLogs[$loglevel]))?self::$lastLogs[$loglevel]:false;
+    }
+
+    /**
+     * If called, the authenticated current user gets an extra log-file.
+     *
+     * If called until the user is authenticated (e.g. at the end of IBackend->Logon()) all log
+     * messages that happened until this point will also be logged.
+     *
+     * @access public
+     * @return void
+     */
+    static public function SpecialLogUser() {
+        self::getLogger()->SpecialLogUser();
     }
 
     /**
@@ -170,9 +167,6 @@ class ZLog {
 /**----------------------------------------------------------------------------------------------------------
  * Legacy debug stuff
  */
-
-// E_DEPRECATED only available since PHP 5.3.0
-if (!defined('E_DEPRECATED')) define(E_DEPRECATED, 8192);
 
 // TODO review error handler
 function zpush_error_handler($errno, $errstr, $errfile, $errline, $errcontext) {

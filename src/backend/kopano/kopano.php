@@ -13,25 +13,7 @@
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -88,7 +70,7 @@ class BackendKopano implements IBackend, ISearchProvider {
      *
      * @access public
      */
-    public function BackendKopano() {
+    public function __construct() {
         $this->session = false;
         $this->store = false;
         $this->storeName = false;
@@ -176,7 +158,7 @@ class BackendKopano implements IBackend, ISearchProvider {
             if (mapi_last_hresult()) {
                 ZLog::Write(LOGLEVEL_ERROR, sprintf("KopanoBackend->Logon(): login failed with error code: 0x%X", mapi_last_hresult()));
                 if (mapi_last_hresult() == MAPI_E_NETWORK_ERROR)
-                    throw new HTTPReturnCodeException("Error connecting to KC (login)", 503, null, LOGLEVEL_INFO);
+                    throw new ServiceUnavailableException("Error connecting to KC (login)");
             }
         }
         catch (MAPIException $ex) {
@@ -193,7 +175,7 @@ class BackendKopano implements IBackend, ISearchProvider {
         $this->defaultstore = $this->openMessageStore($this->mainUser);
 
         if (mapi_last_hresult() == MAPI_E_FAILONEPROVIDER)
-            throw new HTTPReturnCodeException("Error connecting to KC (open store)", 503, null, LOGLEVEL_INFO);
+            throw new ServiceUnavailableException("Error connecting to KC (open store)");
 
         if($this->defaultstore === false)
             throw new AuthenticationRequiredException(sprintf("KopanoBackend->Logon(): User '%s' has no default store", $user));
@@ -339,31 +321,47 @@ class BackendKopano implements IBackend, ISearchProvider {
     public function GetHierarchy() {
         $folders = array();
         $mapiprovider = new MAPIProvider($this->session, $this->store);
+        $storeProps = $mapiprovider->GetStoreProps();
 
-        $rootfolder = mapi_msgstore_openentry($this->store);
+        // for SYSTEM user open the public folders
+        if (strtoupper($this->storeName) == "SYSTEM") {
+            $rootfolder = mapi_msgstore_openentry($this->store, $storeProps[PR_IPM_PUBLIC_FOLDERS_ENTRYID]);
+        }
+        else {
+            $rootfolder = mapi_msgstore_openentry($this->store);
+        }
+
         $rootfolderprops = mapi_getprops($rootfolder, array(PR_SOURCE_KEY));
 
         $hierarchy =  mapi_folder_gethierarchytable($rootfolder, CONVENIENT_DEPTH);
         $rows = mapi_table_queryallrows($hierarchy, array(PR_DISPLAY_NAME, PR_PARENT_ENTRYID, PR_ENTRYID, PR_SOURCE_KEY, PR_PARENT_SOURCE_KEY, PR_CONTAINER_CLASS, PR_ATTR_HIDDEN, PR_EXTENDED_FOLDER_FLAGS, PR_FOLDER_TYPE));
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendKopano->GetHierarchy(): fetched %d folders from MAPI", count($rows)));
 
         foreach ($rows as $row) {
             // do not display hidden and search folders
             if ((isset($row[PR_ATTR_HIDDEN]) && $row[PR_ATTR_HIDDEN]) ||
                 (isset($row[PR_FOLDER_TYPE]) && $row[PR_FOLDER_TYPE] == FOLDER_SEARCH) ||
-                (isset($row[PR_PARENT_SOURCE_KEY]) && $row[PR_PARENT_SOURCE_KEY] == $rootfolderprops[PR_SOURCE_KEY]) ) {
-                continue;
+                // for SYSTEM user $row[PR_PARENT_SOURCE_KEY] == $rootfolderprops[PR_SOURCE_KEY] is true, but we need those folders
+                (isset($row[PR_PARENT_SOURCE_KEY]) && $row[PR_PARENT_SOURCE_KEY] == $rootfolderprops[PR_SOURCE_KEY] && strtoupper($this->storeName) != "SYSTEM")) {
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendKopano->GetHierarchy(): ignoring folder '%s' as it's a hidden/search/root folder", (isset($row[PR_DISPLAY_NAME]) ? $row[PR_DISPLAY_NAME] : "unknown")));
+                    continue;
             }
             $folder = $mapiprovider->GetFolder($row);
             if ($folder) {
                 $folders[] = $folder;
             }
+            else {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendKopano->GetHierarchy(): ignoring folder '%s' as MAPIProvider->GetFolder() did not return a SyncFolder object", (isset($row[PR_DISPLAY_NAME]) ? $row[PR_DISPLAY_NAME] : "unknown")));
+            }
         }
 
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendKopano->GetHierarchy(): processed %d folders, starting parent remap", count($folders)));
         // reloop the folders to make sure all parentids are mapped correctly
         $dm = ZPush::GetDeviceManager();
         foreach ($folders as $folder) {
             if ($folder->parentid !== "0") {
-                $folder->parentid = $dm->GetFolderIdForBackendId($folder->parentid);
+                // SYSTEM user's parentid points to $rootfolderprops[PR_SOURCE_KEY], but they need to be on the top level
+                $folder->parentid = (strtoupper($this->storeName) == "SYSTEM" && $folder->parentid == bin2hex($rootfolderprops[PR_SOURCE_KEY])) ? '0' : $dm->GetFolderIdForBackendId($folder->parentid);
             }
         }
 
@@ -434,6 +432,36 @@ class BackendKopano implements IBackend, ISearchProvider {
                                             Utils::PrintAsString((isset($sm->source->folderid) ? $sm->source->folderid : false)),
                                             Utils::PrintAsString(($sm->saveinsent)), Utils::PrintAsString(isset($sm->replacemime)) ));
 
+        // Send-As functionality - https://jira.z-hub.io/browse/ZP-908
+        $sendingAsSomeone = false;
+        if (defined('KOE_CAPABILITY_SENDAS') && KOE_CAPABILITY_SENDAS) {
+            $senderEmail = array();
+            // KOE: grep for the Sender header indicating we should send-as
+            // the 'X-Push-Sender-Name' header is not used
+            if (preg_match("/^X-Push-Sender:\s(.*?)$/im", $sm->mime, $senderEmail)) {
+                $sendAsEmail = trim($senderEmail[1]);
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->SendMail(): Send-As '%s' requested by KOE", $sendAsEmail));
+                $sm->mime =  preg_replace("/^From: .*?$/im", "From: ". $sendAsEmail, $sm->mime, 1);
+                $sendingAsSomeone = true;
+            }
+            // serverside Send-As - shared folder with DeviceManager::FLD_FLAGS_REPLYASUSER flag
+            elseif (isset($sm->source->folderid)) {
+                // get the owner of this folder - System is not allowed
+                $sharedUser = ZPush::GetAdditionalSyncFolderStore($sm->source->folderid);
+                if ($sharedUser != false && $sharedUser != 'SYSTEM') {
+                    $folders = ZPush::GetAdditionalSyncFolders();
+                    if (isset($folders[$sm->source->folderid]) && ($folders[$sm->source->folderid]->Flags & DeviceManager::FLD_FLAGS_REPLYASUSER)) {
+                        $sendAs = $this->resolveRecipientGAL($sharedUser, 1);
+                        if (isset($sendAs[0])) {
+                            ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->SendMail(): Server side Send-As activated for shared folder. Sending as '%s'.", $sendAs[0]->emailaddress));
+                            $sm->mime =  preg_replace("/^From: .*?$/im", "From: ". $sendAs[0]->emailaddress, $sm->mime, 1);
+                            $sendingAsSomeone = true;
+                        }
+                    }
+                }
+            }
+        }
+
         // by splitting the message in several lines we can easily grep later
         foreach(preg_split("/((\r)?\n)/", $sm->mime) as $rfc822line)
             ZLog::Write(LOGLEVEL_WBXML, "RFC822: ". $rfc822line);
@@ -497,9 +525,12 @@ class BackendKopano implements IBackend, ISearchProvider {
         // PR_SENT_REPRESENTING_EMAIL_ADDRESS properties and "broken" PR_SENT_REPRESENTING_ENTRYID
         // which results in spooler not being able to send the message.
         // @see http://jira.zarafa.com/browse/ZP-85
-        mapi_deleteprops($mapimessage,
-            array(  $sendMailProps["sentrepresentingname"], $sendMailProps["sentrepresentingemail"], $sendMailProps["representingentryid"],
-                    $sendMailProps["sentrepresentingaddt"], $sendMailProps["sentrepresentinsrchk"]));
+        // If using KOE send-as feature, we keep this properties because they actually are the send-as
+        if (!$sendingAsSomeone) {
+            mapi_deleteprops($mapimessage,
+                array(  $sendMailProps["sentrepresentingname"], $sendMailProps["sentrepresentingemail"], $sendMailProps["representingentryid"],
+                        $sendMailProps["sentrepresentingaddt"], $sendMailProps["sentrepresentinsrchk"]));
+        }
 
         if(isset($sm->source->itemid) && $sm->source->itemid) {
             // answering an email in a public/shared folder
@@ -614,7 +645,7 @@ class BackendKopano implements IBackend, ISearchProvider {
      */
     public function Fetch($folderid, $id, $contentparameters) {
         // id might be in the new longid format, so we have to split it here
-        list($fsk, $sk) = MAPIUtils::SplitMessageId($id);
+        list($fsk, $sk) = Utils::SplitMessageId($id);
         // get the entry id of the message
         $entryid = mapi_msgstore_entryidfromsourcekey($this->store, hex2bin($folderid), hex2bin($sk));
         if(!$entryid)
@@ -699,7 +730,7 @@ class BackendKopano implements IBackend, ISearchProvider {
             $attachment->contenttype = "message/rfc822";
         }
         else
-            $stream = mapi_openpropertytostream($attach, PR_ATTACH_DATA_BIN);
+            $stream = mapi_openproperty($attach, PR_ATTACH_DATA_BIN, IID_IStream, 0, 0);
 
         if(!$stream)
             throw new StatusException(sprintf("KopanoBackend->GetAttachmentData('%s'): Error, unable to open attachment data stream: 0x%X", $attname, mapi_last_hresult()), SYNC_ITEMOPERATIONSSTATUS_INVALIDATT);
@@ -764,6 +795,7 @@ class BackendKopano implements IBackend, ISearchProvider {
      */
     public function MeetingResponse($requestid, $folderid, $response) {
         // Use standard meeting response code to process meeting request
+        list($fid, $requestid) = Utils::SplitMessageId($requestid);
         $reqentryid = mapi_msgstore_entryidfromsourcekey($this->store, hex2bin($folderid), hex2bin($requestid));
         if (!$reqentryid)
             throw new StatusException(sprintf("BackendKopano->MeetingResponse('%s', '%s', '%s'): Error, unable to entryid of the message 0x%X", $requestid, $folderid, $response, mapi_last_hresult()), SYNC_MEETRESPSTATUS_INVALIDMEETREQ);
@@ -799,6 +831,7 @@ class BackendKopano implements IBackend, ISearchProvider {
 
         // We have to return the ID of the new calendar item, so do that here
         $calendarid = "";
+        $calFolderId = "";
         if (isset($entryid)) {
             $newitem = mapi_msgstore_openentry($this->store, $entryid);
             // new item might be in a delegator's store. ActiveSync does not support accepting them.
@@ -806,8 +839,9 @@ class BackendKopano implements IBackend, ISearchProvider {
                 throw new StatusException(sprintf("BackendKopano->MeetingResponse('%s','%s', '%s'): Object with entryid '%s' was not found in user's store (0x%X). It might be in a delegator's store.", $requestid, $folderid, $response, bin2hex($entryid), mapi_last_hresult()), SYNC_MEETRESPSTATUS_SERVERERROR, null, LOGLEVEL_WARN);
             }
 
-            $newprops = mapi_getprops($newitem, array(PR_SOURCE_KEY));
+            $newprops = mapi_getprops($newitem, array(PR_SOURCE_KEY, PR_PARENT_SOURCE_KEY));
             $calendarid = bin2hex($newprops[PR_SOURCE_KEY]);
+            $calFolderId = bin2hex($newprops[PR_PARENT_SOURCE_KEY]);
         }
 
         // on recurring items, the MeetingRequest class responds with a wrong entryid
@@ -824,8 +858,9 @@ class BackendKopano implements IBackend, ISearchProvider {
 
             if (is_array($items)) {
                $newitem = mapi_msgstore_openentry($this->store, $items[0]);
-               $newprops = mapi_getprops($newitem, array(PR_SOURCE_KEY));
+               $newprops = mapi_getprops($newitem, array(PR_SOURCE_KEY, PR_PARENT_SOURCE_KEY));
                $calendarid = bin2hex($newprops[PR_SOURCE_KEY]);
+               $calFolderId = bin2hex($newprops[PR_PARENT_SOURCE_KEY]);
                ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendKopano->MeetingResponse('%s','%s', '%s'): found other calendar entryid", $requestid, $folderid, $response));
             }
 
@@ -838,7 +873,15 @@ class BackendKopano implements IBackend, ISearchProvider {
         $folder = mapi_msgstore_openentry($this->store, $folderentryid);
         mapi_folder_deletemessages($folder, array($reqentryid), 0);
 
-        return $calendarid;
+        $prefix = '';
+        // prepend the short folderid of the target calendar: if available and short ids are used
+        if ($calFolderId) {
+            $shortFolderId = ZPush::GetDeviceManager()->GetFolderIdForBackendId($calFolderId);
+            if ($calFolderId != $shortFolderId) {
+                $prefix = $shortFolderId . ':';
+            }
+        }
+        return $prefix . $calendarid;
     }
 
     /**
@@ -1553,10 +1596,16 @@ class BackendKopano implements IBackend, ISearchProvider {
      */
     public function HasSecretaryACLs($store, $folderid) {
         $entryid = mapi_msgstore_entryidfromsourcekey($store, hex2bin($folderid));
-        if (!$entryid)  return false;
+        if (!$entryid) {
+            ZLog::Write(LOGLEVEL_WARN, sprintf("KopanoBackend->HasSecretaryACLs(): error, no entryid resolved for %s on store %s", $folderid, $store));
+            return false;
+        }
 
         $folder = mapi_msgstore_openentry($store, $entryid);
-        if (!$folder) return false;
+        if (!$folder) {
+            ZLog::Write(LOGLEVEL_WARN, sprintf("KopanoBackend->HasSecretaryACLs(): error, could not open folder with entryid %s on store %s", bin2hex($entryid), $store));
+            return false;
+        }
 
         $props = mapi_getprops($folder, array(PR_RIGHTS));
         if (isset($props[PR_RIGHTS]) &&
@@ -1583,10 +1632,16 @@ class BackendKopano implements IBackend, ISearchProvider {
      */
     public function HasReadACLs($store, $folderid) {
         $entryid = mapi_msgstore_entryidfromsourcekey($store, hex2bin($folderid));
-        if (!$entryid)  return false;
+        if (!$entryid) {
+            ZLog::Write(LOGLEVEL_WARN, sprintf("KopanoBackend->HasReadACLs(): error, no entryid resolved for %s on store %s", $folderid, $store));
+            return false;
+        }
 
         $folder = mapi_msgstore_openentry($store, $entryid);
-        if (!$folder) return false;
+        if (!$folder) {
+            ZLog::Write(LOGLEVEL_WARN, sprintf("KopanoBackend->HasReadACLs(): error, could not open folder with entryid %s on store %s", bin2hex($entryid), $store));
+            return false;
+        }
 
         $props = mapi_getprops($folder, array(PR_RIGHTS));
         if (isset($props[PR_RIGHTS]) &&

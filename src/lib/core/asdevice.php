@@ -11,25 +11,7 @@
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -95,7 +77,7 @@ class ASDevice extends StateObject {
      * @access public
      * @return
      */
-    public function ASDevice($devid, $devicetype, $getuser, $useragent) {
+    public function __construct($devid, $devicetype, $getuser, $useragent) {
         $this->deviceid = $devid;
         $this->devicetype = $devicetype;
         list ($this->deviceuser, $this->domain) =  Utils::SplitDomainUser($getuser);
@@ -854,11 +836,20 @@ class ASDevice extends StateObject {
      * @param string    $folderid   the folder id of the additional folder.
      * @param string    $name       the name of the additional folder (has to be unique for all folders on the device).
      * @param string    $type       AS foldertype of SYNC_FOLDER_TYPE_USER_*
+     * @param int       $flags      Additional flags, like DeviceManager::FLD_FLAGS_REPLYASUSER
+     * @param string    $parentid   the parentid of this folder.
+     * @param boolean   $checkDups  indicates if duplicate names and ids should be verified. Default: true
      *
      * @access public
      * @return boolean
      */
-    public function AddAdditionalFolder($store, $folderid, $name, $type) {
+    public function AddAdditionalFolder($store, $folderid, $name, $type, $flags, $parentid = 0, $checkDups = true) {
+        // check if a folderid and name were sent
+        if (!$folderid || !$name) {
+            ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->AddAdditionalFolder(): No valid folderid ('%s') or name ('%s') sent. Aborting. ", $folderid, $name));
+            return false;
+        }
+
         // check if type is of a additional user type
         if (!in_array($type, array(SYNC_FOLDER_TYPE_USER_CONTACT, SYNC_FOLDER_TYPE_USER_APPOINTMENT, SYNC_FOLDER_TYPE_USER_TASK, SYNC_FOLDER_TYPE_USER_MAIL, SYNC_FOLDER_TYPE_USER_NOTE, SYNC_FOLDER_TYPE_USER_JOURNAL))) {
             ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->AddAdditionalFolder(): folder can not be added because the specified type '%s' is not a permitted user type.", $type));
@@ -871,25 +862,40 @@ class ASDevice extends StateObject {
             return false;
         }
 
-        // check if a folder with that Name is already in the list
+        // check if a folder with that Name is already in the list and that its parent exists
+        $parentFound = false;
         foreach ($this->additionalfolders as $k => $folder) {
-            if ($folder['name'] == $name) {
-                ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->AddAdditionalFolder(): folder can not be added because there is already an additional folder with the same name: '%s'", $name));
+            // TODO: this parentid check should go into fixstates!
+            if (!isset($folder['parentid'])) $folder['parentid'] = "0";
+
+            if ($folder['name'] == $name && $folder['parentid'] == $parentid) {
+                ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->AddAdditionalFolder(): folder can not be added because there is already an additional folder with the same name in the same folder: '%s'", $name));
                 return false;
             }
+            if ($folder['folderid'] == $parentid) {
+                $parentFound = true;
+            }
+        }
+        if ($parentid != '0' && !$parentFound) {
+            ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->AddAdditionalFolder(): folder '%s' ('%s') can not be added because the parent folder '%s' can not be found'", $name, $folderid, $parentid));
+            return false;
         }
 
         // check if a folder with this ID or Name is already known on the device (regular folder)
-        foreach($this->GetHierarchyCache()->ExportFolders() as $syncedFolderid => $folder) {
-            if ($syncedFolderid === $folderid || $folder->BackendId === $folderid) {
-                ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->AddAdditionalFolder(): folder can not be added because there is already a folder with the same folder id synchronized: '%s'", $folderid));
-                return false;
-            }
+        if ($checkDups) {
+            // in order to check for the parent-ids we need a shortid
+            $parentShortId = $this->GetFolderIdForBackendId($parentid, false, null, null);
+            foreach($this->GetHierarchyCache()->ExportFolders() as $syncedFolderid => $folder) {
+                if ($syncedFolderid === $folderid || $folder->BackendId === $folderid) {
+                    ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->AddAdditionalFolder(): folder can not be added because there is already a folder with the same folder id synchronized: '%s'", $folderid));
+                    return false;
+                }
 
-            // $folder is a SyncFolder object here
-            if ($folder->displayname == $name) {
-                ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->AddAdditionalFolder(): folder can not be added because there is already a folder with the same name synchronized: '%s'", $name));
-                return false;
+                // $folder is a SyncFolder object here
+                if ($folder->displayname == $name && ($folder->parentid == $parentid || $folder->parentid == $parentShortId)) {
+                    ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->AddAdditionalFolder(): folder can not be added because there is already a folder with the same name synchronized in the same parent: '%s'", $name));
+                    return false;
+                }
             }
         }
 
@@ -898,8 +904,10 @@ class ASDevice extends StateObject {
         $af[$folderid] = array(
                             'store'     => $store,
                             'folderid'  => $folderid,
+                            'parentid'  => $parentid,
                             'name'      => $name,
                             'type'      => $type,
+                            'flags'     => $flags,
                          );
         $this->additionalfolders = $af;
 
@@ -914,11 +922,20 @@ class ASDevice extends StateObject {
      *
      * @param string    $folderid   the folder id of the additional folder.
      * @param string    $name       the name of the additional folder (has to be unique for all folders on the device).
+     * @param int       $flags      Additional flags, like DeviceManager::FLD_FLAGS_REPLYASUSER
+     * @param string    $parentid   the parentid of this folder.
+     * @param boolean   $checkDups  indicates if duplicate names and ids should be verified. Default: true
      *
      * @access public
      * @return boolean
      */
-    public function EditAdditionalFolder($folderid, $name) {
+    public function EditAdditionalFolder($folderid, $name, $flags, $parentid = 0, $checkDups = true) {
+        // check if a folderid and name were sent
+        if (!$folderid || !$name) {
+            ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->EditAdditionalFolder(): No valid folderid ('%s') or name ('%s') sent. Aborting. ", $folderid, $name));
+            return false;
+        }
+
         // check if a folder with this ID is known
         if (!isset($this->additionalfolders[$folderid])) {
             ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->EditAdditionalFolder(): folder can not be edited because there is no folder known with this folder id: '%s'. Add the folder first.", $folderid));
@@ -926,25 +943,31 @@ class ASDevice extends StateObject {
         }
 
         // check if a folder with the new name is already in the list
-        foreach ($this->additionalfolders as $k => $folder) {
-            if ($folder['name'] == $name) {
-                ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->EditAdditionalFolder(): folder can not be added because there is already an additional folder with the same name: '%s'", $name));
+        foreach ($this->additionalfolders as $existingFolderid => $folder) {
+            if ($folder['name'] == $name &&  $folderid !== $existingFolderid) {
+                ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->EditAdditionalFolder(): folder can not be edited because there is already an additional folder with the same name: '%s'", $name));
                 return false;
             }
         }
 
         // check if a folder with the new name is already known on the device (regular folder)
-        foreach($this->GetHierarchyCache()->ExportFolders() as $syncedFolderid => $folder) {
-            // $folder is a SyncFolder object here
-            if ($folder->displayname == $name) {
-                ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->EditAdditionalFolder(): folder can not be added because there is already a folder with the same name synchronized: '%s'", $folderid));
-                return false;
+        if ($checkDups) {
+            // in order to check for the parent-ids we need a shortid
+            $parentShortId = $this->GetFolderIdForBackendId($parentid, false, null, null);
+            foreach($this->GetHierarchyCache()->ExportFolders() as $syncedFolderid => $folder) {
+                // $folder is a SyncFolder object here
+                if ($folder->displayname == $name && $folderid !== $folder->BackendId && $folderid !== $syncedFolderid && ($folder->parentid == $parentid || $folder->parentid == $parentShortId)) {
+                    ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->EditAdditionalFolder(): folder can not be edited because there is already a folder with the same name synchronized: '%s'", $folderid));
+                    return false;
+                }
             }
         }
 
         // update the name
         $af = $this->additionalfolders;
         $af[$folderid]['name'] = $name;
+        $af[$folderid]['flags'] = $flags;
+        $af[$folderid]['parentid'] = $parentid;
         $this->additionalfolders = $af;
 
         return true;
@@ -957,6 +980,11 @@ class ASDevice extends StateObject {
      * @return boolean
      */
     public function RemoveAdditionalFolder($folderid) {
+        // check if a folderid were sent
+        if (!$folderid) {
+            ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->RemoveAdditionalFolder(): No valid folderid ('%s') sent. Aborting. ", $folderid));
+            return false;
+        }
         // check if a folder with this ID is known
         if (!isset($this->additionalfolders[$folderid])) {
             ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->RemoveAdditionalFolder(): folder can not be removed because there is no folder known with this folder id: '%s'", $folderid));
@@ -970,11 +998,113 @@ class ASDevice extends StateObject {
         return true;
     }
 
+
+    /**
+     * Sets a list of additional folders of one store to the device.
+     * If there are additional folders for the set_store, that are not in the list they will be removed.
+     *
+     * @param string    $store      the store where this folder is located, e.g. "SYSTEM" (for public folder) or an username/email address.
+     * @param array     $folders    a list of folders to be set for this user. Other existing additional folders (that are not in this list)
+     *                              will be removed. The list is an array containing folders, where each folder is an array with the following keys:
+     *                              'folderid'  (string) the folder id of the additional folder.
+     *                              'parentid'  (string) the folderid of the parent folder. If no parent folder is set or the parent folder is not defined, '0' (main folder) is used.
+     *                              'name'      (string) the name of the additional folder (has to be unique for all folders on the device).
+     *                              'type'      (string) AS foldertype of SYNC_FOLDER_TYPE_USER_*
+     *                              'flags'     (int)    Additional flags, like DeviceManager::FLD_FLAGS_REPLYASUSER
+     *
+     * @access public
+     * @return boolean
+     */
+    public function SetAdditionalFolderList($store, $folders) {
+        // remove all folders already shared for this store
+        $newAF = array();
+        $noDupsCheck = array();
+        foreach($this->additionalfolders as $keepFolder) {
+            if ($keepFolder['store'] !== $store) {
+                $newAF[$keepFolder['folderid']] = $keepFolder;
+            }
+            else {
+                $noDupsCheck[$keepFolder['folderid']] = true;
+            }
+        }
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ASDevice->SetAdditionalFolderList(): cleared additional folder lists of store '%s', total %d folders, kept %d and removed %d", $store, count($this->additionalfolders), count($newAF), count($noDupsCheck)));
+        // set remaining additional folders
+        $this->additionalfolders = $newAF;
+
+        // transform our array in a key/value array where folderids are keys and do some basic checks
+        $toOrder = array();
+        $ordered = array();
+        $validTypes = array(SYNC_FOLDER_TYPE_USER_CONTACT, SYNC_FOLDER_TYPE_USER_APPOINTMENT, SYNC_FOLDER_TYPE_USER_TASK, SYNC_FOLDER_TYPE_USER_MAIL, SYNC_FOLDER_TYPE_USER_NOTE, SYNC_FOLDER_TYPE_USER_JOURNAL);
+        foreach($folders as $f) {
+            // fail early
+            if (!$f['folderid'] || !$f['name']) {
+                ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->SetAdditionalFolderList(): No valid folderid ('%s') or name ('%s') sent. Aborting. ", $f['folderid'], $f['name']));
+                return false;
+            }
+
+            // check if type is of a additional user type
+            if (!in_array($f['type'], $validTypes)) {
+                ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->SetAdditionalFolderList(): folder (id: '%s' - name: '%s') can not be added because the specified type '%s' is not a permitted user type.", $f['folderid'], $f['name'], $f['type']));
+                return false;
+            }
+            $toOrder[$f['folderid']] = $f;
+        }
+
+        // order the array, so folders with leafs come first
+        $this->orderAdditionalFoldersHierarchically($toOrder, $ordered);
+
+        // if there are folders that are not be positioned in the tree, we can't add them!
+        if (!empty($toOrder)) {
+            $s = "";
+            foreach($toOrder as $f) {
+                $s .= sprintf("'%s'('%s') ", $f['name'], $f['folderid']);
+            }
+            ZLog::Write(LOGLEVEL_ERROR, "ASDevice->SetAdditionalFolderList(): cannot proceed as these folders have invalid parentids (not found): ". $s);
+            return false;
+        }
+
+        foreach($ordered as $f) {
+            $status = $this->AddAdditionalFolder($store, $f['folderid'], $f['name'], $f['type'], $f['flags'], $f['parentid'], !isset($noDupsCheck[$f['folderid']]));
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ASDevice->SetAdditionalFolderList(): set folder '%s' in additional folders list with status: %s", $f['name'], Utils::PrintAsString($status)));
+            // break if a folder can not be added
+            if (!$status) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Orders a list of folders so the parents are first in the array, all leaves come afterwards.
+     *
+     * @param array $toOrderFolders     an array of folders, where the folderids are keys. This array should be empty at the end.
+     * @param array $orderedFolders     the ordered array
+     * @param string $parentid          the parentid to start with, if not set '0' (main folders) is used.
+     */
+    private function orderAdditionalFoldersHierarchically(&$toOrderFolders, &$orderedFolders, $parentid = '0') {
+        $stepInto = array();
+        // loop through the remaining folders that need to be ordered
+        foreach($toOrderFolders as $folder) {
+            // move folders with the matching parentid to the ordered array
+            if ($folder['parentid'] == $parentid) {
+                echo "found.. \n";
+                $fid = $folder['folderid'];
+                $orderedFolders[$fid] = $folder;
+                unset($toOrderFolders[$fid]);
+                $stepInto[] = $fid;
+            }
+        }
+        // call recursively to move/order the leaves as well
+        foreach($stepInto as $fid) {
+            $this->orderAdditionalFoldersHierarchically($toOrderFolders, $orderedFolders, $fid);
+        }
+    }
+
     /**
      * Generates the AS folder hash from the backend folder id, type and name.
      *
      * @param string    $backendid              Backend folder id
-     * @param string    $folderOrigin             Folder type is one of   'U' (user)
+     * @param string    $folderOrigin           Folder type is one of   'U' (user)
      *                                                                  'C' (configured)
      *                                                                  'S' (shared)
      *                                                                  'G' (global address book)
@@ -990,7 +1120,7 @@ class ASDevice extends StateObject {
         $cnt = 0;
         // Collision avoiding. Append an increasing number to the string to hash
         // until there aren't any collisions. Probably a smaller number is also sufficient.
-        while (isset($this->contentData[$folderId]) && $cnt < 10000) {
+        while ((isset($this->contentData[$folderId]) || in_array($folderId, $this->backend2folderidCache, true)) && $cnt < 10000) {
             $folderId = substr($folderOrigin . dechex(crc32($backendid . $folderName . $cnt++)), 0, 6);
             ZLog::Write(LOGLEVEL_WARN, sprintf("ASDevice->generateFolderHash(): collision avoiding nr %05d. Generated hash: '%s'", $cnt, $folderId));
         }

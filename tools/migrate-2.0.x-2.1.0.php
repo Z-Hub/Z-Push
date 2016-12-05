@@ -1,4 +1,4 @@
-#!/usr/bin/php
+#!/usr/bin/env php
 <?php
 /***********************************************
 * File      :   migrate-2.0.x-2.1.0.php
@@ -104,7 +104,7 @@ class StateMigrator20xto210 {
     /**
      * Constructor
      */
-    public function StateMigrator20xto210() {
+    public function __construct() {
         $this->sm = false;
     }
 

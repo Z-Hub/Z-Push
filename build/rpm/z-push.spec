@@ -13,7 +13,11 @@ BuildRoot:  %_tmppath/%name-%version-build
 %if 0%{?suse_version}
     %define apache_dir %_sysconfdir/apache2
 %else
-    %define apache_dir %_sysconfdir/httpd
+	%if "%_repository" == "RHEL_6_PHP_56" || "%_repository" == "RHEL_7_PHP_56"
+		%define apache_dir /opt/rh/httpd24/root/etc/httpd/
+	%else
+		%define apache_dir %_sysconfdir/httpd
+	%endif
 %endif
 
 %description
@@ -28,10 +32,16 @@ Requires:   php-posix
 %else
 Requires:   php-process
 %endif
+%if "%_repository" == "RHEL_6_PHP_56" || "%_repository" == "RHEL_7_PHP_56"
+Requires:   rh-php56
+Requires:   rh-php56-php-soap
+Requires:   rh-php56-php-mbstring
+Requires:   rh-php56-php-process
+%else
 Requires:   php >= 5.4.0
 Requires:   php-soap
 Requires:   php-mbstring
-
+%endif
 %description -n %name-common
 Z-push is an implementation of the ActiveSync protocol which is used 'over-the-air' for multi platform ActiveSync devices. Devices supported are including Windows Mobile, Android, iPhone, and Nokia. With Z-push any groupware can be connected and synced with these devices.
 
@@ -96,7 +106,11 @@ Backend for Z-Push, that adds the ability to connect to a ldap server
 Summary:    Z-Push Kopano backend
 Group:      Productivity/Networking/Email/Utilities
 Requires:   %name-common = %version
+%if 0%{?fedora_version} || 0%{?centos_version} || 0%{?rhel_version}
+Requires:   php-mapi-webapp
+%else
 Requires:   php-mapi
+%endif
 Provides:   %name-backend
 
 %description -n %name-backend-kopano
@@ -125,9 +139,13 @@ Synchronizes a Kopano global address book
 Summary:    Z-Push ipc shared memory provider
 Group:      Productivity/Networking/Email/Utilities
 Requires:   %name-common = %version
+%if "%_repository" == "RHEL_6_PHP_56" || "%_repository" == "RHEL_7_PHP_56"
+Requires:   rh-php56-php-process
+%else
 Requires:   php-sysvshm
 Requires:   php-sysvsem
 Requires:   php-pcntl
+%endif
 
 %description -n %name-ipc-sharedmemory
 Provider for Z-Push, that adds the ability to use ipc shared memory
@@ -189,7 +207,11 @@ Requires:   %name-common = %version
 Requires:   apache2
 Requires:   mod_php_any
 %else
+%if "%_repository" == "RHEL_6_PHP_56" || "%_repository" == "RHEL_7_PHP_56"
+Requires:   httpd24-httpd
+%else
 Requires:   httpd
+%endif
 %endif
 
 %description -n %name-config-apache
@@ -203,7 +225,11 @@ Requires:   %name-autodiscover = %version
 Requires:   apache2
 Requires:   mod_php_any
 %else
+%if "%_repository" == "RHEL_6_PHP_56" || "%_repository" == "RHEL_7_PHP_56"
+Requires:   httpd24-httpd
+%else
 Requires:   httpd
+%endif
 %endif
 
 %description -n %name-config-apache-autodiscover
@@ -241,8 +267,8 @@ ln -s "%zpush_dir/z-push-top.php" "$b/%_bindir/z-push-top";
 mkdir -p "$b/%_localstatedir/lib/z-push";
 mkdir -p "$b/%_localstatedir/log/z-push";
 mkdir -p "$b/%_sysconfdir/logrotate.d";
-install -Dpm 644 config/z-push.lr \
-    "$b/%_sysconfdir/logrotate.d/"
+install -Dpm 644 config/z-push-rhel.lr \
+    "$b/%_sysconfdir/logrotate.d/z-push.lr"
 
 # CALDAV
 mv "$bdir/caldav/config.php" "$cdir/caldav.conf.php";
@@ -459,7 +485,7 @@ install -Dpm 644 config/apache2/z-push-autodiscover.conf \
 %dir %zpush_dir/backend/ipcsharedmemory/
 %zpush_dir/backend/ipcsharedmemory
 
-# IPCMEMCACHED
+# IPC-MEMCACHED
 %files -n %name-ipc-memcached
 %defattr(-, root, root)
 %dir %zpush_dir/backend

@@ -14,25 +14,7 @@
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -44,7 +26,6 @@
 *
 * Consult LICENSE file for details
 ************************************************/
-
 
 class SyncAppointment extends SyncObject {
     public $timezone;
@@ -81,7 +62,7 @@ class SyncAppointment extends SyncObject {
     public $responserequested;
 
 
-    function SyncAppointment() {
+    function __construct() {
         $mapping = array(
                     SYNC_POOMCAL_TIMEZONE                               => array (  self::STREAMER_VAR      => "timezone",
                                                                                     self::STREAMER_RONOTIFY => true),
@@ -92,8 +73,7 @@ class SyncAppointment extends SyncObject {
 
                     SYNC_POOMCAL_STARTTIME                              => array (  self::STREAMER_VAR      => "starttime",
                                                                                     self::STREAMER_TYPE     => self::STREAMER_TYPE_DATE,
-                                                                                    self::STREAMER_CHECKS   => array(   self::STREAMER_CHECK_REQUIRED       => self::STREAMER_CHECK_SETZERO,
-                                                                                                                        self::STREAMER_CHECK_CMPLOWER       => SYNC_POOMCAL_ENDTIME ),
+                                                                                    self::STREAMER_CHECKS   => array(   self::STREAMER_CHECK_CMPLOWER       => SYNC_POOMCAL_ENDTIME ),
                                                                                     self::STREAMER_RONOTIFY => true ),
 
 
@@ -108,8 +88,7 @@ class SyncAppointment extends SyncObject {
                                                                                     self::STREAMER_RONOTIFY => true),
                     SYNC_POOMCAL_ENDTIME                                => array (  self::STREAMER_VAR      => "endtime",
                                                                                     self::STREAMER_TYPE     => self::STREAMER_TYPE_DATE,
-                                                                                    self::STREAMER_CHECKS   => array(   self::STREAMER_CHECK_REQUIRED       => self::STREAMER_CHECK_SETONE,
-                                                                                                                        self::STREAMER_CHECK_CMPHIGHER      => SYNC_POOMCAL_STARTTIME ),
+                                                                                    self::STREAMER_CHECKS   => array(   self::STREAMER_CHECK_CMPHIGHER      => SYNC_POOMCAL_STARTTIME ),
                                                                                     self::STREAMER_RONOTIFY => true ),
 
                     SYNC_POOMCAL_RECURRENCE                             => array (  self::STREAMER_VAR      => "recurrence",
@@ -218,7 +197,7 @@ class SyncAppointment extends SyncObject {
                                                                                     self::STREAMER_RONOTIFY => true);
         }
 
-        parent::SyncObject($mapping);
+        parent::__construct($mapping);
     }
 
     /**
@@ -234,6 +213,41 @@ class SyncAppointment extends SyncObject {
      * @return boolean
      */
     public function Check($logAsDebug = false) {
+        // Fix starttime and endtime if they are not set on NEW appointments - see https://jira.z-hub.io/browse/ZP-983
+        if ($this->flags === SYNC_NEWMESSAGE) {
+            $time = time();
+            $calcstart = $time + 1800 - ($time % 1800); // round up to the next half hour
+
+            // Check error cases first
+            // Case 2: starttime not set, endtime in the past
+            if (!isset($this->starttime) && isset($this->endtime) && $this->endtime < $time) {
+                ZLog::Write(LOGLEVEL_WARN, "SyncAppointment->Check(): Parameter 'starttime' not set while 'endtime' is in the past (case 2). Aborting.");
+                return false;
+            }
+            // Case 3b: starttime not set, endtime in the future (3) but before the calculated starttime (3b)
+            elseif (!isset($this->starttime) && isset($this->endtime) && $this->endtime > $time && $this->endtime < $calcstart) {
+                ZLog::Write(LOGLEVEL_WARN, "SyncAppointment->Check(): Parameter 'starttime' not set while 'endtime' is in the future but before the calculated starttime (case 3b). Aborting.");
+                return false;
+            }
+            // Case 5: starttime in the future but no endtime set
+            elseif (isset($this->starttime) && $this->starttime > $time && !isset($this->endtime)) {
+                ZLog::Write(LOGLEVEL_WARN, "SyncAppointment->Check(): Parameter 'starttime' is in the future but 'endtime' is not set (case 5). Aborting.");
+                return false;
+            }
+
+            // Set starttime to the rounded up next half hour
+            // Case 1, 3a (endtime won't be changed as it's set)
+            if (!isset($this->starttime)) {
+                $this->starttime = $calcstart;
+                ZLog::Write(LOGLEVEL_WBXML, sprintf("SyncAppointment->Check(): Parameter 'starttime' was not set, setting it to %d (%s).", $this->starttime, gmstrftime("%Y%m%dT%H%M%SZ", $this->starttime)));
+            }
+            // Case 1, 4
+            if (!isset($this->endtime)) {
+                $this->endtime = $calcstart + 1800; // 30 min after calcstart
+                ZLog::Write(LOGLEVEL_WBXML, sprintf("SyncAppointment->Check(): Parameter 'endtime' was not set, setting it to %d (%s).", $this->endtime, gmstrftime("%Y%m%dT%H%M%SZ", $this->endtime)));
+            }
+        }
+
         $ret = parent::Check($logAsDebug);
 
         // semantic checks general "turn off switch"
