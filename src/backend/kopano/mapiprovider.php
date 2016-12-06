@@ -10,25 +10,7 @@
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -58,7 +40,7 @@ class MAPIProvider {
      *
      * @access public
      */
-    function MAPIProvider($session, $store) {
+    function __construct($session, $store) {
         $this->session = $session;
         $this->store = $store;
     }
@@ -330,7 +312,14 @@ class MAPIProvider {
 
         }
 
-        if (!isset($message->nativebodytype)) $message->nativebodytype = $this->getNativeBodyType($messageprops);
+        if (!isset($message->nativebodytype)) {
+            $message->nativebodytype = $this->getNativeBodyType($messageprops);
+        }
+        elseif ($message->nativebodytype == SYNC_BODYPREFERENCE_UNDEFINED) {
+            $nbt = $this->getNativeBodyType($messageprops);
+            ZLog::Write(LOGLEVEL_INFO, sprintf("MAPIProvider->getAppointment(): native body type is undefined. Set it to %d.", $nbt));
+            $message->nativebodytype = $nbt;
+        }
 
         // If the user is working from a location other than the office the busystatus should be interpreted as free.
         if (isset($message->busystatus) && $message->busystatus == fbWorkingElsewhere) {
@@ -589,8 +578,10 @@ class MAPIProvider {
 
             // Get the GOID
             if(isset($props[$meetingrequestproperties["goidtag"]])) {
+                $req = new Meetingrequest($this->store, $mapimessage, $this->session);
+                $items = $req->findCalendarItems($props[$meetingrequestproperties["goidtag"]]);
                 // GlobalObjId support was removed in AS 16.0
-                if (Request::IsGlobalObjIdHexClient()) {
+                if (Request::IsGlobalObjIdHexClient() && !empty($items)) {
                     $message->meetingrequest->globalobjid = strtoupper(bin2hex($props[$meetingrequestproperties["goidtag"]]));
                 }
                 else {
@@ -689,7 +680,9 @@ class MAPIProvider {
                 // check if we are not sending the MR so we can process it - ZP-581
                 $cuser = ZPush::GetBackend()->GetUserDetails(ZPush::GetBackend()->GetCurrentUsername());
                 if(isset($cuser["emailaddress"]) && $cuser["emailaddress"] != $fromaddr) {
-                    $req = new Meetingrequest($this->store, $mapimessage, $this->session);
+                    if (!isset($req)) {
+                        $req = new Meetingrequest($this->store, $mapimessage, $this->session);
+                    }
                     if ($req->isMeetingRequestResponse()) {
                         $req->processMeetingRequestResponse();
                     }
@@ -777,7 +770,13 @@ class MAPIProvider {
                     }
                     // android devices require attachment size in order to display an attachment properly
                     if (!isset($attachprops[PR_ATTACH_SIZE])) {
-                        $stream = mapi_openpropertytostream($mapiattach, PR_ATTACH_DATA_BIN);
+                        $stream = mapi_openproperty($mapiattach, PR_ATTACH_DATA_BIN, IID_IStream, 0, 0);
+                        // It's not possible to open some (embedded only?) messages, so we need to open the attachment object itself to get the data
+                        if (mapi_last_hresult()) {
+                            $embMessage = mapi_attach_openobj($mapiattach);
+                            $addrbook = $this->getAddressbook();
+                            $stream = mapi_inetmapi_imtoinet($this->session, $addrbook, $embMessage, array('use_tnef' => -1));
+                        }
                         $stat = mapi_stream_stat($stream);
                         $attach->estimatedDataSize = $stat['cb'];
                     }

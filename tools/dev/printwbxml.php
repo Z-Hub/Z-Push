@@ -69,6 +69,10 @@ class ZLog {
             }
         }
     }
+
+    static public function IsWbxmlDebugEnabled() {
+        return true;
+    }
 }
 
 // setup

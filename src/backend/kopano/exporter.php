@@ -12,29 +12,11 @@
 *
 * Created   :   14.02.2011
 *
-* Copyright 2007 - 2013, 2015 Zarafa Deutschland GmbH
+* Copyright 2007 - 2013, 2015 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -75,7 +57,7 @@ class ExportChangesICS implements IExportChanges{
      * @access public
      * @throws StatusException
      */
-    public function ExportChangesICS($session, $store, $folderid = false) {
+    public function __construct($session, $store, $folderid = false) {
         // Open a hierarchy or a contents exporter depending on whether a folderid was specified
         $this->session = $session;
         $this->folderid = $folderid;
@@ -152,8 +134,10 @@ class ExportChangesICS implements IExportChanges{
             }
         }
 
-        if($this->flags & BACKEND_DISCARD_DATA)
+        if($this->flags & BACKEND_DISCARD_DATA) {
             $this->exporterflags |= SYNC_CATCHUP;
+            $this->exporterflags |= SYNC_STATE_READONLY;
+        }
 
         // Put the state information in a stream that can be used by ICS
         $stream = mapi_stream_create();
@@ -323,6 +307,11 @@ class ExportChangesICS implements IExportChanges{
      * @return array
      */
     public function Synchronize() {
+        if ($this->flags & BACKEND_DISCARD_DATA) {
+            ZLog::Write(LOGLEVEL_WARN, 'ExportChangesICS->Synchronize(): not supported in combination with the BACKEND_DISCARD_DATA flag.');
+            return false;
+        }
+
         if ($this->exporter) {
             return mapi_exportchanges_synchronize($this->exporter);
         }

@@ -16,25 +16,7 @@
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -74,7 +56,7 @@ class PHPWrapper {
      * @access public
      * @return
      */
-    public function PHPWrapper($session, $store, $importer, $folderid) {
+    public function __construct($session, $store, $importer, $folderid) {
         $this->importer = &$importer;
         $this->store = $store;
         $this->mapiprovider = new MAPIProvider($session, $this->store);
@@ -120,7 +102,7 @@ class PHPWrapper {
      * @access public
      * @return long
      */
-    public function ImportMessageChange($props, $flags, &$retmapimessage) {
+    public function ImportMessageChange($props, $flags, $retmapimessage) {
         $sourcekey = $props[PR_SOURCE_KEY];
         $parentsourcekey = $props[PR_PARENT_SOURCE_KEY];
         $entryid = mapi_msgstore_entryidfromsourcekey($this->store, $parentsourcekey, $sourcekey);
@@ -131,6 +113,15 @@ class PHPWrapper {
         $mapimessage = mapi_msgstore_openentry($this->store, $entryid);
         try {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("PHPWrapper->ImportMessageChange(): Getting message from MAPIProvider, sourcekey: '%s', parentsourcekey: '%s', entryid: '%s'", bin2hex($sourcekey), bin2hex($parentsourcekey), bin2hex($entryid)));
+
+            // do not send private messages from shared folders to the device
+            $sensitivity = mapi_getprops($mapimessage, array(PR_SENSITIVITY));
+            $sharedUser = ZPush::GetAdditionalSyncFolderStore(bin2hex($this->folderid));
+            if ($sharedUser != false && $sharedUser != 'SYSTEM' && isset($sensitivity[PR_SENSITIVITY]) && $sensitivity[PR_SENSITIVITY] >= SENSITIVITY_PRIVATE) {
+                ZLog::Write(LOGLEVEL_DEBUG, "PHPWrapper->ImportMessageChange(): ignoring private message from a shared folder");
+                return SYNC_E_IGNORE;
+            }
+
             $message = $this->mapiprovider->GetMessage($mapimessage, $this->contentparameters);
         }
         catch (SyncObjectBrokenException $mbe) {

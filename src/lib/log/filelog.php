@@ -6,29 +6,11 @@
  *
  * Created   :   13.11.2015
  *
- * Copyright 2007 - 2015 Zarafa Deutschland GmbH
+ * Copyright 2007 - 2016 Zarafa Deutschland GmbH
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License, version 3,
- * as published by the Free Software Foundation with the following additional
- * term according to sec. 7:
- *
- * According to sec. 7 of the GNU Affero General Public License, version 3,
- * the terms of the AGPL are supplemented with the following terms:
- *
- * "Zarafa" is a registered trademark of Zarafa B.V.
- * "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
- * The licensing of the Program under the AGPL does not imply a trademark license.
- * Therefore any rights, title and interest in our trademarks remain entirely with us.
- *
- * However, if you propagate an unmodified version of the Program you are
- * allowed to use the term "Z-Push" to indicate that you distribute the Program.
- * Furthermore you may use our trademarks where it is necessary to indicate
- * the intended purpose of a product or service provided you use it in accordance
- * with honest practices in industrial or commercial matters.
- * If you want to propagate modified versions of the Program under the name "Z-Push",
- * you may only do so if you have a written permission by Zarafa Deutschland GmbH
- * (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+ * as published by the Free Software Foundation.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -40,12 +22,19 @@
  *
  * Consult LICENSE file for details
  ************************************************/
+
 class FileLog extends Log {
 
     /**
      * @var string|bool
      */
     private $log_to_user_file = false;
+
+    /**
+     * Constructor
+     */
+    public function __construct() {
+    }
 
     /**
      * Get the log user file.
@@ -61,17 +50,19 @@ class FileLog extends Log {
     }
 
     /**
+     * Set user log-file relative to log directory.
+     *
      * @param string $value
+     *
+     * @access private
+     * @return void
      */
     private function setLogToUserFile($value) {
         $this->log_to_user_file = $value;
     }
 
-    public function __construct() {
-    }
-
     /**
-     * Returns the string to be logged
+     * Returns the string to be logged.
      *
      * @param int $loglevel
      * @param string $message
@@ -92,6 +83,15 @@ class FileLog extends Log {
     // Implementation of Log
     //
 
+    /**
+     * Writes a log message to the general log.
+     *
+     * @param int $loglevel
+     * @param string $message
+     *
+     * @access protected
+     * @return void
+     */
     protected function Write($loglevel, $message) {
         $data = $this->buildLogString($loglevel, $message) . PHP_EOL;
         @file_put_contents(LOGFILE, $data, FILE_APPEND);
@@ -101,11 +101,26 @@ class FileLog extends Log {
         }
     }
 
+    /**
+     * Writes a log message to the user specific log.
+     * @param int $loglevel
+     * @param string $message
+     *
+     * @access public
+     * @return void
+     */
     public function WriteForUser($loglevel, $message) {
         $data = $this->buildLogString($loglevel, $message) . PHP_EOL;
         @file_put_contents(LOGFILEDIR . $this->getLogToUserFile(), $data, FILE_APPEND);
     }
 
+    /**
+     * This function is used as an event for log implementer.
+     * It happens when the a call to the Log function is finished.
+     *
+     * @access protected
+     * @return void
+     */
     protected function afterLog($loglevel, $message) {
         if (($loglevel & LOGLEVEL_FATAL) || ($loglevel & LOGLEVEL_ERROR)) {
             $data = $this->buildLogString($loglevel, $message) . PHP_EOL;

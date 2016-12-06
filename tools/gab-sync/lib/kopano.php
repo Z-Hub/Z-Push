@@ -49,7 +49,12 @@ include_once('mapi/mapitags.php');
 include_once('mapi/mapicode.php');
 include_once('mapi/mapiguid.php');
 
-define('PR_EMS_AB_THUMBNAIL_PHOTO', mapi_prop_tag(PT_BINARY, 0x8C9E));
+if (!defined('PR_EMS_AB_THUMBNAIL_PHOTO')) {
+    define('PR_EMS_AB_THUMBNAIL_PHOTO', mapi_prop_tag(PT_BINARY, 0x8C9E));
+}
+if (!defined('PR_EC_AB_HIDDEN')) {
+    define('PR_EC_AB_HIDDEN', mapi_prop_tag(PT_BOOLEAN, 0x67A7));
+}
 
 class Kopano extends SyncWorker {
     const NAME = "Z-Push Kopano GAB Sync";
@@ -113,6 +118,9 @@ class Kopano extends SyncWorker {
      */
     protected function createHiddenFolder($gabId = null, $gabName = 'default') {
         $store = $this->getStore($gabId, $gabName);
+        if (!$store) {
+            return false;
+        }
         $parentfolder = $this->getRootFolder($store);
 
         // mapi_folder_createfolder() fails if a folder with this name already exists -> MAPI_E_COLLISION
@@ -145,6 +153,9 @@ class Kopano extends SyncWorker {
      */
     protected function deleteHiddenFolder($folderid, $gabId = null, $gabName = 'default') {
         $store = $this->getStore($gabId, $gabName);
+        if (!$store) {
+            return false;
+        }
         $parentfolder = $this->getRootFolder($store);
 
         $folderentryid = mapi_msgstore_entryidfromsourcekey($store, hex2bin($folderid));
@@ -169,6 +180,9 @@ class Kopano extends SyncWorker {
     */
     protected function getHiddenFolderId($gabId = null, $gabName = 'default') {
         $store = $this->getStore($gabId, $gabName);
+        if (!$store) {
+            return false;
+        }
         $parentfolder = $this->getRootFolder($store);
         $table = mapi_folder_gethierarchytable($parentfolder);
 
@@ -198,6 +212,9 @@ class Kopano extends SyncWorker {
     protected function clearFolderContents($folderid, $gabId = null, $gabName = 'default') {
         $this->Log(sprintf("Kopano->clearFolderContents: emptying folder in GAB '%s': %s", $gabName, $folderid));
         $store = $this->getStore($gabId, $gabName);
+        if (!$store) {
+            return false;
+        }
         $folder = $this->getFolder($store, $folderid);
 
         // empty folder!
@@ -221,6 +238,9 @@ class Kopano extends SyncWorker {
      */
     protected function clearAllNotCurrentChunkType($folderid, $gabId = null, $gabName = 'default') {
         $store = $this->getStore($gabId, $gabName);
+        if (!$store) {
+            return false;
+        }
         $folder = $this->getFolder($store, $folderid);
         $table = mapi_folder_getcontentstable($folder);
         if (!$table)
@@ -257,7 +277,7 @@ class Kopano extends SyncWorker {
         $companies = mapi_zarafa_getcompanylist($this->store);
         if (is_array($companies)) {
             foreach($companies as $c) {
-                $names[$c['companyname']] = bin2hex($c['companyid']);
+                $names[trim($c['companyname'])] = bin2hex($c['companyid']);
             }
         }
         return $names;
@@ -340,6 +360,7 @@ class Kopano extends SyncWorker {
                                                             PR_INITIALS,
                                                             PR_LANGUAGE,
                                                             PR_EMS_AB_THUMBNAIL_PHOTO,
+                                                            PR_EC_AB_HIDDEN,
                                                             PR_DISPLAY_TYPE_EX
                                                     ));
         foreach ($gabentries as $entry) {
@@ -347,6 +368,12 @@ class Kopano extends SyncWorker {
             if (strtoupper($entry[PR_DISPLAY_NAME]) == "SYSTEM") {
                 continue;
             }
+            // ignore hidden entries
+            if (isset($entry[PR_EC_AB_HIDDEN]) && $entry[PR_EC_AB_HIDDEN]) {
+                $this->Log(sprintf("Kopano->GetGAB(): Ignoring user '%s' as account is hidden", $entry[PR_ACCOUNT]));
+                continue;
+            }
+
             $a = new GABEntry();
             $a->type = GABEntry::CONTACT;
             $a->memberOf = array();
@@ -432,6 +459,9 @@ class Kopano extends SyncWorker {
     protected function getChunkData($folderid, $chunkName, $gabId = null, $gabName = 'default') {
         // find the chunk message in the folder
         $store = $this->getStore($gabId, $gabName);
+        if (!$store) {
+            return false;
+        }
         $chunkdata = $this->findChunk($store, $folderid, $chunkName);
 
         if (isset($chunkdata[PR_ENTRYID])) {
@@ -466,6 +496,9 @@ class Kopano extends SyncWorker {
 
         // find the chunk message in the folder
         $store = $this->getStore($gabId, $gabName);
+        if (!$store) {
+            return false;
+        }
         $chunkdata = $this->findChunk($store, $folderid, $chunkName);
         $message = false;
 
@@ -619,8 +652,14 @@ class Kopano extends SyncWorker {
         if (!isset($this->storeCache[$gabId])) {
             $user =  (strtoupper($this->targetStore) == 'SYSTEM') ? $gabName : $this->targetStore . "@" . $gabName;
             $store_entryid = mapi_msgstore_createentryid($this->store, $user);
-            $store = mapi_openmsgstore($this->session, $store_entryid);
-            $this->Log(sprintf("Kopano->getStore(): Found store of user '%s': '%s'", $user, $store));
+            if ($store_entryid) {
+                $store = mapi_openmsgstore($this->session, $store_entryid);
+                $this->Log(sprintf("Kopano->getStore(): Found store of user '%s': '%s'", $user, $store));
+            }
+            else {
+                $this->Log(sprintf("Kopano->getStore(): No store found for '%s'", $user));
+                $store = false;
+            }
             $this->storeCache[$gabId] = $store;
         }
 
@@ -636,7 +675,8 @@ class Kopano extends SyncWorker {
      * @return ressource
      */
     private function getRootFolder($store) {
-        $rootId = "root";
+        // stringify the store ressource
+        $rootId = bin2hex($store."!");
         if (!isset($this->folderCache[$rootId])) {
             $parentfentryid = false;
 

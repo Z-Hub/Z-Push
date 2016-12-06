@@ -8,7 +8,7 @@ Homepage: http://z-push.org
 
 Package: z-push-common
 Architecture: all
-Depends: ${misc:Depends}, php5 (>= 5.4) | php7.0, php5-cli | php7.0-cli, php-soap
+Depends: ${misc:Depends}, php5 (>= 5.4) | php (>= 5.4) , php5-cli | php-cli, php-soap, ${dist:Depends}
 Conflicts: d-push, z-push
 Replaces: d-push, z-push
 Description: open source implementation of the ActiveSync protocol
@@ -26,7 +26,7 @@ Description: Z-Push caldav backend
 
 Package: z-push-backend-carddav
 Architecture: all
-Depends: ${misc:Depends}, z-push-common (= ${binary:Version}), php-curl | php5-curl, php5-xsl | php7.0-xsl
+Depends: ${misc:Depends}, z-push-common (= ${binary:Version}), php-curl | php5-curl, php5-xsl | php-xml
 Description: Z-Push carddav backend
  Backend for Z-Push, that adds the ability to connect to a carddav server
 
