@@ -1209,6 +1209,12 @@ class TimezoneUtil {
      * @return string
      */
     static private function getMSTZnameFromTZName($name) {
+        // if $name is empty, get the timezone from system
+        if (trim($name) == '') {
+            $name = date_default_timezone_get();
+            ZLog::Write(LOGLEVEL_INFO, sprintf("TimezoneUtil::getMSTZnameFromTZName(): empty timezone name sent. Got timezone from the system: '%s'", $name));
+        }
+
         foreach (self::$mstzones as $mskey => $msdefs) {
             if ($name == $msdefs[0])
                 return $msdefs[1];
