@@ -22,7 +22,11 @@ override_dh_gencontrol:
 
 override_dh_install:
 	mv src/* .
+	# set version number
 	sed -s "s/ZPUSHVERSION/${DEB_VERSION}/" build/version.php.in > version.php
+
+	# fix z-push directory in gab2contacts script
+	sed -s "s/PATH_TO_ZPUSH', '\.\.\/\.\.\/src\/')/PATH_TO_ZPUSH', '\/usr\/share\/z-push\/')/" tools/gab2contacts/gab2contacts.php > tools/gab2contacts/gab2contacts.php
 
 	mv "config.php" "z-push.conf.php";
 
