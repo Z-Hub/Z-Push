@@ -258,6 +258,7 @@ cp -a src/* "$b/%zpush_dir/"
 rm -f "$b/%zpush_dir/"{INSTALL,LICENSE}
 
 # COMMON
+# set version number
 sed -s "s/ZPUSHVERSION/%version/" build/version.php.in > "$b/%zpush_dir/version.php"
 
 mkdir -p "$b/%_sysconfdir/z-push";
@@ -302,15 +303,18 @@ ln -s "%_sysconfdir/z-push/ldap.conf.php" "$bdir/ldap/config.php";
 mv "$bdir/kopano/config.php" "$cdir/kopano.conf.php";
 ln -s "%_sysconfdir/z-push/kopano.conf.php" "$bdir/kopano/config.php";
 
+# GAB-SYNC
 mkdir -p "$b/%zpush_dir/tools"
 cp -a tools/gab-sync "$b/%zpush_dir/tools/"
 mv "$b/%zpush_dir/tools/gab-sync/config.php" "$cdir/gabsync.conf.php";
 ln -s "%_sysconfdir/z-push/gabsync.conf.php" "$b/%zpush_dir/tools/gab-sync/config.php";
 
+# GAB2CONTACTS
 mkdir -p "$b/%zpush_dir/tools"
 cp -a tools/gab2contacts "$b/%zpush_dir/tools/"
 mv "$b/%zpush_dir/tools/gab2contacts/config.php" "$cdir/gab2contacts.conf.php";
 ln -s "%_sysconfdir/z-push/gab2contacts.conf.php" "$b/%zpush_dir/tools/gab2contacts/config.php";
+sed -i -s "s/PATH_TO_ZPUSH', '\.\.\/\.\.\/src\/')/PATH_TO_ZPUSH', '\/usr\/share\/z-push\/')/" "$b/%zpush_dir/tools/gab2contacts/gab2contacts.php"
 
 # MEMCACHED
 mv "$bdir/ipcmemcached/config.php" "$cdir/memcached.conf.php";
