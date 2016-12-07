@@ -60,6 +60,7 @@ class WebserviceInfo {
      * @return string
      */
     public function About() {
+        ZLog::Write(LOGLEVEL_INFO, sprintf("WebserviceInfo->About(): returning Z-Push version '%s'", @constant('ZPUSH_VERSION')));
         return @constant('ZPUSH_VERSION');
     }
 }
