@@ -52,4 +52,14 @@ class WebserviceInfo {
 
         return $output;
     }
+
+    /**
+     * Returns the Z-Push version.
+     *
+     * @access public
+     * @return string
+     */
+    public function About() {
+        return @constant('ZPUSH_VERSION');
+    }
 }
