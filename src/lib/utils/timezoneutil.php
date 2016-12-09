@@ -66,6 +66,7 @@ class TimezoneUtil {
                         "100" => array("Central European Standard Time",            "(GMT+01:00) Sarajevo, Skopje, Warsaw, Zagreb"),
                         "105" => array("Romance Standard Time",                     "(GMT+01:00) Brussels, Copenhagen, Madrid, Paris"),
                         "110" => array("W Europe Standard Time",                    "(GMT+01:00) Amsterdam, Berlin, Bern, Rome, Stockholm, Vienna"),
+                        "111" => array("W. Europe Standard Time",                   "(GMT+01:00) Amsterdam, Berlin, Bern, Rome, Stockholm, Vienna"),
                         "113" => array("W Central Africa Standard Time",            "(GMT+01:00) West Central Africa"),
                         "115" => array("E Europe Standard Time",                    "(GMT+02:00) Bucharest"),
                         "120" => array("Egypt Standard Time",                       "(GMT+02:00) Cairo"),
