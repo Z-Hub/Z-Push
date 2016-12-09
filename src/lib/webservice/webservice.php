@@ -71,9 +71,13 @@ class Webservice {
             include_once('webservicedevice.php');
             $this->server->setClass("WebserviceDevice");
         }
-
+        elseif ($commandCode == ZPush::COMMAND_WEBSERVICE_INFO) {
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("Webservice::HandleWebservice('%s'): executing WebserviceInfo service", $commandCode));
+            include_once('webserviceinfo.php');
+            $this->server->setClass("WebserviceInfo");
+        }
         // the webservice command is handled by its class
-        if ($commandCode == ZPush::COMMAND_WEBSERVICE_USERS) {
+        elseif ($commandCode == ZPush::COMMAND_WEBSERVICE_USERS) {
             if (!defined("ALLOW_WEBSERVICE_USERS_ACCESS") || ALLOW_WEBSERVICE_USERS_ACCESS !== true)
                 throw new HTTPReturnCodeException("Access to the WebserviceUsers service is disabled in configuration. Enable setting ALLOW_WEBSERVICE_USERS_ACCESS", 403);
 
