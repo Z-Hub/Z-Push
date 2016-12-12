@@ -1,2 +1,2 @@
 etc/z-push/gabsync.conf.php usr/share/z-push/tools/gab-sync/config.php
-usr/share/z-push/tools/gab-sync/gab-sync.php /usr/local/sbin/z-push-gabsync
+usr/share/z-push/tools/gab-sync/gab-sync.php /usr/sbin/z-push-gabsync
