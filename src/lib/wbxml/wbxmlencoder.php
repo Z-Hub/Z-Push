@@ -162,20 +162,22 @@ class WBXMLEncoder extends WBXMLDefs {
      *
      * @param resource $stream
      * @param boolean $asBase64     if true, the data will be encoded as base64, default: false
+     * @param boolean $opaque       if true, output the opaque data, default: false
      *
      * @access public
      * @return
      */
-    public function contentStream($stream, $asBase64 = false) {
-        if (!$asBase64) {
+    public function contentStream($stream, $asBase64 = false, $opaque = false) {
+        // Do not append filters to opaque data as it might contain null char
+        if (!$asBase64 && !$opaque) {
             stream_filter_register('replacenullchar', 'ReplaceNullcharFilter');
             $rnc_filter = stream_filter_append($stream, 'replacenullchar');
         }
 
         $this->_outputStack();
-        $this->_contentStream($stream, $asBase64);
+        $this->_contentStream($stream, $asBase64, $opaque);
 
-        if (!$asBase64) {
+        if (!$asBase64 && !$opaque) {
             stream_filter_remove($rnc_filter);
         }
 
@@ -286,9 +288,17 @@ class WBXMLEncoder extends WBXMLDefs {
      * @param boolean  $asBase64
      * @return
      */
-    private function _contentStream($stream, $asBase64) {
+    private function _contentStream($stream, $asBase64, $opaque) {
+        $stat = fstat($stream);
         // write full stream, including the finalizing terminator to the output stream (stuff outTermStr() would do)
-        $this->outByte(self::WBXML_STR_I);
+        if ($opaque) {
+            $this->outByte(self::WBXML_OPAQUE);
+            $this->outMBUInt($stat['size']);
+        }
+        else {
+            $this->outByte(self::WBXML_STR_I);
+        }
+
         if ($asBase64) {
             $out_filter = stream_filter_append($this->_out, 'convert.base64-encode');
         }
@@ -296,11 +306,12 @@ class WBXMLEncoder extends WBXMLDefs {
         if ($asBase64) {
             stream_filter_remove($out_filter);
         }
-        fwrite($this->_out, chr(0));
+        if (!$opaque) {
+            fwrite($this->_out, chr(0));
+        }
 
         if ($this->log) {
             // data is out, do some logging
-            $stat = fstat($stream);
             $this->logContent(sprintf("<<< written %d of %d bytes of %s data >>>", $written, $stat['size'], $asBase64 ? "base64 encoded":"plain"));
         }
     }
@@ -330,24 +341,39 @@ class WBXMLEncoder extends WBXMLDefs {
     }
 
     /**
-     * Outputs a string table
+     * Output the multibyte integers to the stream.
      *
-     * @param $uint
+     * A multi-byte integer consists of a series of octets,
+     * where the most significant bit is the continuation flag
+     * and the remaining seven bits are a scalar value.
+     * The octets are arranged in a big-endian order,
+     * eg, the most significant seven bits are transmitted first.
+     *
+     * @see https://www.w3.org/1999/06/NOTE-wbxml-19990624/#_Toc443384895
+     *
+     * @param int $uint
      *
      * @access private
-     * @return
+     * @return void
      */
     private function outMBUInt($uint) {
-        while(1) {
+        if ($uint == 0x0) {
+            return $this->outByte($uint);
+        }
+
+        $out = '';
+
+        for ($i = 0; $uint != 0; $i++) {
             $byte = $uint & 0x7f;
             $uint = $uint >> 7;
-            if($uint == 0) {
-                $this->outByte($byte);
-                break;
-            } else {
-                $this->outByte($byte | 0x80);
+            if ($i == 0) {
+                $out = chr($byte) . $out;
+            }
+            else {
+                $out = chr($byte | 0x80) . $out;
             }
         }
+        fwrite($this->_out, $out);
     }
 
     /**
