@@ -35,6 +35,7 @@ class Search extends RequestProcessor {
      */
     public function Handle($commandCode) {
         $searchrange = '0';
+        $searchpicture = new SyncResolveRecipientsPicture();
         $cpo = new ContentParameters();
 
         if(!self::$decoder->getElementStartTag(SYNC_SEARCH_SEARCH))
@@ -252,6 +253,27 @@ class Search extends RequestProcessor {
                         return false;
                 }
 
+                if(self::$decoder->getElementStartTag(SYNC_SEARCH_PICTURE)) { // TODO - do something with maxsize and maxpictures in the backend
+                    if(self::$decoder->getElementStartTag(SYNC_SEARCH_MAXSIZE)) {
+                        $searchpicture->maxsize = self::$decoder->getElementContent();
+                        if(!self::$decoder->getElementEndTag())
+                            return false;
+                    }
+
+                    if(self::$decoder->getElementStartTag(SYNC_SEARCH_MAXPICTURES)) {
+                        $searchpicture->maxpictures = self::$decoder->getElementContent();
+                        if(!self::$decoder->getElementEndTag())
+                            return false;
+                    }
+
+                    // iOs devices send empty picture tag: <Search:Picture/>
+                    $e = self::$decoder->peek();
+                    if($e[EN_TYPE] == EN_TYPE_ENDTAG) {
+                        if(!self::$decoder->getElementEndTag()) // SYNC_SEARCH_PICTURE
+                            return false;
+                    }
+                }
+
                 $e = self::$decoder->peek();
                 if($e[EN_TYPE] == EN_TYPE_ENDTAG) {
                     self::$decoder->getElementEndTag();
@@ -276,7 +298,7 @@ class Search extends RequestProcessor {
             try {
                 if ($searchname == ISearchProvider::SEARCH_GAL) {
                     //get search results from the searchprovider
-                    $rows = $searchprovider->GetGALSearchResults($searchquery, $searchrange);
+                    $rows = $searchprovider->GetGALSearchResults($searchquery, $searchrange, $searchpicture);
                 }
                 elseif ($searchname == ISearchProvider::SEARCH_MAILBOX) {
                     $backendFolderId = self::$deviceManager->GetBackendIdForFolderId($cpo->GetSearchFolderid());
@@ -385,6 +407,19 @@ class Search extends RequestProcessor {
                                         self::$encoder->startTag(SYNC_GAL_EMAILADDRESS);
                                         self::$encoder->content((isset($u[SYNC_GAL_EMAILADDRESS]))?$u[SYNC_GAL_EMAILADDRESS]:"");
                                         self::$encoder->endTag();
+
+
+                                        if (isset($u[SYNC_GAL_PICTURE])) {
+                                            self::$encoder->startTag(SYNC_GAL_PICTURE);
+                                                self::$encoder->startTag(SYNC_GAL_STATUS);
+                                                self::$encoder->content(SYNC_SEARCHSTATUS_PICTURE_SUCCESS); //FIXME: status code
+                                                self::$encoder->endTag(); // SYNC_SEARCH_STATUS
+
+                                                self::$encoder->startTag(SYNC_GAL_DATA);
+                                                self::$encoder->contentStream($u[SYNC_GAL_PICTURE], false, true);
+                                                self::$encoder->endTag(); // SYNC_GAL_DATA
+                                            self::$encoder->endTag(); // SYNC_GAL_PICTURE
+                                        }
 
                                     self::$encoder->endTag();//result
                                 self::$encoder->endTag();//properties
