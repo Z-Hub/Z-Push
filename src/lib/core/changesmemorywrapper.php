@@ -193,12 +193,22 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
                 $cacheFolder = $this->GetFolder($folder->serverid);
                 $folder->type = $cacheFolder->type;
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("ChangesMemoryWrapper->ImportFolderChange(): Set foldertype for folder '%s' from cache as it was not sent: '%s'", $folder->displayname, $folder->type));
+                if (isset($cacheFolder->TypeReal)) {
+                    $folder->TypeReal = $cacheFolder->TypeReal;
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("ChangesMemoryWrapper->ImportFolderChange(): Set REAL foldertype for folder '%s' from cache: '%s'", $folder->displayname, $folder->TypeReal));
+                }
             }
 
             // KOE ZO-42: When Notes folders are updated in Outlook, it tries to update the name (that fails by default, as it's a system folder)
             // catch this case here and ignore the change
             if (($folder->type == SYNC_FOLDER_TYPE_NOTE || $folder->type == SYNC_FOLDER_TYPE_USER_NOTE) && ZPush::GetDeviceManager()->IsKoe()) {
                 $retFolder = false;
+            }
+            // KOE ZP-907: When a secondary contact folder is patched (update type & change name) don't import it through the backend
+            elseif ($folder->type == SYNC_FOLDER_TYPE_UNKNOWN && ZPush::GetDeviceManager()->IsKoe() && !Utils::IsFolderToBeProcessedByKoe($folder)) {
+                ZLog::Write(LOGLEVEL_DEBUG, "ChangesMemoryWrapper->ImportFolderChange(): Rewrote folder type to real type, as KOE patched the folder");
+                $folder->type = $folder->TypeReal;
+                $retFolder = $folder;
             }
             // do regular folder update
             else {
@@ -332,9 +342,16 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
             $change = $this->changes[$this->step];
 
             if ($change[0] == self::CHANGE) {
-                if (! $this->GetFolder($change[1]->serverid, true))
+                if (! $this->GetFolder($change[1]->serverid, true)) {
                     $change[1]->flags = SYNC_NEWMESSAGE;
 
+                    // ZP-907: if we are ADDING a secondary contact folder and Outlook is connected, rewrite the type to SYNC_FOLDER_TYPE_UNKNOWN and mark the foldername
+                    // TODO: ZP-1124 this should only be done, if the feature is enabled and the KOE version supports this feature
+                    if (defined('KOE_CAPABILITY_SECONDARYCONTACTS') && KOE_CAPABILITY_SECONDARYCONTACTS && $change[1]->type == SYNC_FOLDER_TYPE_USER_CONTACT && ZPush::GetDeviceManager()->IsKoe()) {
+                        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ChangesMemoryWrapper->Synchronize(): Synchronizing folder '%s' as type SYNC_FOLDER_TYPE_UNKNOWN as Outlook is not able to handle secondary contact folders", $change[1]->displayname));
+                        $change[1] = Utils::ChangeFolderToTypeUnknownForKoe($change[1]);
+                    }
+                }
                 $this->exportImporter->ImportFolderChange($change[1]);
             }
             // deletion

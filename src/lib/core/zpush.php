@@ -145,7 +145,7 @@ class ZPush {
                                         self::CLASS_NAME => "SyncContact",
                                         self::CLASS_REQUIRESPROTOCOLVERSION => true,
                                         self::CLASS_DEFAULTTYPE => SYNC_FOLDER_TYPE_CONTACT,
-                                        self::CLASS_OTHERTYPES => array(SYNC_FOLDER_TYPE_USER_CONTACT),
+                                        self::CLASS_OTHERTYPES => array(SYNC_FOLDER_TYPE_USER_CONTACT, SYNC_FOLDER_TYPE_UNKNOWN),
                                    ),
                     "Calendar"  => array(
                                         self::CLASS_NAME => "SyncAppointment",

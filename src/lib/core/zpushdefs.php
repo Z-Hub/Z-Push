@@ -309,6 +309,7 @@ define("SYNC_FOLDERHIERARCHY_IGNORE_STORE","FolderHierarchy:IgnoreStore");
 define("SYNC_FOLDERHIERARCHY_IGNORE_NOBCKENDFLD","FolderHierarchy:IgnoreNoBackendFolder");
 define("SYNC_FOLDERHIERARCHY_IGNORE_BACKENDID","FolderHierarchy:IgnoreBackendId");
 define("SYNC_FOLDERHIERARCHY_IGNORE_FLAGS","FolderHierarchy:IgnoreFlags");
+define("SYNC_FOLDERHIERARCHY_IGNORE_TYPEREAL","FolderHierarchy:TypeReal");
 
 // MeetingResponse
 define("SYNC_MEETINGRESPONSE_CALENDARID","MeetingResponse:CalendarId");
