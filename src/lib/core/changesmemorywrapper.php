@@ -206,7 +206,7 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
             }
             // KOE ZP-907: When a secondary contact folder is patched (update type & change name) don't import it through the backend
             elseif ($folder->type == SYNC_FOLDER_TYPE_UNKNOWN && ZPush::GetDeviceManager()->IsKoe() && !Utils::IsFolderToBeProcessedByKoe($folder)) {
-                ZLog::Write(LOGLEVEL_DEBUG, "ChangesMemoryWrapper->ImportFolderChange(): Rewrote folder type to real type', as KOE patched the folder");
+                ZLog::Write(LOGLEVEL_DEBUG, "ChangesMemoryWrapper->ImportFolderChange(): Rewrote folder type to real type, as KOE patched the folder");
                 $folder->type = $folder->TypeReal;
                 $retFolder = $folder;
             }
