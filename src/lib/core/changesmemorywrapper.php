@@ -347,7 +347,7 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
 
                     // ZP-907: if we are ADDING a secondary contact folder and Outlook is connected, rewrite the type to SYNC_FOLDER_TYPE_UNKNOWN and mark the foldername
                     // TODO: ZP-1124 this should only be done, if the feature is enabled and the KOE version supports this feature
-                    if ($change[1]->type == SYNC_FOLDER_TYPE_USER_CONTACT && ZPush::GetDeviceManager()->IsKoe()) {
+                    if (defined('KOE_CAPABILITY_SECONDARYCONTACTS') && KOE_CAPABILITY_SECONDARYCONTACTS && $change[1]->type == SYNC_FOLDER_TYPE_USER_CONTACT && ZPush::GetDeviceManager()->IsKoe()) {
                         ZLog::Write(LOGLEVEL_DEBUG, sprintf("ChangesMemoryWrapper->Synchronize(): Synchronizing folder '%s' as type SYNC_FOLDER_TYPE_UNKNOWN as Outlook is not able to handle secondary contact folders", $change[1]->displayname));
                         $change[1] = Utils::ChangeFolderToTypeUnknownForKoe($change[1]);
                     }

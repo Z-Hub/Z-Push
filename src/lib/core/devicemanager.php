@@ -491,7 +491,7 @@ class DeviceManager {
 
             // adjust additional folders so it matches not yet processed KOE type UNKNOWN folders
             $type = $this->device->GetFolderType($folder->serverid);
-            if ($type !== $folder->type && $type == SYNC_FOLDER_TYPE_UNKNOWN) {
+            if (defined('KOE_CAPABILITY_SECONDARYCONTACTS') && KOE_CAPABILITY_SECONDARYCONTACTS && $type !== $folder->type && $type == SYNC_FOLDER_TYPE_UNKNOWN) {
                 ZLog::Write(LOGLEVEL_DEBUG, "DeviceManager->GetAdditionalUserSyncFolders(): Modifying additional folder so it matches an unprocessed KOE folder");
                 $folder = Utils::ChangeFolderToTypeUnknownForKoe($folder);
             }
