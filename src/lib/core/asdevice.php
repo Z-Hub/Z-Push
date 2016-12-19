@@ -581,8 +581,8 @@ class ASDevice extends StateObject {
    /**
      * Sets the foldertype of a folder id
      *
-     * @param string        $uuid
-     * @param string        $folderid       (opt) if not set Hierarchy UUID is linked
+     * @param string        $folderid
+     * @param int           $foldertype         ActiveSync folder type (as on the mobile)
      *
      * @access public
      * @return boolean      true if the type was set or updated
