@@ -278,7 +278,7 @@ class Ping extends RequestProcessor {
     private function isClassValid($class, $spa) {
         // ZP-907: Outlook might request a ping for such a folder, but we shouldn't answer it in any way
         if (Request::IsOutlook() && self::$deviceManager->GetFolderTypeFromCacheById($spa->GetFolderId()) == SYNC_FOLDER_TYPE_UNKNOWN) {
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandlePing(): ignoring folder id '%s' as it's of type UNKNOWN ", $spa->GetFolderId()));
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandlePing()->isClassValid(): ignoring folder id '%s' as it's of type UNKNOWN ", $spa->GetFolderId()));
             return false;
         }
         if ($class == $spa->GetContentClass() ||

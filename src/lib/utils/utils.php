@@ -1169,11 +1169,12 @@ class Utils {
      * Modifies a SyncFolder object, changing the type to SYNC_FOLDER_TYPE_UNKNOWN but saving the original type.
      * It also appends a zero-width UTF-8 (U+200B) character to the name, which serves as marker.
      *
+     * @access public
      * @param SyncFolder $folder
      * @return SyncFolder
      */
     public static function ChangeFolderToTypeUnknownForKoe($folder) {
-        // append an zero width UTF-8 space to the name
+        // append a zero width UTF-8 space to the name
         $folder->displayname .= hex2bin("e2808b");
         $folder->TypeReal = $folder->type;
         $folder->type = SYNC_FOLDER_TYPE_UNKNOWN;
@@ -1184,6 +1185,7 @@ class Utils {
     /**
      * Checks if the displayname of the folder contains the zero-width UTF-8 (U+200B) character marker.
      *
+     * @access public
      * @param SyncFolder $folder
      * @return boolean
      */
