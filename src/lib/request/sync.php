@@ -772,6 +772,12 @@ class Sync extends RequestProcessor {
                     $setupExporter = false;
                 }
 
+                // ZP-907: never send changes of UNKNOWN folders to an Outlook client
+                if (Request::IsOutlook() && self::$deviceManager->GetFolderTypeFromCacheById($spa->GetFolderId()) == SYNC_FOLDER_TYPE_UNKNOWN && $spa->HasSyncKey()) {
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("Sync(): no exporter setup for '%s' as type is UNKNOWN.", $spa->GetFolderId()));
+                    $setupExporter = false;
+                }
+
                 // compare the folder statistics if the backend supports this
                 if ($setupExporter && self::$backend->HasFolderStats()) {
                     // check if the folder stats changed -> if not, don't setup the exporter, there are no changes!

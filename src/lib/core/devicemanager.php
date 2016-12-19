@@ -488,6 +488,14 @@ class DeviceManager {
             }
 
             $folder = $this->getAdditionalSyncFolderObject($df['store'], $df['folderid'], $df['parentid'], $df['name'], $df['type'], $df['flags'], DeviceManager::FLD_ORIGIN_SHARED);
+
+            // adjust additional folders so it matches not yet processed KOE type UNKNOWN folders
+            $type = $this->device->GetFolderType($folder->serverid);
+            if ($type !== $folder->type && $type == SYNC_FOLDER_TYPE_UNKNOWN) {
+                ZLog::Write(LOGLEVEL_DEBUG, "DeviceManager->GetAdditionalUserSyncFolders(): Modifying additional folder so it matches an unprocessed KOE folder");
+                $folder = Utils::ChangeFolderToTypeUnknownForKoe($folder);
+            }
+
             $folders[$folder->BackendId] = $folder;
         }
 
