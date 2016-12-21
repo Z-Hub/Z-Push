@@ -865,7 +865,8 @@ class ASDevice extends StateObject {
         // check if a folder with that Name is already in the list and that its parent exists
         $parentFound = false;
         foreach ($this->additionalfolders as $k => $folder) {
-            // TODO: this parentid check should go into fixstates!
+            // This is fixed in fixstates, but we could keep this here a while longer.
+            // TODO: remove line at a later point.
             if (!isset($folder['parentid'])) $folder['parentid'] = "0";
 
             if ($folder['name'] == $name && $folder['parentid'] == $parentid) {
@@ -1087,7 +1088,6 @@ class ASDevice extends StateObject {
         foreach($toOrderFolders as $folder) {
             // move folders with the matching parentid to the ordered array
             if ($folder['parentid'] == $parentid) {
-                echo "found.. \n";
                 $fid = $folder['folderid'];
                 $orderedFolders[$fid] = $folder;
                 unset($toOrderFolders[$fid]);
