@@ -484,7 +484,7 @@ class DeviceManager {
             }
             if (!isset($df['parentid'])) {
                 $df['parentid'] = '0';
-                ZLog::Write(LOGLEVEL_WARN, sprintf("DeviceManager->GetAdditionalUserSyncFolders(): Additional folder '%s' has no parentid. // TODO FIX: Please run 'z-push-admin -a fixstates' to fix this issue.", $df['name']));
+                ZLog::Write(LOGLEVEL_WARN, sprintf("DeviceManager->GetAdditionalUserSyncFolders(): Additional folder '%s' has no parentid. Please run 'z-push-admin -a fixstates' to fix this issue.", $df['name']));
             }
 
             $folder = $this->getAdditionalSyncFolderObject($df['store'], $df['folderid'], $df['parentid'], $df['name'], $df['type'], $df['flags'], DeviceManager::FLD_ORIGIN_SHARED);
