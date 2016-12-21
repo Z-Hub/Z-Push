@@ -11,25 +11,7 @@
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -55,6 +37,7 @@ class Request {
     const NUMBERSDOT_ONLY = 5;
     const HEX_EXTENDED = 6;
     const ISO8601 = 7;
+    const HEX_EXTENDED2 = 8;
 
     /**
      * Command parameters for base64 encoded requests (AS >= 12.1)
@@ -126,11 +109,11 @@ class Request {
         if(isset($_GET["DeviceType"]))
             self::$devtype = self::filterEvilInput($_GET["DeviceType"], self::LETTERS_ONLY);
         if (isset($_GET["AttachmentName"]))
-            self::$attachmentName = self::filterEvilInput($_GET["AttachmentName"], self::HEX_EXTENDED);
+            self::$attachmentName = self::filterEvilInput($_GET["AttachmentName"], self::HEX_EXTENDED2);
         if (isset($_GET["CollectionId"]))
-            self::$collectionId = self::filterEvilInput($_GET["CollectionId"], self::HEX_ONLY);
+            self::$collectionId = self::filterEvilInput($_GET["CollectionId"], self::HEX_EXTENDED2);
         if (isset($_GET["ItemId"]))
-            self::$itemId = self::filterEvilInput($_GET["ItemId"], self::HEX_ONLY);
+            self::$itemId = self::filterEvilInput($_GET["ItemId"], self::HEX_EXTENDED2);
         if (isset($_GET["SaveInSent"]) && $_GET["SaveInSent"] == "T")
             self::$saveInSent = true;
 
@@ -166,13 +149,13 @@ class Request {
                 self::$asProtocolVersion = self::filterEvilInput($query['ProtVer'], self::NUMBERS_ONLY) / 10;
 
             if (isset($query[self::COMMANDPARAM_ATTACHMENTNAME]))
-                self::$attachmentName = self::filterEvilInput($query[self::COMMANDPARAM_ATTACHMENTNAME], self::HEX_EXTENDED);
+                self::$attachmentName = self::filterEvilInput($query[self::COMMANDPARAM_ATTACHMENTNAME], self::HEX_EXTENDED2);
 
             if (isset($query[self::COMMANDPARAM_COLLECTIONID]))
-                self::$collectionId = self::filterEvilInput($query[self::COMMANDPARAM_COLLECTIONID], self::HEX_ONLY);
+                self::$collectionId = self::filterEvilInput($query[self::COMMANDPARAM_COLLECTIONID], self::HEX_EXTENDED2);
 
             if (isset($query[self::COMMANDPARAM_ITEMID]))
-                self::$itemId = self::filterEvilInput($query[self::COMMANDPARAM_ITEMID], self::HEX_ONLY);
+                self::$itemId = self::filterEvilInput($query[self::COMMANDPARAM_ITEMID], self::HEX_EXTENDED2);
 
             if (isset($query[self::COMMANDPARAM_OPTIONS]) && (ord($query[self::COMMANDPARAM_OPTIONS]) & self::COMMANDPARAM_OPTIONS_SAVEINSENT))
                 self::$saveInSent = true;
@@ -687,6 +670,7 @@ class Request {
         else if ($filter == self::NUMBERS_ONLY)       $re = "/[^0-9]/";
         else if ($filter == self::NUMBERSDOT_ONLY)    $re = "/[^0-9\.]/";
         else if ($filter == self::HEX_EXTENDED)       $re = "/[^A-Fa-f0-9\:]/";
+        else if ($filter == self::HEX_EXTENDED2)      $re = "/[^A-Fa-f0-9\:USG]/"; // Folder origin constants from DeviceManager::FLD_ORIGIN_* (C already hex)
         else if ($filter == self::ISO8601)            $re = "/[^\d{8}T\d{6}Z]/";
 
         return ($re) ? preg_replace($re, $replacevalue, $input) : '';

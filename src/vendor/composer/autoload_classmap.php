@@ -112,6 +112,7 @@ return array(
     'Search' => $baseDir . '/lib/request/search.php',
     'SearchProvider' => $baseDir . '/lib/default/searchprovider.php',
     'SendMail' => $baseDir . '/lib/request/sendmail.php',
+    'ServiceUnavailableException' => $baseDir . '/lib/exceptions/serviceunavailableexception.php',
     'Settings' => $baseDir . '/lib/request/settings.php',
     'SimpleMutex' => $baseDir . '/lib/default/simplemutex.php',
     'SqlStateMachine' => $baseDir . '/backend/sqlstatemachine/sqlstatemachine.php',
