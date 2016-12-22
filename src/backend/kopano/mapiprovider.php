@@ -30,6 +30,7 @@ class MAPIProvider {
     private $addressbook;
     private $storeProps;
     private $inboxProps;
+    private $rootProps;
 
     /**
      * Constructor of the MAPI Provider
@@ -905,12 +906,24 @@ class MAPIProvider {
         }
 
         // ignore suggested contacts folder
-        if (isset($folderprops[PR_CONTAINER_CLASS]) && $folderprops[PR_CONTAINER_CLASS] == "IPF.Contact" && isset($folderprops[PR_EXTENDED_FOLDER_FLAGS])) {
-            // the PR_EXTENDED_FOLDER_FLAGS is a binary value which consists of subproperties. 070403000000 indicates a suggested contacts folder
-            $extendedFlags = bin2hex($folderprops[PR_EXTENDED_FOLDER_FLAGS]);
-            if (substr_count($extendedFlags, "070403000000") > 0) {
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("MAPIProvider->GetFolder(): folder '%s' should not be synchronized", $folderprops[PR_DISPLAY_NAME]));
-                return false;
+        // The persist data of an entry in PR_IPM_OL2007_ENTRYIDS consists of:
+        //      PersistId - e.g. RSF_PID_SUGGESTED_CONTACTS (2 bytes)
+        //      DataElementsSize - size of DataElements field (2 bytes)
+        //      DataElements - array of PersistElement structures (variable size)
+        //          PersistElement Structure consists of
+        //              ElementID - e.g. RSF_ELID_ENTRYID (2 bytes)
+        //              ElementDataSize - size of ElementData (2 bytes)
+        //              ElementData - The data for the special folder identified by the PersistID (variable size)
+        $rootProps = $this->getRootProps();
+        if (isset($rootProps[PR_IPM_OL2007_ENTRYIDS])) {
+            $scPos = strpos($rootProps[PR_IPM_OL2007_ENTRYIDS], RSF_PID_SUGGESTED_CONTACTS);
+            // check RSF_ELID_ENTRYID with strpos, in order to avoid unpack or chr hassle
+            if ($scPos !== false && strpos(substr($rootProps[PR_IPM_OL2007_ENTRYIDS], $scPos + 4, 2), RSF_ELID_ENTRYID) !== false) {
+                // size of ElementDataSize is an unsigned short in little endian order
+                $elDataSize = unpack("v", substr($rootProps[PR_IPM_OL2007_ENTRYIDS], $scPos + 6, 2));
+                if (isset($elDataSize[1]) && substr($rootProps[PR_IPM_OL2007_ENTRYIDS], $scPos + 8, $elDataSize [1]) == $folderprops[PR_ENTRYID]) {
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("MAPIProvider->GetFolder(): folder '%s' should not be synchronized", $folderprops[PR_DISPLAY_NAME]));
+                }
             }
         }
 
@@ -1001,7 +1014,7 @@ class MAPIProvider {
         if(!mapi_last_hresult())
             $inboxProps = mapi_getprops($inbox, array(PR_ENTRYID));
 
-        $root = mapi_msgstore_openentry($this->store, null);
+        $root = mapi_msgstore_openentry($this->store, null); // TODO use getRootProps()
         $rootProps = mapi_getprops($root, array(PR_IPM_APPOINTMENT_ENTRYID, PR_IPM_CONTACT_ENTRYID, PR_IPM_DRAFTS_ENTRYID, PR_IPM_JOURNAL_ENTRYID, PR_IPM_NOTE_ENTRYID, PR_IPM_TASK_ENTRYID, PR_ADDITIONAL_REN_ENTRYIDS));
 
         $additional_ren_entryids = array();
@@ -2839,6 +2852,20 @@ class MAPIProvider {
             }
         }
         return $this->inboxProps;
+    }
+
+    /**
+     * Gets the required store root properties.
+     *
+     * @access private
+     * @return array
+     */
+    private function getRootProps() {
+        if (!isset($this->rootProps)) {
+            $root = mapi_msgstore_openentry($this->store, null);
+            $this->rootProps = mapi_getprops($root, array(PR_IPM_OL2007_ENTRYIDS));
+        }
+        return $this->rootProps;
     }
 
     /**
