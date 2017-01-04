@@ -66,6 +66,12 @@ Depends: ${misc:Depends}, php5-mapi | php7-mapi
 Description: GAB sync for Kopano
  Synchronizes a the global address book for the Kopano Outlook Extension
 
+Package: z-push-kopano-gab2contacts
+Architecture: all
+Depends: ${misc:Depends}, z-push-common (= ${binary:Version}), php5-mapi | php7-mapi
+Description: GAB sync into a contacts folder for Kopano
+ Synchronizes a the global address book into a contacts folder
+
 Package: z-push-ipc-sharedmemory
 Architecture: all
 Depends: ${misc:Depends}, z-push-common (= ${binary:Version})
