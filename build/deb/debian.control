@@ -68,7 +68,7 @@ Description: GAB sync for Kopano
 
 Package: z-push-kopano-gab2contacts
 Architecture: all
-Depends: ${misc:Depends}, php5-mapi | php7-mapi
+Depends: ${misc:Depends}, z-push-common (= ${binary:Version}), php5-mapi | php7-mapi
 Description: GAB sync into a contacts folder for Kopano
  Synchronizes a the global address book into a contacts folder
 

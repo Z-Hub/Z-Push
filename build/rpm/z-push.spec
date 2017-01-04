@@ -137,6 +137,7 @@ Synchronizes a Kopano global address book
 %package -n %name-kopano-gab2contacts
 Summary:    GAB sync into a contacts folder for Kopano
 Group:      Productivity/Networking/Email/Utilities
+Requires:   %name-common = %version
 Requires:   php-mapi
 
 %description -n %name-kopano-gab2contacts
