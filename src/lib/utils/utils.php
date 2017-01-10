@@ -511,6 +511,23 @@ class Utils {
     }
 
     /**
+     * Converts an UTF7-IMAP encoded string into an UTF-8 string.
+     *
+     * @param string $string to convert
+     *
+     * @access public
+     * @return string
+     */
+    static public function Utf7imap_to_utf8($string) {
+        if (function_exists("mb_convert_encoding")){
+            return @mb_convert_encoding($string, "UTF-8", "UTF7-IMAP");
+        } else {
+            ZLog::Write(LOGLEVEL_WARN, "Utils::Utf7imap_to_utf8() 'mb_convert_encoding' is not available. Charset conversion skipped.");
+        }
+        return $string;
+    }
+
+    /**
      * Converts an UTF-8 encoded string into an UTF-7 string.
      *
      * @param string $string to convert
@@ -525,6 +542,23 @@ class Utils {
         else
             ZLog::Write(LOGLEVEL_WARN, "Utils::Utf8_to_utf7() 'iconv' is not available. Charset conversion skipped.");
 
+        return $string;
+    }
+
+    /**
+     * Converts an UTF-8 encoded string into an UTF7-IMAP string.
+     *
+     * @param string $string to convert
+     *
+     * @access public
+     * @return string
+     */
+    static public function Utf8_to_utf7imap($string) {
+        if (function_exists("mb_convert_encoding")){
+            return @mb_convert_encoding($string, "UTF7-IMAP", "UTF-8");
+        } else {
+            ZLog::Write(LOGLEVEL_WARN, "Utils::Utf7imap_to_utf8() 'mb_convert_encoding' is not available. Charset conversion skipped.");
+        }
         return $string;
     }
 
