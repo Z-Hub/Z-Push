@@ -80,6 +80,7 @@ class Request {
     static private $koeVersion;
     static private $koeBuild;
     static private $koeBuildDate;
+    static private $koeCapabilites;
     static private $expectedConnectionTimeout;
 
     /**
@@ -224,6 +225,14 @@ class Request {
             self::$koeVersion = self::filterEvilInput($version, self::NUMBERSDOT_ONLY);
             self::$koeBuild = self::filterEvilInput($build, self::HEX_ONLY);
             self::$koeBuildDate = strtotime(self::filterEvilInput($buildDate, self::ISO8601));
+        }
+
+        if (isset(self::$headers["x-push-plugin-capabilities"])) {
+            $caps = explode(",", self::$headers["x-push-plugin-capabilities"]);
+            self::$koeCapabilites = array();
+            foreach($caps as $cap) {
+                self::$koeCapabilites[] = strtolower(self::filterEvilInput($cap, self::WORDCHAR_ONLY));
+            }
         }
 
         if (defined('USE_X_FORWARDED_FOR_HEADER') && USE_X_FORWARDED_FOR_HEADER == true && isset(self::$headers["x-forwarded-for"])) {
@@ -738,6 +747,21 @@ class Request {
             return self::$koeBuildDate;
         else
             return self::UNKNOWN;
+    }
+
+    /**
+     * Returns the capabilities of the KOE informed by the capabilities header.
+     *
+     * @access public
+     * @return string
+     */
+    static public function GetKoeCapabilities() {
+        if (isset(self::$koeCapabilites)) {
+            return self::$koeCapabilites;
+        }
+        else {
+            return array();
+        }
     }
 
     /**

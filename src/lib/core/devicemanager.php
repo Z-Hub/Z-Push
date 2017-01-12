@@ -150,6 +150,7 @@ class DeviceManager {
             $this->device->SetKoeVersion(Request::GetKoeVersion());
             $this->device->SetKoeBuild(Request::GetKoeBuild());
             $this->device->SetKoeBuildDate(Request::GetKoeBuildDate());
+            $this->device->SetKoeCapabilities(Request::GetKoeCapabilities());
         }
 
         // data to be saved
@@ -771,6 +772,23 @@ class DeviceManager {
             return true;
         }
         return false;
+    }
+
+    /**
+     * Indicates if the KOE client supports a feature.
+     *
+     * @param string $feature
+     *
+     * @access public
+     * @return boolean
+     */
+    public function HasKoeFeature($feature) {
+        $capabilities = $this->device->GetKoeCapabilities();
+        // in a settings request the capabilities might not yet be stored in the device
+        if (empty($capabilities)) {
+            $capabilities = Request::GetKoeCapabilities();
+        }
+        return in_array($feature, $capabilities);
     }
 
     /**
