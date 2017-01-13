@@ -75,7 +75,7 @@ class MAPIProvider {
             return $this->getContact($mapimessage, $contentparameters);
         else if(strpos($messageclass,"IPM.Appointment") === 0)
             return $this->getAppointment($mapimessage, $contentparameters);
-        else if(strpos($messageclass,"IPM.Task") === 0)
+        else if(strpos($messageclass,"IPM.Task") === 0 && strpos($messageclass, "IPM.TaskRequest") === false)
             return $this->getTask($mapimessage, $contentparameters);
         else if(strpos($messageclass,"IPM.StickyNote") === 0)
             return $this->getNote($mapimessage, $contentparameters);
