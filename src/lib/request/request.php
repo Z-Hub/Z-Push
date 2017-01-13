@@ -759,9 +759,7 @@ class Request {
         if (isset(self::$koeCapabilites)) {
             return self::$koeCapabilites;
         }
-        else {
-            return array();
-        }
+        return array();
     }
 
     /**
