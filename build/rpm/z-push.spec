@@ -498,6 +498,7 @@ install -Dpm 644 config/apache2/z-push-autodiscover.conf \
 %else
     %config(noreplace) %attr(0640,root,apache) %_sysconfdir/z-push/gabsync.conf.php
 %endif
+%_bindir/z-push-gabsync
 
 %files -n %name-kopano-gab2contacts
 %defattr(-, root, root)
@@ -510,6 +511,7 @@ install -Dpm 644 config/apache2/z-push-autodiscover.conf \
 %else
     %config(noreplace) %attr(0640,root,apache) %_sysconfdir/z-push/gab2contacts.conf.php
 %endif
+%_bindir/z-push-gab2contacts
 
 %files -n %name-kopano
 
