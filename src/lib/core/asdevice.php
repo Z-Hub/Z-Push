@@ -58,6 +58,7 @@ class ASDevice extends StateObject {
                                     'koebuild' => false,
                                     'koebuilddate' => false,
                                     'koegabbackendfolderid' => false,
+                                    'koecapabilities' => array(),
                                 );
 
     static private $loadedData;
