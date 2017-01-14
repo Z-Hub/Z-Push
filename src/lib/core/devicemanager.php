@@ -488,15 +488,7 @@ class DeviceManager {
                 ZLog::Write(LOGLEVEL_WARN, sprintf("DeviceManager->GetAdditionalUserSyncFolders(): Additional folder '%s' has no parentid. Please run 'z-push-admin -a fixstates' to fix this issue.", $df['name']));
             }
 
-            $folder = $this->getAdditionalSyncFolderObject($df['store'], $df['folderid'], $df['parentid'], $df['name'], $df['type'], $df['flags'], DeviceManager::FLD_ORIGIN_SHARED);
-
-            // adjust additional folders so it matches not yet processed KOE type UNKNOWN folders
-            $type = $this->device->GetFolderType($folder->serverid);
-            if (defined('KOE_CAPABILITY_SECONDARYCONTACTS') && KOE_CAPABILITY_SECONDARYCONTACTS && $type !== $folder->type && $type == SYNC_FOLDER_TYPE_UNKNOWN) {
-                ZLog::Write(LOGLEVEL_DEBUG, "DeviceManager->GetAdditionalUserSyncFolders(): Modifying additional folder so it matches an unprocessed KOE folder");
-                $folder = Utils::ChangeFolderToTypeUnknownForKoe($folder);
-            }
-
+            $folder = $this->BuildSyncFolderObject($df['store'], $df['folderid'], $df['parentid'], $df['name'], $df['type'], $df['flags'], DeviceManager::FLD_ORIGIN_SHARED);
             $folders[$folder->BackendId] = $folder;
         }
 
@@ -504,7 +496,7 @@ class DeviceManager {
         if (KOE_CAPABILITY_GAB && $this->IsKoe() && KOE_GAB_STORE != "" && KOE_GAB_NAME != "") {
             // if KOE_GAB_FOLDERID is set, use it
             if (KOE_GAB_FOLDERID != "") {
-                $folder = $this->getAdditionalSyncFolderObject(KOE_GAB_STORE, KOE_GAB_FOLDERID, '0', KOE_GAB_NAME, SYNC_FOLDER_TYPE_USER_APPOINTMENT, 0, DeviceManager::FLD_ORIGIN_GAB);
+                $folder = $this->BuildSyncFolderObject(KOE_GAB_STORE, KOE_GAB_FOLDERID, '0', KOE_GAB_NAME, SYNC_FOLDER_TYPE_USER_APPOINTMENT, 0, DeviceManager::FLD_ORIGIN_GAB);
                 $folders[$folder->BackendId] = $folder;
             }
             else {
@@ -521,7 +513,7 @@ class DeviceManager {
                     }
 
                     if ($backendGabId) {
-                        $folders[$backendGabId] = $this->getAdditionalSyncFolderObject(KOE_GAB_STORE, $backendGabId, '0', KOE_GAB_NAME, SYNC_FOLDER_TYPE_USER_APPOINTMENT, 0, DeviceManager::FLD_ORIGIN_GAB);
+                        $folders[$backendGabId] = $this->BuildSyncFolderObject(KOE_GAB_STORE, $backendGabId, '0', KOE_GAB_NAME, SYNC_FOLDER_TYPE_USER_APPOINTMENT, 0, DeviceManager::FLD_ORIGIN_GAB);
                     }
                 }
             }
@@ -789,6 +781,18 @@ class DeviceManager {
             $capabilities = Request::GetKoeCapabilities();
         }
         return in_array($feature, $capabilities);
+    }
+
+    /**
+     * Indicates if the connected device is Outlook + KOE and supports the
+     * secondary contact folder synchronization.
+     *
+     *  @access public
+     *  @return boolean
+     */
+    public function IsKoeSupportingSecondaryContacts() {
+        // TODO: ZP-1124 still needs to check if KOE version this feature
+        return defined('KOE_CAPABILITY_SECONDARYCONTACTS') && KOE_CAPABILITY_SECONDARYCONTACTS && $this->IsKoe(); // &&  $this->HasKoeFeature('secondarycontacts');
     }
 
     /**
@@ -1201,10 +1205,10 @@ class DeviceManager {
      * @param int       $flags
      * @param string    $folderOrigin
      *
-     * @access private
+     * @access public
      * @returns SyncFolder
      */
-    private function getAdditionalSyncFolderObject($store, $folderid, $parentid, $name, $type, $flags, $folderOrigin) {
+    public function BuildSyncFolderObject($store, $folderid, $parentid, $name, $type, $flags, $folderOrigin) {
         $folder = new SyncFolder();
         $folder->BackendId = $folderid;
         $folder->serverid = $this->GetFolderIdForBackendId($folder->BackendId, true, $folderOrigin, $name);
@@ -1216,6 +1220,12 @@ class DeviceManager {
         $folder->Store = $store;
         $folder->Flags = $flags;
 
+        // adjust additional folders so it matches not yet processed KOE type UNKNOWN folders
+        $synctype = $this->device->GetFolderType($folder->serverid);
+        if ($this->IsKoeSupportingSecondaryContacts() && $synctype !== $folder->type && $synctype == SYNC_FOLDER_TYPE_UNKNOWN) {
+            ZLog::Write(LOGLEVEL_DEBUG, "DeviceManager->BuildSyncFolderObject(): Modifying additional folder so it matches an unprocessed KOE folder");
+            $folder = Utils::ChangeFolderToTypeUnknownForKoe($folder);
+        }
         return $folder;
     }
 }
