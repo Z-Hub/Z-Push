@@ -817,6 +817,7 @@ class ZPushAdminCLI {
         // $additionalFolders comes directly from the config
         array_walk($additionalFolders, function (&$key) { $key["origin"] = 'Configured'; });
         foreach(array_merge($additionalFolders,$sharedFolders) as $df) {
+            $df['additional'] = '';
             $syncfolderid = $device->GetFolderIdForBackendId($df['folderid'], false, false, null);
             switch($df['type']) {
                 case SYNC_FOLDER_TYPE_USER_APPOINTMENT:
