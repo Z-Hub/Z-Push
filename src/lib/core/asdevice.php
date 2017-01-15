@@ -810,7 +810,10 @@ class ASDevice extends StateObject {
      * @return array
      */
     public function GetAdditionalFolders() {
-        return array_values($this->additionalfolders);
+        if (is_array($this->additionalfolders)) {
+            return array_values($this->additionalfolders);
+        }
+        return array();
     }
 
     /**
