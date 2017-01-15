@@ -847,7 +847,7 @@ class ZPushAdminCLI {
             $df['synched'] = ($device->GetFolderUUID($syncfolderid))?'Active':'Inactive (not yet synchronized or no permissions)';
             $addFolders[] = $df;
         }
-        $additionalTotal = !empty($addFolders) ? count($addFolders) : 'none';
+        $addFoldersTotal = !empty($addFolders) ? count($addFolders) : 'none';
 
         echo "-----------------------------------------------------\n";
         echo "DeviceId:\t\t$deviceId\n";
@@ -900,8 +900,14 @@ class ZPushAdminCLI {
                 }
             }
         }
-        echo "Additional Folders:\t$additionalTotal\n";
+        echo "Additional Folders:\t$addFoldersTotal\n";
         foreach ($addFolders as $folder) {
+            if (strlen($folder['store']) > 14) {
+                $folder['store'] = substr($folder['store'], 0, 12) . "..";
+            }
+            if (strlen($folder['name']) > 20) {
+                $folder['name'] = substr($folder['name'], 0, 18) . "..";
+            }
             printf("\t%s %s %s %s %s %s\n", str_pad($folder['origin'], 10), str_pad($folder['type'], 8), str_pad($folder['store'], 14), str_pad($folder['name'], 20), $folder['synched'], $folder['additional']);
         }
         echo "Status:\t\t\t";
