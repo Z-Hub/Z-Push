@@ -744,6 +744,7 @@ class ZPushAdminCLI {
      * @access private
      */
     static private function printDeviceData($deviceId, $user) {
+        global $additionalFolders;
         $device = ZPushAdmin::GetDeviceDetails($deviceId, $user);
 
         if (! $device instanceof ASDevice) {
@@ -809,6 +810,45 @@ class ZPushAdminCLI {
         }
         if (!$folderinfo) $folderinfo = "None available";
 
+        // additional folders
+        $addFolders = array();
+        $sharedFolders = $device->GetAdditionalFolders();
+        array_walk($sharedFolders, function (&$key) { $key["origin"] = 'Shared'; });
+        // $additionalFolders comes directly from the config
+        array_walk($additionalFolders, function (&$key) { $key["origin"] = 'Configured'; });
+        foreach(array_merge($additionalFolders,$sharedFolders) as $df) {
+            $syncfolderid = $device->GetFolderIdForBackendId($df['folderid'], false, false, null);
+            switch($df['type']) {
+                case SYNC_FOLDER_TYPE_USER_APPOINTMENT:
+                    if (KOE_GAB_NAME != "" && $name == KOE_GAB_NAME) {
+                        $gentype = "GAB";
+                    }
+                    else {
+                        $gentype = "Calendar";
+                    }
+                    break;
+                case SYNC_FOLDER_TYPE_USER_CONTACT:
+                    $gentype = "Contact";
+                    break;
+                case SYNC_FOLDER_TYPE_USER_TASK:
+                    $gentype = "Task";
+                    break;
+                case SYNC_FOLDER_TYPE_USER_NOTE:
+                    $gentype = "Note";
+                    break;
+                default:
+                    $gentype = "Email";
+                    break;
+            }
+            if ($device->GetFolderType($syncfolderid) == SYNC_FOLDER_TYPE_UNKNOWN) {
+                $df['additional'] = "(KOE patching incomplete)";
+            }
+            $df['type'] = $gentype;
+            $df['synched'] = ($device->GetFolderUUID($syncfolderid))?'Active':'Inactive (not yet synchronized or no permissions)';
+            $addFolders[] = $df;
+        }
+        $additionalTotal = !empty($addFolders) ? count($addFolders) : 'none';
+
         echo "-----------------------------------------------------\n";
         echo "DeviceId:\t\t$deviceId\n";
         echo "Device type:\t\t". ($device->GetDeviceType() !== ASDevice::UNDEFINED ? $device->GetDeviceType() : "unknown") ."\n";
@@ -859,6 +899,10 @@ class ZPushAdminCLI {
                     printf("\tFolder: %s Sync: %s %s\n", str_pad($d['name'], 20), str_pad($d['status'], 13), $status);
                 }
             }
+        }
+        echo "Additional Folders:\t$additionalTotal\n";
+        foreach ($addFolders as $folder) {
+            printf("\t%s %s %s %s %s %s\n", str_pad($folder['origin'], 10), str_pad($folder['type'], 8), str_pad($folder['store'], 14), str_pad($folder['name'], 20), $folder['synched'], $folder['additional']);
         }
         echo "Status:\t\t\t";
         switch ($device->GetWipeStatus()) {
