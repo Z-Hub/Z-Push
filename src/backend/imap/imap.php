@@ -207,12 +207,6 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             $message->headers["subject"] = mb_encode_mimeheader($message->headers["subject"]);
         }
 
-        if (isset($message->headers["subject"]) and mb_detect_encoding($message->headers["subject"], "UTF-8") != FALSE) {
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->SendMail(): Subject in raw UTF-8: %s", $message->headers["subject"]));
-            mb_internal_encoding("UTF-8");
-            $message->headers["subject"] = mb_encode_mimeheader($message->headers["subject"]);
-        }
-
         $this->setReturnPathValue($message->headers, $fromaddr);
 
         $finalBody = "";
