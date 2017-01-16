@@ -282,7 +282,7 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
                 if (ZPush::GetDeviceManager()->IsKoeSupportingSecondaryContacts() && $folder->type == SYNC_FOLDER_TYPE_USER_CONTACT &&
                          (!$this->GetFolder($folder->serverid, true) || !$this->GetFolder($folder->serverid) || $this->GetFolder($folder->serverid)->type === SYNC_FOLDER_TYPE_UNKNOWN)
                         ) {
-                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("ChangesMemoryWrapper->Synchronize(): Synchronizing new folder '%s' as type SYNC_FOLDER_TYPE_UNKNOWN as Outlook is not able to handle secondary contact folders", $folder->displayname));
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("ChangesMemoryWrapper->ImportFolderChange(): Sending new folder '%s' as type SYNC_FOLDER_TYPE_UNKNOWN as Outlook is not able to handle secondary contact folders", $folder->displayname));
                     $folder = Utils::ChangeFolderToTypeUnknownForKoe($folder);
                 }
 
