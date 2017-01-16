@@ -766,7 +766,7 @@ class ZPushAdminCLI {
                 switch($type) {
                     case SYNC_FOLDER_TYPE_APPOINTMENT:
                     case SYNC_FOLDER_TYPE_USER_APPOINTMENT:
-                        if (KOE_GAB_NAME != "" && $name == KOE_GAB_NAME) {
+                        if ($name == KOE_GAB_NAME) {
                             $gentype = "GAB";
                         }
                         else {
@@ -821,7 +821,7 @@ class ZPushAdminCLI {
             $syncfolderid = $device->GetFolderIdForBackendId($df['folderid'], false, false, null);
             switch($df['type']) {
                 case SYNC_FOLDER_TYPE_USER_APPOINTMENT:
-                    if (KOE_GAB_NAME != "" && $name == KOE_GAB_NAME) {
+                    if ($name == KOE_GAB_NAME) {
                         $gentype = "GAB";
                     }
                     else {
@@ -845,7 +845,7 @@ class ZPushAdminCLI {
                 $df['additional'] = "(KOE patching incomplete)";
             }
             $df['type'] = $gentype;
-            $df['synched'] = ($device->GetFolderUUID($syncfolderid))?'Active':'Inactive (not yet synchronized or no permissions)';
+            $df['synched'] = ($device->GetFolderUUID($syncfolderid)) ? 'Active' : 'Inactive (not yet synchronized or no permissions)';
             $addFolders[] = $df;
         }
         $addFoldersTotal = !empty($addFolders) ? count($addFolders) : 'none';
