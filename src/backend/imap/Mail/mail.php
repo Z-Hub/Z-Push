@@ -144,8 +144,7 @@ class Mail_mail extends Mail {
         // pass it as a seperate argument to mail().
         $subject = '';
         if (isset($headers['Subject'])) {
-            mb_internal_encoding("UTF-8");
-            $subject = mb_encode_mimeheader($headers['Subject']);
+            $subject = $headers['Subject'];
             unset($headers['Subject']);
         }
 

@@ -201,6 +201,18 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
         }
         unset($Mail_RFC822);
 
+        if (isset($message->headers["subject"]) and mb_detect_encoding($message->headers["subject"], "UTF-8") != FALSE and preg_match('/[^\x00-\x7F]/', $message->headers["subject"]) == 1) {
+            mb_internal_encoding("UTF-8");
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->SendMail(): Subject in raw UTF-8: %s", $message->headers["subject"]));
+            $message->headers["subject"] = mb_encode_mimeheader($message->headers["subject"]);
+        }
+
+        if (isset($message->headers["subject"]) and mb_detect_encoding($message->headers["subject"], "UTF-8") != FALSE) {
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->SendMail(): Subject in raw UTF-8: %s", $message->headers["subject"]));
+            mb_internal_encoding("UTF-8");
+            $message->headers["subject"] = mb_encode_mimeheader($message->headers["subject"]);
+        }
+
         $this->setReturnPathValue($message->headers, $fromaddr);
 
         $finalBody = "";
@@ -2477,10 +2489,6 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
      */
     private function saveSentMessage($finalHeaders, $finalBody) {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->saveSentMessage(): saving message in Sent Items folder"));
-        if ( isset($finalHeaders['Subject']) ) {
-            mb_internal_encoding("UTF-8");
-            $finalHeaders['Subject'] = mb_encode_mimeheader($finalHeaders['Subject']);
-        }
 
         $headers = "";
         foreach ($finalHeaders as $k => $v) {
