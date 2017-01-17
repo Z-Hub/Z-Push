@@ -521,8 +521,6 @@ class Utils {
     static public function Utf7imap_to_utf8($string) {
         if (function_exists("mb_convert_encoding")){
             return @mb_convert_encoding($string, "UTF-8", "UTF7-IMAP");
-        } else {
-            ZLog::Write(LOGLEVEL_WARN, "Utils::Utf7imap_to_utf8() 'mb_convert_encoding' is not available. Charset conversion skipped.");
         }
         return $string;
     }
@@ -556,8 +554,6 @@ class Utils {
     static public function Utf8_to_utf7imap($string) {
         if (function_exists("mb_convert_encoding")){
             return @mb_convert_encoding($string, "UTF7-IMAP", "UTF-8");
-        } else {
-            ZLog::Write(LOGLEVEL_WARN, "Utils::Utf7imap_to_utf8() 'mb_convert_encoding' is not available. Charset conversion skipped.");
         }
         return $string;
     }
