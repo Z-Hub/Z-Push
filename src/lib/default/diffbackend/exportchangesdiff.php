@@ -78,8 +78,6 @@ class ExportChangesDiff extends DiffState implements IExportChanges{
             }
         }
         else {
-            ZLog::Write(LOGLEVEL_DEBUG, "Initializing folder diff engine");
-
             ZLog::Write(LOGLEVEL_DEBUG, "ExportChangesDiff->InitializeExporter(): Initializing folder diff engine");
 
             $folderlist = $this->backend->GetFolderList();
