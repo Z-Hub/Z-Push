@@ -565,7 +565,7 @@ define("SYNC_SETTINGS_REPLYMESSAGE", "Settings:ReplyMessage");
 define("SYNC_SETTINGS_BODYTYPE", "Settings:BodyType");
 define("SYNC_SETTINGS_DEVICEPW", "Settings:DevicePassword");
 define("SYNC_SETTINGS_PW", "Settings:Password");
-define("SYNC_SETTINGS_DEVICEINFORMATION", "Settings:DeviceInformaton");
+define("SYNC_SETTINGS_DEVICEINFORMATION", "Settings:DeviceInformation");
 define("SYNC_SETTINGS_MODEL", "Settings:Model");
 define("SYNC_SETTINGS_IMEI", "Settings:IMEI");
 define("SYNC_SETTINGS_FRIENDLYNAME", "Settings:FriendlyName");
