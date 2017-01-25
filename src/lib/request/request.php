@@ -77,6 +77,7 @@ class Request {
     static private $occurence; //TODO
     static private $saveInSent;
     static private $acceptMultipart;
+    static private $base64QueryDecoded;
     static private $koeVersion;
     static private $koeBuild;
     static private $koeBuildDate;
@@ -126,42 +127,42 @@ class Request {
 
         // in protocol version > 14 mobile send these inputs as encoded query string
         if (!isset(self::$command) && !empty($_SERVER['QUERY_STRING']) && Utils::IsBase64String($_SERVER['QUERY_STRING'])) {
-            $query = Utils::DecodeBase64URI($_SERVER['QUERY_STRING']);
-            if (!isset(self::$command) && isset($query['Command']))
-                self::$command = Utils::GetCommandFromCode($query['Command']);
+            self::decodeBase64URI();
+            if (!isset(self::$command) && isset(self::$base64QueryDecoded['Command']))
+                self::$command = Utils::GetCommandFromCode(self::$base64QueryDecoded['Command']);
 
-            if (!isset(self::$getUser) && isset($query[self::COMMANDPARAM_USER])) {
-                self::$getUser = strtolower($query[self::COMMANDPARAM_USER]);
+            if (!isset(self::$getUser) && isset(self::$base64QueryDecoded[self::COMMANDPARAM_USER])) {
+                self::$getUser = strtolower(self::$base64QueryDecoded[self::COMMANDPARAM_USER]);
                 if(defined('USE_FULLEMAIL_FOR_LOGIN') && ! USE_FULLEMAIL_FOR_LOGIN) {
                     self::$getUser = Utils::GetLocalPartFromEmail(self::$getUser);
                 }
             }
 
-            if (!isset(self::$devid) && isset($query['DevID']))
-                self::$devid = strtolower(self::filterEvilInput($query['DevID'], self::WORDCHAR_ONLY));
+            if (!isset(self::$devid) && isset(self::$base64QueryDecoded['DevID']))
+                self::$devid = strtolower(self::filterEvilInput(self::$base64QueryDecoded['DevID'], self::WORDCHAR_ONLY));
 
-            if (!isset(self::$devtype) && isset($query['DevType']))
-                self::$devtype = self::filterEvilInput($query['DevType'], self::LETTERS_ONLY);
+            if (!isset(self::$devtype) && isset(self::$base64QueryDecoded['DevType']))
+                self::$devtype = self::filterEvilInput(self::$base64QueryDecoded['DevType'], self::LETTERS_ONLY);
 
-            if (isset($query['PolKey']))
-                self::$policykey = (int) self::filterEvilInput($query['PolKey'], self::NUMBERS_ONLY);
+            if (isset(self::$base64QueryDecoded['PolKey']))
+                self::$policykey = (int) self::filterEvilInput(self::$base64QueryDecoded['PolKey'], self::NUMBERS_ONLY);
 
-            if (isset($query['ProtVer']))
-                self::$asProtocolVersion = self::filterEvilInput($query['ProtVer'], self::NUMBERS_ONLY) / 10;
+            if (isset(self::$base64QueryDecoded['ProtVer']))
+                self::$asProtocolVersion = self::filterEvilInput(self::$base64QueryDecoded['ProtVer'], self::NUMBERS_ONLY) / 10;
 
-            if (isset($query[self::COMMANDPARAM_ATTACHMENTNAME]))
-                self::$attachmentName = self::filterEvilInput($query[self::COMMANDPARAM_ATTACHMENTNAME], self::HEX_EXTENDED2);
+            if (isset(self::$base64QueryDecoded[self::COMMANDPARAM_ATTACHMENTNAME]))
+                self::$attachmentName = self::filterEvilInput(self::$base64QueryDecoded[self::COMMANDPARAM_ATTACHMENTNAME], self::HEX_EXTENDED2);
 
-            if (isset($query[self::COMMANDPARAM_COLLECTIONID]))
-                self::$collectionId = self::filterEvilInput($query[self::COMMANDPARAM_COLLECTIONID], self::HEX_EXTENDED2);
+            if (isset(self::$base64QueryDecoded[self::COMMANDPARAM_COLLECTIONID]))
+                self::$collectionId = self::filterEvilInput(self::$base64QueryDecoded[self::COMMANDPARAM_COLLECTIONID], self::HEX_EXTENDED2);
 
-            if (isset($query[self::COMMANDPARAM_ITEMID]))
-                self::$itemId = self::filterEvilInput($query[self::COMMANDPARAM_ITEMID], self::HEX_EXTENDED2);
+            if (isset(self::$base64QueryDecoded[self::COMMANDPARAM_ITEMID]))
+                self::$itemId = self::filterEvilInput(self::$base64QueryDecoded[self::COMMANDPARAM_ITEMID], self::HEX_EXTENDED2);
 
-            if (isset($query[self::COMMANDPARAM_OPTIONS]) && (ord($query[self::COMMANDPARAM_OPTIONS]) & self::COMMANDPARAM_OPTIONS_SAVEINSENT))
+            if (isset(self::$base64QueryDecoded[self::COMMANDPARAM_OPTIONS]) && (ord(self::$base64QueryDecoded[self::COMMANDPARAM_OPTIONS]) & self::COMMANDPARAM_OPTIONS_SAVEINSENT))
                 self::$saveInSent = true;
 
-            if (isset($query[self::COMMANDPARAM_OPTIONS]) && (ord($query[self::COMMANDPARAM_OPTIONS]) & self::COMMANDPARAM_OPTIONS_ACCEPTMULTIPART))
+            if (isset(self::$base64QueryDecoded[self::COMMANDPARAM_OPTIONS]) && (ord(self::$base64QueryDecoded[self::COMMANDPARAM_OPTIONS]) & self::COMMANDPARAM_OPTIONS_ACCEPTMULTIPART))
                 self::$acceptMultipart = true;
         }
 
@@ -205,8 +206,8 @@ class Request {
                 self::$policykey = 0;
         }
 
-        if (!empty($_SERVER['QUERY_STRING']) && Utils::IsBase64String($_SERVER['QUERY_STRING'])) {
-            ZLog::Write(LOGLEVEL_DEBUG, "Using data from base64 encoded query string");
+        if (isset(self::$base64QueryDecoded)) {
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("Request::ProcessHeaders(): base64 query string: '%s' (decoded: '%s')", $_SERVER['QUERY_STRING'], http_build_query(self::$base64QueryDecoded, '', ',')));
             if (isset(self::$policykey))
                 self::$headers["x-ms-policykey"] = self::$policykey;
 
@@ -698,6 +699,49 @@ class Request {
         $wbxml = base64_encode(stream_get_contents($input));
         fclose($input);
         return $wbxml;
+    }
+
+    /**
+     * Decodes base64 encoded query parameters. Based on dw2412 contribution.
+     *
+     * @access private
+     * @return void
+     */
+    static private function decodeBase64URI() {
+        /*
+         * The query string has a following structure. Number in () is position:
+         * 1 byte       - protocoll version (0)
+         * 1 byte       - command code (1)
+         * 2 bytes      - locale (2)
+         * 1 byte       - device ID length (4)
+         * variable     - device ID (4+device ID length)
+         * 1 byte       - policy key length (5+device ID length)
+         * 0 or 4 bytes - policy key (5+device ID length + policy key length)
+         * 1 byte       - device type length (6+device ID length + policy key length)
+         * variable     - device type (6+device ID length + policy key length + device type length)
+         * variable     - command parameters, array which consists of:
+         *                      1 byte      - tag
+         *                      1 byte      - length
+         *                      variable    - value of the parameter
+         *
+         */
+        $decoded = base64_decode($_SERVER['QUERY_STRING']);
+        $devIdLength = ord($decoded[4]); //device ID length
+        $polKeyLength = ord($decoded[5+$devIdLength]); //policy key length
+        $devTypeLength = ord($decoded[6+$devIdLength+$polKeyLength]); //device type length
+        //unpack the decoded query string values
+        self::$base64QueryDecoded = unpack("CProtVer/CCommand/vLocale/CDevIDLen/H".($devIdLength*2)."DevID/CPolKeyLen".($polKeyLength == 4 ? "/VPolKey" : "")."/CDevTypeLen/A".($devTypeLength)."DevType", $decoded);
+
+        //get the command parameters
+        $pos = 7 + $devIdLength + $polKeyLength + $devTypeLength;
+        $decoded = substr($decoded, $pos);
+        while (strlen($decoded) > 0) {
+            $paramLength = ord($decoded[1]);
+            $unpackedParam = unpack("CParamTag/CParamLength/A".$paramLength."ParamValue", $decoded);
+            self::$base64QueryDecoded[ord($decoded[0])] = $unpackedParam['ParamValue'];
+            //remove parameter from decoded query string
+            $decoded = substr($decoded, 2 + $paramLength);
+        }
     }
 
     /**
