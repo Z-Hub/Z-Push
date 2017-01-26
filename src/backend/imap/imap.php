@@ -32,6 +32,11 @@ require_once("backend/imap/mime_calendar.php");
 require_once("backend/imap/mime_encode.php");
 require_once("backend/imap/user_identity.php");
 
+// Add the path for Andrew's Web Libraries to include_path
+// because it is required for the emails with ics attachments
+// @see https://jira.z-hub.io/browse/ZP-1149
+set_include_path(get_include_path() . PATH_SEPARATOR . '/usr/share/awl/inc');
+
 class BackendIMAP extends BackendDiff implements ISearchProvider {
     private $wasteID;
     private $sentID;
