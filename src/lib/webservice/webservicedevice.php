@@ -150,18 +150,24 @@ class WebserviceDevice {
         $deviceId = preg_replace("/[^A-Za-z0-9]/", "", $deviceId);
         $folders = ZPushAdmin::AdditionalFolderList($user, $deviceId);
         ZLog::Write(LOGLEVEL_INFO, sprintf("WebserviceDevice::AdditionalFolderList(): found %d folders for device '%s' of user '%s'", count($folders), $deviceId, $user));
-        // retrieve the permission flags from the backend
+        // retrieve the permission flags from the backend and convert associative array into stdClass object for PHP7 support
+        $folderObjects = array();
         $backend = ZPush::GetBackend();
-        foreach($folders as &$folder) {
-            $folder['readable'] = $backend->Setup($folder['store'], true, $folder['folderid'], true);
-            $folder['writeable'] = $backend->Setup($folder['store'], true, $folder['folderid']);
+        foreach($folders as $folder) {
+            $folderObject = new stdClass();
+            $folderObject->store = $folder['store'];
+            $folderObject->folderid = $folder['folderid'];
+            $folderObject->syncfolderid = $folder['syncfolderid'];
+            $folderObject->name = $folder['name'];
+            $folderObject->type = $folder['type'];
+            $folderObject->origin = $folder['origin'];
+            $folderObject->flags = $folder['flags'];
+            $folderObject->readable = $backend->Setup($folder['store'], true, $folder['folderid'], true);
+            $folderObject->writeable = $backend->Setup($folder['store'], true, $folder['folderid']);
+            $folderObjects[] = $folderObject;
         }
-        // make sure folder is not pointing to our last folder anymore
-        unset($folder);
-
-        ZPush::GetTopCollector()->AnnounceInformation(sprintf("Retrieved details of %d folders", count($folders)), true);
-
-        return $folders;
+        ZPush::GetTopCollector()->AnnounceInformation(sprintf("Retrieved details of %d folders", count($folderObjects)), true);
+        return $folderObjects;
     }
 
     /**
