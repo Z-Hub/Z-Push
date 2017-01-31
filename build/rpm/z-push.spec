@@ -85,6 +85,7 @@ Summary:    Z-Push imap backend
 Group:      Productivity/Networking/Email/Utilities
 Requires:   %name-common = %version
 Requires:   php-imap
+Requires:   libawl-php
 Provides:   %name-backend
 
 %description -n %name-backend-imap
