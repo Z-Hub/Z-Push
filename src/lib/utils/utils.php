@@ -585,53 +585,6 @@ class Utils {
     }
 
     /**
-     * Decodes base64 encoded query parameters. Based on dw2412 contribution.
-     *
-     * @param string $query     the query to decode
-     *
-     * @access public
-     * @return array
-     */
-    static public function DecodeBase64URI($query) {
-        /*
-         * The query string has a following structure. Number in () is position:
-         * 1 byte       - protocoll version (0)
-         * 1 byte       - command code (1)
-         * 2 bytes      - locale (2)
-         * 1 byte       - device ID length (4)
-         * variable     - device ID (4+device ID length)
-         * 1 byte       - policy key length (5+device ID length)
-         * 0 or 4 bytes - policy key (5+device ID length + policy key length)
-         * 1 byte       - device type length (6+device ID length + policy key length)
-         * variable     - device type (6+device ID length + policy key length + device type length)
-         * variable     - command parameters, array which consists of:
-         *                      1 byte      - tag
-         *                      1 byte      - length
-         *                      variable    - value of the parameter
-         *
-         */
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("Utils::DecodeBase64URI(): decoding base64 query string: %s", $query));
-        $decoded = base64_decode($query);
-        $devIdLength = ord($decoded[4]); //device ID length
-        $polKeyLength = ord($decoded[5+$devIdLength]); //policy key length
-        $devTypeLength = ord($decoded[6+$devIdLength+$polKeyLength]); //device type length
-        //unpack the decoded query string values
-        $unpackedQuery = unpack("CProtVer/CCommand/vLocale/CDevIDLen/H".($devIdLength*2)."DevID/CPolKeyLen".($polKeyLength == 4 ? "/VPolKey" : "")."/CDevTypeLen/A".($devTypeLength)."DevType", $decoded);
-
-        //get the command parameters
-        $pos = 7 + $devIdLength + $polKeyLength + $devTypeLength;
-        $decoded = substr($decoded, $pos);
-        while (strlen($decoded) > 0) {
-            $paramLength = ord($decoded[1]);
-            $unpackedParam = unpack("CParamTag/CParamLength/A".$paramLength."ParamValue", $decoded);
-            $unpackedQuery[ord($decoded[0])] = $unpackedParam['ParamValue'];
-            //remove parameter from decoded query string
-            $decoded = substr($decoded, 2 + $paramLength);
-        }
-        return $unpackedQuery;
-    }
-
-    /**
      * Returns a command string for a given command code.
      *
      * @param int $code
