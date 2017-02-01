@@ -95,6 +95,7 @@ class DeviceManager {
 
         if ($this->IsKoe() && $this->device->GetKoeVersion() !== false) {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("KOE: %s / %s / %s", $this->device->GetKoeVersion(), $this->device->GetKoeBuild(), strftime("%Y-%m-%d %H:%M", $this->device->GetKoeBuildDate())));
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("KOE Capabilities: %s ", count($this->device->GetKoeCapabilities()) ? implode(',', $this->device->GetKoeCapabilities()) : 'unknown'));
         }
     }
 
@@ -791,8 +792,7 @@ class DeviceManager {
      *  @return boolean
      */
     public function IsKoeSupportingSecondaryContacts() {
-        // TODO: ZP-1124 still needs to check if KOE version this feature
-        return defined('KOE_CAPABILITY_SECONDARYCONTACTS') && KOE_CAPABILITY_SECONDARYCONTACTS && $this->IsKoe(); // &&  $this->HasKoeFeature('secondarycontacts');
+        return defined('KOE_CAPABILITY_SECONDARYCONTACTS') && KOE_CAPABILITY_SECONDARYCONTACTS && $this->IsKoe() && $this->HasKoeFeature('secondarycontacts');
     }
 
     /**
