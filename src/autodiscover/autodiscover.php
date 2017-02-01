@@ -223,13 +223,14 @@ class ZPushAutodiscover {
         $xml = file_get_contents('response.xml');
         $zpushHost = defined('ZPUSH_HOST') ? ZPUSH_HOST : ( $_SERVER['HTTP_HOST'] ? : $_SERVER['SERVER_NAME']);
         $serverUrl = "https://" . $zpushHost . "/Microsoft-Server-ActiveSync";
+        ZLog::Write(LOGLEVEL_INFO, sprintf("ZPushAutodiscover->createResponse(): server URL: '%s'", $serverUrl));
         $response = new SimpleXMLElement($xml);
         $response->Response->User->DisplayName = $userFullname;
         $response->Response->User->EMailAddress = $email;
         $response->Response->Action->Settings->Server->Url = $serverUrl;
         $response->Response->Action->Settings->Server->Name = $serverUrl;
         $response = $response->asXML();
-        ZLog::Write(LOGLEVEL_WBXML, sprintf("ZPushAutodiscover->createResponse() XML response:%s%s", PHP_EOL, $response));
+        ZLog::Write(LOGLEVEL_WBXML, sprintf("ZPushAutodiscover->createResponse(): XML response:%s%s", PHP_EOL, $response));
         return $response;
     }
 
