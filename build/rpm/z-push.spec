@@ -29,8 +29,6 @@ Group:      Productivity/Networking/Email/Utilities
 
 %if 0%{?suse_version}
 Requires:   php-posix
-%else
-Requires:   php-process
 %endif
 %if "%_repository" == "RHEL_6_PHP_56" || "%_repository" == "RHEL_7_PHP_56"
 Requires:   rh-php56
@@ -41,6 +39,7 @@ Requires:   rh-php56-php-process
 Requires:   php >= 5.4.0
 Requires:   php-soap
 Requires:   php-mbstring
+Requires:   php-process
 %endif
 %description -n %name-common
 Z-push is an implementation of the ActiveSync protocol which is used 'over-the-air' for multi platform ActiveSync devices. Devices supported are including Windows Mobile, Android, iPhone, and Nokia. With Z-push any groupware can be connected and synced with these devices.
@@ -50,8 +49,15 @@ Z-push is an implementation of the ActiveSync protocol which is used 'over-the-a
 Summary:    Z-Push caldav backend
 Group:      Productivity/Networking/Email/Utilities
 Requires:   %name-common = %version
-Requires:   php-curl
 Requires:   libawl-php
+%if "%_repository" == "RHEL_6_PHP_56" || "%_repository" == "RHEL_7_PHP_56"
+Requires:   rh-php56-php-common
+Requires:   rh-php56-php-xml
+%else
+Requires:   php-curl
+Requires:   php-xml
+%endif
+
 Provides:   %name-backend
 
 %description -n %name-backend-caldav
@@ -84,8 +90,12 @@ Backend for Z-Push, that adds the ability to combine backends.
 Summary:    Z-Push imap backend
 Group:      Productivity/Networking/Email/Utilities
 Requires:   %name-common = %version
-Requires:   php-imap
 Requires:   libawl-php
+%if "%_repository" == "RHEL_6_PHP_56" || "%_repository" == "RHEL_7_PHP_56"
+Requires:   rh-php56-php-imap
+%else
+Requires:   php-imap
+%endif
 Provides:   %name-backend
 
 %description -n %name-backend-imap
@@ -96,7 +106,11 @@ Backend for Z-Push, that adds the ability to connect to a imap server
 Summary:    Z-Push ldap backend
 Group:      Productivity/Networking/Email/Utilities
 Requires:   %name-common = %version
+%if "%_repository" == "RHEL_6_PHP_56" || "%_repository" == "RHEL_7_PHP_56"
+Requires:   rh-php56-php-ldap
+%else
 Requires:   php-ldap
+%endif
 Provides:   %name-backend
 
 %description -n %name-backend-ldap
@@ -167,6 +181,10 @@ Group:      Productivity/Networking/Email/Utilities
 Requires:   %name-common = %version
 %if 0%{?suse_version}
 Requires:   php5-memcached
+%endif
+%if "%_repository" == "RHEL_6_PHP_56" || "%_repository" == "RHEL_7_PHP_56"
+Requires:   memcached
+Requires:   rh-php56-php-pecl-memcache
 %else
 Requires:   memcached
 Requires:   php-pecl-memcached
@@ -180,7 +198,11 @@ Provider for Z-Push, that adds the ability to use ipc memcached
 Summary:    Z-Push ldap search backend
 Group:      Productivity/Networking/Email/Utilities
 Requires:   %name-common = %version
+%if "%_repository" == "RHEL_6_PHP_56" || "%_repository" == "RHEL_7_PHP_56"
+Requires:   rh-php56-php-ldap
+%else
 Requires:   php-ldap
+%endif
 Provides:   %name-backend
 
 %description -n %name-galsearch-ldap
@@ -191,8 +213,13 @@ Backend for Z-Push, that adds the ability to search a ldap server
 Summary:    Z-Push mysql state backend
 Group:      Productivity/Networking/Email/Utilities
 Requires:   %name-common = %version
+%if "%_repository" == "RHEL_6_PHP_56" || "%_repository" == "RHEL_7_PHP_56"
+Requires:   rh-php56-php-mysqlnd
+Requires:   rh-php56-php-pdo
+%else
 Requires:   php-mysql
 Requires:   php-pdo
+%endif
 
 %description -n %name-state-sql
 Backend for Z-Push, that adds the ability to save states in a mysql database
