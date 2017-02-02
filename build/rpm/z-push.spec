@@ -27,9 +27,6 @@ Z-push is an implementation of the ActiveSync protocol which is used 'over-the-a
 Summary:    Z-Push core package
 Group:      Productivity/Networking/Email/Utilities
 
-%if 0%{?suse_version}
-Requires:   php-posix
-%else
 %if "%_repository" == "RHEL_6_PHP_56" || "%_repository" == "RHEL_7_PHP_56"
 Requires:   rh-php56
 Requires:   rh-php56-php-soap
@@ -39,6 +36,9 @@ Requires:   rh-php56-php-process
 Requires:   php >= 5.4.0
 Requires:   php-soap
 Requires:   php-mbstring
+%if 0%{?suse_version}
+Requires:   php-posix
+%else
 Requires:   php-process
 %endif
 %endif
@@ -180,14 +180,13 @@ Provider for Z-Push, that adds the ability to use ipc shared memory
 Summary:    Z-Push ipc memcached provider
 Group:      Productivity/Networking/Email/Utilities
 Requires:   %name-common = %version
+Requires:   memcached
+%if "%_repository" == "RHEL_6_PHP_56" || "%_repository" == "RHEL_7_PHP_56"
+Requires:   rh-php56-php-pecl-memcache
+%else
 %if 0%{?suse_version}
 Requires:   php5-memcached
 %else
-%if "%_repository" == "RHEL_6_PHP_56" || "%_repository" == "RHEL_7_PHP_56"
-Requires:   memcached
-Requires:   rh-php56-php-pecl-memcache
-%else
-Requires:   memcached
 Requires:   php-pecl-memcached
 %endif
 %endif
