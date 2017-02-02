@@ -58,6 +58,7 @@ class ASDevice extends StateObject {
                                     'koebuild' => false,
                                     'koebuilddate' => false,
                                     'koegabbackendfolderid' => false,
+                                    'koecapabilities' => array(),
                                 );
 
     static private $loadedData;
@@ -581,8 +582,8 @@ class ASDevice extends StateObject {
    /**
      * Sets the foldertype of a folder id
      *
-     * @param string        $uuid
-     * @param string        $folderid       (opt) if not set Hierarchy UUID is linked
+     * @param string        $folderid
+     * @param int           $foldertype         ActiveSync folder type (as on the mobile)
      *
      * @access public
      * @return boolean      true if the type was set or updated
@@ -809,7 +810,10 @@ class ASDevice extends StateObject {
      * @return array
      */
     public function GetAdditionalFolders() {
-        return array_values($this->additionalfolders);
+        if (is_array($this->additionalfolders)) {
+            return array_values($this->additionalfolders);
+        }
+        return array();
     }
 
     /**

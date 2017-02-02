@@ -1226,3 +1226,21 @@ define('PR_TODO_ITEM_FLAGS'                           ,mapi_prop_tag(PT_LONG,   
 define('PR_LOCAL_COMMIT_TIME_MAX'                     ,mapi_prop_tag(PT_SYSTIME,     0x670A));
 define('PR_DELETED_MSG_COUNT'                         ,mapi_prop_tag(PT_LONG,        0x6640));
 
+
+// PR_IPM_OL2007_ENTRYIDS / PR_ADDITIONAL_REN_ENTRYIDS_EX PersistIDs
+define('RSF_PID_RSS_SUBSCRIPTION'                     ,0x8001); // Indicates that the structure contains data for the RSS Feeds folder
+define('RSF_PID_SEND_AND_TRACK'                       ,0x8002); // Indicates that the structure contains data for the Tracked Mail Processing folder
+define('RSF_PID_TODO_SEARCH'                          ,0x8004); // Indicates that the structure contains data for the To-Do folder
+define('RSF_PID_CONV_ACTIONS'                         ,0x8006); // Indicates that the structure contains data for the Conversation Action Settings folder
+define('RSF_PID_COMBINED_ACTIONS'                     ,0x8007); // This value is reserved.
+define('RSF_PID_SUGGESTED_CONTACTS'                   ,0x8008); // Indicates that the structure contains data for the Suggested Contacts folder.
+define('RSF_PID_CONTACT_SEARCH'                       ,0x8009); // Indicates that the structure contains data for the Contacts Search folder.
+define('RSF_PID_BUDDYLIST_PDLS'                       ,0x800A); // Indicates that the structure contains data for the IM Contacts List folder.
+define('RSF_PID_BUDDYLIST_CONTACTS'                   ,0x800B); // Indicates that the structure contains data for the Quick Contacts folder.
+define('PERSIST_SENTINEL'                             ,0x0000); // Indicates that the PersistData structure is the last one contained in the PidTagAdditionalRenEntryIdsEx property
+
+// ElementIDs for persist data of PR_IPM_OL2007_ENTRYIDS / PR_ADDITIONAL_REN_ENTRYIDS_EX
+define('RSF_ELID_HEADER'                              ,0x0002); // 4 bytes Indicates that the ElementData field contains a 4-byte header value equal to 0x00000000.
+define('RSF_ELID_ENTRYID'                             ,0x0001); // variable Indicates that the ElementData field contains the entry ID of the special folder
+                                                                // that is of the type indicated by the value of the PersistID field of the PersistData structure.
+define('ELEMENT_SENTINEL'                             ,0x0000); // 0 bytes Indicates that the PersistElement structure is the last one contained in the DataElements field of the PersistData structure.

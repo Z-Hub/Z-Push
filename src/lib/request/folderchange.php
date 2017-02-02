@@ -123,8 +123,8 @@ class FolderChange extends RequestProcessor {
             if ($changesMem->GetChangeCount() > 0)
                 throw new StatusException("HandleFolderChange() can not proceed as there are unprocessed hierarchy changes", SYNC_FSSTATUS_SERVERERROR);
 
-            // any additional folders can not be modified!
-            if ($serverid !== false && ZPush::GetAdditionalSyncFolderStore($backendid))
+            // any additional folders can not be modified - with exception if they are of type SYNC_FOLDER_TYPE_UNKNOWN (ZP-907)
+            if ($serverid !== false && ZPush::GetAdditionalSyncFolderStore($backendid) && self::$deviceManager->GetFolderTypeFromCacheById($serverid) != SYNC_FOLDER_TYPE_UNKNOWN)
                 throw new StatusException("HandleFolderChange() can not change additional folders which are configured", SYNC_FSSTATUS_SYSTEMFOLDER);
 
             // switch user store if this this happens inside an additional folder

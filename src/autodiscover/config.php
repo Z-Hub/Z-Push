@@ -26,14 +26,15 @@
 /**********************************************************************************
  *  Default settings
  */
+
+    // Replace zpush.example.com with your z-push's host name and uncomment the line below.
+    // define('ZPUSH_HOST', 'zpush.example.com');
+
     // Defines the default time zone, change e.g. to "Europe/London" if necessary
     define('TIMEZONE', '');
 
     // Defines the base path on the server
     define('BASE_PATH', dirname($_SERVER['SCRIPT_FILENAME']). '/');
-
-    // The Z-Push server location for the autodiscover response
-    define('SERVERURL', 'https://localhost/Microsoft-Server-ActiveSync');
 
     /*
      * Whether to use the complete email address as a login name
