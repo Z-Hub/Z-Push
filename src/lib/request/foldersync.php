@@ -77,7 +77,7 @@ class FolderSync extends RequestProcessor {
         $changesMem = self::$deviceManager->GetHierarchyChangesWrapper();
 
         // the hierarchyCache should now fully be initialized - check for changes in the additional folders
-        $changesMem->Config(ZPush::GetAdditionalSyncFolders(false));
+        $changesMem->Config(ZPush::GetAdditionalSyncFolders(false), ChangesMemoryWrapper::SYNCHRONIZING);
 
          // reset to default store in backend
         self::$backend->Setup(false);
