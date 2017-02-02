@@ -29,7 +29,7 @@ Group:      Productivity/Networking/Email/Utilities
 
 %if 0%{?suse_version}
 Requires:   php-posix
-%endif
+%else
 %if "%_repository" == "RHEL_6_PHP_56" || "%_repository" == "RHEL_7_PHP_56"
 Requires:   rh-php56
 Requires:   rh-php56-php-soap
@@ -40,6 +40,7 @@ Requires:   php >= 5.4.0
 Requires:   php-soap
 Requires:   php-mbstring
 Requires:   php-process
+%endif
 %endif
 %description -n %name-common
 Z-push is an implementation of the ActiveSync protocol which is used 'over-the-air' for multi platform ActiveSync devices. Devices supported are including Windows Mobile, Android, iPhone, and Nokia. With Z-push any groupware can be connected and synced with these devices.
@@ -181,13 +182,14 @@ Group:      Productivity/Networking/Email/Utilities
 Requires:   %name-common = %version
 %if 0%{?suse_version}
 Requires:   php5-memcached
-%endif
+%else
 %if "%_repository" == "RHEL_6_PHP_56" || "%_repository" == "RHEL_7_PHP_56"
 Requires:   memcached
 Requires:   rh-php56-php-pecl-memcache
 %else
 Requires:   memcached
 Requires:   php-pecl-memcached
+%endif
 %endif
 
 %description -n %name-ipc-memcached
