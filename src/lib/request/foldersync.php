@@ -248,11 +248,17 @@ class FolderSync extends RequestProcessor {
                     // update SPA & save it
                     $spa->SetSyncKey($newsynckey);
                     $spa->SetFolderId(false);
-                    self::$deviceManager->GetStateManager()->SetSynchedFolderState($spa);
 
                     // invalidate all pingable flags
                     SyncCollections::InvalidatePingableFlags();
                 }
+                // save the SyncParameters if it changed or the reference policy key is not set or different
+                if ($spa->IsDataChanged() || !$spa->HasReferencePolicyKey() || self::$deviceManager->ProvisioningRequired($spa->GetReferencePolicyKey(), true, false)) {
+                    // saves the SPA (while updating the reference policy key)
+                    $spa->SetLastSynctime(time());
+                    self::$deviceManager->GetStateManager()->SetSynchedFolderState($spa);
+                }
+
             }
         }
         self::$encoder->endTag();
