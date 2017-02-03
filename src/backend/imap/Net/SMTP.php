@@ -1,9 +1,9 @@
 <?php
-/* vim: set expandtab softtabstop=4 tabstop=4 shiftwidth=4: */
+/** vim: set expandtab softtabstop=4 tabstop=4 shiftwidth=4: */
 // +----------------------------------------------------------------------+
-// | PHP Version 5                                                        |
+// | PHP Version 5 and 7                                                  |
 // +----------------------------------------------------------------------+
-// | Copyright (c) 1997-2003 The PHP Group                                |
+// | Copyright (c) 1997-2015 The PHP Group                                |
 // +----------------------------------------------------------------------+
 // | This source file is subject to version 2.02 of the PHP license,      |
 // | that is bundled with this package in the file LICENSE, and is        |
