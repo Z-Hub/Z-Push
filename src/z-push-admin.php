@@ -28,9 +28,6 @@
 
 require_once 'vendor/autoload.php';
 
-if (!defined('ZPUSH_CONFIG')) define('ZPUSH_CONFIG', 'config.php');
-include_once(ZPUSH_CONFIG);
-
 /**
  * //TODO resync of single folders of a users device
  */
@@ -40,6 +37,10 @@ include_once(ZPUSH_CONFIG);
  */
     define('BASE_PATH_CLI',  dirname(__FILE__) ."/");
     set_include_path(get_include_path() . PATH_SEPARATOR . BASE_PATH_CLI);
+
+    if (!defined('ZPUSH_CONFIG')) define('ZPUSH_CONFIG', BASE_PATH_CLI . 'config.php');
+    include_once(ZPUSH_CONFIG);
+
     try {
         ZPush::CheckConfig();
         ZPushAdminCLI::CheckEnv();
