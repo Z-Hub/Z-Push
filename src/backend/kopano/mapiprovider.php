@@ -2554,6 +2554,17 @@ class MAPIProvider {
             $bpo = $contentparameters->BodyPreference($bpReturnType);
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("bpo: truncation size:'%d', allornone:'%d', preview:'%d'", $bpo->GetTruncationSize(), $bpo->GetAllOrNone(), $bpo->GetPreview()));
 
+            // Android Blackberry expects a full mime message for signed emails
+            // @see https://jira.z-hub.io/projects/ZP/issues/ZP-1154
+            // @TODO change this when refactoring
+            $props = mapi_getprops($mapimessage, array(PR_MESSAGE_CLASS));
+            if (isset($props[PR_MESSAGE_CLASS]) &&
+                    stripos($props[PR_MESSAGE_CLASS], 'IPM.Note.SMIME.MultipartSigned') !== false &&
+                    ($key = array_search(SYNC_BODYPREFERENCE_MIME, $bpTypes) !== false)) {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("MAPIProvider->setMessageBody(): enforcing SYNC_BODYPREFERENCE_MIME type for a signed message"));
+                $bpReturnType = SYNC_BODYPREFERENCE_MIME;
+            }
+
             $this->setMessageBodyForType($mapimessage, $bpReturnType, $message);
             //only set the truncation size data if device set it in request
             if (    $bpo->GetTruncationSize() != false &&
