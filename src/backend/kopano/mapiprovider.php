@@ -828,11 +828,19 @@ class MAPIProvider {
         if (!isset($message->importance))
             $message->importance = IMPORTANCE_NORMAL;
 
-        //TODO contentclass and nativebodytype and internetcpid
         if (!isset($message->internetcpid)) $message->internetcpid = (defined('STORE_INTERNET_CPID')) ? constant('STORE_INTERNET_CPID') : INTERNET_CPID_WINDOWS1252;
         $this->setFlag($mapimessage, $message);
+        //TODO checkcontentclass
         if (!isset($message->contentclass)) $message->contentclass = DEFAULT_EMAIL_CONTENTCLASS;
-        if (!isset($message->nativebodytype)) $message->nativebodytype = $this->getNativeBodyType($messageprops);
+
+        if (!isset($message->nativebodytype)) {
+            $message->nativebodytype = $this->getNativeBodyType($messageprops);
+        }
+        elseif ($message->nativebodytype == SYNC_BODYPREFERENCE_UNDEFINED) {
+            $nbt = $this->getNativeBodyType($messageprops);
+            ZLog::Write(LOGLEVEL_INFO, sprintf("MAPIProvider->getEmail(): native body type is undefined. Set it to %d.", $nbt));
+            $message->nativebodytype = $nbt;
+        }
 
         // reply, reply to all, forward flags
         if (isset($message->lastverbexecuted) && $message->lastverbexecuted) {
