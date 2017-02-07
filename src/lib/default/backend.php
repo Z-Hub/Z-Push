@@ -247,6 +247,16 @@ abstract class Backend implements IBackend {
         return "not implemented-".gmdate("Y-m-d-H");
     }
 
+    /**
+     * Returns a KoeSignatures object.
+     *
+     * @access public
+     * @return KoeSignatures
+     */
+    public function GetKoeSignatures() {
+        return new KoeSignatures();
+    }
+
 
     /**----------------------------------------------------------------------------------------------------------
      * Protected methods for BackendStorage

@@ -1049,16 +1049,16 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
 
             // We need the text body even though MIME is used, for the preview
             $textBody = "";
-            Mail_mimeDecode::getBodyRecursive($message, "html", $textBody, true);
+            Mail_mimeDecode::getBodyRecursive($message, "plain", $textBody, true);
             if (strlen($textBody) > 0) {
                 if ($bpReturnType != SYNC_BODYPREFERENCE_MIME) {
-                    $bpReturnType = SYNC_BODYPREFERENCE_HTML;
+                    $bpReturnType = SYNC_BODYPREFERENCE_PLAIN;
                 }
             }
             else {
-                Mail_mimeDecode::getBodyRecursive($message, "plain", $textBody, true);
+                Mail_mimeDecode::getBodyRecursive($message, "html", $textBody, true);
                 if ($bpReturnType != SYNC_BODYPREFERENCE_MIME) {
-                    $bpReturnType = SYNC_BODYPREFERENCE_PLAIN;
+                    $bpReturnType = SYNC_BODYPREFERENCE_HTML;
                 }
             }
 

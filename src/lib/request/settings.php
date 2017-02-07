@@ -50,10 +50,15 @@ class Settings extends RequestProcessor {
             if (defined('KOE_CAPABILITY_SHAREDFOLDER') && KOE_CAPABILITY_SHAREDFOLDER)              $cap[] = "sharedfolder";
             if (defined('KOE_CAPABILITY_SENDAS') && KOE_CAPABILITY_SENDAS)                          $cap[] = "sendas";
             if (defined('KOE_CAPABILITY_SECONDARYCONTACTS') && KOE_CAPABILITY_SECONDARYCONTACTS)    $cap[] = "secondarycontacts";
+            if (defined('KOE_CAPABILITY_SIGNATURES') && KOE_CAPABILITY_SIGNATURES)                  $cap[] = "signatures";
 
             self::$specialHeaders = array();
             self::$specialHeaders[] = "X-Push-Capabilities: ". implode(",",$cap);
             self::$specialHeaders[] = "X-Push-GAB-Name: ". bin2hex(KOE_GAB_NAME);
+
+            if (defined('KOE_CAPABILITY_SIGNATURES') && KOE_CAPABILITY_SIGNATURES) {
+                self::$specialHeaders[] = "X-Push-Signatures-Hash: ". self::$backend->GetKoeSignatures()->GetHash();
+            }
         }
 
         //save the request parameters
