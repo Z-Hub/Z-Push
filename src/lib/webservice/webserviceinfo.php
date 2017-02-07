@@ -54,6 +54,27 @@ class WebserviceInfo {
     }
 
     /**
+     * Returns signatures saved for the Request::GetGETUser().
+     *
+     * @access public
+     * @return KoeSignatures
+     */
+    public function GetSignatures() {
+        $user = Request::GetGETUser();
+        $sigs = null;
+
+        $hasRights = ZPush::GetBackend()->Setup($user);
+        ZLog::Write(LOGLEVEL_INFO, sprintf("WebserviceInfo::GetSignatures(): permissions to open store '%s': %s", $user, Utils::PrintAsString($hasRights)));
+
+        if ($hasRights) {
+            $sigs = ZPush::GetBackend()->GetKoeSignatures();
+            ZPush::GetTopCollector()->AnnounceInformation(sprintf("Retrieved %d signatures", count($sigs->GetSignatures())), true);
+        }
+
+        return $sigs;
+    }
+
+    /**
      * Returns the Z-Push version.
      *
      * @access public

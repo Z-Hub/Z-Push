@@ -333,4 +333,12 @@ interface IBackend {
      * @return string|boolean
      */
     public function GetKoeGabBackendFolderId($foldername);
+
+    /**
+     * Returns a KoeSignatures object.
+     *
+     * @access public
+     * @return KoeSignatures
+     */
+    public function GetKoeSignatures();
 }

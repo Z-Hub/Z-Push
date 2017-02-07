@@ -315,10 +315,10 @@ class MAPIProvider {
         }
 
         if (!isset($message->nativebodytype)) {
-            $message->nativebodytype = $this->getNativeBodyType($messageprops);
+            $message->nativebodytype = MAPIUtils::GetNativeBodyType($messageprops);
         }
         elseif ($message->nativebodytype == SYNC_BODYPREFERENCE_UNDEFINED) {
-            $nbt = $this->getNativeBodyType($messageprops);
+            $nbt = MAPIUtils::GetNativeBodyType($messageprops);
             ZLog::Write(LOGLEVEL_INFO, sprintf("MAPIProvider->getAppointment(): native body type is undefined. Set it to %d.", $nbt));
             $message->nativebodytype = $nbt;
         }
@@ -834,10 +834,10 @@ class MAPIProvider {
         if (!isset($message->contentclass)) $message->contentclass = DEFAULT_EMAIL_CONTENTCLASS;
 
         if (!isset($message->nativebodytype)) {
-            $message->nativebodytype = $this->getNativeBodyType($messageprops);
+            $message->nativebodytype = MAPIUtils::GetNativeBodyType($messageprops);
         }
         elseif ($message->nativebodytype == SYNC_BODYPREFERENCE_UNDEFINED) {
-            $nbt = $this->getNativeBodyType($messageprops);
+            $nbt = MAPIUtils::GetNativeBodyType($messageprops);
             ZLog::Write(LOGLEVEL_INFO, sprintf("MAPIProvider->getEmail(): native body type is undefined. Set it to %d.", $nbt));
             $message->nativebodytype = $nbt;
         }
@@ -2615,107 +2615,6 @@ class MAPIProvider {
                 $this->imtoinet($mapimessage, $message);
             }
         }
-    }
-
-    /**
-     * Calculates the native body type of a message using available properties. Refer to oxbbody.
-     *
-     * @param array             $messageprops
-     *
-     * @access private
-     * @return int
-     */
-    private function getNativeBodyType($messageprops) {
-        //check if the properties are set and get the error code if needed
-        if (!isset($messageprops[PR_BODY]))             $messageprops[PR_BODY]              = $this->getError(PR_BODY, $messageprops);
-        if (!isset($messageprops[PR_RTF_COMPRESSED]))   $messageprops[PR_RTF_COMPRESSED]    = $this->getError(PR_RTF_COMPRESSED, $messageprops);
-        if (!isset($messageprops[PR_HTML]))             $messageprops[PR_HTML]              = $this->getError(PR_HTML, $messageprops);
-        if (!isset($messageprops[PR_RTF_IN_SYNC]))      $messageprops[PR_RTF_IN_SYNC]       = $this->getError(PR_RTF_IN_SYNC, $messageprops);
-
-        if ( // 1
-            ($messageprops[PR_BODY]             == MAPI_E_NOT_FOUND) &&
-            ($messageprops[PR_RTF_COMPRESSED]   == MAPI_E_NOT_FOUND) &&
-            ($messageprops[PR_HTML]             == MAPI_E_NOT_FOUND))
-            return SYNC_BODYPREFERENCE_PLAIN;
-        elseif ( // 2
-            ($messageprops[PR_BODY]             == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_RTF_COMPRESSED]   == MAPI_E_NOT_FOUND) &&
-            ($messageprops[PR_HTML]             == MAPI_E_NOT_FOUND))
-            return SYNC_BODYPREFERENCE_PLAIN;
-        elseif ( // 3
-            ($messageprops[PR_BODY]             == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_RTF_COMPRESSED]   == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_HTML]             == MAPI_E_NOT_FOUND))
-            return SYNC_BODYPREFERENCE_RTF;
-        elseif ( // 4
-            ($messageprops[PR_BODY]             == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_RTF_COMPRESSED]   == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_HTML]             == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_RTF_IN_SYNC]))
-            return SYNC_BODYPREFERENCE_RTF;
-        elseif ( // 5
-            ($messageprops[PR_BODY]             == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_RTF_COMPRESSED]   == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_HTML]             == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            (!$messageprops[PR_RTF_IN_SYNC]))
-            return SYNC_BODYPREFERENCE_HTML;
-        elseif ( // 6
-            ($messageprops[PR_RTF_COMPRESSED]   != MAPI_E_NOT_FOUND   || $messageprops[PR_RTF_COMPRESSED]  == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_HTML]             != MAPI_E_NOT_FOUND   || $messageprops[PR_HTML]            == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_RTF_IN_SYNC]))
-            return SYNC_BODYPREFERENCE_RTF;
-        elseif ( // 7
-            ($messageprops[PR_RTF_COMPRESSED]   != MAPI_E_NOT_FOUND   || $messageprops[PR_RTF_COMPRESSED]  == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_HTML]             != MAPI_E_NOT_FOUND   || $messageprops[PR_HTML]            == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            (!$messageprops[PR_RTF_IN_SYNC]))
-            return SYNC_BODYPREFERENCE_HTML;
-        elseif ( // 8
-            ($messageprops[PR_BODY]             != MAPI_E_NOT_FOUND   || $messageprops[PR_BODY]            == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_RTF_COMPRESSED]   != MAPI_E_NOT_FOUND   || $messageprops[PR_RTF_COMPRESSED]  == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_RTF_IN_SYNC]))
-            return SYNC_BODYPREFERENCE_RTF;
-        elseif ( // 9.1
-            ($messageprops[PR_BODY]             != MAPI_E_NOT_FOUND   || $messageprops[PR_BODY]            == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_RTF_COMPRESSED]   != MAPI_E_NOT_FOUND   || $messageprops[PR_RTF_COMPRESSED]  == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            (!$messageprops[PR_RTF_IN_SYNC]))
-            return SYNC_BODYPREFERENCE_PLAIN;
-        elseif ( // 9.2
-            ($messageprops[PR_RTF_COMPRESSED]   != MAPI_E_NOT_FOUND   || $messageprops[PR_RTF_COMPRESSED]  == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_BODY]             == MAPI_E_NOT_FOUND) &&
-            ($messageprops[PR_HTML]             == MAPI_E_NOT_FOUND))
-            return SYNC_BODYPREFERENCE_RTF;
-        elseif ( // 9.3
-            ($messageprops[PR_BODY]             != MAPI_E_NOT_FOUND   || $messageprops[PR_BODY]            == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_RTF_COMPRESSED]   == MAPI_E_NOT_FOUND) &&
-            ($messageprops[PR_HTML]             == MAPI_E_NOT_FOUND))
-            return SYNC_BODYPREFERENCE_PLAIN;
-        elseif ( // 9.4
-            ($messageprops[PR_HTML]             != MAPI_E_NOT_FOUND   || $messageprops[PR_HTML]            == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_BODY]             == MAPI_E_NOT_FOUND) &&
-            ($messageprops[PR_RTF_COMPRESSED]   == MAPI_E_NOT_FOUND))
-            return SYNC_BODYPREFERENCE_HTML;
-        else // 10
-            return SYNC_BODYPREFERENCE_PLAIN;
-    }
-
-    /**
-     * Returns the error code for a given property. Helper for getNativeBodyType function.
-     *
-     * @param int               $tag
-     * @param array             $messageprops
-     *
-     * @access private
-     * @return int (MAPI_ERROR_CODE)
-     */
-    private function getError($tag, $messageprops) {
-        $prBodyError = mapi_prop_tag(PT_ERROR, mapi_prop_id($tag));
-        if(isset($messageprops[$prBodyError]) && mapi_is_error($messageprops[$prBodyError])) {
-            if($messageprops[$prBodyError] == MAPI_E_NOT_ENOUGH_MEMORY_32BIT ||
-                 $messageprops[$prBodyError] == MAPI_E_NOT_ENOUGH_MEMORY_64BIT) {
-                    return MAPI_E_NOT_ENOUGH_MEMORY;
-            }
-        }
-            return MAPI_E_NOT_FOUND;
     }
 
     /**
