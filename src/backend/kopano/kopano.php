@@ -1476,6 +1476,37 @@ class BackendKopano implements IBackend, ISearchProvider {
         }
     }
 
+    /**
+     * Returns a KoeSignatures object.
+     *
+     * @access public
+     * @return KoeSignatures
+     */
+    public function GetKoeSignatures() {
+        $sigs = new KoeSignatures();
+        $storeProps = mapi_getprops($this->store, array(PR_EC_WEBACCESS_SETTINGS_JSON));
+
+        // Check if property exists, if it doesn't exist then we can continue with empty an empty signature object
+        if (isset($storeProps[PR_EC_WEBACCESS_SETTINGS_JSON]) || MAPIUtils::GetError(PR_EC_WEBACCESS_SETTINGS_JSON, $storeProps) == MAPI_E_NOT_ENOUGH_MEMORY) {
+            $settings_string = MAPIUtils::readPropStream($this->store, PR_EC_WEBACCESS_SETTINGS_JSON);
+            if(!empty($settings_string)) {
+                $settings = json_decode($settings_string, true);
+                if (json_last_error()) {
+                    ZLog::Write(LOGLEVEL_WARN, sprintf("KopanoBackend->GetKoeSignatures(): Error decoding JSON WebApp settings: %s", json_last_error()));
+                }
+                if (isset($settings['settings']['zarafa']['v1']['contexts']['mail']['signatures'])) {
+                    // convert WebApp signatures into KoeSignatures object
+                    $sigs->LoadSignaturesFromData($settings['settings']['zarafa']['v1']['contexts']['mail']['signatures']);
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->GetKoeSignatures(): Found %d signatures - new '%s' - reply/fw: '%s' - hash: %s", count($sigs->GetSignatures()), $sigs->GetNewMessageSignature(), $sigs->GetReplyForwardSignature(), $sigs->GetHash()));
+                }
+                else {
+                    ZLog::Write(LOGLEVEL_DEBUG, "KopanoBackend->GetKoeSignatures(): No signature data in WebApp settings");
+                }
+            }
+        }
+        return $sigs;
+    }
+
     /**----------------------------------------------------------------------------------------------------------
      * Private methods
      */
