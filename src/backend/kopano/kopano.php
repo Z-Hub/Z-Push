@@ -1497,7 +1497,7 @@ class BackendKopano implements IBackend, ISearchProvider {
                 if (isset($settings['settings']['zarafa']['v1']['contexts']['mail']['signatures'])) {
                     // convert WebApp signatures into KoeSignatures object
                     $sigs->LoadSignaturesFromData($settings['settings']['zarafa']['v1']['contexts']['mail']['signatures']);
-                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->GetKoeSignatures(): Found %d signatures - new '%s' - reply/fw: '%s' - hash: %s", count($sigs->GetSignatures()), $sigs->GetNewMessageSignature(), $sigs->GetReplyForwardSignature(), $sigs->GetHash()));
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->GetKoeSignatures(): Found %d signatures - new '%s' - reply/fw: '%s' - hash: %s", count($sigs->GetSignatures()), $sigs->GetNewMessageSignatureId(), $sigs->GetReplyForwardSignatureId(), $sigs->GetHash()));
                 }
                 else {
                     ZLog::Write(LOGLEVEL_DEBUG, "KopanoBackend->GetKoeSignatures(): No signature data in WebApp settings");

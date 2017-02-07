@@ -54,10 +54,10 @@ class KoeSignatures {
             }
         }
         if (isset($data['new_message'])) {
-            $this->SetNewMessageSignature($data['new_message']);
+            $this->SetNewMessageSignatureId($data['new_message']);
         }
         if (isset($data['replyforward_message'])) {
-            $this->SetReplyForwardSignature($data['replyforward_message']);
+            $this->SetReplyForwardSignatureId($data['replyforward_message']);
         }
         // update the hash
         $this->GetHash();
@@ -106,7 +106,7 @@ class KoeSignatures {
      * @access public
      * @return void
      */
-    public function SetNewMessageSignature($id) {
+    public function SetNewMessageSignatureId($id) {
         $this->new_message = $id;
     }
 
@@ -116,7 +116,7 @@ class KoeSignatures {
      * @access public
      * @return string | null
      */
-    public function GetNewMessageSignature() {
+    public function GetNewMessageSignatureId() {
         return $this->new_message;
     }
 
@@ -129,7 +129,7 @@ class KoeSignatures {
      * @access public
      * @return void
      */
-    public function SetReplyForwardSignature($id) {
+    public function SetReplyForwardSignatureId($id) {
         $this->replyforward_message = $id;
     }
 
@@ -139,7 +139,7 @@ class KoeSignatures {
      * @access public
      * @return string | null
      */
-    public function GetReplyForwardSignature() {
+    public function GetReplyForwardSignatureId() {
         return $this->replyforward_message;
     }
 
