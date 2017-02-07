@@ -828,11 +828,19 @@ class MAPIProvider {
         if (!isset($message->importance))
             $message->importance = IMPORTANCE_NORMAL;
 
-        //TODO contentclass and nativebodytype and internetcpid
         if (!isset($message->internetcpid)) $message->internetcpid = (defined('STORE_INTERNET_CPID')) ? constant('STORE_INTERNET_CPID') : INTERNET_CPID_WINDOWS1252;
         $this->setFlag($mapimessage, $message);
+        //TODO checkcontentclass
         if (!isset($message->contentclass)) $message->contentclass = DEFAULT_EMAIL_CONTENTCLASS;
-        if (!isset($message->nativebodytype)) $message->nativebodytype = MAPIUtils::GetNativeBodyType($messageprops);
+
+        if (!isset($message->nativebodytype)) {
+            $message->nativebodytype = MAPIUtils::GetNativeBodyType($messageprops);
+        }
+        elseif ($message->nativebodytype == SYNC_BODYPREFERENCE_UNDEFINED) {
+            $nbt = MAPIUtils::GetNativeBodyType($messageprops);
+            ZLog::Write(LOGLEVEL_INFO, sprintf("MAPIProvider->getEmail(): native body type is undefined. Set it to %d.", $nbt));
+            $message->nativebodytype = $nbt;
+        }
 
         // reply, reply to all, forward flags
         if (isset($message->lastverbexecuted) && $message->lastverbexecuted) {
@@ -2553,6 +2561,17 @@ class MAPIProvider {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("GetBodyPreferenceBestMatch: %d", $bpReturnType));
             $bpo = $contentparameters->BodyPreference($bpReturnType);
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("bpo: truncation size:'%d', allornone:'%d', preview:'%d'", $bpo->GetTruncationSize(), $bpo->GetAllOrNone(), $bpo->GetPreview()));
+
+            // Android Blackberry expects a full mime message for signed emails
+            // @see https://jira.z-hub.io/projects/ZP/issues/ZP-1154
+            // @TODO change this when refactoring
+            $props = mapi_getprops($mapimessage, array(PR_MESSAGE_CLASS));
+            if (isset($props[PR_MESSAGE_CLASS]) &&
+                    stripos($props[PR_MESSAGE_CLASS], 'IPM.Note.SMIME.MultipartSigned') !== false &&
+                    ($key = array_search(SYNC_BODYPREFERENCE_MIME, $bpTypes) !== false)) {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("MAPIProvider->setMessageBody(): enforcing SYNC_BODYPREFERENCE_MIME type for a signed message"));
+                $bpReturnType = SYNC_BODYPREFERENCE_MIME;
+            }
 
             $this->setMessageBodyForType($mapimessage, $bpReturnType, $message);
             //only set the truncation size data if device set it in request

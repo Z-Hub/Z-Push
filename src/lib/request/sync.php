@@ -748,8 +748,12 @@ class Sync extends RequestProcessor {
                 continue;
             }
 
-            if (! $sc->GetParameter($spa, "requested"))
+            if (! $sc->GetParameter($spa, "requested")) {
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleSync(): partial sync for folder class '%s' with id '%s'", $spa->GetContentClass(), $spa->GetFolderId()));
+                // reload state and initialize StateMachine correctly
+                $sc->AddParameter($spa, "state", null);
+                $status = $this->loadStates($sc, $spa, $actiondata);
+            }
 
             // initialize exporter to get changecount
             $changecount = false;
