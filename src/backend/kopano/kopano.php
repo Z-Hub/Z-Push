@@ -1486,7 +1486,7 @@ class BackendKopano implements IBackend, ISearchProvider {
         $sigs = new KoeSignatures();
         $storeProps = mapi_getprops($this->store, array(PR_EC_WEBACCESS_SETTINGS_JSON));
 
-        // Check if property exists, if it doesn't exist then we can continue with empty an empty signature object
+        // Check if property exists, if it doesn't exist then we can continue with an empty signature object
         if (isset($storeProps[PR_EC_WEBACCESS_SETTINGS_JSON]) || MAPIUtils::GetError(PR_EC_WEBACCESS_SETTINGS_JSON, $storeProps) == MAPI_E_NOT_ENOUGH_MEMORY) {
             $settings_string = MAPIUtils::readPropStream($this->store, PR_EC_WEBACCESS_SETTINGS_JSON);
             if(!empty($settings_string)) {
