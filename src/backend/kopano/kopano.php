@@ -454,6 +454,7 @@ class BackendKopano implements IBackend, ISearchProvider {
                     $sm->mime = $start;
                     $sm->mime .= "From: ". $sendAsEmail;
                     $sm->mime .= $end;
+                    unset($start, $end);
                     $sendingAsSomeone = true;
                 }
                 else {
