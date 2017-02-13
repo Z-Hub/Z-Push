@@ -691,7 +691,7 @@ class Request {
      * With POST request (our case), you can open and read
      * multiple times "php://input"
      *
-     * @param int $maxLength   max lenght to be returned. Default: return all
+     * @param int $maxLength   max. length to be returned. Default: return all
      *
      * @access public
      * @return string - base64 encoded wbxml
