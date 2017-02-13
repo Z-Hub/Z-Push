@@ -112,13 +112,15 @@ abstract class RequestProcessor {
             }
         }
         catch (Exception $ex) {
-            ZLog::Write(LOGLEVEL_FATAL, "WBXML debug data: " . Request::GetInputAsBase64(), false);
+            // Log 10 KB of the WBXML data
+            ZLog::Write(LOGLEVEL_FATAL, "WBXML 10K debug data: " . Request::GetInputAsBase64(10240), false);
             throw $ex;
         }
 
         // also log WBXML in happy case
         if (ZLog::IsWbxmlDebugEnabled()) {
-            ZLog::Write(LOGLEVEL_WBXML, "WBXML-IN : ". Request::GetInputAsBase64(), false);
+            // Log 4 KB in the happy case
+            ZLog::Write(LOGLEVEL_WBXML, "WBXML-IN : ". Request::GetInputAsBase64(4096), false);
         }
     }
 
