@@ -691,12 +691,14 @@ class Request {
      * With POST request (our case), you can open and read
      * multiple times "php://input"
      *
+     * @param int $maxLength   max. length to be returned. Default: return all
+     *
      * @access public
      * @return string - base64 encoded wbxml
      */
-    public static function GetInputAsBase64() {
+    public static function GetInputAsBase64($maxLength = -1) {
         $input = fopen('php://input', 'r');
-        $wbxml = base64_encode(stream_get_contents($input));
+        $wbxml = base64_encode(stream_get_contents($input, $maxLength));
         fclose($input);
         return $wbxml;
     }

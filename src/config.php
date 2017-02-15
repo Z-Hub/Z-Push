@@ -309,6 +309,8 @@
     define('KOE_CAPABILITY_SENDAS', true);
     // Secondary Contact folders (own and shared)
     define('KOE_CAPABILITY_SECONDARYCONTACTS', true);
+    // Copy WebApp signature into KOE
+    define('KOE_CAPABILITY_SIGNATURES', true);
 
     // To synchronize the GAB KOE, the GAB store and folderid need to be specified.
     // Use the gab-sync script to generate this data. The name needs to

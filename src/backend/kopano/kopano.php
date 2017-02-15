@@ -441,8 +441,25 @@ class BackendKopano implements IBackend, ISearchProvider {
             if (preg_match("/^X-Push-Sender:\s(.*?)$/im", $sm->mime, $senderEmail)) {
                 $sendAsEmail = trim($senderEmail[1]);
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->SendMail(): Send-As '%s' requested by KOE", $sendAsEmail));
-                $sm->mime =  preg_replace("/^From: .*?$/im", "From: ". $sendAsEmail, $sm->mime, 1);
-                $sendingAsSomeone = true;
+
+                $originalFrom = array();
+                if (preg_match("/^(From:\s.*?)$/im", $sm->mime, $originalFrom)) {
+                    // find the occurence of the From header and replace it
+                    // preg_replace() uses additional 3x the length of $sm->mime to perform,
+                    // mb_ereg_replace() requires only 1x addtional memory, but replaces ALL occurences.
+                    // The below is different than concatenating in one line and also only uses 1x additional memory
+                    $fromPosition = strpos($sm->mime, $originalFrom[1]);
+                    $start = substr($sm->mime, 0, $fromPosition);
+                    $end = substr($sm->mime, $fromPosition + strlen($originalFrom[1]));
+                    $sm->mime = $start;
+                    $sm->mime .= "From: ". $sendAsEmail;
+                    $sm->mime .= $end;
+                    unset($start, $end);
+                    $sendingAsSomeone = true;
+                }
+                else {
+                    ZLog::Write(LOGLEVEL_DEBUG, "KopanoBackend->SendMail(): Could not find FROM header to replace for send-as");
+                }
             }
             // serverside Send-As - shared folder with DeviceManager::FLD_FLAGS_REPLYASUSER flag
             elseif (isset($sm->source->folderid)) {
@@ -461,10 +478,6 @@ class BackendKopano implements IBackend, ISearchProvider {
                 }
             }
         }
-
-        // by splitting the message in several lines we can easily grep later
-        foreach(preg_split("/((\r)?\n)/", $sm->mime) as $rfc822line)
-            ZLog::Write(LOGLEVEL_WBXML, "RFC822: ". $rfc822line);
 
         $sendMailProps = MAPIMapping::GetSendMailProperties();
         $sendMailProps = getPropIdsFromStrings($this->defaultstore, $sendMailProps);
