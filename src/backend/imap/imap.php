@@ -2250,10 +2250,14 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
                 if (isset($overview[0]->date)) {
                     $epoch_sent = strtotime($overview[0]->date);
                     if ( $epoch_sent === false ) {
-                        $pattern = '/^(Sun|Mon|Tue|Wed|Thu|Fri|Sat), [0-9]+ (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) [0-9]+ [0-9]+:[0-9]+(:[0-9]+)* /';
-                        if (preg_match($pattern, $overview[0]->date, $matches) == 1) {
+                        $pattern1 = '/^(Sun|Mon|Tue|Wed|Thu|Fri|Sat), [0-9]+ (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) [0-9]+ [0-9]+:[0-9]+(:[0-9]+)* [A-Z]+/';
+                        $pattern2 = '/^(Sun|Mon|Tue|Wed|Thu|Fri|Sat), [0-9]+ (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) [0-9]+ [0-9]+:[0-9]+(:[0-9]+)* [+-]+[0-9]+/';
+                        if (preg_match($pattern1, $overview[0]->date, $matches) == 1) {
                             ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->imap_inside_cutoffdate(): date: %s, match: %s", $overview[0]->date, $matches[0]));
                             $epoch_sent = strtotime($matches[0].' UTC');
+                        } else if (preg_match($pattern2, $overview[0]->date, $matches) == 1) {
+                            ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->imap_inside_cutoffdate(): date: %s, match: %s", $overview[0]->date, $matches[0]));
+                            $epoch_sent = strtotime($matches[0]);
                         }
                     }
                     ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->imap_inside_cutoffdate(): cutoffdate: %s, epoch_sent: %s", $cutoffdate, $epoch_sent));
