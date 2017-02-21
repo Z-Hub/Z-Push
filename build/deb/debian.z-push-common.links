@@ -1,4 +1,2 @@
 etc/z-push/z-push.conf.php usr/share/z-push/config.php
 etc/z-push/policies.ini usr/share/z-push/policies.ini
-usr/share/z-push/z-push-admin.php /usr/sbin/z-push-admin
-usr/share/z-push/z-push-top.php /usr/sbin/z-push-top

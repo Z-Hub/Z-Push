@@ -9,3 +9,6 @@ z-push-admin.php   /usr/share/z-push/
 z-push-top.php     /usr/share/z-push/
 
 config/z-push.lr   etc/logrotate.d/
+
+build/deb/z-push-admin	/usr/sbin/
+build/deb/z-push-top	/usr/sbin/
