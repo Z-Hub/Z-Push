@@ -1030,6 +1030,13 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             $mobj = new Mail_mimeDecode($mail);
             $message = $mobj->decode(array('decode_headers' => true, 'decode_bodies' => true, 'include_bodies' => true, 'rfc_822bodies' => true, 'charset' => 'utf-8'));
 
+            if ( strpos($message->headers["subject"], chr(0x1b).'$B') !== false ) {
+                $message->headers["subject"] = mb_convert_encoding($message->headers["subject"], "utf-8", "ISO-2022-JP-MS");
+            }
+            if ( strpos($message->headers["from"], chr(0x1b).'$B') !== false ) {
+                $message->headers["from"] = mb_convert_encoding($message->headers["from"], "utf-8", "ISO-2022-JP-MS");
+            }
+
             $is_multipart = is_multipart($message);
             $is_smime = is_smime($message);
             $is_encrypted = $is_smime ? is_encrypted($message) : false;
@@ -1097,6 +1104,10 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
                         // TODO: this is broken. This is no RTF.
                         $data = base64_encode($textBody);
                         break;
+                }
+
+                if ( strpos($data, chr(0x1b).'$B') !== false ) {
+                    $data = mb_convert_encoding($data, "utf-8", "ISO-2022-JP-MS");
                 }
 
                 // truncate body, if requested.

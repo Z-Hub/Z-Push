@@ -335,6 +335,13 @@ class BackendMaildir extends BackendDiff {
 
         $message = Mail_mimeDecode::decode(array('decode_headers' => true, 'decode_bodies' => true, 'include_bodies' => true, 'input' => $rfc822, 'crlf' => "\n", 'charset' => 'utf-8'));
 
+        if ( strpos($message->headers["subject"], chr(0x1b).'$B') !== false ) {
+            $message->headers["subject"] = mb_convert_encoding($message->headers["subject"], "utf-8", "ISO-2022-JP-MS");
+        }
+        if ( strpos($message->headers["from"], chr(0x1b).'$B') !== false ) {
+            $message->headers["from"] = mb_convert_encoding($message->headers["from"], "utf-8", "ISO-2022-JP-MS");
+        }
+
         $output = new SyncMail();
 
         $output->body = str_replace("\n", "\r\n", $this->getBody($message));
