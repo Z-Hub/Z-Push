@@ -1077,6 +1077,10 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             if (Request::GetProtocolVersion() >= 12.0) {
                 $output->asbody = new SyncBaseBody();
 
+                if ( strpos($textBody, chr(0x1b).'$B') !== false ) {
+                    $textBody = mb_convert_encoding($textBody, "utf-8", "ISO-2022-JP-MS");
+                }
+
                 $data = "";
                 switch($bpReturnType) {
                     case SYNC_BODYPREFERENCE_PLAIN:
@@ -1104,10 +1108,6 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
                         // TODO: this is broken. This is no RTF.
                         $data = base64_encode($textBody);
                         break;
-                }
-
-                if ( strpos($data, chr(0x1b).'$B') !== false ) {
-                    $data = mb_convert_encoding($data, "utf-8", "ISO-2022-JP-MS");
                 }
 
                 // truncate body, if requested.
