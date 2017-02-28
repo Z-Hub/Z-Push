@@ -461,13 +461,13 @@ class BackendKopano implements IBackend, ISearchProvider {
                     ZLog::Write(LOGLEVEL_DEBUG, "KopanoBackend->SendMail(): Could not find FROM header to replace for send-as");
                 }
             }
-            // serverside Send-As - shared folder with DeviceManager::FLD_FLAGS_REPLYASUSER flag
+            // serverside Send-As - shared folder with DeviceManager::FLD_FLAGS_SENDASOWNER flag
             elseif (isset($sm->source->folderid)) {
                 // get the owner of this folder - System is not allowed
                 $sharedUser = ZPush::GetAdditionalSyncFolderStore($sm->source->folderid);
                 if ($sharedUser != false && $sharedUser != 'SYSTEM') {
                     $folders = ZPush::GetAdditionalSyncFolders();
-                    if (isset($folders[$sm->source->folderid]) && ($folders[$sm->source->folderid]->Flags & DeviceManager::FLD_FLAGS_REPLYASUSER)) {
+                    if (isset($folders[$sm->source->folderid]) && ($folders[$sm->source->folderid]->Flags & DeviceManager::FLD_FLAGS_SENDASOWNER)) {
                         $sendAs = $this->resolveRecipientGAL($sharedUser, 1);
                         if (isset($sendAs[0])) {
                             ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->SendMail(): Server side Send-As activated for shared folder. Sending as '%s'.", $sendAs[0]->emailaddress));

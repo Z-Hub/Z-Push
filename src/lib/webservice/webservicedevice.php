@@ -179,7 +179,7 @@ class WebserviceDevice {
      * @param string    $add_folderid   the folder id of the additional folder.
      * @param string    $add_name       the name of the additional folder (has to be unique for all folders on the device).
      * @param string    $add_type       AS foldertype of SYNC_FOLDER_TYPE_USER_*
-     * @param int       $add_flags      Additional flags, like DeviceManager::FLD_FLAGS_REPLYASUSER
+     * @param int       $add_flags      Additional flags, like DeviceManager::FLD_FLAGS_SENDASOWNER
      *
      * @access public
      * @return boolean
@@ -208,7 +208,7 @@ class WebserviceDevice {
      * @param string    $deviceId       device id of where the folder should be updated.
      * @param string    $add_folderid   the folder id of the additional folder.
      * @param string    $add_name       the name of the additional folder (has to be unique for all folders on the device).
-     * @param int       $add_flags      Additional flags, like DeviceManager::FLD_FLAGS_REPLYASUSER
+     * @param int       $add_flags      Additional flags, like DeviceManager::FLD_FLAGS_SENDASOWNER
      *
      * @access public
      * @return boolean
@@ -267,7 +267,7 @@ class WebserviceDevice {
      *                                  'parentid'  (string) the folderid of the parent folder. If no parent folder is set or the parent folder is not defined, '0' (main folder) is used.
      *                                  'name'      (string) the name of the additional folder (has to be unique for all folders on the device).
      *                                  'type'      (string) AS foldertype of SYNC_FOLDER_TYPE_USER_*
-     *                                  'flags'     (int)    Additional flags, like DeviceManager::FLD_FLAGS_REPLYASUSER
+     *                                  'flags'     (int)    Additional flags, like DeviceManager::FLD_FLAGS_SENDASOWNER
      *
      * @access public
      * @return boolean
