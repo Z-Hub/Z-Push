@@ -43,7 +43,9 @@ class DeviceManager {
     const FLD_ORIGIN_SHARED = "S";
     const FLD_ORIGIN_GAB = "G";
 
-    const FLD_FLAGS_REPLYASUSER = 1;
+    const FLD_FLAGS_SENDASOWNER = 1;
+    const FLD_FLAGS_TRACKSHARENAME = 2;
+    const FLD_FLAGS_CALENDARREMINDERS = 4;
 
     private $device;
     private $deviceHash;
