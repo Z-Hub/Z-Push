@@ -27,7 +27,6 @@
 * Consult LICENSE file for details
 ************************************************/
 
-define("PHP_MAPI_PATH", "/usr/share/php/mapi/");
 if (CheckMapiExtVersion('8.0.0')) {
     define('MAPI_SERVER', 'default:');
 }
@@ -67,11 +66,11 @@ function listfolders_configure() {
         exit(1);
     }
 
-    require(PHP_MAPI_PATH.'mapi.util.php');
-    require(PHP_MAPI_PATH.'mapidefs.php');
-    require(PHP_MAPI_PATH.'mapicode.php');
-    require(PHP_MAPI_PATH.'mapitags.php');
-    require(PHP_MAPI_PATH.'mapiguid.php');
+    require(__DIR__ . '/mapi/mapi.util.php');
+    require(__DIR__ . '/mapi/mapidefs.php');
+    require(__DIR__ . '/mapi/mapicode.php');
+    require(__DIR__ . '/mapi/mapitags.php');
+    require(__DIR__ . '/mapi/mapiguid.php');
 }
 
 function listfolders_handle() {
