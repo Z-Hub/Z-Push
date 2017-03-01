@@ -840,7 +840,7 @@ class ASDevice extends StateObject {
      * @param string    $folderid   the folder id of the additional folder.
      * @param string    $name       the name of the additional folder (has to be unique for all folders on the device).
      * @param string    $type       AS foldertype of SYNC_FOLDER_TYPE_USER_*
-     * @param int       $flags      Additional flags, like DeviceManager::FLD_FLAGS_REPLYASUSER
+     * @param int       $flags      Additional flags, like DeviceManager::FLD_FLAGS_SENDASOWNER
      * @param string    $parentid   the parentid of this folder.
      * @param boolean   $checkDups  indicates if duplicate names and ids should be verified. Default: true
      *
@@ -927,7 +927,7 @@ class ASDevice extends StateObject {
      *
      * @param string    $folderid   the folder id of the additional folder.
      * @param string    $name       the name of the additional folder (has to be unique for all folders on the device).
-     * @param int       $flags      Additional flags, like DeviceManager::FLD_FLAGS_REPLYASUSER
+     * @param int       $flags      Additional flags, like DeviceManager::FLD_FLAGS_SENDASOWNER
      * @param string    $parentid   the parentid of this folder.
      * @param boolean   $checkDups  indicates if duplicate names and ids should be verified. Default: true
      *
@@ -1015,7 +1015,7 @@ class ASDevice extends StateObject {
      *                              'parentid'  (string) the folderid of the parent folder. If no parent folder is set or the parent folder is not defined, '0' (main folder) is used.
      *                              'name'      (string) the name of the additional folder (has to be unique for all folders on the device).
      *                              'type'      (string) AS foldertype of SYNC_FOLDER_TYPE_USER_*
-     *                              'flags'     (int)    Additional flags, like DeviceManager::FLD_FLAGS_REPLYASUSER
+     *                              'flags'     (int)    Additional flags, like DeviceManager::FLD_FLAGS_SENDASOWNER
      *
      * @access public
      * @return boolean
