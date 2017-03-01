@@ -150,18 +150,25 @@ class WebserviceDevice {
         $deviceId = preg_replace("/[^A-Za-z0-9]/", "", $deviceId);
         $folders = ZPushAdmin::AdditionalFolderList($user, $deviceId);
         ZLog::Write(LOGLEVEL_INFO, sprintf("WebserviceDevice::AdditionalFolderList(): found %d folders for device '%s' of user '%s'", count($folders), $deviceId, $user));
-        // retrieve the permission flags from the backend
+        // retrieve the permission flags from the backend and convert associative array into stdClass object for PHP7 support
+        $folderObjects = array();
         $backend = ZPush::GetBackend();
-        foreach($folders as &$folder) {
-            $folder['readable'] = $backend->Setup($folder['store'], true, $folder['folderid'], true);
-            $folder['writeable'] = $backend->Setup($folder['store'], true, $folder['folderid']);
+        foreach($folders as $folder) {
+            $folderObject = new stdClass();
+            $folderObject->store = $folder['store'];
+            $folderObject->folderid = $folder['folderid'];
+            $folderObject->parentid = $folder['parentid'];
+            $folderObject->syncfolderid = $folder['syncfolderid'];
+            $folderObject->name = $folder['name'];
+            $folderObject->type = $folder['type'];
+            $folderObject->origin = $folder['origin'];
+            $folderObject->flags = $folder['flags'];
+            $folderObject->readable = $backend->Setup($folder['store'], true, $folder['folderid'], true);
+            $folderObject->writeable = $backend->Setup($folder['store'], true, $folder['folderid']);
+            $folderObjects[] = $folderObject;
         }
-        // make sure folder is not pointing to our last folder anymore
-        unset($folder);
-
-        ZPush::GetTopCollector()->AnnounceInformation(sprintf("Retrieved details of %d folders", count($folders)), true);
-
-        return $folders;
+        ZPush::GetTopCollector()->AnnounceInformation(sprintf("Retrieved details of %d folders", count($folderObjects)), true);
+        return $folderObjects;
     }
 
     /**
@@ -172,7 +179,7 @@ class WebserviceDevice {
      * @param string    $add_folderid   the folder id of the additional folder.
      * @param string    $add_name       the name of the additional folder (has to be unique for all folders on the device).
      * @param string    $add_type       AS foldertype of SYNC_FOLDER_TYPE_USER_*
-     * @param int       $add_flags      Additional flags, like DeviceManager::FLD_FLAGS_REPLYASUSER
+     * @param int       $add_flags      Additional flags, like DeviceManager::FLD_FLAGS_SENDASOWNER
      *
      * @access public
      * @return boolean
@@ -201,7 +208,7 @@ class WebserviceDevice {
      * @param string    $deviceId       device id of where the folder should be updated.
      * @param string    $add_folderid   the folder id of the additional folder.
      * @param string    $add_name       the name of the additional folder (has to be unique for all folders on the device).
-     * @param int       $add_flags      Additional flags, like DeviceManager::FLD_FLAGS_REPLYASUSER
+     * @param int       $add_flags      Additional flags, like DeviceManager::FLD_FLAGS_SENDASOWNER
      *
      * @access public
      * @return boolean
@@ -260,7 +267,7 @@ class WebserviceDevice {
      *                                  'parentid'  (string) the folderid of the parent folder. If no parent folder is set or the parent folder is not defined, '0' (main folder) is used.
      *                                  'name'      (string) the name of the additional folder (has to be unique for all folders on the device).
      *                                  'type'      (string) AS foldertype of SYNC_FOLDER_TYPE_USER_*
-     *                                  'flags'     (int)    Additional flags, like DeviceManager::FLD_FLAGS_REPLYASUSER
+     *                                  'flags'     (int)    Additional flags, like DeviceManager::FLD_FLAGS_SENDASOWNER
      *
      * @access public
      * @return boolean

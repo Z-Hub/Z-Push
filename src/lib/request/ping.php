@@ -114,6 +114,11 @@ class Ping extends RequestProcessor {
                         // check if the HierarchyCache is available, if not, trigger a HierarchySync
                         try {
                             self::$deviceManager->GetFolderClassFromCacheByID($folderid);
+                            // ZP-907: ignore all folders with SYNC_FOLDER_TYPE_UNKNOWN
+                            if (self::$deviceManager->GetFolderTypeFromCacheById($folderid) == SYNC_FOLDER_TYPE_UNKNOWN) {
+                                ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandlePing(): ignoring folder id '%s' as it's of type UNKNOWN ", $folderid));
+                                continue;
+                            }
                         }
                         catch (NoHierarchyCacheAvailableException $nhca) {
                             ZLog::Write(LOGLEVEL_INFO, sprintf("HandlePing(): unknown collection '%s', triggering HierarchySync", $folderid));
@@ -271,6 +276,11 @@ class Ping extends RequestProcessor {
      * @return boolean
      */
     private function isClassValid($class, $spa) {
+        // ZP-907: Outlook might request a ping for such a folder, but we shouldn't answer it in any way
+        if (Request::IsOutlook() && self::$deviceManager->GetFolderTypeFromCacheById($spa->GetFolderId()) == SYNC_FOLDER_TYPE_UNKNOWN) {
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandlePing()->isClassValid(): ignoring folder id '%s' as it's of type UNKNOWN ", $spa->GetFolderId()));
+            return false;
+        }
         if ($class == $spa->GetContentClass() ||
                 // KOE ZO-42: Notes are synched as Appointments
                 (self::$deviceManager->IsKoe() && KOE_CAPABILITY_NOTES && $class == "Calendar" && $spa->GetContentClass() == "Notes")

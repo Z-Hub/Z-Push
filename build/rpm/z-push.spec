@@ -27,11 +27,6 @@ Z-push is an implementation of the ActiveSync protocol which is used 'over-the-a
 Summary:    Z-Push core package
 Group:      Productivity/Networking/Email/Utilities
 
-%if 0%{?suse_version}
-Requires:   php-posix
-%else
-Requires:   php-process
-%endif
 %if "%_repository" == "RHEL_6_PHP_56" || "%_repository" == "RHEL_7_PHP_56"
 Requires:   rh-php56
 Requires:   rh-php56-php-soap
@@ -41,6 +36,11 @@ Requires:   rh-php56-php-process
 Requires:   php >= 5.4.0
 Requires:   php-soap
 Requires:   php-mbstring
+%if 0%{?suse_version}
+Requires:   php-posix
+%else
+Requires:   php-process
+%endif
 %endif
 %description -n %name-common
 Z-push is an implementation of the ActiveSync protocol which is used 'over-the-air' for multi platform ActiveSync devices. Devices supported are including Windows Mobile, Android, iPhone, and Nokia. With Z-push any groupware can be connected and synced with these devices.
@@ -50,8 +50,15 @@ Z-push is an implementation of the ActiveSync protocol which is used 'over-the-a
 Summary:    Z-Push caldav backend
 Group:      Productivity/Networking/Email/Utilities
 Requires:   %name-common = %version
-Requires:   php-curl
 Requires:   libawl-php
+%if "%_repository" == "RHEL_6_PHP_56" || "%_repository" == "RHEL_7_PHP_56"
+Requires:   rh-php56-php-common
+Requires:   rh-php56-php-xml
+%else
+Requires:   php-curl
+Requires:   php-xml
+%endif
+
 Provides:   %name-backend
 
 %description -n %name-backend-caldav
@@ -84,7 +91,12 @@ Backend for Z-Push, that adds the ability to combine backends.
 Summary:    Z-Push imap backend
 Group:      Productivity/Networking/Email/Utilities
 Requires:   %name-common = %version
+Requires:   libawl-php
+%if "%_repository" == "RHEL_6_PHP_56" || "%_repository" == "RHEL_7_PHP_56"
+Requires:   rh-php56-php-imap
+%else
 Requires:   php-imap
+%endif
 Provides:   %name-backend
 
 %description -n %name-backend-imap
@@ -95,7 +107,11 @@ Backend for Z-Push, that adds the ability to connect to a imap server
 Summary:    Z-Push ldap backend
 Group:      Productivity/Networking/Email/Utilities
 Requires:   %name-common = %version
+%if "%_repository" == "RHEL_6_PHP_56" || "%_repository" == "RHEL_7_PHP_56"
+Requires:   rh-php56-php-ldap
+%else
 Requires:   php-ldap
+%endif
 Provides:   %name-backend
 
 %description -n %name-backend-ldap
@@ -134,6 +150,15 @@ Requires:   php-mapi
 %description -n %name-kopano-gabsync
 Synchronizes a Kopano global address book
 
+%package -n %name-kopano-gab2contacts
+Summary:    GAB sync into a contacts folder for Kopano
+Group:      Productivity/Networking/Email/Utilities
+Requires:   %name-common = %version
+Requires:   php-mapi
+
+%description -n %name-kopano-gab2contacts
+Synchronizes a Kopano global address book into a contacts folder
+
 # IPC SHARED MEMORY
 %package -n %name-ipc-sharedmemory
 Summary:    Z-Push ipc shared memory provider
@@ -155,11 +180,15 @@ Provider for Z-Push, that adds the ability to use ipc shared memory
 Summary:    Z-Push ipc memcached provider
 Group:      Productivity/Networking/Email/Utilities
 Requires:   %name-common = %version
+Requires:   memcached
+%if "%_repository" == "RHEL_6_PHP_56" || "%_repository" == "RHEL_7_PHP_56"
+Requires:   rh-php56-php-pecl-memcache
+%else
 %if 0%{?suse_version}
 Requires:   php5-memcached
 %else
-Requires:   memcached
 Requires:   php-pecl-memcached
+%endif
 %endif
 
 %description -n %name-ipc-memcached
@@ -170,7 +199,11 @@ Provider for Z-Push, that adds the ability to use ipc memcached
 Summary:    Z-Push ldap search backend
 Group:      Productivity/Networking/Email/Utilities
 Requires:   %name-common = %version
+%if "%_repository" == "RHEL_6_PHP_56" || "%_repository" == "RHEL_7_PHP_56"
+Requires:   rh-php56-php-ldap
+%else
 Requires:   php-ldap
+%endif
 Provides:   %name-backend
 
 %description -n %name-galsearch-ldap
@@ -181,8 +214,13 @@ Backend for Z-Push, that adds the ability to search a ldap server
 Summary:    Z-Push mysql state backend
 Group:      Productivity/Networking/Email/Utilities
 Requires:   %name-common = %version
+%if "%_repository" == "RHEL_6_PHP_56" || "%_repository" == "RHEL_7_PHP_56"
+Requires:   rh-php56-php-mysqlnd
+Requires:   rh-php56-php-pdo
+%else
 Requires:   php-mysql
 Requires:   php-pdo
+%endif
 
 %description -n %name-state-sql
 Backend for Z-Push, that adds the ability to save states in a mysql database
@@ -250,6 +288,7 @@ cp -a src/* "$b/%zpush_dir/"
 rm -f "$b/%zpush_dir/"{INSTALL,LICENSE}
 
 # COMMON
+# set version number
 sed -s "s/ZPUSHVERSION/%version/" build/version.php.in > "$b/%zpush_dir/version.php"
 
 mkdir -p "$b/%_sysconfdir/z-push";
@@ -294,10 +333,22 @@ ln -s "%_sysconfdir/z-push/ldap.conf.php" "$bdir/ldap/config.php";
 mv "$bdir/kopano/config.php" "$cdir/kopano.conf.php";
 ln -s "%_sysconfdir/z-push/kopano.conf.php" "$bdir/kopano/config.php";
 
+# GAB-SYNC
 mkdir -p "$b/%zpush_dir/tools"
 cp -a tools/gab-sync "$b/%zpush_dir/tools/"
 mv "$b/%zpush_dir/tools/gab-sync/config.php" "$cdir/gabsync.conf.php";
 ln -s "%_sysconfdir/z-push/gabsync.conf.php" "$b/%zpush_dir/tools/gab-sync/config.php";
+mkdir -p "$b/%_bindir"
+ln -s "%zpush_dir/tools/gab-sync/gab-sync.php" "$b/%_bindir/z-push-gabsync";
+
+# GAB2CONTACTS
+mkdir -p "$b/%zpush_dir/tools"
+cp -a tools/gab2contacts "$b/%zpush_dir/tools/"
+mv "$b/%zpush_dir/tools/gab2contacts/config.php" "$cdir/gab2contacts.conf.php";
+ln -s "%_sysconfdir/z-push/gab2contacts.conf.php" "$b/%zpush_dir/tools/gab2contacts/config.php";
+sed -i -s "s/PATH_TO_ZPUSH', '\.\.\/\.\.\/src\/')/PATH_TO_ZPUSH', '\/usr\/share\/z-push\/')/" "$b/%zpush_dir/tools/gab2contacts/gab2contacts.php"
+mkdir -p "$b/%_bindir"
+ln -s "%zpush_dir/tools/gab2contacts/gab2contacts.php" "$b/%_bindir/z-push-gab2contacts";
 
 # MEMCACHED
 mv "$bdir/ipcmemcached/config.php" "$cdir/memcached.conf.php";
@@ -372,6 +423,7 @@ install -Dpm 644 config/apache2/z-push-autodiscover.conf \
 %exclude %zpush_dir/autodiscover
 %exclude %zpush_dir/tools/migrate-filestates-to-db.php
 %exclude %zpush_dir/tools/gab-sync
+%exclude %zpush_dir/tools/gab2contacts
 %zpush_dir/
 %doc src/LICENSE
 
@@ -475,6 +527,20 @@ install -Dpm 644 config/apache2/z-push-autodiscover.conf \
 %else
     %config(noreplace) %attr(0640,root,apache) %_sysconfdir/z-push/gabsync.conf.php
 %endif
+%_bindir/z-push-gabsync
+
+%files -n %name-kopano-gab2contacts
+%defattr(-, root, root)
+%dir %zpush_dir/tools
+%dir %zpush_dir/tools/gab2contacts
+%zpush_dir/tools/gab2contacts/
+%dir %_sysconfdir/z-push
+%if 0%{?suse_version}
+    %config(noreplace) %attr(0640,root,www) %_sysconfdir/z-push/gab2contacts.conf.php
+%else
+    %config(noreplace) %attr(0640,root,apache) %_sysconfdir/z-push/gab2contacts.conf.php
+%endif
+%_bindir/z-push-gab2contacts
 
 %files -n %name-kopano
 

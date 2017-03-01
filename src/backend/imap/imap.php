@@ -32,6 +32,11 @@ require_once("backend/imap/mime_calendar.php");
 require_once("backend/imap/mime_encode.php");
 require_once("backend/imap/user_identity.php");
 
+// Add the path for Andrew's Web Libraries to include_path
+// because it is required for the emails with ics attachments
+// @see https://jira.z-hub.io/browse/ZP-1149
+set_include_path(get_include_path() . PATH_SEPARATOR . '/usr/share/awl/inc');
+
 class BackendIMAP extends BackendDiff implements ISearchProvider {
     private $wasteID;
     private $sentID;
@@ -200,6 +205,12 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->SendMail(): To defined: %s", $toaddr));
         }
         unset($Mail_RFC822);
+
+        if (isset($message->headers["subject"]) && mb_detect_encoding($message->headers["subject"], "UTF-8") != false && preg_match('/[^\x00-\x7F]/', $message->headers["subject"]) == 1) {
+            mb_internal_encoding("UTF-8");
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->SendMail(): Subject in raw UTF-8: %s", $message->headers["subject"]));
+            $message->headers["subject"] = mb_encode_mimeheader($message->headers["subject"]);
+        }
 
         $this->setReturnPathValue($message->headers, $fromaddr);
 
@@ -703,7 +714,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             $notExcluded = true;
             for ($i = 0, $cnt = count($this->excludedFolders); $notExcluded && $i < $cnt; $i++) { // expr1, expr2 modified by mku ZP-329
                 // fix exclude folders with special chars by mku ZP-329
-                if (strpos(strtolower($val), strtolower(Utils::Utf7_iconv_encode(Utils::Utf8_to_utf7($this->excludedFolders[$i])))) !== false) {
+                if (strpos(strtolower($val), strtolower(Utils::Utf8_to_utf7imap($this->excludedFolders[$i]))) !== false) {
                     $notExcluded = false;
                     ZLog::Write(LOGLEVEL_DEBUG, sprintf("Pattern: <%s> found, excluding folder: '%s'", $this->excludedFolders[$i], $val)); // sprintf added by mku ZP-329
                 }
@@ -785,12 +796,12 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             }
 
             if (count($fhir) == 1) {
-                $folder->displayname = Utils::Utf7_to_utf8(Utils::Utf7_iconv_decode($fhir[0]));
+                $folder->displayname = Utils::Utf7imap_to_utf8($fhir[0]);
                 $folder->parentid = "0";
             }
             else {
                 $this->getModAndParentNames($fhir, $folder->displayname, $imapparent);
-                $folder->displayname = Utils::Utf7_to_utf8(Utils::Utf7_iconv_decode($folder->displayname));
+                $folder->displayname = Utils::Utf7imap_to_utf8($folder->displayname);
                 if ($imapparent === null) {
                     ZLog::Write(LOGLEVEL_WARN, sprintf("BackendIMAP->GetFolder('%s'): '%s'; we didn't found a valid parent name for the folder, but we should... contact the developers for further info", $id, $imapid));
                     $folder->parentid = "0"; // We put the folder as root folder, so we see it
@@ -856,7 +867,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
         else {
 
             // build name for new mailboxBackendMaildir
-            $displayname = Utils::Utf7_iconv_encode(Utils::Utf8_to_utf7($displayname));
+            $displayname = Utils::Utf8_to_utf7imap($displayname);
 
             if ($folderid == "0") {
                 $newimapid = $displayname;
@@ -1038,16 +1049,16 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
 
             // We need the text body even though MIME is used, for the preview
             $textBody = "";
-            Mail_mimeDecode::getBodyRecursive($message, "html", $textBody, true);
+            Mail_mimeDecode::getBodyRecursive($message, "plain", $textBody, true);
             if (strlen($textBody) > 0) {
                 if ($bpReturnType != SYNC_BODYPREFERENCE_MIME) {
-                    $bpReturnType = SYNC_BODYPREFERENCE_HTML;
+                    $bpReturnType = SYNC_BODYPREFERENCE_PLAIN;
                 }
             }
             else {
-                Mail_mimeDecode::getBodyRecursive($message, "plain", $textBody, true);
+                Mail_mimeDecode::getBodyRecursive($message, "html", $textBody, true);
                 if ($bpReturnType != SYNC_BODYPREFERENCE_MIME) {
-                    $bpReturnType = SYNC_BODYPREFERENCE_PLAIN;
+                    $bpReturnType = SYNC_BODYPREFERENCE_HTML;
                 }
             }
 
@@ -2203,7 +2214,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
      * @return boolean      success
      */
     private function imap_create_folder($foldername) {
-        $name = Utils::Utf7_iconv_encode(Utils::Utf8_to_utf7($foldername));
+        $name = Utils::Utf8_to_utf7imap($foldername);
 
         $res = @imap_createmailbox($this->mbox, $name);
         if ($res) {
@@ -2455,7 +2466,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
         }
 
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->sendMessage(): SendingMail with %s", $sendingMethod));
-        $mail =& Mail::factory($sendingMethod, $sendingMethod == "mail" ? "-f " . $fromaddr : $imap_smtp_params);
+        $mail = Mail::factory($sendingMethod, $sendingMethod == "mail" ? "-f " . $fromaddr : $imap_smtp_params);
         $send = $mail->send($recipients, $headers, $body);
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->sendMessage(): send return value %s", $send));
 

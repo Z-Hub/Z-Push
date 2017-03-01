@@ -73,6 +73,8 @@ return array(
     'IpcMemcachedProvider' => $baseDir . '/backend/ipcmemcached/ipcmemcachedprovider.php',
     'IpcSharedMemoryProvider' => $baseDir . '/backend/ipcsharedmemory/ipcsharedmemoryprovider.php',
     'ItemOperations' => $baseDir . '/lib/request/itemoperations.php',
+    'KoeSignature' => $baseDir . '/lib/core/koesignatures.php',
+    'KoeSignatures' => $baseDir . '/lib/core/koesignatures.php',
     'KopanoChangesWrapper' => $baseDir . '/backend/kopano/kopanochangeswrapper.php',
     'Log' => $baseDir . '/lib/log/log.php',
     'LoopDetection' => $baseDir . '/lib/core/loopdetection.php',

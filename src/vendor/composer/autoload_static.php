@@ -80,6 +80,8 @@ class ComposerStaticInitd6749fc2fb9944bbe86b2b7d79a7852f
         'IpcMemcachedProvider' => __DIR__ . '/../..' . '/backend/ipcmemcached/ipcmemcachedprovider.php',
         'IpcSharedMemoryProvider' => __DIR__ . '/../..' . '/backend/ipcsharedmemory/ipcsharedmemoryprovider.php',
         'ItemOperations' => __DIR__ . '/../..' . '/lib/request/itemoperations.php',
+        'KoeSignature' => __DIR__ . '/../..' . '/lib/core/koesignatures.php',
+        'KoeSignatures' => __DIR__ . '/../..' . '/lib/core/koesignatures.php',
         'KopanoChangesWrapper' => __DIR__ . '/../..' . '/backend/kopano/kopanochangeswrapper.php',
         'Log' => __DIR__ . '/../..' . '/lib/log/log.php',
         'LoopDetection' => __DIR__ . '/../..' . '/lib/core/loopdetection.php',

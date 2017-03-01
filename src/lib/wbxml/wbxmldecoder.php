@@ -316,7 +316,18 @@ class WBXMLDecoder extends WBXMLDefs {
                 ZLog::Write(LOGLEVEL_WBXML,"I " . $spaces . "</" . $tag . ">");
                 break;
             case EN_TYPE_CONTENT:
-                ZLog::Write(LOGLEVEL_WBXML,"I " . $spaces . " " . $el[EN_CONTENT]);
+                // as we concatenate the string here, the entire content is copied.
+                // when sending an email with an attachment this single log line (which is never logged in INFO)
+                // requires easily additional 20 MB of RAM. See https://jira.z-hub.io/browse/ZP-1159
+                $messagesize = strlen($el[EN_CONTENT]);
+                if ($messagesize > 10240) {
+                    $content = substr($el[EN_CONTENT], 0, 10240) . sprintf(" <log message with %d bytes truncated>", $messagesize);
+                }
+                else {
+                    $content = $el[EN_CONTENT];
+                }
+                // Log but make sure it's not truncated again (will be slightly bigger than 10KB)
+                ZLog::Write(LOGLEVEL_WBXML,"I " . $spaces . " " . $content, false);
                 break;
         }
     }

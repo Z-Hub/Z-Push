@@ -36,6 +36,7 @@ class SyncFolder extends SyncObject {
     public $NoBackendFolder;
     public $BackendId;
     public $Flags;
+    public $TypeReal;
 
     function __construct() {
         $mapping = array (
@@ -65,6 +66,8 @@ class SyncFolder extends SyncObject {
                     SYNC_FOLDERHIERARCHY_IGNORE_FLAGS                   => array (  self::STREAMER_VAR      => "Flags",
                                                                                     self::STREAMER_TYPE     => self::STREAMER_TYPE_IGNORE),
 
+                    SYNC_FOLDERHIERARCHY_IGNORE_TYPEREAL                => array (  self::STREAMER_VAR      => "TypeReal",
+                                                                                    self::STREAMER_TYPE     => self::STREAMER_TYPE_IGNORE),
         );
 
         parent::__construct($mapping);

@@ -472,10 +472,10 @@ class MAPIUtils {
      */
     public static function GetNativeBodyType($messageprops) {
         //check if the properties are set and get the error code if needed
-        if (!isset($messageprops[PR_BODY]))             $messageprops[PR_BODY]              = self::getError(PR_BODY, $messageprops);
-        if (!isset($messageprops[PR_RTF_COMPRESSED]))   $messageprops[PR_RTF_COMPRESSED]    = self::getError(PR_RTF_COMPRESSED, $messageprops);
-        if (!isset($messageprops[PR_HTML]))             $messageprops[PR_HTML]              = self::getError(PR_HTML, $messageprops);
-        if (!isset($messageprops[PR_RTF_IN_SYNC]))      $messageprops[PR_RTF_IN_SYNC]       = self::getError(PR_RTF_IN_SYNC, $messageprops);
+        if (!isset($messageprops[PR_BODY]))             $messageprops[PR_BODY]              = self::GetError(PR_BODY, $messageprops);
+        if (!isset($messageprops[PR_RTF_COMPRESSED]))   $messageprops[PR_RTF_COMPRESSED]    = self::GetError(PR_RTF_COMPRESSED, $messageprops);
+        if (!isset($messageprops[PR_HTML]))             $messageprops[PR_HTML]              = self::GetError(PR_HTML, $messageprops);
+        if (!isset($messageprops[PR_RTF_IN_SYNC]))      $messageprops[PR_RTF_IN_SYNC]       = self::GetError(PR_RTF_IN_SYNC, $messageprops);
 
         if ( // 1
                 ($messageprops[PR_BODY]             == MAPI_E_NOT_FOUND) &&
@@ -544,15 +544,16 @@ class MAPIUtils {
     }
 
     /**
-     * Returns the error code for a given property. Helper for getNativeBodyType function.
+     * Returns the error code for a given property.
+     * Helper for MAPIUtils::GetNativeBodyType() function but also used in other places.
      *
      * @param int               $tag
      * @param array             $messageprops
      *
-     * @access private
+     * @access public
      * @return int (MAPI_ERROR_CODE)
      */
-    private static function getError($tag, $messageprops) {
+    public static function GetError($tag, $messageprops) {
         $prBodyError = mapi_prop_tag(PT_ERROR, mapi_prop_id($tag));
         if(isset($messageprops[$prBodyError]) && mapi_is_error($messageprops[$prBodyError])) {
             if($messageprops[$prBodyError] == MAPI_E_NOT_ENOUGH_MEMORY_32BIT ||

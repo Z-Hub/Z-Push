@@ -748,8 +748,12 @@ class Sync extends RequestProcessor {
                 continue;
             }
 
-            if (! $sc->GetParameter($spa, "requested"))
+            if (! $sc->GetParameter($spa, "requested")) {
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleSync(): partial sync for folder class '%s' with id '%s'", $spa->GetContentClass(), $spa->GetFolderId()));
+                // reload state and initialize StateMachine correctly
+                $sc->AddParameter($spa, "state", null);
+                $status = $this->loadStates($sc, $spa, $actiondata);
+            }
 
             // initialize exporter to get changecount
             $changecount = false;
@@ -769,6 +773,12 @@ class Sync extends RequestProcessor {
                 // if the maximum request timeout is reached, stop processing other collections
                 if (Request::IsRequestTimeoutReached()) {
                     ZLog::Write(LOGLEVEL_DEBUG, sprintf("Sync(): no exporter setup for '%s' as request timeout reached, omitting output for collection.", $spa->GetFolderId()));
+                    $setupExporter = false;
+                }
+
+                // ZP-907: never send changes of UNKNOWN folders to an Outlook client
+                if (Request::IsOutlook() && self::$deviceManager->GetFolderTypeFromCacheById($spa->GetFolderId()) == SYNC_FOLDER_TYPE_UNKNOWN && $spa->HasSyncKey()) {
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("Sync(): no exporter setup for '%s' as type is UNKNOWN.", $spa->GetFolderId()));
                     $setupExporter = false;
                 }
 
