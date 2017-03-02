@@ -142,6 +142,11 @@ function change_charset_and_add_subparts(&$email, $part) {
         $new_part = null;
         if (isset($part->ctype_parameters['charset'])) {
             $part->ctype_parameters['charset'] = 'UTF-8';
+
+            if ( isset($part->body) && strpos($part->body, chr(0x1b).'$B') !== false ) {
+                $part->body = mb_convert_encoding($part->body, "utf-8", "ISO-2022-JP-MS");
+            }
+
             $new_part = add_sub_part($email, $part);
         }
         else {
@@ -231,6 +236,10 @@ function build_mime_message($message) {
                 }
                 break;
         }
+    }
+
+    if ( isset($message->body) && strpos($message->body, chr(0x1b).'$B') !== false ) {
+        $message->body = mb_convert_encoding($message->body, "utf-8", "ISO-2022-JP-MS");
     }
 
     $finalEmail = new Mail_mimePart(isset($message->body) ? $message->body : "", $mimeHeaders);
