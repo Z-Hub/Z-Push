@@ -232,7 +232,7 @@ class PHPWrapper {
      */
     function ImportFolderDeletion($flags, $sourcekeys) {
         foreach ($sourcekeys as $sourcekey) {
-            $this->importer->ImportFolderDeletion(SyncFolder::GetObject(bin2hex($sourcekey)));
+            $this->importer->ImportFolderDeletion(SyncFolder::GetObject(ZPush::GetDeviceManager()->GetFolderIdForBackendId(bin2hex($sourcekey))));
         }
         return 0;
     }
