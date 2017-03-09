@@ -142,7 +142,7 @@ abstract class RequestProcessor {
     /**
      * Returns the amount of seconds RequestProcessor waited e.g. during Ping.
      *
-     * @access pulic
+     * @access public
      * @return int
      */
     public static function GetWaitTime() {

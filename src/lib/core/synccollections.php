@@ -804,7 +804,7 @@ class SyncCollections implements Iterator {
      * regular export to find changes
      *
      * @access public
-     * @return array
+     * @return boolean
      */
     public function WaitedForChanges() {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->WaitedForChanges: waited for %d seconds", $this->waitingTime));
@@ -816,7 +816,7 @@ class SyncCollections implements Iterator {
      * regular export to find changes.
      *
      * @access public
-     * @return array
+     * @return int
      */
     public function GetWaitedSeconds() {
         return $this->waitingTime;
