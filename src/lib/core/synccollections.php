@@ -578,6 +578,9 @@ class SyncCollections implements Iterator {
                 ZPush::GetTopCollector()->AnnounceInformation(sprintf("Sink %d/%ds on %s", ($now-$started), $lifetime, $checkClasses));
                 $notifications = ZPush::GetBackend()->ChangesSink($nextInterval);
 
+                // how long are we waiting for changes
+                $this->waitingTime = time()-$started;
+
                 $validNotifications = false;
                 foreach ($notifications as $backendFolderId) {
                     // Check hierarchy notifications
@@ -806,6 +809,17 @@ class SyncCollections implements Iterator {
     public function WaitedForChanges() {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->WaitedForChanges: waited for %d seconds", $this->waitingTime));
         return ($this->waitingTime > 0);
+    }
+
+    /**
+     * Indicates how many seconds the process did wait in a sink, polling or before running a
+     * regular export to find changes.
+     *
+     * @access public
+     * @return array
+     */
+    public function GetWaitedSeconds() {
+        return $this->waitingTime;
     }
 
     /**

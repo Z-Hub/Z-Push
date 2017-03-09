@@ -242,6 +242,9 @@ class Ping extends RequestProcessor {
 
         self::$encoder->endTag();
 
+        // update the waittime waited
+        self::$waitTime = $sc->GetWaitedSeconds();
+
         return true;
     }
 
