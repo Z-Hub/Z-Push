@@ -95,10 +95,6 @@ class FileLog extends Log {
     protected function Write($loglevel, $message) {
         $data = $this->buildLogString($loglevel, $message) . PHP_EOL;
         @file_put_contents(LOGFILE, $data, FILE_APPEND);
-
-        if (($loglevel & LOGLEVEL_FATAL) || ($loglevel & LOGLEVEL_ERROR)) {
-            @file_put_contents(LOGERRORFILE, $data, FILE_APPEND);
-        }
     }
 
     /**
