@@ -463,10 +463,10 @@ class DeviceManager {
     public function GetKoeGabBackendFolderId() {
         $gabid = false;
         if (KOE_CAPABILITY_GAB) {
-            if (KOE_GAB_FOLDERID != false && KOE_GAB_FOLDERID != '') {
+            if (KOE_GAB_FOLDERID) {
                 $gabid = KOE_GAB_FOLDERID;
             }
-            else if (KOE_GAB_STORE != "" && KOE_GAB_NAME != "") {
+            else if (KOE_GAB_STORE && KOE_GAB_NAME) {
                 $gabid = $this->device->GetKoeGabBackendFolderId();
             }
         }
@@ -534,7 +534,7 @@ class DeviceManager {
      */
     public function GetAdditionalUserSyncFolderStore($folderid) {
         // is this the KOE GAB folder?
-        if ($folderid == $this->GetKoeGabBackendFolderId()) {
+        if ($folderid && $folderid === $this->GetKoeGabBackendFolderId()) {
             return KOE_GAB_STORE;
         }
 
