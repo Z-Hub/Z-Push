@@ -74,6 +74,12 @@ class KopanoChangesWrapper implements IImportChanges, IExportChanges {
      * @return KopanoChangesWrapper | boolean
      */
     static public function GetWrapper($storeName, $session, $store, $folderid, $ownFolder) {
+        // if existing exporter is used by Ping we need to discard it so it's fully reconfigured (ZP-1169)
+        if (isset(self::$wrappers[$storeName][$folderid]) && self::$wrappers[$storeName][$folderid]->hasDiscardDataFlag()) {
+            ZLog::Write(LOGLEVEL_DEBUG, "KopanoChangesWrapper::GetWrapper(): Found existing notification check exporter. Reinitializing.");
+            unset(self::$wrappers[$storeName][$folderid]);
+        }
+
         // check early due to the folderstats
         if (isset(self::$wrappers[$storeName][$folderid])) {
             return self::$wrappers[$storeName][$folderid];
@@ -149,6 +155,21 @@ class KopanoChangesWrapper implements IImportChanges, IExportChanges {
      */
     private function isReplyBackExporter() {
         return $this->current == $this->replyback;
+    }
+
+    /**
+     * Indicates if the current IChanges object is an ICS exporter and has the BACKEND_DISCARD_DATA flag configured.
+     * These are used to verify notifications e.g. in Ping.
+     *
+     * @access private
+     * @return boolean
+     */
+    private function hasDiscardDataFlag() {
+        if (isset($this->current) && $this->current instanceof ExportChangesICS && $this->current->HasDiscardDataFlag()) {
+            return true;
+        }
+
+        return false;
     }
 
     /**
