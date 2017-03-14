@@ -75,7 +75,7 @@ class KopanoChangesWrapper implements IImportChanges, IExportChanges {
      */
     static public function GetWrapper($storeName, $session, $store, $folderid, $ownFolder) {
         // if existing exporter is used by Ping we need to discard it so it's fully reconfigured (ZP-1169)
-        if (isset(self::$wrappers[$storeName][$folderid]) && self::$wrappers[$storeName][$folderid]->HasDiscardDataFlag()) {
+        if (isset(self::$wrappers[$storeName][$folderid]) && self::$wrappers[$storeName][$folderid]->hasDiscardDataFlag()) {
             ZLog::Write(LOGLEVEL_DEBUG, "KopanoChangesWrapper::GetWrapper(): Found existing notification check exporter. Reinitializing.");
             unset(self::$wrappers[$storeName][$folderid]);
         }
@@ -164,7 +164,7 @@ class KopanoChangesWrapper implements IImportChanges, IExportChanges {
      * @access private
      * @return boolean
      */
-    private function HasDiscardDataFlag() {
+    private function hasDiscardDataFlag() {
         if (isset($this->current) && $this->current instanceof ExportChangesICS && $this->current->HasDiscardDataFlag()) {
             return true;
         }
