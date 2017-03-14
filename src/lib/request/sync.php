@@ -911,6 +911,9 @@ class Sync extends RequestProcessor {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleSync: Processed %d folders", $sc->GetCollectionCount()));
         }
 
+        // update the waittime waited
+        self::$waitTime = $sc->GetWaitedSeconds();
+
         return true;
     }
 
