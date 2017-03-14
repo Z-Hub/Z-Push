@@ -131,6 +131,9 @@ class FolderChange extends RequestProcessor {
             // if this is an additional folder the backend has to be setup correctly
             if (!self::$backend->Setup(ZPush::GetAdditionalSyncFolderStore((($parentBackendId != false)?$parentBackendId:$backendid))))
                 throw new StatusException(sprintf("HandleFolderChange() could not Setup() the backend for folder id '%s'", (($parentBackendId != false)?$parentBackendId:$backendid)), SYNC_FSSTATUS_SERVERERROR);
+
+            // reset to default store in backend
+            self::$backend->Setup(false);
         }
         catch (StateNotFoundException $snfex) {
             $status = SYNC_FSSTATUS_SYNCKEYERROR;
