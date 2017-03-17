@@ -143,9 +143,7 @@ function change_charset_and_add_subparts(&$email, $part) {
         if (isset($part->ctype_parameters['charset'])) {
             $part->ctype_parameters['charset'] = 'UTF-8';
 
-            if ( isset($part->body) && strpos($part->body, chr(0x1b).'$B') !== false ) {
-                $part->body = mb_convert_encoding($part->body, "utf-8", "ISO-2022-JP-MS");
-            }
+            Utils::CheckAndFixEncoding($part->body);
 
             $new_part = add_sub_part($email, $part);
         }
@@ -238,9 +236,7 @@ function build_mime_message($message) {
         }
     }
 
-    if ( isset($message->body) && strpos($message->body, chr(0x1b).'$B') !== false ) {
-        $message->body = mb_convert_encoding($message->body, "utf-8", "ISO-2022-JP-MS");
-    }
+    Utils::CheckAndFixEncoding($message->body);
 
     $finalEmail = new Mail_mimePart(isset($message->body) ? $message->body : "", $mimeHeaders);
     unset($mimeHeaders);

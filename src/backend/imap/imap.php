@@ -1030,12 +1030,8 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             $mobj = new Mail_mimeDecode($mail);
             $message = $mobj->decode(array('decode_headers' => true, 'decode_bodies' => true, 'include_bodies' => true, 'rfc_822bodies' => true, 'charset' => 'utf-8'));
 
-            if ( strpos($message->headers["subject"], chr(0x1b).'$B') !== false ) {
-                $message->headers["subject"] = mb_convert_encoding($message->headers["subject"], "utf-8", "ISO-2022-JP-MS");
-            }
-            if ( strpos($message->headers["from"], chr(0x1b).'$B') !== false ) {
-                $message->headers["from"] = mb_convert_encoding($message->headers["from"], "utf-8", "ISO-2022-JP-MS");
-            }
+            Utils::CheckAndFixEncoding($message->headers["subject"]);
+            Utils::CheckAndFixEncoding($message->headers["from"]);
 
             $is_multipart = is_multipart($message);
             $is_smime = is_smime($message);
@@ -1077,9 +1073,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             if (Request::GetProtocolVersion() >= 12.0) {
                 $output->asbody = new SyncBaseBody();
 
-                if ( strpos($textBody, chr(0x1b).'$B') !== false ) {
-                    $textBody = mb_convert_encoding($textBody, "utf-8", "ISO-2022-JP-MS");
-                }
+                Utils::CheckAndFixEncoding($textBody);
 
                 $data = "";
                 switch($bpReturnType) {
