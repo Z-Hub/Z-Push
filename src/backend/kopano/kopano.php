@@ -1743,6 +1743,7 @@ class BackendKopano implements IBackend, ISearchProvider {
                     // Out of office is set but the date is in the past. Set the state to disabled.
                     // @see https://jira.z-hub.io/browse/ZP-1188 for details
                     $oof->oofstate = SYNC_SETTINGSOOF_DISABLED;
+                    @mapi_setprops($this->defaultstore, array(PR_EC_OUTOFOFFICE => false));
                     @mapi_deleteprops($this->defaultstore, array(PR_EC_OUTOFOFFICE_FROM, PR_EC_OUTOFOFFICE_UNTIL));
                     ZLog::Write(LOGLEVEL_INFO, "BackendKopano->settingsOofGet(): Out of office is set but the from and until are in the past. Disabling out of office.");
                 }
