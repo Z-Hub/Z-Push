@@ -1,0 +1,46 @@
+.TH Z-PUSH-TOP 1
+.SH NAME
+z-push-top \(em top-like overview of Z-push
+.SH SYNOPSIS
+.B \fBz-push-top\fP
+.SH DESCRIPTION
+\fBz-push-top\fP is a live top-like overview of what Z-push is doing.
+.SH OPTIONS
+None.
+.SH USAGE
+When \fBz-push-top\fP is running you can specify certain actions and options which can be executed (listed below). This help information can also be shown inside z-push-top by hitting \fBhelp\fP or \fBh\fP.
+.SS h,help
+Displays this information.
+.SS q,quit,:q
+Exits z-push-top.
+.SS w,wide
+Tries not to truncate data. Automatically done if more than 180 columns available.
+.SS f:VAL,filter:VAL
+Only display connections which contain VAL. This value is case-insensitive.
+.SS f:,filter:
+Without a search word: resets the filter.
+.SS l:STR,log:STR
+Issues 'less +G' on the logfile, after grepping on the optional STR.
+.SS t:STR,tail:STR
+Issues 'tail -f' on the logfile, grepping for optional STR.
+.SS e:STR,error:STR
+Issues 'tail -f' on the error logfile, grepping for optional STR.
+.SS r,reset
+Resets 'wide' or 'filter'.
+.SS o:,option:
+Sets display options. Valid options are:
+.TP
+.BI p,push
+Lists/does not list active and open push connections.
+.TP
+.BI a,action
+Lists only active connections.
+.TP
+.BI u,unknown
+Lists only unknown connections.
+.TP
+.BI 10,20
+Lists terminated connections for 10 or 20 seconds. Any other number can be used.
+.TP
+.BI d,default
+Use default display options.
