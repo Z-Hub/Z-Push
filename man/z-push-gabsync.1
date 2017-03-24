@@ -1,0 +1,35 @@
+.TH Z-PUSH-GABSYNC 1
+.SH NAME
+z-push-gabsync \(em synchronize Global Address Book data
+.SH SYNOPSIS
+.B \fBz-push-gabsync\fP \fB\-a\fP \fIsimulate\fP [\fB\-t\fP \fITARGET-GAB\fP]
+.PP
+.B \fBz-push-gabsync\fP \fB\-a\fP \fIsync\fP [\fB\-t\fP \fITARGET-GAB\fP]
+.PP
+.B \fBz-push-gabsync\fP \fB\-a\fP \fIsync-one\fP \fB\-u\fP \fIUNIQUE-ID\fP [\fB\-t\fP \fITARGET-GAB\fP]
+.PP
+.B \fBz-push-gabsync\fP \fB\-a\fP \fIclear-all\fP [\fB\-t\fP \fITARGET-GAB\fP]
+.PP
+.B \fBz-push-gabsync\fP \fB\-a\fP \fIdelete-all\fP [\fB\-t\fP \fITARGET-GAB\fP]
+.PP
+.SH DESCRIPTION
+\fBz-push-gabsync\fP can be used to synchronize Global Address Book (GAB) data
+with clients that use the Kopano Outlook Extension (KOE).
+.SH OPTIONS
+In multi-tenant or hosted environments, multiple GABs exist. To perform an
+action only for a specific tenant, the name of the GAB can be passed with
+the \fB\-t\fP \fITARGET-GAB\fP option.
+.SS simulate
+The \fIsimulate\fP action simulates synchronization of the the Global Address
+Book (GAB) entries, and prints out statistics and configuration suggestions.
+.SS sync-one
+The \fIsync\fP action synchronizes the GAB to an address book in Outlook.
+.SS sync-one
+The \fIsync-one\fP action synchronizes a single GAB entry. The \fB\-u\fP
+\fIUNIQUE-ID\fP option must be used to select which entry to synchronize.
+.SS clear-all
+The \fIclear-all\fP action removes all entries from the synchronized folder in
+Outlook.
+.SS delete-all
+The \fIdelete-all\fP action removes all entries from the synchronized folder
+in Outlook, and also removes the folder itself.
