@@ -33,7 +33,10 @@ extended information about the selected device(s).
 The \fIlastsync\fP action lists all devices and synchronized users and the
 time that the last synchronization took place.
 .SS wipe
-The \fIwipe\fP action
+The \fIwipe\fP action sends the wipe command to the selected device. The
+device decides how to handle this command: some devices only remove the
+account from the device, other devices do a factory reset, or even empty
+the complete storage. Use with caution.
 .SS remove
 The \fIremove\fP action removes state data. When a username is specified
 (\fB\-u\fP \fIUSER\fP), the state data of all devices of that user is removed.
