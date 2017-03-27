@@ -142,6 +142,9 @@ function change_charset_and_add_subparts(&$email, $part) {
         $new_part = null;
         if (isset($part->ctype_parameters['charset'])) {
             $part->ctype_parameters['charset'] = 'UTF-8';
+
+            Utils::CheckAndFixEncoding($part->body);
+
             $new_part = add_sub_part($email, $part);
         }
         else {
@@ -232,6 +235,8 @@ function build_mime_message($message) {
                 break;
         }
     }
+
+    Utils::CheckAndFixEncoding($message->body);
 
     $finalEmail = new Mail_mimePart(isset($message->body) ? $message->body : "", $mimeHeaders);
     unset($mimeHeaders);

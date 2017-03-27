@@ -1030,6 +1030,9 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             $mobj = new Mail_mimeDecode($mail);
             $message = $mobj->decode(array('decode_headers' => true, 'decode_bodies' => true, 'include_bodies' => true, 'rfc_822bodies' => true, 'charset' => 'utf-8'));
 
+            Utils::CheckAndFixEncoding($message->headers["subject"]);
+            Utils::CheckAndFixEncoding($message->headers["from"]);
+
             $is_multipart = is_multipart($message);
             $is_smime = is_smime($message);
             $is_encrypted = $is_smime ? is_encrypted($message) : false;
@@ -1069,6 +1072,8 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
 
             if (Request::GetProtocolVersion() >= 12.0) {
                 $output->asbody = new SyncBaseBody();
+
+                Utils::CheckAndFixEncoding($textBody);
 
                 $data = "";
                 switch($bpReturnType) {
