@@ -375,6 +375,10 @@ install -Dpm 644 config/apache2/z-push.conf \
 install -Dpm 644 config/apache2/z-push-autodiscover.conf \
     "$b/%apache_dir/conf.d/z-push-autodiscover.conf";
 
+# MANPAGES
+mkdir -p "$b/%_mandir/man1"
+cp man/*.1 "$b/%_mandir/man1"
+
 %post -n %name-config-apache
 %if 0%{?suse_version}
     service apache2 reload || true
@@ -437,6 +441,9 @@ install -Dpm 644 config/apache2/z-push-autodiscover.conf \
 
 %_bindir/z-push-admin
 %_bindir/z-push-top
+
+%_mandir/man1/z-push-admin.1*
+%_mandir/man1/z-push-top.1*
 
 # CALDAV
 %files -n %name-backend-caldav
@@ -528,6 +535,7 @@ install -Dpm 644 config/apache2/z-push-autodiscover.conf \
     %config(noreplace) %attr(0640,root,apache) %_sysconfdir/z-push/gabsync.conf.php
 %endif
 %_bindir/z-push-gabsync
+%_mandir/man1/z-push-gabsync.1*
 
 %files -n %name-kopano-gab2contacts
 %defattr(-, root, root)
@@ -541,6 +549,7 @@ install -Dpm 644 config/apache2/z-push-autodiscover.conf \
     %config(noreplace) %attr(0640,root,apache) %_sysconfdir/z-push/gab2contacts.conf.php
 %endif
 %_bindir/z-push-gab2contacts
+%_mandir/man1/z-push-gab2contacts.1*
 
 %files -n %name-kopano
 
