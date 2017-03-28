@@ -1177,16 +1177,17 @@ class BackendCardDAV extends BackendDiff implements ISearchProvider {
             if (Request::GetProtocolVersion() >= 12.0) {
                 $message->asbody = new SyncBaseBody();
                 $message->asbody->type = SYNC_BODYPREFERENCE_PLAIN;
-                $message->asbody->data = $vcard['note'][0]['val'][0];
-                if ($truncsize > 0 && $truncsize < strlen($message->asbody->data)) {
+                $data = $vcard['note'][0]['val'][0];
+                if ($truncsize > 0 && $truncsize < strlen($data)) {
                     $message->asbody->truncated = 1;
-                    $message->asbody->data = Utils::Utf8_truncate($message->asbody->data, $truncsize);
+                    $data = Utils::Utf8_truncate($data, $truncsize);
                 }
                 else {
                     $message->asbody->truncated = 0;
                 }
-
-                $message->asbody->estimatedDataSize = strlen($message->asbody->data);
+                $message->asbody->data = StringStreamWrapper::Open($data);
+                $message->asbody->estimatedDataSize = strlen($data);
+                unset($data);
             }
             else {
                 $message->body = $vcard['note'][0]['val'][0];
@@ -1261,7 +1262,7 @@ class BackendCardDAV extends BackendDiff implements ISearchProvider {
                 $val.=';';
             }
             if ($k == 'body' && isset($message->asbody)) {
-                $val = $message->asbody->data;
+                $val = stream_get_contents($message->asbody->data);
             }
             if (empty($val) || preg_match('/^(\;)+$/', $val) == 1)
                 continue;

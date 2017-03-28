@@ -1175,6 +1175,21 @@ class Utils {
     public static function IsFolderToBeProcessedByKoe($folder) {
         return isset($folder->displayname) && substr($folder->displayname, -3) == hex2bin("e2808b");
     }
+
+    /**
+     * Check if the UTF-8 string has ISO-2022-JP esc seq 
+     * if so, it is ISO-2022-JP, not UTF-8 and convert it into UTF-8
+     * string
+     *
+     * @access public
+     * @param $string
+     * @return $string
+     */
+    public static function CheckAndFixEncoding(&$string) {
+        if ( isset($string) && strpos($string, chr(0x1b).'$B') !== false ) {
+            $string = mb_convert_encoding($string, "utf-8", "ISO-2022-JP-MS");
+        }
+    }
 }
 
 

@@ -1030,6 +1030,9 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             $mobj = new Mail_mimeDecode($mail);
             $message = $mobj->decode(array('decode_headers' => true, 'decode_bodies' => true, 'include_bodies' => true, 'rfc_822bodies' => true, 'charset' => 'utf-8'));
 
+            Utils::CheckAndFixEncoding($message->headers["subject"]);
+            Utils::CheckAndFixEncoding($message->headers["from"]);
+
             $is_multipart = is_multipart($message);
             $is_smime = is_smime($message);
             $is_encrypted = $is_smime ? is_encrypted($message) : false;
@@ -1069,6 +1072,8 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
 
             if (Request::GetProtocolVersion() >= 12.0) {
                 $output->asbody = new SyncBaseBody();
+
+                Utils::CheckAndFixEncoding($textBody);
 
                 $data = "";
                 switch($bpReturnType) {
@@ -2249,6 +2254,18 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             if (is_array($overview)) {
                 if (isset($overview[0]->date)) {
                     $epoch_sent = strtotime($overview[0]->date);
+                    if ( $epoch_sent === false ) {
+                        $pattern1 = '/^(Sun|Mon|Tue|Wed|Thu|Fri|Sat), [0-9]+ (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) [0-9]+ [0-9]+:[0-9]+(:[0-9]+)* [+-]+[0-9]+/';
+                        $pattern2 = '/^(Sun|Mon|Tue|Wed|Thu|Fri|Sat), [0-9]+ (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) [0-9]+ [0-9]+:[0-9]+(:[0-9]+)* /';
+                        if (preg_match($pattern1, $overview[0]->date, $matches) == 1) {
+                            ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->imap_inside_cutoffdate(): date: %s, match: %s", $overview[0]->date, $matches[0]));
+                            $epoch_sent = strtotime($matches[0]);
+                        } else if (preg_match($pattern2, $overview[0]->date, $matches) == 1) {
+                            ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->imap_inside_cutoffdate(): date: %s, match: %s", $overview[0]->date, $matches[0]));
+                            $epoch_sent = strtotime($matches[0].' UTC');
+                        }
+                    }
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->imap_inside_cutoffdate(): cutoffdate: %s, epoch_sent: %s", $cutoffdate, $epoch_sent));
                     $is_inside = ($cutoffdate <= $epoch_sent);
                     ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->imap_inside_cutoffdate(): Message is %s cutoffdate range", ($is_inside ? "INSIDE" : "OUTSIDE")));
                 }
