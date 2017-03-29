@@ -50,7 +50,7 @@ Z-push is an implementation of the ActiveSync protocol which is used 'over-the-a
 Summary:    Z-Push caldav backend
 Group:      Productivity/Networking/Email/Utilities
 Requires:   %name-common = %version
-Requires:   libawl-php
+Requires:   php-awl
 %if "%_repository" == "RHEL_6_PHP_56" || "%_repository" == "RHEL_7_PHP_56"
 Requires:   rh-php56-php-common
 Requires:   rh-php56-php-xml
@@ -91,7 +91,7 @@ Backend for Z-Push, that adds the ability to combine backends.
 Summary:    Z-Push imap backend
 Group:      Productivity/Networking/Email/Utilities
 Requires:   %name-common = %version
-Requires:   libawl-php
+Requires:   php-awl
 %if "%_repository" == "RHEL_6_PHP_56" || "%_repository" == "RHEL_7_PHP_56"
 Requires:   rh-php56-php-imap
 %else
