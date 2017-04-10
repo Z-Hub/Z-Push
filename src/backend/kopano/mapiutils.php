@@ -358,7 +358,6 @@ class MAPIUtils {
      *
      * @param string          $folderid        binary folderid of the message
      * @param MAPIMessage     $mapimessage     the mapi message to be checked
-     * @param long            $timestamp       the lower time limit
      *
      * @access public
      * @return boolean
