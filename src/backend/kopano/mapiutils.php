@@ -353,6 +353,26 @@ class MAPIUtils {
         return false;
     }
 
+    /**
+     * Checks if mapimessage is in a shared folder and private.
+     *
+     * @param string          $folderid        binary folderid of the message
+     * @param MAPIMessage     $mapimessage     the mapi message to be checked
+     * @param long            $timestamp       the lower time limit
+     *
+     * @access public
+     * @return boolean
+     */
+    public static function IsMessageSharedAndPrivate($folderid, $mapimessage) {
+        $sensitivity = mapi_getprops($mapimessage, array(PR_SENSITIVITY));
+        $sharedUser = ZPush::GetAdditionalSyncFolderStore(bin2hex($folderid));
+        if ($sharedUser != false && $sharedUser != 'SYSTEM' && isset($sensitivity[PR_SENSITIVITY]) && $sensitivity[PR_SENSITIVITY] >= SENSITIVITY_PRIVATE) {
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("MAPIUtils->IsMessageSharedAndPrivate(): Message is in shared store '%s' and marked as private", $sharedUser));
+            return true;
+        }
+
+        return false;
+    }
 
     /**
      * Reads data of large properties from a stream
