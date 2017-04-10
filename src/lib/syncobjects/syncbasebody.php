@@ -36,16 +36,23 @@ class SyncBaseBody extends SyncObject {
     function __construct() {
         $mapping = array(
                     SYNC_AIRSYNCBASE_TYPE                               => array (self::STREAMER_VAR        => "type"),
-                    SYNC_AIRSYNCBASE_ESTIMATEDDATASIZE                  => array (self::STREAMER_VAR        => "estimatedDataSize"),
+                    SYNC_AIRSYNCBASE_ESTIMATEDDATASIZE                  => array (self::STREAMER_VAR        => "estimatedDataSize",
+                                                                                  self::STREAMER_PRIVATE    => 0),          // when stripping private we remove the body, so the size needs to be 0
                     SYNC_AIRSYNCBASE_TRUNCATED                          => array (self::STREAMER_VAR        => "truncated"),
                     SYNC_AIRSYNCBASE_DATA                               => array (self::STREAMER_VAR        => "data",
                                                                                   self::STREAMER_TYPE       => self::STREAMER_TYPE_STREAM_ASPLAIN,
-                                                                                  self::STREAMER_RONOTIFY => true),
+                                                                                  self::STREAMER_RONOTIFY   => true,
+                                                                                  self::STREAMER_PRIVATE    => true),       // just remove the body when stripping private
         );
         if(Request::GetProtocolVersion() >= 14.0) {
-            $mapping[SYNC_AIRSYNCBASE_PREVIEW]                          =  array (self::STREAMER_VAR        => "preview");
+            $mapping[SYNC_AIRSYNCBASE_PREVIEW]                          =  array (self::STREAMER_VAR        => "preview",
+                                                                                  self::STREAMER_PRIVATE    => true
+            );
         }
 
         parent::__construct($mapping);
+
+        // Indicates that this SyncObject supports the private flag and stripping of private data.
+        $this->supportsPrivateStripping = true;
     }
 }
