@@ -38,7 +38,7 @@ abstract class RequestProcessor {
     static protected $encoder;
     static protected $userIsAuthenticated;
     static protected $specialHeaders;
-    static protected $waitTime;
+    static protected $waitTime = 0;
 
     /**
      * Authenticates the remote user
