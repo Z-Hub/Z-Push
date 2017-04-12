@@ -27,7 +27,7 @@
 *************************************************/
 
 // config file
-$config_path = stream_resolve_include_path("backend/kopano/config.php");
+$config_path = stream_resolve_include_path("config.php");
 if ($config_path !== false) {
     require_once($config_path);
 }
