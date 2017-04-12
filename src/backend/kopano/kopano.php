@@ -27,7 +27,13 @@
 *************************************************/
 
 // config file
-require_once("backend/kopano/config.php");
+$config_path = stream_resolve_include_path(__DIR__."/config.php");
+if ($config_path !== false) {
+    require_once($config_path);
+}
+else {
+    ZLog::Write(LOGLEVEL_WARN, "Kopano backend config file can not be found");
+}
 
 // include PHP-MAPI classes
 include_once('backend/kopano/mapi/mapi.util.php');
