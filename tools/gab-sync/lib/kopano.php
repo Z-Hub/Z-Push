@@ -345,6 +345,10 @@ class Kopano extends SyncWorker {
                                                             PR_EC_AB_HIDDEN,
                                                             PR_DISPLAY_TYPE_EX
                                                     ));
+        if(!is_array($gabentries)) {
+            $this->Log("Kopano->GetGAB(): GAB data can not be retrieved.");
+            return $data;
+        }
         foreach ($gabentries as $entry) {
             // do not add SYSTEM user to the GAB
             if (strtoupper($entry[PR_DISPLAY_NAME]) == "SYSTEM") {
