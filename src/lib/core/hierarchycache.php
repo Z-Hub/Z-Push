@@ -182,6 +182,21 @@ class HierarchyCache {
     }
 
     /**
+     * Removes internal data from the object, so this data can not be exposed.
+     *
+     * @access public
+     * @return boolean
+     */
+    public function StripData() {
+        unset($this->changed);
+        unset($this->cacheByIdOld);
+        foreach ($this->cacheById as $id => $folder) {
+            $folder->StripData();
+        }
+        return true;
+    }
+
+    /**
      * Returns objects which should be persistent
      * called before serialization
      *
