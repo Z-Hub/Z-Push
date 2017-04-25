@@ -177,12 +177,12 @@ class ASDevice extends StateObject {
    /**
      * Removes internal data from the object, so this data can not be exposed.
      *
-     * @param boolean $noHierarchyCache  (opt) strips the hierarchy cache - default: true
+     * @param boolean $stripHierarchyCache  (opt) strips the hierarchy cache - default: true
      *
      * @access public
      * @return boolean
      */
-    public function StripData($noHierarchyCache = true) {
+    public function StripData($stripHierarchyCache = true) {
         unset($this->changed);
         unset($this->unsetdata);
         unset($this->forceSave);
@@ -202,7 +202,7 @@ class ASDevice extends StateObject {
         }
 
 
-        if (!$noHierarchyCache && $this->hierarchyCache !== false && $this->hierarchyCache instanceof ChangesMemoryWrapper) {
+        if (!$stripHierarchyCache && $this->hierarchyCache !== false && $this->hierarchyCache instanceof ChangesMemoryWrapper) {
             $this->hierarchyCache->StripData();
         }
         else {
