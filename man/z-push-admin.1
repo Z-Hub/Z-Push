@@ -1,0 +1,68 @@
+.TH Z-PUSH-ADMIN 1
+.SH NAME
+z-push-admin \(em device and user administration for Z-push
+.SH SYNOPSIS
+.B \fBz-push-admin\fP \fB\-a\fP \fIlist\fP [\fB\-u\fP \fIUSER\fP | \fB\-d\fP \fIDEVICE\fP]
+.PP
+.B \fBz-push-admin\fP \fB\-a\fP \fIlastsync\fP
+.PP
+.B \fBz-push-admin\fP \fB\-a\fP \fIwipe\fP \fB\-u\fP \fIUSER\fP | \fB\-d\fP \fIDEVICE\fP|\fB\-u\fP \fIUSER\fP \fB\-d\fP \fIDEVICE\fP
+.PP
+.B \fBz-push-admin\fP \fB\-a\fP \fIremove\fP \fB\-u\fP \fIUSER\fP | \fB\-d\fP \fIDEVICE\fP | \fB\-u\fP \fIUSER\fP \fB\-d\fP \fIDEVICE\fP
+.PP
+.B \fBz-push-admin\fP \fB\-a\fP \fIresync\fP \fB\-t\fP \fITYPE\fP | \fB\-t\fP \fITYPE\fP \fB\-u\fP \fIUSER\fP | \fB\-t\fP \fITYPE\fP \fB\-u\fP \fIUSER\fP \fB\-d\fP \fIDEVICE\fP
+.PP
+.B \fBz-push-admin\fP \fB\-a\fP \fIresync\fP \fB\-t\fP \fIFOLDERID\fP \fB\-u\fP \fIUSER\fP
+.PP
+.B \fBz-push-admin\fP \fB\-a\fP \fIresync\fP \fB\-t\fP \fIhierarchy\fP \fB\-u\fP \fIUSER\fP \fB\-d\fP \fIDEVICE\fP
+.PP
+.B \fBz-push-admin\fP \fB\-a\fP \fIclearloop\fP [\fB\-d\fP \fIDEVICE\fP | \fB\-d\fP \fIDEVICE\fP \fB\-u\fP \fIUSER\fP]
+.PP
+.B \fBz-push-admin\fP \fB\-a\fP \fIfixstates\fP
+.SH DESCRIPTION
+\fBz-push-admin\fP can be used to manage the users and devices that sync their
+email, contacts and calendar items with Z-push.
+.SH OPTIONS
+.SS list
+The \fIlist\fP action lists synchronized devices. When no extra options are
+given, the command returns a listing of all synchronized devices. If the
+selection is narrowed by specifying a username (\fB\-u\fP \fIUSER\fP) or
+a device id (\fB\-d\fP \fIDEVICE\fP) or both, the command lists
+extended information about the selected device(s).
+.SS lastsync
+The \fIlastsync\fP action lists all devices and synchronized users and the
+time that the last synchronization took place.
+.SS wipe
+The \fIwipe\fP action sends the wipe command to the selected device. The
+device decides how to handle this command: some devices only remove the
+account from the device, other devices do a factory reset, or even empty
+the complete storage. Use with caution.
+.SS remove
+The \fIremove\fP action removes state data. When a username is specified
+(\fB\-u\fP \fIUSER\fP), the state data of all devices of that user is removed.
+When a device id is specified (\fB\-d\fP \fIDEVICE\fP), the state data of all
+users for that device is removed. When both are specified, the state data is
+removed for a specific user on a specific device.
+.SS resync
+The \fIresync\fP action triggers a resynchronization of specific data. With
+the options, it is possible to select which data exactly is synchronized.
+When a username (\fB\-u\fP \fIUSER\fP) and device id (\fB\-d\fP \fIDEVICE\fP)
+are specified, all data of this user on this device is resynchronized. By
+specifying a folder type (\fB\-t\fP \fITYPE\fP), only folders of this type are
+synchronized. Valid types are \fBemail\fP, \fBcalendar\fP, \fBcontact\fP,
+\fBtask\fP, \fBnote\fP and \fBgab\fP.
+
+The \fB\-t\fP option can also be used to specify a folder id to resynchronize
+only a specific folder, or \fBhierarchy\fP to resynchronize the folder list.
+.SS clearloop
+The \fIclearloop\fP action clears the loop detection data, either for all
+users and devices, or (with \fB\-d\fP \fIDEVICE\fP and \fB\-u\fP \fIUSER\fP)
+for a specific user on a specific device.
+Loop detection is Z-push's automatic mechanism for avoiding problems where a
+device requests the same item over and over again. With the clearloop action
+this mechanism is reset.
+.SS fixstates
+The \fIfixstates\fP action checks the state of all users and devices and fixes
+potential problems.
+.SH SEE ALSO
+https://wiki.z-hub.io/display/ZP/Tools:+z-push-admin

@@ -28,9 +28,6 @@
 
 require_once 'vendor/autoload.php';
 
-if (!defined('ZPUSH_CONFIG')) define('ZPUSH_CONFIG', 'config.php');
-include_once(ZPUSH_CONFIG);
-
 /**
  * //TODO resync of single folders of a users device
  */
@@ -40,6 +37,10 @@ include_once(ZPUSH_CONFIG);
  */
     define('BASE_PATH_CLI',  dirname(__FILE__) ."/");
     set_include_path(get_include_path() . PATH_SEPARATOR . BASE_PATH_CLI);
+
+    if (!defined('ZPUSH_CONFIG')) define('ZPUSH_CONFIG', BASE_PATH_CLI . 'config.php');
+    include_once(ZPUSH_CONFIG);
+
     try {
         ZPush::CheckConfig();
         ZPushAdminCLI::CheckEnv();
@@ -744,6 +745,7 @@ class ZPushAdminCLI {
      * @access private
      */
     static private function printDeviceData($deviceId, $user) {
+        global $additionalFolders;
         $device = ZPushAdmin::GetDeviceDetails($deviceId, $user);
 
         if (! $device instanceof ASDevice) {
@@ -765,7 +767,7 @@ class ZPushAdminCLI {
                 switch($type) {
                     case SYNC_FOLDER_TYPE_APPOINTMENT:
                     case SYNC_FOLDER_TYPE_USER_APPOINTMENT:
-                        if (KOE_GAB_NAME != "" && $name == KOE_GAB_NAME) {
+                        if ($name == KOE_GAB_NAME) {
                             $gentype = "GAB";
                         }
                         else {
@@ -808,6 +810,46 @@ class ZPushAdminCLI {
             $folderinfo .= " ";
         }
         if (!$folderinfo) $folderinfo = "None available";
+
+        // additional folders
+        $addFolders = array();
+        $sharedFolders = $device->GetAdditionalFolders();
+        array_walk($sharedFolders, function (&$key) { $key["origin"] = 'Shared'; });
+        // $additionalFolders comes directly from the config
+        array_walk($additionalFolders, function (&$key) { $key["origin"] = 'Configured'; });
+        foreach(array_merge($additionalFolders,$sharedFolders) as $df) {
+            $df['additional'] = '';
+            $syncfolderid = $device->GetFolderIdForBackendId($df['folderid'], false, false, null);
+            switch($df['type']) {
+                case SYNC_FOLDER_TYPE_USER_APPOINTMENT:
+                    if ($name == KOE_GAB_NAME) {
+                        $gentype = "GAB";
+                    }
+                    else {
+                        $gentype = "Calendar";
+                    }
+                    break;
+                case SYNC_FOLDER_TYPE_USER_CONTACT:
+                    $gentype = "Contact";
+                    break;
+                case SYNC_FOLDER_TYPE_USER_TASK:
+                    $gentype = "Task";
+                    break;
+                case SYNC_FOLDER_TYPE_USER_NOTE:
+                    $gentype = "Note";
+                    break;
+                default:
+                    $gentype = "Email";
+                    break;
+            }
+            if ($device->GetFolderType($syncfolderid) == SYNC_FOLDER_TYPE_UNKNOWN) {
+                $df['additional'] = "(KOE patching incomplete)";
+            }
+            $df['type'] = $gentype;
+            $df['synched'] = ($device->GetFolderUUID($syncfolderid)) ? 'Active' : 'Inactive (not yet synchronized or no permissions)';
+            $addFolders[] = $df;
+        }
+        $addFoldersTotal = !empty($addFolders) ? count($addFolders) : 'none';
 
         echo "-----------------------------------------------------\n";
         echo "DeviceId:\t\t$deviceId\n";
@@ -860,6 +902,16 @@ class ZPushAdminCLI {
                 }
             }
         }
+        echo "Additional Folders:\t$addFoldersTotal\n";
+        foreach ($addFolders as $folder) {
+            if (strlen($folder['store']) > 14) {
+                $folder['store'] = substr($folder['store'], 0, 12) . "..";
+            }
+            if (strlen($folder['name']) > 20) {
+                $folder['name'] = substr($folder['name'], 0, 18) . "..";
+            }
+            printf("\t%s %s %s %s %s %s\n", str_pad($folder['origin'], 10), str_pad($folder['type'], 8), str_pad($folder['store'], 14), str_pad($folder['name'], 20), $folder['synched'], $folder['additional']);
+        }
         echo "Status:\t\t\t";
         switch ($device->GetWipeStatus()) {
             case SYNC_PROVISION_RWSTATUS_OK:
@@ -889,6 +941,7 @@ class ZPushAdminCLI {
             echo "\tVersion:\t". $device->GetKoeVersion() ."\n";
             echo "\tBuild:\t\t". $device->GetKoeBuild() ."\n";
             echo "\tBuild Date:\t". strftime("%Y-%m-%d %H:%M",$device->GetKoeBuildDate()) ."\n";
+            echo "\tCapabilities:\t". (count($device->GetKoeCapabilities()) ? implode(',', $device->GetKoeCapabilities()) : 'unknown') ."\n";
         }
 
         echo "Attention needed:\t";

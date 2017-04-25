@@ -147,7 +147,7 @@ class ZPush {
                                         self::CLASS_NAME => "SyncContact",
                                         self::CLASS_REQUIRESPROTOCOLVERSION => true,
                                         self::CLASS_DEFAULTTYPE => SYNC_FOLDER_TYPE_CONTACT,
-                                        self::CLASS_OTHERTYPES => array(SYNC_FOLDER_TYPE_USER_CONTACT),
+                                        self::CLASS_OTHERTYPES => array(SYNC_FOLDER_TYPE_USER_CONTACT, SYNC_FOLDER_TYPE_UNKNOWN),
                                    ),
                     "Calendar"  => array(
                                         self::CLASS_NAME => "SyncAppointment",
@@ -370,9 +370,7 @@ class ZPush {
         if (isset($additionalFolders) && !is_array($additionalFolders))
             ZLog::Write(LOGLEVEL_ERROR, "ZPush::CheckConfig() : The additional folders synchronization not available as array.");
         else {
-            self::$addSyncFolders = array();
-
-            // process configured data
+            // check configured data
             foreach ($additionalFolders as $af) {
 
                 if (!is_array($af) || !isset($af['store']) || !isset($af['folderid']) || !isset($af['name']) || !isset($af['type'])) {
@@ -389,21 +387,8 @@ class ZPush {
                     ZLog::Write(LOGLEVEL_ERROR, sprintf("ZPush::CheckConfig() : the type of the additional synchronization folder '%s is not permitted.", $af['name']));
                     continue;
                 }
-
-                $folder = new SyncFolder();
-
-                $folder->BackendId = $af['folderid'];
-                $folder->serverid = ZPush::GetDeviceManager(true)->GetFolderIdForBackendId($folder->BackendId, true, DeviceManager::FLD_ORIGIN_CONFIG, $af['name']);
-                $folder->parentid = 0;                  // only top folders are supported
-                $folder->displayname = $af['name'];
-                $folder->type = $af['type'];
-                // save store as custom property which is not streamed directly to the device
-                $folder->NoBackendFolder = true;
-                $folder->Store = $af['store'];
-
-                self::$addSyncFolders[$folder->BackendId] = $folder;
+                // the data will be inizialized when used via self::getAddFolders()
             }
-
         }
 
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("Used timezone '%s'", date_default_timezone_get()));
@@ -605,7 +590,7 @@ class ZPush {
     static public function GetAdditionalSyncFolders($backendIdsAsKeys = true) {
         // get user based folders which should be synchronized
         $userFolder = self::GetDeviceManager()->GetAdditionalUserSyncFolders();
-        $addfolders = self::$addSyncFolders + $userFolder;
+        $addfolders = self::getAddSyncFolders() + $userFolder;
         // if requested, we rewrite the backendids to folderids here
         if ($backendIdsAsKeys === false && !empty($addfolders)) {
             ZLog::Write(LOGLEVEL_DEBUG, "ZPush::GetAdditionalSyncFolders(): Requested AS folderids as keys for additional folders array, converting");
@@ -630,8 +615,8 @@ class ZPush {
      * @return string
      */
     static public function GetAdditionalSyncFolderStore($backendid, $noDebug = false) {
-        if(isset(self::$addSyncFolders[$backendid]->Store)) {
-            $val = self::$addSyncFolders[$backendid]->Store;
+        if(isset(self::getAddSyncFolders()[$backendid]->Store)) {
+            $val = self::getAddSyncFolders()[$backendid]->Store;
         }
         else {
             $val = self::GetDeviceManager()->GetAdditionalUserSyncFolderStore($backendid);
@@ -660,6 +645,46 @@ class ZPush {
             return new $class(Request::GetProtocolVersion());
         else
             return new $class();
+    }
+
+    /**
+     * Initializes the SyncObjects for additional folders on demand.
+     * Uses DeviceManager->BuildSyncFolderObject() to do patching required for ZP-907.
+     *
+     * @access private
+     * @return array
+     */
+    static private function getAddSyncFolders() {
+        global $additionalFolders;
+        if (!isset(self::$addSyncFolders)) {
+            self::$addSyncFolders = array();
+
+            if (isset($additionalFolders) && !is_array($additionalFolders)) {
+                ZLog::Write(LOGLEVEL_ERROR, "ZPush::getAddSyncFolders() : The additional folders synchronization not available as array.");
+            }
+            else {
+                foreach ($additionalFolders as $af) {
+                    if (!is_array($af) || !isset($af['store']) || !isset($af['folderid']) || !isset($af['name']) || !isset($af['type'])) {
+                        ZLog::Write(LOGLEVEL_ERROR, "ZPush::getAddSyncFolders() : the additional folder synchronization is not configured correctly. Missing parameters. Entry will be ignored.");
+                        continue;
+                    }
+
+                    if ($af['store'] == "" || $af['folderid'] == "" || $af['name'] == "" || $af['type'] == "") {
+                        ZLog::Write(LOGLEVEL_WARN, "ZPush::getAddSyncFolders() : the additional folder synchronization is not configured correctly. Empty parameters. Entry will be ignored.");
+                        continue;
+                    }
+
+                    if (!in_array($af['type'], array(SYNC_FOLDER_TYPE_USER_NOTE, SYNC_FOLDER_TYPE_USER_CONTACT, SYNC_FOLDER_TYPE_USER_APPOINTMENT, SYNC_FOLDER_TYPE_USER_TASK, SYNC_FOLDER_TYPE_USER_MAIL))) {
+                        ZLog::Write(LOGLEVEL_ERROR, sprintf("ZPush::getAddSyncFolders() : the type of the additional synchronization folder '%s is not permitted.", $af['name']));
+                        continue;
+                    }
+
+                    $folder = self::GetDeviceManager()->BuildSyncFolderObject($af['store'], $af['folderid'], '0', $af['name'], $af['type'], 0, DeviceManager::FLD_ORIGIN_CONFIG);
+                    self::$addSyncFolders[$folder->BackendId] = $folder;
+                }
+            }
+        }
+        return self::$addSyncFolders;
     }
 
     /**

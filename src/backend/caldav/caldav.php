@@ -704,15 +704,18 @@ class BackendCalDAV extends BackendDiff {
                 case "DESCRIPTION":
                     if (Request::GetProtocolVersion() >= 12.0) {
                         $message->asbody = new SyncBaseBody();
-                        $message->asbody->data = str_replace("\n","\r\n", str_replace("\r","",Utils::ConvertHtmlToText($property->Value())));
+                        $data = str_replace("\n","\r\n", str_replace("\r","",Utils::ConvertHtmlToText($property->Value())));
                         // truncate body, if requested
-                        if (strlen($message->asbody->data) > $truncsize) {
+                        if (strlen($data) > $truncsize) {
                             $message->asbody->truncated = 1;
-                            $message->asbody->data = Utils::Utf8_truncate($message->asbody->data, $truncsize);
+                            $data = Utils::Utf8_truncate($data, $truncsize);
                         }
                         else {
                             $message->asbody->truncated = 0;
                         }
+                        $message->asbody->data = StringStreamWrapper::Open($data);
+                        $message->asbody->estimatedDataSize = strlen($data);
+                        unset($data);
                         $message->nativebodytype = SYNC_BODYPREFERENCE_PLAIN;
                     }
                     else {
@@ -1067,7 +1070,7 @@ class BackendCalDAV extends BackendDiff {
             $vevent->AddProperty("DESCRIPTION", $data->body);
         }
         if (isset($data->asbody->data)) {
-            $vevent->AddProperty("DESCRIPTION", $data->asbody->data);
+            $vevent->AddProperty("DESCRIPTION", stream_get_contents($data->asbody->data));
         }
         if (isset($data->categories) && is_array($data->categories)) {
             $vevent->AddProperty("CATEGORIES", implode(",", $data->categories));
@@ -1336,13 +1339,13 @@ class BackendCalDAV extends BackendDiff {
         if (isset($data->asbody->data)) {
             if (isset($data->nativebodytype) && $data->nativebodytype == SYNC_BODYPREFERENCE_RTF) {
                 $rtfparser = new rtf();
-                $rtfparser->loadrtf(base64_decode($data->asbody->data));
+                $rtfparser->loadrtf(base64_decode(stream_get_contents($data->asbody->data)));
                 $rtfparser->output("ascii");
                 $rtfparser->parse();
                 $vtodo->AddProperty("DESCRIPTION", $rtfparser->out);
             }
             else {
-                $vtodo->AddProperty("DESCRIPTION", $data->asbody->data);
+                $vtodo->AddProperty("DESCRIPTION", stream_get_contents($data->asbody->data));
             }
         }
         if (isset($data->complete)) {

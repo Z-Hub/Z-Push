@@ -30,6 +30,8 @@ class MAPIProvider {
     private $addressbook;
     private $storeProps;
     private $inboxProps;
+    private $rootProps;
+    private $specialFoldersData;
 
     /**
      * Constructor of the MAPI Provider
@@ -73,7 +75,7 @@ class MAPIProvider {
             return $this->getContact($mapimessage, $contentparameters);
         else if(strpos($messageclass,"IPM.Appointment") === 0)
             return $this->getAppointment($mapimessage, $contentparameters);
-        else if(strpos($messageclass,"IPM.Task") === 0)
+        else if(strpos($messageclass,"IPM.Task") === 0 && strpos($messageclass, "IPM.TaskRequest") === false)
             return $this->getTask($mapimessage, $contentparameters);
         else if(strpos($messageclass,"IPM.StickyNote") === 0)
             return $this->getNote($mapimessage, $contentparameters);
@@ -226,7 +228,7 @@ class MAPIProvider {
         // Do attendees
         $reciptable = mapi_message_getrecipienttable($mapimessage);
         // Only get first 256 recipients, to prevent possible load issues.
-        $rows = mapi_table_queryrows($reciptable, array(PR_DISPLAY_NAME, PR_EMAIL_ADDRESS, PR_SMTP_ADDRESS, PR_ADDRTYPE, PR_RECIPIENT_TRACKSTATUS, PR_RECIPIENT_TYPE), 0, 256);
+        $rows = mapi_table_queryrows($reciptable, array(PR_DISPLAY_NAME, PR_EMAIL_ADDRESS, PR_SMTP_ADDRESS, PR_ADDRTYPE, PR_RECIPIENT_TRACKSTATUS, PR_RECIPIENT_TYPE, PR_SEARCH_KEY), 0, 256);
 
         // Exception: we do not synchronize appointments with more than 250 attendees
         if (count($rows) > 250) {
@@ -256,14 +258,20 @@ class MAPIProvider {
                     if (is_array($userinfo) && isset($userinfo["emailaddress"])) {
                         $attendee->email = w2u($userinfo["emailaddress"]);
                     }
-                    else
+                    // if the user was not found, do a fallback to PR_SEARCH_KEY
+                    // @see https://jira.z-hub.io/browse/ZP-1178
+                    elseif (isset($row[PR_SEARCH_KEY])) {
+                        $attendee->email = w2u($this->getEmailAddressFromSearchKey($row[PR_SEARCH_KEY]));
+                    }
+                    else {
                         ZLog::Write(LOGLEVEL_WARN, sprintf("MAPIProvider->getAppointment: The attendee '%s' of type ZARAFA can not be resolved. Code: 0x%X", $row[PR_EMAIL_ADDRESS], mapi_last_hresult()));
+                    }
                 }
             }
 
             //set attendee's status and type if they're available and if we are the organizer
             $storeprops = $this->GetStoreProps();
-            if (isset($row[PR_RECIPIENT_TRACKSTATUS]) && $messageprops[$appointmentprops["representingentryid"]] == $storeprops[PR_MAILBOX_OWNER_ENTRYID])
+            if (isset($row[PR_RECIPIENT_TRACKSTATUS]) && isset($messageprops[$appointmentprops["representingentryid"]]) && $messageprops[$appointmentprops["representingentryid"]] == $storeprops[PR_MAILBOX_OWNER_ENTRYID])
                 $attendee->attendeestatus = $row[PR_RECIPIENT_TRACKSTATUS];
             if (isset($row[PR_RECIPIENT_TYPE]))
                 $attendee->attendeetype = $row[PR_RECIPIENT_TYPE];
@@ -313,10 +321,10 @@ class MAPIProvider {
         }
 
         if (!isset($message->nativebodytype)) {
-            $message->nativebodytype = $this->getNativeBodyType($messageprops);
+            $message->nativebodytype = MAPIUtils::GetNativeBodyType($messageprops);
         }
         elseif ($message->nativebodytype == SYNC_BODYPREFERENCE_UNDEFINED) {
-            $nbt = $this->getNativeBodyType($messageprops);
+            $nbt = MAPIUtils::GetNativeBodyType($messageprops);
             ZLog::Write(LOGLEVEL_INFO, sprintf("MAPIProvider->getAppointment(): native body type is undefined. Set it to %d.", $nbt));
             $message->nativebodytype = $nbt;
         }
@@ -814,7 +822,7 @@ class MAPIProvider {
         $message->cc = array();
 
         $reciptable = mapi_message_getrecipienttable($mapimessage);
-        $rows = mapi_table_queryallrows($reciptable, array(PR_RECIPIENT_TYPE, PR_DISPLAY_NAME, PR_ADDRTYPE, PR_EMAIL_ADDRESS, PR_SMTP_ADDRESS, PR_ENTRYID));
+        $rows = mapi_table_queryallrows($reciptable, array(PR_RECIPIENT_TYPE, PR_DISPLAY_NAME, PR_ADDRTYPE, PR_EMAIL_ADDRESS, PR_SMTP_ADDRESS, PR_ENTRYID, PR_SEARCH_KEY));
 
         foreach ($rows as $row) {
             $address = "";
@@ -828,6 +836,12 @@ class MAPIProvider {
                 $address = $row[PR_EMAIL_ADDRESS];
             elseif ($addrtype == "ZARAFA" && isset($row[PR_ENTRYID]))
                 $address = $this->getSMTPAddressFromEntryID($row[PR_ENTRYID]);
+
+            // if the user was not found, do a fallback to PR_SEARCH_KEY
+            // @see https://jira.z-hub.io/browse/ZP-1178
+            if (empty($address) && isset($row[PR_SEARCH_KEY])) {
+                $address = $this->getEmailAddressFromSearchKey($row[PR_SEARCH_KEY]);
+            }
 
             $name = isset($row[PR_DISPLAY_NAME]) ? $row[PR_DISPLAY_NAME] : "";
 
@@ -856,11 +870,19 @@ class MAPIProvider {
         if (!isset($message->importance))
             $message->importance = IMPORTANCE_NORMAL;
 
-        //TODO contentclass and nativebodytype and internetcpid
         if (!isset($message->internetcpid)) $message->internetcpid = (defined('STORE_INTERNET_CPID')) ? constant('STORE_INTERNET_CPID') : INTERNET_CPID_WINDOWS1252;
         $this->setFlag($mapimessage, $message);
+        //TODO checkcontentclass
         if (!isset($message->contentclass)) $message->contentclass = DEFAULT_EMAIL_CONTENTCLASS;
-        if (!isset($message->nativebodytype)) $message->nativebodytype = $this->getNativeBodyType($messageprops);
+
+        if (!isset($message->nativebodytype)) {
+            $message->nativebodytype = MAPIUtils::GetNativeBodyType($messageprops);
+        }
+        elseif ($message->nativebodytype == SYNC_BODYPREFERENCE_UNDEFINED) {
+            $nbt = MAPIUtils::GetNativeBodyType($messageprops);
+            ZLog::Write(LOGLEVEL_INFO, sprintf("MAPIProvider->getEmail(): native body type is undefined. Set it to %d.", $nbt));
+            $message->nativebodytype = $nbt;
+        }
 
         // reply, reply to all, forward flags
         if (isset($message->lastverbexecuted) && $message->lastverbexecuted) {
@@ -928,20 +950,11 @@ class MAPIProvider {
             return false;
         }
 
-        // ignore certain undesired folders, like "RSS Feeds"
-        if (isset($folderprops[PR_CONTAINER_CLASS]) && $folderprops[PR_CONTAINER_CLASS] == "IPF.Note.OutlookHomepage") {
+        // ignore certain undesired folders, like "RSS Feeds" and "Suggested contacts"
+        if ((isset($folderprops[PR_CONTAINER_CLASS]) && $folderprops[PR_CONTAINER_CLASS] == "IPF.Note.OutlookHomepage")
+                || in_array($folderprops[PR_ENTRYID], $this->getSpecialFoldersData())) {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("MAPIProvider->GetFolder(): folder '%s' should not be synchronized", $folderprops[PR_DISPLAY_NAME]));
             return false;
-        }
-
-        // ignore suggested contacts folder
-        if (isset($folderprops[PR_CONTAINER_CLASS]) && $folderprops[PR_CONTAINER_CLASS] == "IPF.Contact" && isset($folderprops[PR_EXTENDED_FOLDER_FLAGS])) {
-            // the PR_EXTENDED_FOLDER_FLAGS is a binary value which consists of subproperties. 070403000000 indicates a suggested contacts folder
-            $extendedFlags = bin2hex($folderprops[PR_EXTENDED_FOLDER_FLAGS]);
-            if (substr_count($extendedFlags, "070403000000") > 0) {
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("MAPIProvider->GetFolder(): folder '%s' should not be synchronized", $folderprops[PR_DISPLAY_NAME]));
-                return false;
-            }
         }
 
         $folder->BackendId = bin2hex($folderprops[PR_SOURCE_KEY]);
@@ -1031,7 +1044,7 @@ class MAPIProvider {
         if(!mapi_last_hresult())
             $inboxProps = mapi_getprops($inbox, array(PR_ENTRYID));
 
-        $root = mapi_msgstore_openentry($this->store, null);
+        $root = mapi_msgstore_openentry($this->store, null); // TODO use getRootProps()
         $rootProps = mapi_getprops($root, array(PR_IPM_APPOINTMENT_ENTRYID, PR_IPM_CONTACT_ENTRYID, PR_IPM_DRAFTS_ENTRYID, PR_IPM_JOURNAL_ENTRYID, PR_IPM_NOTE_ENTRYID, PR_IPM_TASK_ENTRYID, PR_ADDITIONAL_REN_ENTRYIDS));
 
         $additional_ren_entryids = array();
@@ -2591,6 +2604,17 @@ class MAPIProvider {
             $bpo = $contentparameters->BodyPreference($bpReturnType);
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("bpo: truncation size:'%d', allornone:'%d', preview:'%d'", $bpo->GetTruncationSize(), $bpo->GetAllOrNone(), $bpo->GetPreview()));
 
+            // Android Blackberry expects a full mime message for signed emails
+            // @see https://jira.z-hub.io/projects/ZP/issues/ZP-1154
+            // @TODO change this when refactoring
+            $props = mapi_getprops($mapimessage, array(PR_MESSAGE_CLASS));
+            if (isset($props[PR_MESSAGE_CLASS]) &&
+                    stripos($props[PR_MESSAGE_CLASS], 'IPM.Note.SMIME.MultipartSigned') !== false &&
+                    ($key = array_search(SYNC_BODYPREFERENCE_MIME, $bpTypes) !== false)) {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("MAPIProvider->setMessageBody(): enforcing SYNC_BODYPREFERENCE_MIME type for a signed message"));
+                $bpReturnType = SYNC_BODYPREFERENCE_MIME;
+            }
+
             $this->setMessageBodyForType($mapimessage, $bpReturnType, $message);
             //only set the truncation size data if device set it in request
             if (    $bpo->GetTruncationSize() != false &&
@@ -2633,107 +2657,6 @@ class MAPIProvider {
                 $this->imtoinet($mapimessage, $message);
             }
         }
-    }
-
-    /**
-     * Calculates the native body type of a message using available properties. Refer to oxbbody.
-     *
-     * @param array             $messageprops
-     *
-     * @access private
-     * @return int
-     */
-    private function getNativeBodyType($messageprops) {
-        //check if the properties are set and get the error code if needed
-        if (!isset($messageprops[PR_BODY]))             $messageprops[PR_BODY]              = $this->getError(PR_BODY, $messageprops);
-        if (!isset($messageprops[PR_RTF_COMPRESSED]))   $messageprops[PR_RTF_COMPRESSED]    = $this->getError(PR_RTF_COMPRESSED, $messageprops);
-        if (!isset($messageprops[PR_HTML]))             $messageprops[PR_HTML]              = $this->getError(PR_HTML, $messageprops);
-        if (!isset($messageprops[PR_RTF_IN_SYNC]))      $messageprops[PR_RTF_IN_SYNC]       = $this->getError(PR_RTF_IN_SYNC, $messageprops);
-
-        if ( // 1
-            ($messageprops[PR_BODY]             == MAPI_E_NOT_FOUND) &&
-            ($messageprops[PR_RTF_COMPRESSED]   == MAPI_E_NOT_FOUND) &&
-            ($messageprops[PR_HTML]             == MAPI_E_NOT_FOUND))
-            return SYNC_BODYPREFERENCE_PLAIN;
-        elseif ( // 2
-            ($messageprops[PR_BODY]             == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_RTF_COMPRESSED]   == MAPI_E_NOT_FOUND) &&
-            ($messageprops[PR_HTML]             == MAPI_E_NOT_FOUND))
-            return SYNC_BODYPREFERENCE_PLAIN;
-        elseif ( // 3
-            ($messageprops[PR_BODY]             == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_RTF_COMPRESSED]   == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_HTML]             == MAPI_E_NOT_FOUND))
-            return SYNC_BODYPREFERENCE_RTF;
-        elseif ( // 4
-            ($messageprops[PR_BODY]             == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_RTF_COMPRESSED]   == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_HTML]             == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_RTF_IN_SYNC]))
-            return SYNC_BODYPREFERENCE_RTF;
-        elseif ( // 5
-            ($messageprops[PR_BODY]             == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_RTF_COMPRESSED]   == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_HTML]             == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            (!$messageprops[PR_RTF_IN_SYNC]))
-            return SYNC_BODYPREFERENCE_HTML;
-        elseif ( // 6
-            ($messageprops[PR_RTF_COMPRESSED]   != MAPI_E_NOT_FOUND   || $messageprops[PR_RTF_COMPRESSED]  == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_HTML]             != MAPI_E_NOT_FOUND   || $messageprops[PR_HTML]            == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_RTF_IN_SYNC]))
-            return SYNC_BODYPREFERENCE_RTF;
-        elseif ( // 7
-            ($messageprops[PR_RTF_COMPRESSED]   != MAPI_E_NOT_FOUND   || $messageprops[PR_RTF_COMPRESSED]  == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_HTML]             != MAPI_E_NOT_FOUND   || $messageprops[PR_HTML]            == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            (!$messageprops[PR_RTF_IN_SYNC]))
-            return SYNC_BODYPREFERENCE_HTML;
-        elseif ( // 8
-            ($messageprops[PR_BODY]             != MAPI_E_NOT_FOUND   || $messageprops[PR_BODY]            == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_RTF_COMPRESSED]   != MAPI_E_NOT_FOUND   || $messageprops[PR_RTF_COMPRESSED]  == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_RTF_IN_SYNC]))
-            return SYNC_BODYPREFERENCE_RTF;
-        elseif ( // 9.1
-            ($messageprops[PR_BODY]             != MAPI_E_NOT_FOUND   || $messageprops[PR_BODY]            == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_RTF_COMPRESSED]   != MAPI_E_NOT_FOUND   || $messageprops[PR_RTF_COMPRESSED]  == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            (!$messageprops[PR_RTF_IN_SYNC]))
-            return SYNC_BODYPREFERENCE_PLAIN;
-        elseif ( // 9.2
-            ($messageprops[PR_RTF_COMPRESSED]   != MAPI_E_NOT_FOUND   || $messageprops[PR_RTF_COMPRESSED]  == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_BODY]             == MAPI_E_NOT_FOUND) &&
-            ($messageprops[PR_HTML]             == MAPI_E_NOT_FOUND))
-            return SYNC_BODYPREFERENCE_RTF;
-        elseif ( // 9.3
-            ($messageprops[PR_BODY]             != MAPI_E_NOT_FOUND   || $messageprops[PR_BODY]            == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_RTF_COMPRESSED]   == MAPI_E_NOT_FOUND) &&
-            ($messageprops[PR_HTML]             == MAPI_E_NOT_FOUND))
-            return SYNC_BODYPREFERENCE_PLAIN;
-        elseif ( // 9.4
-            ($messageprops[PR_HTML]             != MAPI_E_NOT_FOUND   || $messageprops[PR_HTML]            == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_BODY]             == MAPI_E_NOT_FOUND) &&
-            ($messageprops[PR_RTF_COMPRESSED]   == MAPI_E_NOT_FOUND))
-            return SYNC_BODYPREFERENCE_HTML;
-        else // 10
-            return SYNC_BODYPREFERENCE_PLAIN;
-    }
-
-    /**
-     * Returns the error code for a given property. Helper for getNativeBodyType function.
-     *
-     * @param int               $tag
-     * @param array             $messageprops
-     *
-     * @access private
-     * @return int (MAPI_ERROR_CODE)
-     */
-    private function getError($tag, $messageprops) {
-        $prBodyError = mapi_prop_tag(PT_ERROR, mapi_prop_id($tag));
-        if(isset($messageprops[$prBodyError]) && mapi_is_error($messageprops[$prBodyError])) {
-            if($messageprops[$prBodyError] == MAPI_E_NOT_ENOUGH_MEMORY_32BIT ||
-                 $messageprops[$prBodyError] == MAPI_E_NOT_ENOUGH_MEMORY_64BIT) {
-                    return MAPI_E_NOT_ENOUGH_MEMORY;
-            }
-        }
-            return MAPI_E_NOT_FOUND;
     }
 
     /**
@@ -2869,6 +2792,78 @@ class MAPIProvider {
             }
         }
         return $this->inboxProps;
+    }
+
+    /**
+     * Gets the required store root properties.
+     *
+     * @access private
+     * @return array
+     */
+    private function getRootProps() {
+        if (!isset($this->rootProps)) {
+            $root = mapi_msgstore_openentry($this->store, null);
+            $this->rootProps = mapi_getprops($root, array(PR_IPM_OL2007_ENTRYIDS));
+        }
+        return $this->rootProps;
+    }
+
+    /**
+     * Returns an array with entryids of some special folders.
+     *
+     * @access private
+     * @return array
+     */
+    private function getSpecialFoldersData() {
+        // The persist data of an entry in PR_IPM_OL2007_ENTRYIDS consists of:
+        //      PersistId - e.g. RSF_PID_SUGGESTED_CONTACTS (2 bytes)
+        //      DataElementsSize - size of DataElements field (2 bytes)
+        //      DataElements - array of PersistElement structures (variable size)
+        //          PersistElement Structure consists of
+        //              ElementID - e.g. RSF_ELID_ENTRYID (2 bytes)
+        //              ElementDataSize - size of ElementData (2 bytes)
+        //              ElementData - The data for the special folder identified by the PersistID (variable size)
+        if (empty($this->specialFoldersData)) {
+            $this->specialFoldersData = array();
+            $rootProps = $this->getRootProps();
+            if (isset($rootProps[PR_IPM_OL2007_ENTRYIDS])) {
+                $persistData = $rootProps[PR_IPM_OL2007_ENTRYIDS];
+                while (strlen($persistData) > 0) {
+                    // PERSIST_SENTINEL marks the end of the persist data
+                    if (strlen($persistData) == 4 && $persistData == PERSIST_SENTINEL) {
+                        break;
+                    }
+                    $unpackedData = unpack("vdataSize/velementID/velDataSize", substr($persistData, 2, 6));
+                    if (isset($unpackedData['dataSize']) && isset($unpackedData['elementID']) && $unpackedData['elementID'] == RSF_ELID_ENTRYID && isset($unpackedData['elDataSize'])) {
+                        $this->specialFoldersData[] = substr($persistData, 8, $unpackedData['elDataSize']);
+                        // Add PersistId and DataElementsSize lenghts to the data size as they're not part of it
+                        $persistData = substr($persistData, $unpackedData['dataSize'] + 4);
+                    }
+                    else {
+                        ZLog::Write(LOGLEVEL_INFO, "MAPIProvider->getSpecialFoldersData(): persistent data is not valid");
+                        break;
+                    }
+                }
+            }
+        }
+        return $this->specialFoldersData;
+    }
+
+    /**
+     * Extracts email address from PR_SEARCH_KEY property if possible.
+     *
+     * @param string $searchKey
+     * @access private
+     * @see https://jira.z-hub.io/browse/ZP-1178
+     *
+     * @return string
+     */
+    private function getEmailAddressFromSearchKey($searchKey) {
+        if (strpos($searchKey, ':') !== false && strpos($searchKey, '@') !== false) {
+            ZLog::Write(LOGLEVEL_INFO, "MAPIProvider->getEmailAddressFromSearchKey(): fall back to PR_SEARCH_KEY to resolve user and get email address");
+            return trim(strtolower(explode(':', $searchKey)[1]));
+        }
+        return "";
     }
 
     /**

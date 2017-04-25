@@ -511,6 +511,21 @@ class Utils {
     }
 
     /**
+     * Converts an UTF7-IMAP encoded string into an UTF-8 string.
+     *
+     * @param string $string to convert
+     *
+     * @access public
+     * @return string
+     */
+    static public function Utf7imap_to_utf8($string) {
+        if (function_exists("mb_convert_encoding")){
+            return @mb_convert_encoding($string, "UTF-8", "UTF7-IMAP");
+        }
+        return $string;
+    }
+
+    /**
      * Converts an UTF-8 encoded string into an UTF-7 string.
      *
      * @param string $string to convert
@@ -525,6 +540,21 @@ class Utils {
         else
             ZLog::Write(LOGLEVEL_WARN, "Utils::Utf8_to_utf7() 'iconv' is not available. Charset conversion skipped.");
 
+        return $string;
+    }
+
+    /**
+     * Converts an UTF-8 encoded string into an UTF7-IMAP string.
+     *
+     * @param string $string to convert
+     *
+     * @access public
+     * @return string
+     */
+    static public function Utf8_to_utf7imap($string) {
+        if (function_exists("mb_convert_encoding")){
+            return @mb_convert_encoding($string, "UTF7-IMAP", "UTF-8");
+        }
         return $string;
     }
 
@@ -552,53 +582,6 @@ class Utils {
      */
     static public function IsBase64String($string) {
         return (bool) preg_match("#^([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{2}==|[A-Za-z0-9+\/]{3}=|[A-Za-z0-9+/]{4})?$#", $string);
-    }
-
-    /**
-     * Decodes base64 encoded query parameters. Based on dw2412 contribution.
-     *
-     * @param string $query     the query to decode
-     *
-     * @access public
-     * @return array
-     */
-    static public function DecodeBase64URI($query) {
-        /*
-         * The query string has a following structure. Number in () is position:
-         * 1 byte       - protocoll version (0)
-         * 1 byte       - command code (1)
-         * 2 bytes      - locale (2)
-         * 1 byte       - device ID length (4)
-         * variable     - device ID (4+device ID length)
-         * 1 byte       - policy key length (5+device ID length)
-         * 0 or 4 bytes - policy key (5+device ID length + policy key length)
-         * 1 byte       - device type length (6+device ID length + policy key length)
-         * variable     - device type (6+device ID length + policy key length + device type length)
-         * variable     - command parameters, array which consists of:
-         *                      1 byte      - tag
-         *                      1 byte      - length
-         *                      variable    - value of the parameter
-         *
-         */
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("Utils::DecodeBase64URI(): decoding base64 query string: %s", $query));
-        $decoded = base64_decode($query);
-        $devIdLength = ord($decoded[4]); //device ID length
-        $polKeyLength = ord($decoded[5+$devIdLength]); //policy key length
-        $devTypeLength = ord($decoded[6+$devIdLength+$polKeyLength]); //device type length
-        //unpack the decoded query string values
-        $unpackedQuery = unpack("CProtVer/CCommand/vLocale/CDevIDLen/H".($devIdLength*2)."DevID/CPolKeyLen".($polKeyLength == 4 ? "/VPolKey" : "")."/CDevTypeLen/A".($devTypeLength)."DevType", $decoded);
-
-        //get the command parameters
-        $pos = 7 + $devIdLength + $polKeyLength + $devTypeLength;
-        $decoded = substr($decoded, $pos);
-        while (strlen($decoded) > 0) {
-            $paramLength = ord($decoded[1]);
-            $unpackedParam = unpack("CParamTag/CParamLength/A".$paramLength."ParamValue", $decoded);
-            $unpackedQuery[ord($decoded[0])] = $unpackedParam['ParamValue'];
-            //remove parameter from decoded query string
-            $decoded = substr($decoded, 2 + $paramLength);
-        }
-        return $unpackedQuery;
     }
 
     /**
@@ -1163,6 +1146,49 @@ class Utils {
         }
 
         return $data;
+    }
+
+    /**
+     * Modifies a SyncFolder object, changing the type to SYNC_FOLDER_TYPE_UNKNOWN but saving the original type.
+     * It also appends a zero-width UTF-8 (U+200B) character to the name, which serves as marker.
+     *
+     * @access public
+     * @param SyncFolder $folder
+     * @return SyncFolder
+     */
+    public static function ChangeFolderToTypeUnknownForKoe($folder) {
+        // append a zero width UTF-8 space to the name
+        $folder->displayname .= hex2bin("e2808b");
+        $folder->TypeReal = $folder->type;
+        $folder->type = SYNC_FOLDER_TYPE_UNKNOWN;
+
+        return $folder;
+    }
+
+    /**
+     * Checks if the displayname of the folder contains the zero-width UTF-8 (U+200B) character marker.
+     *
+     * @access public
+     * @param SyncFolder $folder
+     * @return boolean
+     */
+    public static function IsFolderToBeProcessedByKoe($folder) {
+        return isset($folder->displayname) && substr($folder->displayname, -3) == hex2bin("e2808b");
+    }
+
+    /**
+     * Check if the UTF-8 string has ISO-2022-JP esc seq 
+     * if so, it is ISO-2022-JP, not UTF-8 and convert it into UTF-8
+     * string
+     *
+     * @access public
+     * @param $string
+     * @return $string
+     */
+    public static function CheckAndFixEncoding(&$string) {
+        if ( isset($string) && strpos($string, chr(0x1b).'$B') !== false ) {
+            $string = mb_convert_encoding($string, "utf-8", "ISO-2022-JP-MS");
+        }
     }
 }
 

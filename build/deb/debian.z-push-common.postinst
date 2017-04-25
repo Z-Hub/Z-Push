@@ -5,7 +5,7 @@
 
 case "$1" in
     configure)
-        /usr/local/sbin/z-push-admin -a fixstates
+        /usr/sbin/z-push-admin -a fixstates
         if [ $? -ne 0 ]; then
             YELLOW='\033[0;33m'
             NC='\033[0m' # No Color

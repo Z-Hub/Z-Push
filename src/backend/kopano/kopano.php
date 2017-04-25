@@ -27,7 +27,13 @@
 *************************************************/
 
 // config file
-require_once("backend/kopano/config.php");
+$config_path = stream_resolve_include_path(__DIR__."/config.php");
+if ($config_path !== false) {
+    require_once($config_path);
+}
+else {
+    ZLog::Write(LOGLEVEL_WARN, "Kopano backend config file can not be found");
+}
 
 // include PHP-MAPI classes
 include_once('backend/kopano/mapi/mapi.util.php');
@@ -166,7 +172,7 @@ class BackendKopano implements IBackend, ISearchProvider {
         }
 
         if(!$this->session) {
-            ZLog::Write(LOGLEVEL_WARN, sprintf("KopanoBackend->Logon(): logon failed for user '%s'", $user));
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->Logon(): logon failed for user '%s'", $user));
             $this->defaultstore = false;
             return false;
         }
@@ -441,16 +447,33 @@ class BackendKopano implements IBackend, ISearchProvider {
             if (preg_match("/^X-Push-Sender:\s(.*?)$/im", $sm->mime, $senderEmail)) {
                 $sendAsEmail = trim($senderEmail[1]);
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->SendMail(): Send-As '%s' requested by KOE", $sendAsEmail));
-                $sm->mime =  preg_replace("/^From: .*?$/im", "From: ". $sendAsEmail, $sm->mime, 1);
-                $sendingAsSomeone = true;
+
+                $originalFrom = array();
+                if (preg_match("/^(From:\s.*?)$/im", $sm->mime, $originalFrom)) {
+                    // find the occurence of the From header and replace it
+                    // preg_replace() uses additional 3x the length of $sm->mime to perform,
+                    // mb_ereg_replace() requires only 1x addtional memory, but replaces ALL occurences.
+                    // The below is different than concatenating in one line and also only uses 1x additional memory
+                    $fromPosition = strpos($sm->mime, $originalFrom[1]);
+                    $start = substr($sm->mime, 0, $fromPosition);
+                    $end = substr($sm->mime, $fromPosition + strlen($originalFrom[1]));
+                    $sm->mime = $start;
+                    $sm->mime .= "From: ". $sendAsEmail;
+                    $sm->mime .= $end;
+                    unset($start, $end);
+                    $sendingAsSomeone = true;
+                }
+                else {
+                    ZLog::Write(LOGLEVEL_DEBUG, "KopanoBackend->SendMail(): Could not find FROM header to replace for send-as");
+                }
             }
-            // serverside Send-As - shared folder with DeviceManager::FLD_FLAGS_REPLYASUSER flag
+            // serverside Send-As - shared folder with DeviceManager::FLD_FLAGS_SENDASOWNER flag
             elseif (isset($sm->source->folderid)) {
                 // get the owner of this folder - System is not allowed
                 $sharedUser = ZPush::GetAdditionalSyncFolderStore($sm->source->folderid);
                 if ($sharedUser != false && $sharedUser != 'SYSTEM') {
                     $folders = ZPush::GetAdditionalSyncFolders();
-                    if (isset($folders[$sm->source->folderid]) && ($folders[$sm->source->folderid]->Flags & DeviceManager::FLD_FLAGS_REPLYASUSER)) {
+                    if (isset($folders[$sm->source->folderid]) && ($folders[$sm->source->folderid]->Flags & DeviceManager::FLD_FLAGS_SENDASOWNER)) {
                         $sendAs = $this->resolveRecipientGAL($sharedUser, 1);
                         if (isset($sendAs[0])) {
                             ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->SendMail(): Server side Send-As activated for shared folder. Sending as '%s'.", $sendAs[0]->emailaddress));
@@ -461,10 +484,6 @@ class BackendKopano implements IBackend, ISearchProvider {
                 }
             }
         }
-
-        // by splitting the message in several lines we can easily grep later
-        foreach(preg_split("/((\r)?\n)/", $sm->mime) as $rfc822line)
-            ZLog::Write(LOGLEVEL_WBXML, "RFC822: ". $rfc822line);
 
         $sendMailProps = MAPIMapping::GetSendMailProperties();
         $sendMailProps = getPropIdsFromStrings($this->defaultstore, $sendMailProps);
@@ -1481,6 +1500,37 @@ class BackendKopano implements IBackend, ISearchProvider {
         }
     }
 
+    /**
+     * Returns a KoeSignatures object.
+     *
+     * @access public
+     * @return KoeSignatures
+     */
+    public function GetKoeSignatures() {
+        $sigs = new KoeSignatures();
+        $storeProps = mapi_getprops($this->store, array(PR_EC_WEBACCESS_SETTINGS_JSON));
+
+        // Check if property exists, if it doesn't exist then we can continue with an empty signature object
+        if (isset($storeProps[PR_EC_WEBACCESS_SETTINGS_JSON]) || MAPIUtils::GetError(PR_EC_WEBACCESS_SETTINGS_JSON, $storeProps) == MAPI_E_NOT_ENOUGH_MEMORY) {
+            $settings_string = MAPIUtils::readPropStream($this->store, PR_EC_WEBACCESS_SETTINGS_JSON);
+            if(!empty($settings_string)) {
+                $settings = json_decode($settings_string, true);
+                if (json_last_error()) {
+                    ZLog::Write(LOGLEVEL_WARN, sprintf("KopanoBackend->GetKoeSignatures(): Error decoding JSON WebApp settings: %s", json_last_error()));
+                }
+                if (isset($settings['settings']['zarafa']['v1']['contexts']['mail']['signatures'])) {
+                    // convert WebApp signatures into KoeSignatures object
+                    $sigs->LoadSignaturesFromData($settings['settings']['zarafa']['v1']['contexts']['mail']['signatures']);
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->GetKoeSignatures(): Found %d signatures - new '%s' - reply/fw: '%s' - hash: %s", count($sigs->GetSignatures()), $sigs->GetNewMessageSignatureId(), $sigs->GetReplyForwardSignatureId(), $sigs->GetHash()));
+                }
+                else {
+                    ZLog::Write(LOGLEVEL_DEBUG, "KopanoBackend->GetKoeSignatures(): No signature data in WebApp settings");
+                }
+            }
+        }
+        return $sigs;
+    }
+
     /**----------------------------------------------------------------------------------------------------------
      * Private methods
      */
@@ -1698,8 +1748,17 @@ class BackendKopano implements IBackend, ISearchProvider {
             $oof->oofmessage[] = $oofmessage;
 
             // check whether time based out of office is set
-            if ($oof->oofstate == SYNC_SETTINGSOOF_GLOBAL && isset($oofprops[PR_EC_OUTOFOFFICE_FROM]) && isset($oofprops[PR_EC_OUTOFOFFICE_UNTIL])) {
-                if ($oofprops[PR_EC_OUTOFOFFICE_FROM] < $oofprops[PR_EC_OUTOFOFFICE_UNTIL]) {
+            if ($oof->oofstate == SYNC_SETTINGSOOF_GLOBAL && isset($oofprops[PR_EC_OUTOFOFFICE_FROM], $oofprops[PR_EC_OUTOFOFFICE_UNTIL])) {
+                $now = time();
+                if ($now > $oofprops[PR_EC_OUTOFOFFICE_FROM] && $now > $oofprops[PR_EC_OUTOFOFFICE_UNTIL]) {
+                    // Out of office is set but the date is in the past. Set the state to disabled.
+                    // @see https://jira.z-hub.io/browse/ZP-1188 for details
+                    $oof->oofstate = SYNC_SETTINGSOOF_DISABLED;
+                    @mapi_setprops($this->defaultstore, array(PR_EC_OUTOFOFFICE => false));
+                    @mapi_deleteprops($this->defaultstore, array(PR_EC_OUTOFOFFICE_FROM, PR_EC_OUTOFOFFICE_UNTIL));
+                    ZLog::Write(LOGLEVEL_INFO, "BackendKopano->settingsOofGet(): Out of office is set but the from and until are in the past. Disabling out of office.");
+                }
+                elseif ($oofprops[PR_EC_OUTOFOFFICE_FROM] < $oofprops[PR_EC_OUTOFOFFICE_UNTIL]) {
                     $oof->oofstate = SYNC_SETTINGSOOF_TIMEBASED;
                     $oof->starttime = $oofprops[PR_EC_OUTOFOFFICE_FROM];
                     $oof->endtime = $oofprops[PR_EC_OUTOFOFFICE_UNTIL];

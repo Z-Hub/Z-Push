@@ -602,7 +602,7 @@ class WBXMLDefs {
                         0x13 => "BodyType", //12.0, 12.1 and 14.0
                         0x14 => "DevicePassword", //12.0, 12.1 and 14.0
                         0x15 => "Password", //12.0, 12.1 and 14.0
-                        0x16 => "DeviceInformaton", //12.0, 12.1 and 14.0
+                        0x16 => "DeviceInformation", //12.0, 12.1 and 14.0
                         0x17 => "Model", //12.0, 12.1 and 14.0
                         0x18 => "IMEI", //12.0, 12.1 and 14.0
                         0x19 => "FriendlyName", //12.0, 12.1 and 14.0

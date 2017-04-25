@@ -58,6 +58,7 @@ class ASDevice extends StateObject {
                                     'koebuild' => false,
                                     'koebuilddate' => false,
                                     'koegabbackendfolderid' => false,
+                                    'koecapabilities' => array(),
                                 );
 
     static private $loadedData;
@@ -581,8 +582,8 @@ class ASDevice extends StateObject {
    /**
      * Sets the foldertype of a folder id
      *
-     * @param string        $uuid
-     * @param string        $folderid       (opt) if not set Hierarchy UUID is linked
+     * @param string        $folderid
+     * @param int           $foldertype         ActiveSync folder type (as on the mobile)
      *
      * @access public
      * @return boolean      true if the type was set or updated
@@ -809,7 +810,10 @@ class ASDevice extends StateObject {
      * @return array
      */
     public function GetAdditionalFolders() {
-        return array_values($this->additionalfolders);
+        if (is_array($this->additionalfolders)) {
+            return array_values($this->additionalfolders);
+        }
+        return array();
     }
 
     /**
@@ -836,7 +840,7 @@ class ASDevice extends StateObject {
      * @param string    $folderid   the folder id of the additional folder.
      * @param string    $name       the name of the additional folder (has to be unique for all folders on the device).
      * @param string    $type       AS foldertype of SYNC_FOLDER_TYPE_USER_*
-     * @param int       $flags      Additional flags, like DeviceManager::FLD_FLAGS_REPLYASUSER
+     * @param int       $flags      Additional flags, like DeviceManager::FLD_FLAGS_SENDASOWNER
      * @param string    $parentid   the parentid of this folder.
      * @param boolean   $checkDups  indicates if duplicate names and ids should be verified. Default: true
      *
@@ -865,7 +869,8 @@ class ASDevice extends StateObject {
         // check if a folder with that Name is already in the list and that its parent exists
         $parentFound = false;
         foreach ($this->additionalfolders as $k => $folder) {
-            // TODO: this parentid check should go into fixstates!
+            // This is fixed in fixstates, but we could keep this here a while longer.
+            // TODO: remove line at a later point.
             if (!isset($folder['parentid'])) $folder['parentid'] = "0";
 
             if ($folder['name'] == $name && $folder['parentid'] == $parentid) {
@@ -922,7 +927,7 @@ class ASDevice extends StateObject {
      *
      * @param string    $folderid   the folder id of the additional folder.
      * @param string    $name       the name of the additional folder (has to be unique for all folders on the device).
-     * @param int       $flags      Additional flags, like DeviceManager::FLD_FLAGS_REPLYASUSER
+     * @param int       $flags      Additional flags, like DeviceManager::FLD_FLAGS_SENDASOWNER
      * @param string    $parentid   the parentid of this folder.
      * @param boolean   $checkDups  indicates if duplicate names and ids should be verified. Default: true
      *
@@ -1010,7 +1015,7 @@ class ASDevice extends StateObject {
      *                              'parentid'  (string) the folderid of the parent folder. If no parent folder is set or the parent folder is not defined, '0' (main folder) is used.
      *                              'name'      (string) the name of the additional folder (has to be unique for all folders on the device).
      *                              'type'      (string) AS foldertype of SYNC_FOLDER_TYPE_USER_*
-     *                              'flags'     (int)    Additional flags, like DeviceManager::FLD_FLAGS_REPLYASUSER
+     *                              'flags'     (int)    Additional flags, like DeviceManager::FLD_FLAGS_SENDASOWNER
      *
      * @access public
      * @return boolean
@@ -1087,7 +1092,6 @@ class ASDevice extends StateObject {
         foreach($toOrderFolders as $folder) {
             // move folders with the matching parentid to the ordered array
             if ($folder['parentid'] == $parentid) {
-                echo "found.. \n";
                 $fid = $folder['folderid'];
                 $orderedFolders[$fid] = $folder;
                 unset($toOrderFolders[$fid]);

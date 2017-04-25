@@ -38,6 +38,7 @@ abstract class RequestProcessor {
     static protected $encoder;
     static protected $userIsAuthenticated;
     static protected $specialHeaders;
+    static protected $waitTime = 0;
 
     /**
      * Authenticates the remote user
@@ -94,6 +95,7 @@ abstract class RequestProcessor {
             self::$decoder = new WBXMLDecoder(Request::GetInputStream());
 
         self::$encoder = new WBXMLEncoder(Request::GetOutputStream(), Request::GetGETAcceptMultipart());
+        self::$waitTime = 0;
     }
 
     /**
@@ -112,13 +114,15 @@ abstract class RequestProcessor {
             }
         }
         catch (Exception $ex) {
-            ZLog::Write(LOGLEVEL_FATAL, "WBXML debug data: " . Request::GetInputAsBase64(), false);
+            // Log 10 KB of the WBXML data
+            ZLog::Write(LOGLEVEL_FATAL, "WBXML 10K debug data: " . Request::GetInputAsBase64(10240), false);
             throw $ex;
         }
 
         // also log WBXML in happy case
         if (ZLog::IsWbxmlDebugEnabled()) {
-            ZLog::Write(LOGLEVEL_WBXML, "WBXML-IN : ". Request::GetInputAsBase64(), false);
+            // Log 4 KB in the happy case
+            ZLog::Write(LOGLEVEL_WBXML, "WBXML-IN : ". Request::GetInputAsBase64(4096), false);
         }
     }
 
@@ -133,6 +137,16 @@ abstract class RequestProcessor {
             return array();
 
         return self::$specialHeaders;
+    }
+
+    /**
+     * Returns the amount of seconds RequestProcessor waited e.g. during Ping.
+     *
+     * @access public
+     * @return int
+     */
+    public static function GetWaitTime() {
+        return self::$waitTime;
     }
 
     /**
