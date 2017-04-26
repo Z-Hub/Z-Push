@@ -175,18 +175,20 @@ class ASDevice extends StateObject {
     }
 
    /**
-     * Removes internal data from the object, so this data can not be exposed
+     * Removes internal data from the object, so this data can not be exposed.
+     *
+     * @param boolean $stripHierarchyCache  (opt) strips the hierarchy cache - default: true
      *
      * @access public
      * @return boolean
      */
-    public function StripData() {
+    public function StripData($stripHierarchyCache = true) {
         unset($this->changed);
         unset($this->unsetdata);
-        unset($this->hierarchyCache);
         unset($this->forceSave);
         unset($this->newdevice);
         unset($this->ignoredMessageIds);
+        unset($this->backend2folderidCache);
 
         if (isset($this->ignoredmessages) && is_array($this->ignoredmessages)) {
             $imessages = $this->ignoredmessages;
@@ -197,6 +199,14 @@ class ASDevice extends StateObject {
                 $unserializedMessage[] = $im;
             }
             $this->ignoredmessages = $unserializedMessage;
+        }
+
+
+        if (!$stripHierarchyCache && $this->hierarchyCache !== false && $this->hierarchyCache instanceof ChangesMemoryWrapper) {
+            $this->hierarchyCache->StripData();
+        }
+        else {
+            unset($this->hierarchyCache);
         }
 
         return true;

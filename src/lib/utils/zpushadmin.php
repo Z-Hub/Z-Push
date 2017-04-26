@@ -69,11 +69,12 @@ class ZPushAdmin {
      *
      * @param string    $devid      device id
      * @param string    $user       user to be looked up
+     * @param boolean   $withHierarchyCache (opt) includes the HierarchyCache - default: false
      *
      * @return ASDevice object
      * @access public
      */
-    static public function GetDeviceDetails($devid, $user) {
+    static public function GetDeviceDetails($devid, $user, $withHierarchyCache = false) {
 
         try {
             $device = new ASDevice($devid, ASDevice::UNDEFINED, $user, ASDevice::UNDEFINED);
@@ -127,7 +128,7 @@ class ZPushAdmin {
                     }
                 }
             }
-            $device->StripData();
+            $device->StripData(!$withHierarchyCache);
             return $device;
         }
         catch (StateNotFoundException $e) {
