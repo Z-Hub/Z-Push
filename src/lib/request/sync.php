@@ -687,6 +687,9 @@ class Sync extends RequestProcessor {
                     }
                 }
 
+                // update the waittime waited
+                self::$waitTime = $sc->GetWaitedSeconds();
+
                 // in case there are no changes and no other request has synchronized while we waited, we can reply with an empty response
                 if (!$foundchanges && $status == SYNC_STATUS_SUCCESS) {
                     // if there were changes to the SPA or CPOs we need to save this before we terminate
@@ -910,6 +913,9 @@ class Sync extends RequestProcessor {
             self::$topCollector->AnnounceInformation($this->getMultiFolderInfoLine($sc->GetCollectionCount()), true);
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleSync: Processed %d folders", $sc->GetCollectionCount()));
         }
+
+        // update the waittime waited
+        self::$waitTime = $sc->GetWaitedSeconds();
 
         return true;
     }

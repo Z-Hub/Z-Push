@@ -228,7 +228,7 @@ class MAPIProvider {
         // Do attendees
         $reciptable = mapi_message_getrecipienttable($mapimessage);
         // Only get first 256 recipients, to prevent possible load issues.
-        $rows = mapi_table_queryrows($reciptable, array(PR_DISPLAY_NAME, PR_EMAIL_ADDRESS, PR_SMTP_ADDRESS, PR_ADDRTYPE, PR_RECIPIENT_TRACKSTATUS, PR_RECIPIENT_TYPE), 0, 256);
+        $rows = mapi_table_queryrows($reciptable, array(PR_DISPLAY_NAME, PR_EMAIL_ADDRESS, PR_SMTP_ADDRESS, PR_ADDRTYPE, PR_RECIPIENT_TRACKSTATUS, PR_RECIPIENT_TYPE, PR_SEARCH_KEY), 0, 256);
 
         // Exception: we do not synchronize appointments with more than 250 attendees
         if (count($rows) > 250) {
@@ -258,8 +258,14 @@ class MAPIProvider {
                     if (is_array($userinfo) && isset($userinfo["emailaddress"])) {
                         $attendee->email = w2u($userinfo["emailaddress"]);
                     }
-                    else
+                    // if the user was not found, do a fallback to PR_SEARCH_KEY
+                    // @see https://jira.z-hub.io/browse/ZP-1178
+                    elseif (isset($row[PR_SEARCH_KEY])) {
+                        $attendee->email = w2u($this->getEmailAddressFromSearchKey($row[PR_SEARCH_KEY]));
+                    }
+                    else {
                         ZLog::Write(LOGLEVEL_WARN, sprintf("MAPIProvider->getAppointment: The attendee '%s' of type ZARAFA can not be resolved. Code: 0x%X", $row[PR_EMAIL_ADDRESS], mapi_last_hresult()));
+                    }
                 }
             }
 
@@ -786,7 +792,7 @@ class MAPIProvider {
         $message->cc = array();
 
         $reciptable = mapi_message_getrecipienttable($mapimessage);
-        $rows = mapi_table_queryallrows($reciptable, array(PR_RECIPIENT_TYPE, PR_DISPLAY_NAME, PR_ADDRTYPE, PR_EMAIL_ADDRESS, PR_SMTP_ADDRESS, PR_ENTRYID));
+        $rows = mapi_table_queryallrows($reciptable, array(PR_RECIPIENT_TYPE, PR_DISPLAY_NAME, PR_ADDRTYPE, PR_EMAIL_ADDRESS, PR_SMTP_ADDRESS, PR_ENTRYID, PR_SEARCH_KEY));
 
         foreach ($rows as $row) {
             $address = "";
@@ -800,6 +806,12 @@ class MAPIProvider {
                 $address = $row[PR_EMAIL_ADDRESS];
             elseif ($addrtype == "ZARAFA" && isset($row[PR_ENTRYID]))
                 $address = $this->getSMTPAddressFromEntryID($row[PR_ENTRYID]);
+
+            // if the user was not found, do a fallback to PR_SEARCH_KEY
+            // @see https://jira.z-hub.io/browse/ZP-1178
+            if (empty($address) && isset($row[PR_SEARCH_KEY])) {
+                $address = $this->getEmailAddressFromSearchKey($row[PR_SEARCH_KEY]);
+            }
 
             $name = isset($row[PR_DISPLAY_NAME]) ? $row[PR_DISPLAY_NAME] : "";
 
@@ -2805,6 +2817,23 @@ class MAPIProvider {
             }
         }
         return $this->specialFoldersData;
+    }
+
+    /**
+     * Extracts email address from PR_SEARCH_KEY property if possible.
+     *
+     * @param string $searchKey
+     * @access private
+     * @see https://jira.z-hub.io/browse/ZP-1178
+     *
+     * @return string
+     */
+    private function getEmailAddressFromSearchKey($searchKey) {
+        if (strpos($searchKey, ':') !== false && strpos($searchKey, '@') !== false) {
+            ZLog::Write(LOGLEVEL_INFO, "MAPIProvider->getEmailAddressFromSearchKey(): fall back to PR_SEARCH_KEY to resolve user and get email address");
+            return trim(strtolower(explode(':', $searchKey)[1]));
+        }
+        return "";
     }
 
     /**

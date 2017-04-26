@@ -38,6 +38,7 @@ abstract class RequestProcessor {
     static protected $encoder;
     static protected $userIsAuthenticated;
     static protected $specialHeaders;
+    static protected $waitTime = 0;
 
     /**
      * Authenticates the remote user
@@ -94,6 +95,7 @@ abstract class RequestProcessor {
             self::$decoder = new WBXMLDecoder(Request::GetInputStream());
 
         self::$encoder = new WBXMLEncoder(Request::GetOutputStream(), Request::GetGETAcceptMultipart());
+        self::$waitTime = 0;
     }
 
     /**
@@ -135,6 +137,16 @@ abstract class RequestProcessor {
             return array();
 
         return self::$specialHeaders;
+    }
+
+    /**
+     * Returns the amount of seconds RequestProcessor waited e.g. during Ping.
+     *
+     * @access public
+     * @return int
+     */
+    public static function GetWaitTime() {
+        return self::$waitTime;
     }
 
     /**

@@ -231,6 +231,18 @@ class ExportChangesICS implements IExportChanges{
         return $ret;
     }
 
+    /**
+     * Indicates if the exporter was configured with the BACKEND_DISCARD_DATA flag.
+     *
+     * @access public
+     * @return boolean
+     */
+    public function HasDiscardDataFlag() {
+        if (isset($this->flags) && $this->flags & BACKEND_DISCARD_DATA) {
+            return true;
+        }
+        return false;
+    }
 
     /**
      * Reads the current state from the Exporter

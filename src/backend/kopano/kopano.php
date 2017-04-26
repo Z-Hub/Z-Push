@@ -27,7 +27,13 @@
 *************************************************/
 
 // config file
-require_once("backend/kopano/config.php");
+$config_path = stream_resolve_include_path(__DIR__."/config.php");
+if ($config_path !== false) {
+    require_once($config_path);
+}
+else {
+    ZLog::Write(LOGLEVEL_WARN, "Kopano backend config file can not be found");
+}
 
 // include PHP-MAPI classes
 include_once('backend/kopano/mapi/mapi.util.php');
@@ -166,7 +172,7 @@ class BackendKopano implements IBackend, ISearchProvider {
         }
 
         if(!$this->session) {
-            ZLog::Write(LOGLEVEL_WARN, sprintf("KopanoBackend->Logon(): logon failed for user '%s'", $user));
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->Logon(): logon failed for user '%s'", $user));
             $this->defaultstore = false;
             return false;
         }
@@ -1737,8 +1743,17 @@ class BackendKopano implements IBackend, ISearchProvider {
             $oof->oofmessage[] = $oofmessage;
 
             // check whether time based out of office is set
-            if ($oof->oofstate == SYNC_SETTINGSOOF_GLOBAL && isset($oofprops[PR_EC_OUTOFOFFICE_FROM]) && isset($oofprops[PR_EC_OUTOFOFFICE_UNTIL])) {
-                if ($oofprops[PR_EC_OUTOFOFFICE_FROM] < $oofprops[PR_EC_OUTOFOFFICE_UNTIL]) {
+            if ($oof->oofstate == SYNC_SETTINGSOOF_GLOBAL && isset($oofprops[PR_EC_OUTOFOFFICE_FROM], $oofprops[PR_EC_OUTOFOFFICE_UNTIL])) {
+                $now = time();
+                if ($now > $oofprops[PR_EC_OUTOFOFFICE_FROM] && $now > $oofprops[PR_EC_OUTOFOFFICE_UNTIL]) {
+                    // Out of office is set but the date is in the past. Set the state to disabled.
+                    // @see https://jira.z-hub.io/browse/ZP-1188 for details
+                    $oof->oofstate = SYNC_SETTINGSOOF_DISABLED;
+                    @mapi_setprops($this->defaultstore, array(PR_EC_OUTOFOFFICE => false));
+                    @mapi_deleteprops($this->defaultstore, array(PR_EC_OUTOFOFFICE_FROM, PR_EC_OUTOFOFFICE_UNTIL));
+                    ZLog::Write(LOGLEVEL_INFO, "BackendKopano->settingsOofGet(): Out of office is set but the from and until are in the past. Disabling out of office.");
+                }
+                elseif ($oofprops[PR_EC_OUTOFOFFICE_FROM] < $oofprops[PR_EC_OUTOFOFFICE_UNTIL]) {
                     $oof->oofstate = SYNC_SETTINGSOOF_TIMEBASED;
                     $oof->starttime = $oofprops[PR_EC_OUTOFOFFICE_FROM];
                     $oof->endtime = $oofprops[PR_EC_OUTOFOFFICE_UNTIL];
