@@ -48,6 +48,9 @@ class Streamer implements Serializable {
     const STREAMER_TYPE_MULTIPART = 10;
     const STREAMER_TYPE_STREAM_ASBASE64 = 11;
     const STREAMER_TYPE_STREAM_ASPLAIN = 12;
+    const STREAMER_PRIVATE = 13;
+    const STRIP_PRIVATE_DATA = 1;
+    const STRIP_PRIVATE_SUBSTITUTE = 'Private';
 
     protected $mapping;
     public $flags;
@@ -353,22 +356,40 @@ class Streamer implements Serializable {
      * @access public
      * @return boolean
      */
-    public function StripData() {
+    public function StripData($flags = 0) {
         foreach ($this->mapping as $k=>$v) {
             if (isset($this->{$v[self::STREAMER_VAR]})) {
                 if (is_object($this->{$v[self::STREAMER_VAR]}) && method_exists($this->{$v[self::STREAMER_VAR]}, "StripData") ) {
-                    $this->{$v[self::STREAMER_VAR]}->StripData();
+                    $this->{$v[self::STREAMER_VAR]}->StripData($flags);
                 }
                 else if (isset($v[self::STREAMER_ARRAY]) && !empty($this->{$v[self::STREAMER_VAR]})) {
                     foreach ($this->{$v[self::STREAMER_VAR]} as $element) {
                         if (is_object($element) && method_exists($element, "StripData") ) {
-                            $element->StripData();
+                            $element->StripData($flags);
                         }
+                        elseif ($flags === Streamer::STRIP_PRIVATE_DATA && isset($v[self::STREAMER_PRIVATE])) {
+                            if ($v[self::STREAMER_PRIVATE] !== true) {
+                                $this->{$v[self::STREAMER_VAR]} = $v[self::STREAMER_PRIVATE];
+                            }
+                            else {
+                                unset($this->{$v[self::STREAMER_VAR]});
+                            }
+                        }
+                    }
+                }
+                elseif ($flags === Streamer::STRIP_PRIVATE_DATA && isset($v[self::STREAMER_PRIVATE])) {
+                    if ($v[self::STREAMER_PRIVATE] !== true) {
+                        $this->{$v[self::STREAMER_VAR]} = $v[self::STREAMER_PRIVATE];
+                    }
+                    else {
+                        unset($this->{$v[self::STREAMER_VAR]});
                     }
                 }
             }
         }
-        unset($this->mapping);
+        if ($flags === 0) {
+            unset($this->mapping);
+        }
 
         return true;
     }

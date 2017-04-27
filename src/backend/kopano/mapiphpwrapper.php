@@ -114,15 +114,19 @@ class PHPWrapper {
         try {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("PHPWrapper->ImportMessageChange(): Getting message from MAPIProvider, sourcekey: '%s', parentsourcekey: '%s', entryid: '%s'", bin2hex($sourcekey), bin2hex($parentsourcekey), bin2hex($entryid)));
 
-            // do not send private messages from shared folders to the device
-            $sensitivity = mapi_getprops($mapimessage, array(PR_SENSITIVITY));
-            $sharedUser = ZPush::GetAdditionalSyncFolderStore(bin2hex($this->folderid));
-            if ($sharedUser != false && $sharedUser != 'SYSTEM' && isset($sensitivity[PR_SENSITIVITY]) && $sensitivity[PR_SENSITIVITY] >= SENSITIVITY_PRIVATE) {
-                ZLog::Write(LOGLEVEL_DEBUG, "PHPWrapper->ImportMessageChange(): ignoring private message from a shared folder");
-                return SYNC_E_IGNORE;
-            }
-
             $message = $this->mapiprovider->GetMessage($mapimessage, $this->contentparameters);
+
+            // strip or do not send private messages from shared folders to the device
+            if (MAPIUtils::IsMessageSharedAndPrivate($this->folderid, $mapimessage)) {
+                if ($message->SupportsPrivateStripping()) {
+                    ZLog::Write(LOGLEVEL_DEBUG, "PHPWrapper->ImportMessageChange(): stripping data of private message from a shared folder");
+                    $message->StripData(Streamer::STRIP_PRIVATE_DATA);
+                }
+                else {
+                    ZLog::Write(LOGLEVEL_DEBUG, "PHPWrapper->ImportMessageChange(): ignoring private message from a shared folder");
+                    return SYNC_E_IGNORE;
+                }
+            }
         }
         catch (SyncObjectBrokenException $mbe) {
             $brokenSO = $mbe->GetSyncObject();

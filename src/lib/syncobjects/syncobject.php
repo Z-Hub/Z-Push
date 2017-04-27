@@ -44,10 +44,12 @@ abstract class SyncObject extends Streamer {
     const STREAMER_CHECK_EMAIL   = 16;
 
     protected $unsetVars;
+    protected $supportsPrivateStripping;
 
 
     public function __construct($mapping) {
         $this->unsetVars = array();
+        $this->supportsPrivateStripping = false;
         parent::__construct($mapping);
     }
 
@@ -368,11 +370,22 @@ abstract class SyncObject extends Streamer {
      * @access public
      * @return boolean
      */
-    public function StripData() {
-        if (isset($this->unsetVars)) {
+    public function StripData($flags = 0) {
+        if ($flags === 0 && isset($this->unsetVars)) {
             unset($this->unsetVars);
         }
-        return parent::StripData();
+        return parent::StripData($flags);
+    }
+
+    /**
+     * Indicates if a SyncObject supports the private flag and stripping of private data.
+     * If an object does not support it, it will not be sent to the client but permanently be excluded from the sync.
+     *
+     * @access public
+     * @return boolean - default false defined in constructor - overwritten by implementation
+     */
+    public function SupportsPrivateStripping() {
+        return $this->supportsPrivateStripping;
     }
 
     /**
