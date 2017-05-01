@@ -61,5 +61,8 @@ class SyncAppointmentException extends SyncAppointment {
         $this->mapping[SYNC_POOMCAL_REMINDER][self::STREAMER_RONOTIFY]      = true;
         $this->mapping[SYNC_POOMCAL_EXCEPTIONS][self::STREAMER_CHECKS]      = array(self::STREAMER_CHECK_NOTALLOWED => true);
 
+        // Indicates that this SyncObject supports the private flag and stripping of private data.
+        // It behaves as a SyncAppointment.
+        $this->supportsPrivateStripping = true;
     }
 }

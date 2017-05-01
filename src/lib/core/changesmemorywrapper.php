@@ -403,4 +403,19 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
         $this->changes = array();
         $this->step = 0;
     }
+
+    /**
+     * Removes internal data from the object, so this data can not be exposed.
+     *
+     * @access public
+     * @return boolean
+     */
+    public function StripData() {
+        unset($this->changes);
+        unset($this->step);
+        unset($this->destinationImporter);
+        unset($this->exportImporter);
+
+        return parent::StripData();
+    }
 }
