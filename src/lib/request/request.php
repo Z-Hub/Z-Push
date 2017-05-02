@@ -636,7 +636,7 @@ class Request {
      * Checks the device type if it expects the globalobjid in meeting requests encoded as hex.
      * If it's not the case, globalobjid will be base64 encoded.
      *
-     * WindowsOutlook and iOS device since 9.3 (?) version expect globalobjid to be hex encoded.
+     * iOS device since 9.3 (?) version expect globalobjid to be hex encoded.
      * @see https://jira.z-hub.io/projects/ZP/issues/ZP-1013
      *
      * @access public
@@ -644,9 +644,6 @@ class Request {
      */
     static public function IsGlobalObjIdHexClient() {
         switch (self::GetDeviceType()) {
-            case "WindowsOutlook":
-                ZLog::Write(LOGLEVEL_DEBUG, "Request->IsGlobalObjIdHexClient(): WindowsOutlook");
-                return true;
             case "iPod":
             case "iPad":
             case "iPhone":
@@ -658,6 +655,7 @@ class Request {
         }
         return false;
     }
+
     /**----------------------------------------------------------------------------------------------------------
      * Private stuff
      */
