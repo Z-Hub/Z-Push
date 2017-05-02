@@ -375,13 +375,13 @@ class Kopano extends SyncWorker {
             // is this a group?
             if (array_key_exists($entry[PR_ACCOUNT], $groups)) {
                 $a->type = GABEntry::GROUP;
-                $groupentry = @mapi_ab_openentry($addrbook, $entry[PR_ENTRYID]);
-                // some groups can not be opened - ZP-1196
-                if (mapi_last_hresult() == MAPI_E_INVALID_PARAMETER) {
-                    $this->Log(sprintf("Kopano->GetGAB(): Ignoring group '%s' as it can not be opened.\n", $entry[PR_ACCOUNT]));
+                $groupentry = mapi_ab_openentry($addrbook, $entry[PR_ENTRYID]);
+                $grouptable = @mapi_folder_getcontentstable($groupentry, MAPI_DEFERRED_ERRORS);
+                // some groups can not be listed - ZP-1196
+                if (mapi_last_hresult()) {
+                    $this->Log(sprintf("Kopano->GetGAB(): Ignoring group '%s' as members can not be listed - possibly hidden, code: 0x%08X \n", $entry[PR_ACCOUNT], mapi_last_hresult() ));
                     continue;
                 }
-                $grouptable = mapi_folder_getcontentstable($groupentry, MAPI_DEFERRED_ERRORS);
                 $users = mapi_table_queryallrows($grouptable, array(PR_ENTRYID, PR_ACCOUNT, PR_SMTP_ADDRESS));
 
                 $a->members = array();
