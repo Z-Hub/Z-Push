@@ -153,9 +153,7 @@ class DeviceManager {
             $this->device->SetKoeVersion(Request::GetKoeVersion());
             $this->device->SetKoeBuild(Request::GetKoeBuild());
             $this->device->SetKoeBuildDate(Request::GetKoeBuildDate());
-            if ($this->device->GetKoeCapabilities() != Request::GetKoeCapabilities()) {
-                $this->device->SetKoeCapabilities(Request::GetKoeCapabilities());
-            }
+            $this->device->SetKoeCapabilities(Request::GetKoeCapabilities());
         }
 
         // data to be saved
