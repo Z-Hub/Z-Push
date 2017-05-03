@@ -551,6 +551,20 @@ class BackendKopano implements IBackend, ISearchProvider {
                         $sendMailProps["sentrepresentingaddt"], $sendMailProps["sentrepresentinsrchk"]));
         }
 
+        // Processing of KOE X-Push-Receipts header - delivery notification: ZP-1204
+        if (defined('KOE_CAPABILITY_RECEIPTS') && KOE_CAPABILITY_RECEIPTS) {
+            // KOE: grep for the Sender header indicating that there are TODOs
+            if (preg_match("/^X-Push-Receipts:\s(.*?)$/im", $sm->mime, $receiptsvalue)) {
+                $receipts = trim($receiptsvalue[1]);
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->SendMail(): Receipts '%s' requested by KOE", $receipts));
+
+                // delivery notification requested
+                if (stripos($receipts, 'delivery') !== false) {
+                    $mapiprops[PR_ORIGINATOR_DELIVERY_REPORT_REQUESTED] = true;
+                }
+            }
+        }
+
         if(isset($sm->source->itemid) && $sm->source->itemid) {
             // answering an email in a public/shared folder
             // TODO as the store is setup, we should actually user $this->store instead of $this->defaultstore - nevertheless we need to make sure this store is able to send mail (has an outbox)
