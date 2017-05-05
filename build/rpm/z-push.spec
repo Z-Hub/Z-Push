@@ -145,7 +145,11 @@ Z-Push for Kopano meta package
 %package -n %name-kopano-gabsync
 Summary:    GAB sync for Kopano
 Group:      Productivity/Networking/Email/Utilities
+%if 0%{?fedora_version} || 0%{?centos_version} || 0%{?rhel_version}
+Requires:   php-mapi-webapp
+%else
 Requires:   php-mapi
+%endif
 
 %description -n %name-kopano-gabsync
 Synchronizes a Kopano global address book
@@ -154,7 +158,11 @@ Synchronizes a Kopano global address book
 Summary:    GAB sync into a contacts folder for Kopano
 Group:      Productivity/Networking/Email/Utilities
 Requires:   %name-common = %version
+%if 0%{?fedora_version} || 0%{?centos_version} || 0%{?rhel_version}
+Requires:   php-mapi-webapp
+%else
 Requires:   php-mapi
+%endif
 
 %description -n %name-kopano-gab2contacts
 Synchronizes a Kopano global address book into a contacts folder
