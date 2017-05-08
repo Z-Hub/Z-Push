@@ -128,6 +128,10 @@ abstract class SyncWorker {
             $chunks[$id][$key] = $entry;
         }
 
+        if (empty($chunks)) {
+            $this->Log("No data available");
+            return;
+        }
         $entries = 0;
         $minEntries = $minSize = 99999999999;
         $maxEntries = $maxSize = 0;

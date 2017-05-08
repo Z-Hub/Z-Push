@@ -345,6 +345,10 @@ class Kopano extends SyncWorker {
                                                             PR_EC_AB_HIDDEN,
                                                             PR_DISPLAY_TYPE_EX
                                                     ));
+        if(!is_array($gabentries)) {
+            $this->Log("Kopano->GetGAB(): GAB data can not be retrieved.");
+            return $data;
+        }
         foreach ($gabentries as $entry) {
             // do not add SYSTEM user to the GAB
             if (strtoupper($entry[PR_DISPLAY_NAME]) == "SYSTEM") {
@@ -372,7 +376,12 @@ class Kopano extends SyncWorker {
             if (array_key_exists($entry[PR_ACCOUNT], $groups)) {
                 $a->type = GABEntry::GROUP;
                 $groupentry = mapi_ab_openentry($addrbook, $entry[PR_ENTRYID]);
-                $grouptable = mapi_folder_getcontentstable($groupentry, MAPI_DEFERRED_ERRORS);
+                $grouptable = @mapi_folder_getcontentstable($groupentry, MAPI_DEFERRED_ERRORS);
+                // some groups can not be listed - ZP-1196
+                if (mapi_last_hresult()) {
+                    $this->Log(sprintf("Kopano->GetGAB(): Ignoring group '%s' as members can not be listed - possibly hidden, code: 0x%08X \n", $entry[PR_ACCOUNT], mapi_last_hresult() ));
+                    continue;
+                }
                 $users = mapi_table_queryallrows($grouptable, array(PR_ENTRYID, PR_ACCOUNT, PR_SMTP_ADDRESS));
 
                 $a->members = array();
