@@ -1583,6 +1583,8 @@ class Sync extends RequestProcessor {
 
         $interval = Utils::GetFiltertypeInterval($spa->GetFilterType());
         $timeout = time() + (($interval && $interval < $maxTimeout) ? $interval : $maxTimeout);
+        // randomize timout in 12h
+        $timeout -= rand(0, 43200);
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("Sync()->setFolderStat() on %s: %s expiring %s", $spa->getFolderId(), $newFolderStat, date('Y-m-d H:i:s', $timeout)));
         $spa->SetFolderStatTimeout($timeout);
     }
