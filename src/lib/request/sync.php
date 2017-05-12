@@ -768,8 +768,8 @@ class Sync extends RequestProcessor {
             // TODO we could check against $sc->GetChangedFolderIds() on heartbeat so we do not need to configure all exporter again
             if($status == SYNC_STATUS_SUCCESS && ($sc->GetParameter($spa, "getchanges") || ! $spa->HasSyncKey())) {
 
-                // no need to run the exporter if the globalwindowsize is already full
-                if ($sc->GetGlobalWindowSize() == $this->globallyExportedItems) {
+                // no need to run the exporter if the globalwindowsize is already full - if collection already has a synckey (ZP-1215)
+                if ($sc->GetGlobalWindowSize() == $this->globallyExportedItems && $spa->HasSyncKey()) {
                     ZLog::Write(LOGLEVEL_DEBUG, sprintf("Sync(): no exporter setup for '%s' as GlobalWindowSize is full.", $spa->GetFolderId()));
                     $setupExporter = false;
                 }
