@@ -35,6 +35,9 @@ include_once('../../src/lib/wbxml/wbxmldefs.php');
 include_once('../../src/lib/wbxml/wbxmldecoder.php');
 include_once('../../src/lib/wbxml/wbxmlencoder.php');
 
+// don't truncate WBXML logs and use slow stream reader
+define('WBXML_DEBUGGING', true);
+
 // minimal definitions & log to stdout overwrite
 define('WBXML_DEBUG', true);
 define("LOGLEVEL_WBXML", "wbxml");
