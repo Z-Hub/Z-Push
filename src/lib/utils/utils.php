@@ -388,13 +388,15 @@ class Utils {
         // make sure length is always an interger
         $length = (int)$length;
 
-        if (strlen($string) <= $length)
-            return $string;
+        // if the input string is shorter then the trunction, make sure it's valid UTF-8!
+        if (strlen($string) <= $length) {
+            $length = strlen($string) - 1;
+        }
 
         while($length >= 0) {
-            if ((ord($string[$length]) < 0x80) || (ord($string[$length]) >= 0xC0))
+            if ((ord($string[$length]) < 0x80) || (ord($string[$length]) >= 0xC0)) {
                 return substr($string, 0, $length);
-
+            }
             $length--;
         }
         return "";
@@ -1177,7 +1179,7 @@ class Utils {
     }
 
     /**
-     * Check if the UTF-8 string has ISO-2022-JP esc seq 
+     * Check if the UTF-8 string has ISO-2022-JP esc seq
      * if so, it is ISO-2022-JP, not UTF-8 and convert it into UTF-8
      * string
      *
