@@ -136,11 +136,11 @@ class StringStreamWrapper {
     public function stream_truncate ($new_size) {
         // cut the string!
         $this->stringstream = Utils::Utf8_truncate($this->stringstream, $new_size);
-        $this->streamlength = strlen($this->stringstream);
+        $this->stringlength = strlen($this->stringstream);
 
-        if ($this->position > $this->streamlength) {
-            ZLog::Write(LOGLEVEL_WARN, sprintf("StringStreamWrapper->stream_truncate(): stream position (%d) ahead of new size of %d. Repositioning pointer to end of stream.", $this->position, $this->streamlength));
-            $this->position = $this->streamlength;
+        if ($this->position > $this->stringlength) {
+            ZLog::Write(LOGLEVEL_WARN, sprintf("StringStreamWrapper->stream_truncate(): stream position (%d) ahead of new size of %d. Repositioning pointer to end of stream.", $this->position, $this->stringlength));
+            $this->position = $this->stringlength;
         }
         return true;
     }
