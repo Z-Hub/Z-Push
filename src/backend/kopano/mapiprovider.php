@@ -2626,7 +2626,7 @@ class MAPIProvider {
                 if ($bpReturnType == SYNC_BODYPREFERENCE_PLAIN) {
                     ZLog::Write(LOGLEVEL_DEBUG, "MAPIProvider->setMessageBody(): truncated plain-text body requested, stripping all links and images");
                     // Get more data because of the filtering it's most probably going down in size. It's going to be truncated to the correct size below.
-                    $plainbody = stream_get_contents($message->asbody->data, $bpo->GetTruncationSize() * 3);
+                    $plainbody = stream_get_contents($message->asbody->data, $bpo->GetTruncationSize() * 5);
                     $message->asbody->data = StringStreamWrapper::Open(preg_replace('/<http(s){0,1}:\/\/.*?>/i', '', $plainbody));
                 }
 
