@@ -1853,7 +1853,17 @@ class BackendKopano implements IBackend, ISearchProvider {
         $user = mapi_zarafa_getuser($this->defaultstore, $this->mainUser);
         if ($user != false) {
             $userinformation->Status = SYNC_SETTINGSSTATUS_USERINFO_SUCCESS;
-            $userinformation->emailaddresses[] = $user["emailaddress"];
+            if (Request::GetProtocolVersion() >= 14.1) {
+                $account = new SyncAccount();
+                $emailaddresses = new SyncEmailAddresses();
+                $emailaddresses->smtpaddress[] = $user["emailaddress"];
+                $emailaddresses->primarysmtpaddress = $user["emailaddress"];
+                $account->emailaddresses = $emailaddresses;
+                $userinformation->accounts[] = $account;
+            }
+            else {
+                $userinformation->emailaddresses[] = $user["emailaddress"];
+            }
             return true;
         }
         ZLog::Write(LOGLEVEL_ERROR, sprintf("Getting user information failed: mapi_zarafa_getuser(%X)", mapi_last_hresult()));

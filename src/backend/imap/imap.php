@@ -2617,7 +2617,17 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
      */
     private function settingsUserInformation(&$userinformation) {
         $userinformation->Status = SYNC_SETTINGSSTATUS_USERINFO_SUCCESS;
-        $userinformation->emailaddresses[] = $this->username;
+        if (Request::GetProtocolVersion() >= 14.1) {
+            $account = new SyncAccount();
+            $emailaddresses = new SyncEmailAddresses();
+            $emailaddresses->smtpaddress[] = $this->username;
+            $emailaddresses->primarysmtpaddress = $this->username;
+            $account->emailaddresses = $emailaddresses;
+            $userinformation->accounts[] = $account;
+        }
+        else {
+            $userinformation->emailaddresses[] = $this->username;
+        }
         return true;
     }
 

@@ -178,8 +178,21 @@ abstract class Backend implements IBackend {
             }
         }
         if ($settings instanceof SyncUserInformation) {
-            $settings->emailaddresses = array(ZPush::GetBackend()->GetUserDetails(Request::GetAuthUser())['emailaddress']);
             $settings->Status = SYNC_SETTINGSSTATUS_SUCCESS;
+            if (Request::GetProtocolVersion() >= 14.1) {
+                $account = new SyncAccount();
+                $emailaddresses = new SyncEmailAddresses();
+                $emailaddresses->smtpaddress[] = ZPush::GetBackend()->GetUserDetails(Request::GetAuthUser())['emailaddress'];
+                $emailaddresses->primarysmtpaddress = ZPush::GetBackend()->GetUserDetails(Request::GetAuthUser())['emailaddress'];
+                $account->emailaddresses = $emailaddresses;
+                $userinformation->accounts[] = $account;
+            }
+            else {
+                $userinformation->emailaddresses = array(ZPush::GetBackend()->GetUserDetails(Request::GetAuthUser())['emailaddress']);
+            }
+
+            $settings->emailaddresses = array(ZPush::GetBackend()->GetUserDetails(Request::GetAuthUser())['emailaddress']);
+
         }
         return $settings;
     }

@@ -2,7 +2,7 @@
 /***********************************************
 * File      :   syncuserinformation.php
 * Project   :   Z-Push
-* Descr     :   WBXML appointment entities that can be
+* Descr     :   WBXML user information entities that can be
 *               parsed directly (as a stream) from WBXML.
 *               It is automatically decoded
 *               according to $mapping,
@@ -28,30 +28,26 @@
 ************************************************/
 
 class SyncUserInformation extends SyncObject {
-    public $accountid;
-    public $accountname;
-    public $userdisplayname;
-    public $senddisabled;
     public $emailaddresses;
+    public $accounts;
     public $Status;
 
     public function __construct() {
-        $mapping = array (
-            SYNC_SETTINGS_ACCOUNTID                 => array (  self::STREAMER_VAR      => "accountid"),
-            SYNC_SETTINGS_ACCOUNTNAME               => array (  self::STREAMER_VAR      => "accountname"),
-            SYNC_SETTINGS_EMAILADDRESSES            => array (  self::STREAMER_VAR      => "emailaddresses",
-                                                                self::STREAMER_ARRAY    => SYNC_SETTINGS_SMPTADDRESS),
+        $mapping = array(SYNC_SETTINGS_PROP_STATUS      => array (  self::STREAMER_VAR      => "Status",
+                                                                    self::STREAMER_TYPE     => self::STREAMER_TYPE_IGNORE));
 
-            SYNC_SETTINGS_PROP_STATUS               => array (  self::STREAMER_VAR      => "Status",
-                                                                self::STREAMER_TYPE     => self::STREAMER_TYPE_IGNORE)
-        );
-
-        if (Request::GetProtocolVersion() >= 12.1) {
-            $mapping[SYNC_SETTINGS_USERDISPLAYNAME] = array (   self::STREAMER_VAR       => "userdisplayname");
+        // In AS protocoll versions 12.0, 12.1 and 14.0 EmailAddresses element is child of Get in UserSettings
+        // Since AS protocoll version 14.1 EmailAddresses element is child of Account element of Get in UserSettings
+        if (Request::GetProtocolVersion() >= 12.0) {
+            $mapping[SYNC_SETTINGS_EMAILADDRESSES]      = array (   self::STREAMER_VAR      => "emailaddresses",
+                                                                    self::STREAMER_ARRAY    => SYNC_SETTINGS_SMPTADDRESS);
         }
 
-        if (Request::GetProtocolVersion() >= 14.0) {
-            $mapping[SYNC_SETTINGS_SENDDISABLED]    = array (   self::STREAMER_VAR       => "senddisabled");
+        if (Request::GetProtocolVersion() >= 14.1) {
+            unset($mapping[SYNC_SETTINGS_EMAILADDRESSES]);
+            $mapping[SYNC_SETTINGS_ACCOUNTS]            = array (   self::STREAMER_VAR      => "accounts",
+                                                                    self::STREAMER_TYPE     => "SyncAccount",
+                                                                    self::STREAMER_ARRAY    => SYNC_SETTINGS_ACCOUNT);
         }
 
         parent::__construct($mapping);
