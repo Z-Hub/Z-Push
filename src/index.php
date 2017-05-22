@@ -55,16 +55,16 @@ include_once(ZPUSH_CONFIG);
         if (! Request::HasAuthenticationInfo() || !Request::GetGETUser())
             throw new AuthenticationRequiredException("Access denied. Please send authorisation information");
 
+        ZPush::CheckAdvancedConfig();
+
+        // Process request headers and look for AS headers
+        Request::ProcessHeaders();
+
         // Stop here if this is an OPTIONS request
         if (Request::IsMethodOPTIONS()) {
             RequestProcessor::Authenticate();
             throw new NoPostRequestException("Options request", NoPostRequestException::OPTIONS_REQUEST);
         }
-
-        ZPush::CheckAdvancedConfig();
-
-        // Process request headers and look for AS headers
-        Request::ProcessHeaders();
 
         // Check required GET parameters
         if(Request::IsMethodPOST() && (Request::GetCommandCode() === false || !Request::GetDeviceID() || !Request::GetDeviceType()))

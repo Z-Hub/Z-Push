@@ -311,6 +311,8 @@
     define('KOE_CAPABILITY_SECONDARYCONTACTS', true);
     // Copy WebApp signature into KOE
     define('KOE_CAPABILITY_SIGNATURES', true);
+    // Delivery receipt requests
+    define('KOE_CAPABILITY_RECEIPTS', true);
 
     // To synchronize the GAB KOE, the GAB store and folderid need to be specified.
     // Use the gab-sync script to generate this data. The name needs to
