@@ -538,7 +538,7 @@ class BackendCalDAV extends BackendDiff {
         $timezones = $ical->GetComponents("VTIMEZONE");
         $timezone = "";
         if (count($timezones) > 0) {
-            $timezone = TimezoneUtil::ParseTimezone($timezones[0]->GetPValue("TZID"));
+            $timezone = TimezoneUtil::GetPhpSupportedTimezone($timezones[0]->GetPValue("TZID"));
         }
         if (!$timezone) {
             $timezone = date_default_timezone_get();
@@ -1449,6 +1449,7 @@ class BackendCalDAV extends BackendDiff {
      * @throws Exception
      */
     private function _GetTimezoneString($timezone, $with_names = true) {
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->_GetTimezoneString(): using '%s' timezone", $timezone));
         // UTC needs special handling
         if ($timezone == "UTC")
             return base64_encode(pack('la64vvvvvvvvla64vvvvvvvvl', 0, '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', 0, 0, 0, 0, 0, 0, 0, 0, 0));
