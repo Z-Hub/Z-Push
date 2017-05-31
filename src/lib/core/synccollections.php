@@ -256,7 +256,14 @@ class SyncCollections implements Iterator {
         if (! $spa->HasFolderId())
             return false;
 
-        $this->collections[$spa->GetFolderId()] = $spa;
+        if ($spa->GetKoeGabFolder() === true) {
+            // put KOE GAB at the beginning of the sync
+            $this->collections = [$spa->GetFolderId() => $spa] + $this->collections;
+            ZLog::Write(LOGLEVEL_DEBUG, "SyncCollections->AddCollection(): Prioritizing KOE GAB folder for synchronization");
+        }
+        else {
+            $this->collections[$spa->GetFolderId()] = $spa;
+        }
 
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncCollections->AddCollection(): Folder id '%s' : ref. PolicyKey '%s', ref. Lifetime '%s', last sync at '%s'", $spa->GetFolderId(), $spa->GetReferencePolicyKey(), $spa->GetReferenceLifetime(), $spa->GetLastSyncTime()));
         if ($spa->HasLastSyncTime() && $spa->GetLastSyncTime() > $this->lastSyncTime) {
