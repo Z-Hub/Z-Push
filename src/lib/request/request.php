@@ -685,8 +685,8 @@ class Request {
     }
 
     /**
-     * If $input is a valid IPv4 or IPv6 address, returns a valid compact IPv4 or IPv6 address string
-     * Otherwise, it will strip all characters that are neither numerical or '.' and prefix with "bad-ip"
+     * If $input is a valid IPv4 or IPv6 address, returns a valid compact IPv4 or IPv6 address string.
+     * Otherwise, it will strip all characters that are neither numerical or '.' and prefix with "bad-ip".
      *
      * @param string	$input	The ipv4/ipv6 address
      *
