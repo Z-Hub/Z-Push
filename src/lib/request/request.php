@@ -696,7 +696,7 @@ class Request {
     static private function filterIP($input) {
       $in_addr = @inet_pton($input);
       if ($in_addr === false) {
-        return 'badip-' . self::filterEvilInput($input, self::NUMBERSDOT_ONLY);
+        return 'badip-' . self::filterEvilInput($input, self::HEX_EXTENDED);
       }
       return inet_ntop($in_addr);
     }
