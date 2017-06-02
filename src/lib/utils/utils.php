@@ -788,7 +788,7 @@ class Utils {
     public static function ConvertCodepageStringToUtf8($codepage, $string) {
         if (function_exists("iconv")) {
             $charset = self::GetCodepageCharset($codepage);
-            return iconv($charset, "utf-8", $string);
+            return iconv($charset, "utf-8", str_replace($charset,"utf-8",$string));
         }
         else
             ZLog::Write(LOGLEVEL_WARN, "Utils::ConvertCodepageStringToUtf8() 'iconv' is not available. Charset conversion skipped.");

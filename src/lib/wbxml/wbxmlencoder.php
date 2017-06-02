@@ -486,6 +486,7 @@ class WBXMLEncoder extends WBXMLDefs {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("WBXMLEncoder->processMultipart() with %d parts to be processed", $this->getBodypartsCount()));
         $len = ob_get_length();
         $buffer = ob_get_clean();
+        ob_start();
         $nrBodyparts = $this->getBodypartsCount();
         $blockstart = (($nrBodyparts + 1) * 2) * 4 + 4;
 
