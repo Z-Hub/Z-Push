@@ -95,9 +95,11 @@ abstract class SyncObject extends Streamer {
      *
      * @see SyncObject
      * @param SyncObject $odo other SyncObject
+     * @param boolean $log flag to turn on logging
+     * @param boolean $strictTypeCompare to enforce type matching 
      * @return boolean
      */
-    public function equals($odo, $log = false) {
+    public function equals($odo, $log = false, $strictTypeCompare = false) {
         if ($odo === false)
             return false;
 
@@ -131,9 +133,16 @@ abstract class SyncObject extends Streamer {
             }
             else {
                 if (isset($this->$val) && isset($odo->$val)) {
-                    if ($this->$val !== $odo->$val){
-                        ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncObject->equals() false on field '%s': '%s' != '%s'", $val, Utils::PrintAsString($this->$val), Utils::PrintAsString($odo->$val)));
-                        return false;
+                    if ($strictTypeCompare){
+                        if ($this->$val !== $odo->$val){
+                            ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncObject->equals() false on field '%s': '%s' != '%s' using strictTypeCompare", $val, Utils::PrintAsString($this->$val), Utils::PrintAsString($odo->$val)));
+                            return false;
+                        }
+                    } else {
+                        if ($this->$val != $odo->$val){
+                            ZLog::Write(LOGLEVEL_DEBUG, sprintf("SyncObject->equals() false on field '%s': '%s' != '%s'", $val, Utils::PrintAsString($this->$val), Utils::PrintAsString($odo->$val)));
+                            return false;
+                        }
                     }
                 }
                 else if (!isset($this->$val) && !isset($odo->$val)) {
