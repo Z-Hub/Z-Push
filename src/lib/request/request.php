@@ -677,7 +677,7 @@ class Request {
         else if ($filter == self::WORDCHAR_ONLY)      $re = "/[^A-Za-z0-9]/";
         else if ($filter == self::NUMBERS_ONLY)       $re = "/[^0-9]/";
         else if ($filter == self::NUMBERSDOT_ONLY)    $re = "/[^0-9\.]/";
-        else if ($filter == self::HEX_EXTENDED)       $re = "/[^A-Fa-f0-9\:]/";
+        else if ($filter == self::HEX_EXTENDED)       $re = "/[^A-Fa-f0-9\:\.]/";
         else if ($filter == self::HEX_EXTENDED2)      $re = "/[^A-Fa-f0-9\:USG]/"; // Folder origin constants from DeviceManager::FLD_ORIGIN_* (C already hex)
         else if ($filter == self::ISO8601)            $re = "/[^\d{8}T\d{6}Z]/";
 
