@@ -2473,8 +2473,7 @@ class MAPIProvider {
             elseif (isset($message->internetcpid) && $bpReturnType == SYNC_BODYPREFERENCE_HTML) {
                 // if PR_HTML is UTF-8 we can stream it directly, else we have to convert to UTF-8 & wrap it
                 if (Utils::GetCodepageCharset($message->internetcpid) == "utf-8") {
-                    $body = $this->mapiReadStream($stream, $streamsize);
-                    $message->asbody->data = StringStreamWrapper::Open(str_replace("\n","",str_replace("\r","",$body)));
+                    $message->asbody->data = MAPIStreamWrapper::Open($stream);
                 }
                 else {
                     $body = $this->mapiReadStream($stream, $streamsize);
