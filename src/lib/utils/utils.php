@@ -864,6 +864,7 @@ class Utils {
     /**
      * Checks if a file has the same owner and group as the parent directory.
      * If not, owner and group are fixed (being updated to the owner/group of the directory).
+     * If the given file is a special file (i.g., /dev/null, fifo), nothing is changed.
      * Function code contributed by Robert Scheck aka rsc.
      *
      * @param string $file
@@ -872,7 +873,7 @@ class Utils {
      * @return boolean
      */
     public static function FixFileOwner($file) {
-        if(posix_getuid() == 0 && file_exists($file)) {
+        if(posix_getuid() == 0 && is_file($file)) {
             $dir = dirname($file);
             $perm_dir = stat($dir);
             $perm_file = stat($file);
