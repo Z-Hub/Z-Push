@@ -123,7 +123,7 @@ class Request {
             self::$method = self::filterEvilInput($_SERVER["REQUEST_METHOD"], self::LETTERS_ONLY);
         // TODO check IPv6 addresses
         if(isset($_SERVER["REMOTE_ADDR"]))
-            self::$remoteAddr = self::filterEvilInput($_SERVER["REMOTE_ADDR"], self::NUMBERSDOT_ONLY);
+            self::$remoteAddr = self::filterIP($_SERVER["REMOTE_ADDR"]);
 
         // in protocol version > 14 mobile send these inputs as encoded query string
         if (!isset(self::$command) && !empty($_SERVER['QUERY_STRING']) && Utils::IsBase64String($_SERVER['QUERY_STRING'])) {
@@ -237,7 +237,7 @@ class Request {
         }
 
         if (defined('USE_X_FORWARDED_FOR_HEADER') && USE_X_FORWARDED_FOR_HEADER == true && isset(self::$headers["x-forwarded-for"])) {
-            $forwardedIP = self::filterEvilInput(self::$headers["x-forwarded-for"], self::NUMBERSDOT_ONLY);
+            $forwardedIP = self::filterIP(self::$headers["x-forwarded-for"]);
             if ($forwardedIP) {
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("'X-Forwarded-for' indicates remote IP: %s - connect is coming from IP: %s", $forwardedIP, self::$remoteAddr));
                 self::$remoteAddr = $forwardedIP;
@@ -677,11 +677,28 @@ class Request {
         else if ($filter == self::WORDCHAR_ONLY)      $re = "/[^A-Za-z0-9]/";
         else if ($filter == self::NUMBERS_ONLY)       $re = "/[^0-9]/";
         else if ($filter == self::NUMBERSDOT_ONLY)    $re = "/[^0-9\.]/";
-        else if ($filter == self::HEX_EXTENDED)       $re = "/[^A-Fa-f0-9\:]/";
+        else if ($filter == self::HEX_EXTENDED)       $re = "/[^A-Fa-f0-9\:\.]/";
         else if ($filter == self::HEX_EXTENDED2)      $re = "/[^A-Fa-f0-9\:USG]/"; // Folder origin constants from DeviceManager::FLD_ORIGIN_* (C already hex)
         else if ($filter == self::ISO8601)            $re = "/[^\d{8}T\d{6}Z]/";
 
         return ($re) ? preg_replace($re, $replacevalue, $input) : '';
+    }
+
+    /**
+     * If $input is a valid IPv4 or IPv6 address, returns a valid compact IPv4 or IPv6 address string.
+     * Otherwise, it will strip all characters that are neither numerical or '.' and prefix with "bad-ip".
+     *
+     * @param string	$input	The ipv4/ipv6 address
+     *
+     * @access public
+     * @return string
+     */
+    static private function filterIP($input) {
+      $in_addr = @inet_pton($input);
+      if ($in_addr === false) {
+        return 'badip-' . self::filterEvilInput($input, self::HEX_EXTENDED);
+      }
+      return inet_ntop($in_addr);
     }
 
     /**
