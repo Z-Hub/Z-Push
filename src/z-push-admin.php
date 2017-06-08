@@ -259,10 +259,23 @@ class ZPushAdminCLI {
                 self::$command = self::COMMAND_CLEARLOOP;
                 break;
 
-            // clear loop detection data
+            // fix states
             case "fixstates":
             case "fix":
                 self::$command = self::COMMAND_FIXSTATES;
+                break;
+
+            // hidden feature to run fixstates after upgrading the packages - this is called from postinst only
+            case "fixstates-upgrade":
+                // don't execute fixstates during upgrade if IGNORE_FIXSTATES_ON_UPGRADE is set to true
+                if (!defined('IGNORE_FIXSTATES_ON_UPGRADE') || IGNORE_FIXSTATES_ON_UPGRADE == false) {
+                    self::$command = self::COMMAND_FIXSTATES;
+                }
+                else {
+                    // print warning and exit gracefully
+                    echo "\nZ-Push: Not executing 'fixstates' as IGNORE_FIXSTATES_ON_UPGRADE is set. You should execute 'z-push-admin -a fixstates' manually!\n\n";
+                    exit(0);
+                }
                 break;
 
 
