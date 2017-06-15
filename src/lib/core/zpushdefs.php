@@ -586,7 +586,7 @@ define("SYNC_SETTINGS_ACCOUNTID", "Settings:AccountId"); // Since 14.1
 define("SYNC_SETTINGS_ACCOUNTNAME", "Settings:AccountName"); // Since 14.1
 define("SYNC_SETTINGS_USERDISPLAYNAME", "Settings:UserDisplayName"); // Since 14.1
 define("SYNC_SETTINGS_SENDDISABLED", "Settings:SendDisabled"); // Since 14.1
-define("SYNC_SETTINGS_IHSMANAGEMENTINFORMATION", "Settings:ihsManagementInformation"); // Since 14.1
+define("SYNC_SETTINGS_RIGHTSMANAGEMENTINFORMATION", "Settings:RightsManagementInformation"); // Since 14.1
 // only for internal use - never to be streamed to the mobile
 define("SYNC_SETTINGS_PROP_STATUS", "Settings:PropertyStatus");
 

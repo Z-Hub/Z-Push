@@ -622,7 +622,7 @@ class WBXMLDefs {
                         0x27 => "AccountName", // Since 14.1
                         0x28 => "UserDisplayName", // Since 14.1
                         0x29 => "SendDisabled", // Since 14.1
-                        0x2B => "ihsManagementInformation", // Since 14.1
+                        0x2B => "RightsManagementInformation", // Since 14.1
                     ),
                     0x13 => array( // Since 12.0
                         0x05 => "LinkId",
