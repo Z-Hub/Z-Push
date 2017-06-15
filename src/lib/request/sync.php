@@ -182,6 +182,11 @@ class Sync extends RequestProcessor {
                         }
                     }
 
+                    // determine if this is the KOE GAB folder so it can be prioritized by SyncCollections
+                    if (KOE_CAPABILITY_GAB && self::$deviceManager->IsKoe() && $spa->GetBackendFolderId() == self::$deviceManager->GetKoeGabBackendFolderId()) {
+                        $spa->SetKoeGabFolder(true);
+                    }
+
                     // done basic SPA initialization/loading -> add to SyncCollection
                     $sc->AddCollection($spa);
                     $sc->AddParameter($spa, "requested", true);
@@ -386,7 +391,7 @@ class Sync extends RequestProcessor {
                     }
 
                     // unset filtertype for KOE GAB folder
-                    if (KOE_CAPABILITY_GAB && self::$deviceManager->IsKoe() && $spa->GetBackendFolderId() == self::$deviceManager->GetKoeGabBackendFolderId()) {
+                    if ($spa->GetKoeGabFolder() === true) {
                         $spa->SetFilterType(SYNC_FILTERTYPE_ALL);
                         ZLog::Write(LOGLEVEL_DEBUG, "HandleSync(): KOE GAB folder - setting filter type to unlimited");
                     }
