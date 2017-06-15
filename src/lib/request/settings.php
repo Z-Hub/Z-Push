@@ -86,6 +86,9 @@ class Settings extends RequestProcessor {
             if (self::$decoder->getElementStartTag(SYNC_SETTINGS_USERINFORMATION)) {
                 $propertyName = SYNC_SETTINGS_USERINFORMATION;
             }
+            if (self::$decoder->getElementStartTag(SYNC_SETTINGS_RIGHTSMANAGEMENTINFORMATION)) {
+                $propertyName = SYNC_SETTINGS_RIGHTSMANAGEMENTINFORMATION;
+            }
             //TODO - check if it is necessary
             //no property name available - break
             if (!$propertyName)
@@ -93,7 +96,7 @@ class Settings extends RequestProcessor {
 
             //the property name is followed by either get or set
             if (self::$decoder->getElementStartTag(SYNC_SETTINGS_GET)) {
-                //get is only available for OOF and user information
+                //get is available for OOF (AS 12), user information (AS 12) and rights management (AS 14.1)
                 switch ($propertyName) {
                     case SYNC_SETTINGS_OOF:
                         $oofGet = new SyncOOF();
@@ -104,6 +107,9 @@ class Settings extends RequestProcessor {
 
                     case SYNC_SETTINGS_USERINFORMATION:
                         $userInformation = new SyncUserInformation();
+                        break;
+
+                    case SYNC_SETTINGS_RIGHTSMANAGEMENTINFORMATION:
                         break;
 
                     default:

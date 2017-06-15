@@ -167,6 +167,7 @@ class ComposerStaticInitd6749fc2fb9944bbe86b2b7d79a7852f
         'SyncResolveRecipientsOptions' => __DIR__ . '/../..' . '/lib/syncobjects/syncresolverecipientsoptions.php',
         'SyncResolveRecipientsPicture' => __DIR__ . '/../..' . '/lib/syncobjects/syncresolverecipientspicture.php',
         'SyncResolveRecipientsResponse' => __DIR__ . '/../..' . '/lib/syncobjects/syncresolverecipientsresponse.php',
+        'SyncRightsManagement' => __DIR__ . '/../..' . '/lib/syncobjects/syncrightsmanagement.php',
         'SyncSendMail' => __DIR__ . '/../..' . '/lib/syncobjects/syncsendmail.php',
         'SyncSendMailSource' => __DIR__ . '/../..' . '/lib/syncobjects/syncsendmailsource.php',
         'SyncTask' => __DIR__ . '/../..' . '/lib/syncobjects/synctask.php',
