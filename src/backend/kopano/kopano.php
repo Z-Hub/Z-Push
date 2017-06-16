@@ -1025,9 +1025,9 @@ class BackendKopano implements IBackend, ISearchProvider {
     }
 
     /**
-     * Applies settings to and gets informations from the device
+     * Applies settings to and gets informations from the device.
      *
-     * @param SyncObject        $settings (SyncOOF or SyncUserInformation possible)
+     * @param SyncObject    $settings (SyncOOF, SyncUserInformation, SyncRightsManagementTemplates possible)
      *
      * @access public
      * @return SyncObject       $settings
@@ -1039,6 +1039,10 @@ class BackendKopano implements IBackend, ISearchProvider {
 
         if ($settings instanceof SyncUserInformation) {
             $this->settingsUserInformation($settings);
+        }
+
+        if ($settings instanceof SyncRightsManagementTemplates) {
+            $this->settingsRightsManagementTemplates($settings);
         }
 
         return $settings;
@@ -1882,6 +1886,18 @@ class BackendKopano implements IBackend, ISearchProvider {
         }
         ZLog::Write(LOGLEVEL_ERROR, sprintf("Getting user information failed: mapi_zarafa_getuser(%X)", mapi_last_hresult()));
         return false;
+    }
+
+    /**
+     * Gets the rights management templates from the server.
+     *
+     * @param SyncObject $rmTemplates
+     *
+     * @access private
+     * @return void
+     */
+    private function settingsRightsManagementTemplates(&$rmTemplates) {
+        $rmTemplates->Status = SYNC_SETTINGSSTATUS_SUCCESS;
     }
 
     /**

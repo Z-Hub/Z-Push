@@ -1753,7 +1753,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
     /**
      * Applies settings to and gets informations from the device
      *
-     * @param SyncObject        $settings (SyncOOF or SyncUserInformation possible)
+     * @param SyncObject    $settings (SyncOOF, SyncUserInformation, SyncRightsManagementTemplates possible)
      *
      * @access public
      * @return SyncObject       $settings
@@ -1762,8 +1762,11 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
         if ($settings instanceof SyncOOF) {
             $this->settingsOOF($settings);
         }
-        else if ($settings instanceof SyncUserInformation) {
+        elseif ($settings instanceof SyncUserInformation) {
             $this->settingsUserInformation($settings);
+        }
+        elseif ($settings instanceof SyncRightsManagementTemplates) {
+            $settings->Status = SYNC_SETTINGSSTATUS_SUCCESS;
         }
 
         return $settings;

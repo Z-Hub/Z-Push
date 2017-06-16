@@ -159,7 +159,7 @@ abstract class Backend implements IBackend {
     /**
      * Applies settings to and gets informations from the device
      *
-     * @param SyncObject    $settings (SyncOOF or SyncUserInformation possible)
+     * @param SyncObject    $settings (SyncOOF, SyncUserInformation, SyncRightsManagementTemplates possible)
      *
      * @access public
      * @return SyncObject   $settings
@@ -193,6 +193,9 @@ abstract class Backend implements IBackend {
 
             $settings->emailaddresses = array(ZPush::GetBackend()->GetUserDetails(Request::GetAuthUser())['emailaddress']);
 
+        }
+        if ($settings instanceof SyncRightsManagementTemplates) {
+            $settings->Status = SYNC_SETTINGSSTATUS_SUCCESS;
         }
         return $settings;
     }

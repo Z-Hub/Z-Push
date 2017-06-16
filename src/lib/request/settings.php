@@ -110,6 +110,7 @@ class Settings extends RequestProcessor {
                         break;
 
                     case SYNC_SETTINGS_RIGHTSMANAGEMENTINFORMATION:
+                        $rmTemplates = new SyncRightsManagementTemplates();
                         break;
 
                     default:
@@ -205,6 +206,20 @@ class Settings extends RequestProcessor {
                         $userInformation->Encode(self::$encoder);
                     self::$encoder->endTag(); //SYNC_SETTINGS_GET
                 self::$encoder->endTag(); //SYNC_SETTINGS_USERINFORMATION
+            }
+
+            // get rights management templates
+            if (isset($rmTemplates)) {
+                self::$backend->Settings($rmTemplates);
+                self::$encoder->startTag(SYNC_SETTINGS_RIGHTSMANAGEMENTINFORMATION);
+                    self::$encoder->startTag(SYNC_SETTINGS_STATUS);
+                    self::$encoder->content($rmTemplates->Status);
+                    self::$encoder->endTag(); //SYNC_SETTINGS_STATUS
+
+                    self::$encoder->startTag(SYNC_SETTINGS_GET);
+                        $rmTemplates->Encode(self::$encoder);
+                    self::$encoder->endTag(); //SYNC_SETTINGS_GET
+                self::$encoder->endTag(); //SYNC_SETTINGS_RIGHTSMANAGEMENTINFORMATION
             }
 
             //set out of office
