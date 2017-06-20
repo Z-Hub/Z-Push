@@ -107,8 +107,10 @@ include_once(ZPUSH_CONFIG);
         RequestProcessor::HandleRequest();
 
         // eventually the RequestProcessor wants to send other headers to the mobile
-        foreach (RequestProcessor::GetSpecialHeaders() as $header)
+        foreach (RequestProcessor::GetSpecialHeaders() as $header) {
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("Special header: %s", $header));
             header($header);
+        }
 
         // stream the data
         $len = ob_get_length();
