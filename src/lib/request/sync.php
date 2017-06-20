@@ -649,8 +649,8 @@ class Sync extends RequestProcessor {
             }
         }
 
-        // HEARTBEAT & Empty sync
-        if ($status == SYNC_STATUS_SUCCESS && (isset($hbinterval) || $emptysync == true)) {
+        // HEARTBEAT
+        if ($status == SYNC_STATUS_SUCCESS && isset($hbinterval)) {
             $interval = (defined('PING_INTERVAL') && PING_INTERVAL > 0) ? PING_INTERVAL : 30;
 
             if (isset($hbinterval))
