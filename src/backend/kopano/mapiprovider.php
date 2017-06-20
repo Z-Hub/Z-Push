@@ -2477,15 +2477,13 @@ class MAPIProvider {
                 }
                 else {
                     $body = $this->mapiReadStream($stream, $streamsize);
-                    $message->asbody->data = StringStreamWrapper::Open(Utils::ConvertCodepageStringToUtf8($message->internetcpid, str_replace("\n","",str_replace("\r","",$body))));
+                    $message->asbody->data = StringStreamWrapper::Open(Utils::ConvertCodepageStringToUtf8($message->internetcpid, $body));
                     $message->internetcpid = INTERNET_CPID_UTF8;
                 }
             }
             else {
                 $message->asbody->data = MAPIStreamWrapper::Open($stream);
             }
-            $stat = fstat($message->asbody->data);
-            $streamsize = $stat['size'];
             $message->asbody->estimatedDataSize = $streamsize;
         }
         else {
