@@ -240,39 +240,55 @@ class ImportChangesICS implements IImportChanges {
     }
 
     /**
-     * Checks if a message is in the synchronization interval (window)
-     * if a filter (e.g. Sync items two weeks back) or limits this synchronization.
-     * These checks only apply to Emails and Appointments only, Contacts, Tasks and Notes do not have time restrictions.
+     * Checks if a message may be modified. This involves checking:
+     * - if there is a synchronization interval and if so, if the message is in it (sync window).
+     *   These checks only apply to Emails and Appointments only, Contacts, Tasks and Notes do not have time restrictions.
+     * - if the message is not marked as private in a shared folder.
      *
      * @param string     $messageid        the message id to be checked
      *
      * @access private
      * @return boolean
      */
-    private function isMessageInSyncInterval($messageid) {
-        // if there is no restriciton we do not need to check
-        if ($this->cutoffdate === false)
+    private function isModificationAllowed($messageid) {
+
+        $sharedUser = ZPush::GetAdditionalSyncFolderStore(bin2hex($this->folderid));
+        // if this is either a user folder or SYSTEM and no restriction is set, we don't need to check
+        if (($sharedUser == false || $sharedUser == 'SYSTEM') && $this->cutoffdate === false) {
             return true;
+        }
 
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ImportChangesICS->isMessageInSyncInterval('%s'): cut off date is: %s", $messageid, $this->cutoffdate));
-
+        // open the existing object
         $entryid = mapi_msgstore_entryidfromsourcekey($this->store, $this->folderid, hex2bin($messageid));
         if(!$entryid) {
-            ZLog::Write(LOGLEVEL_WARN, sprintf("ImportChangesICS->isMessageInSyncInterval('%s'): Error, unable to resolve message id: 0x%X", $messageid, mapi_last_hresult()));
+            ZLog::Write(LOGLEVEL_WARN, sprintf("ImportChangesICS->isModificationAllowed('%s'): Error, unable to resolve message id: 0x%X", $messageid, mapi_last_hresult()));
             return false;
         }
 
         $mapimessage = mapi_msgstore_openentry($this->store, $entryid);
         if(!$mapimessage) {
-            ZLog::Write(LOGLEVEL_WARN, sprintf("ImportChangesICS->isMessageInSyncInterval('%s'): Error, unable to open entry id: 0x%X", $messageid, mapi_last_hresult()));
+            ZLog::Write(LOGLEVEL_WARN, sprintf("ImportChangesICS->isModificationAllowed('%s'): Error, unable to open entry id: 0x%X", $messageid, mapi_last_hresult()));
             return false;
         }
 
-        if ($this->contentClass == "Email")
-            return MAPIUtils::IsInEmailSyncInterval($this->store, $mapimessage, $this->cutoffdate);
-        elseif ($this->contentClass == "Calendar")
-            return MAPIUtils::IsInCalendarSyncInterval($this->store, $mapimessage, $this->cutoffdate);
+        // check the sync interval
+        if ($this->cutoffdate !== false) {
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ImportChangesICS->isModificationAllowed('%s'): cut off date is: %s", $messageid, $this->cutoffdate));
+            if (  ($this->contentClass == "Email"    && !MAPIUtils::IsInEmailSyncInterval($this->store, $mapimessage, $this->cutoffdate)) ||
+                  ($this->contentClass == "Calendar" && !MAPIUtils::IsInCalendarSyncInterval($this->store, $mapimessage, $this->cutoffdate)) ) {
 
+                ZLog::Write(LOGLEVEL_WARN, sprintf("ImportChangesICS->isModificationAllowed('%s'): Message in %s is outside the sync interval. Data not saved.", $messageid, $this->contentClass));
+                return false;
+            }
+        }
+
+        // check if not private
+        if (MAPIUtils::IsMessageSharedAndPrivate($this->folderid, $mapimessage)) {
+            ZLog::Write(LOGLEVEL_WARN, sprintf("ImportChangesICS->isModificationAllowed('%s'): Message is shared and marked as private. Data not saved.", $messageid));
+            return false;
+        }
+
+        // yes, modification allowed
         return true;
     }
 
@@ -378,9 +394,9 @@ class ImportChangesICS implements IImportChanges {
             list(, $sk) = Utils::SplitMessageId($id);
             $props[PR_SOURCE_KEY] = hex2bin($sk);
 
-            // on editing an existing message, check if it is in the synchronization interval
-            if (!$this->isMessageInSyncInterval($sk))
-                throw new StatusException(sprintf("ImportChangesICS->ImportMessageChange('%s','%s'): Message is outside the sync interval. Data not saved.", $id, get_class($message)), SYNC_STATUS_SYNCCANNOTBECOMPLETED);
+            // check if message is in the synchronization interval and/or shared+private
+            if (!$this->isModificationAllowed($sk))
+                throw new StatusException(sprintf("ImportChangesICS->ImportMessageChange('%s','%s'): Message modification is not allowed. Data not saved.", $id, get_class($message)), SYNC_STATUS_SYNCCANNOTBECOMPLETED);
 
             // check for conflicts
             $this->lazyLoadConflicts();
@@ -439,9 +455,10 @@ class ImportChangesICS implements IImportChanges {
      */
     public function ImportMessageDeletion($id, $asSoftDelete = false) {
         list(,$sk) = Utils::SplitMessageId($id);
-        // check if the message is in the current syncinterval
-        if (!$this->isMessageInSyncInterval($sk))
-            throw new StatusException(sprintf("ImportChangesICS->ImportMessageDeletion('%s'): Message is outside the sync interval and so far not deleted.", $id), SYNC_STATUS_OBJECTNOTFOUND);
+
+        // check if message is in the synchronization interval and/or shared+private
+        if (!$this->isModificationAllowed($id))
+            throw new StatusException(sprintf("ImportChangesICS->ImportMessageDeletion('%s'): Message deletion is not allowed. Deletion not executed.", $id), SYNC_STATUS_OBJECTNOTFOUND);
 
         // check for conflicts
         $this->lazyLoadConflicts();
@@ -482,9 +499,9 @@ class ImportChangesICS implements IImportChanges {
         // read flag change for our current folder
         if ($this->folderidHex == $fsk || empty($fsk)) {
 
-            // check if the message is in the current syncinterval
-            if (!$this->isMessageInSyncInterval($sk))
-                throw new StatusException(sprintf("ImportChangesICS->ImportMessageReadFlag('%s','%d'): Message is outside the sync interval. Flags not updated.", $id, $flags), SYNC_STATUS_OBJECTNOTFOUND);
+            // check if it is in the synchronization interval and/or shared+private
+            if (!$this->isModificationAllowed($sk))
+                throw new StatusException(sprintf("ImportChangesICS->ImportMessageReadFlag('%s','%d'): Flag update is not allowed. Flags not updated.", $id, $flags), SYNC_STATUS_OBJECTNOTFOUND);
 
             // check for conflicts
             /*
@@ -561,9 +578,9 @@ class ImportChangesICS implements IImportChanges {
             throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Error, unable to %s: 0x%X", $sk, $newfolder, $errorCase, mapi_last_hresult()), $code);
         }
 
-        // check if the source message is in the current syncinterval
-        if (!$this->isMessageInSyncInterval($sk))
-            throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Source message is outside the sync interval. Move not performed.", $sk, $newfolder), SYNC_MOVEITEMSSTATUS_INVALIDSOURCEID);
+        // check if it is in the synchronization interval and/or shared+private
+        if (!$this->isModificationAllowed($sk))
+            throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Source message move is not allowed. Move not performed.", $id, $newfolder), SYNC_MOVEITEMSSTATUS_INVALIDSOURCEID);
 
         // get correct mapi store for the destination folder
         $dststore = ZPush::GetBackend()->GetMAPIStoreForFolderId(ZPush::GetAdditionalSyncFolderStore($newfolder), $newfolder);

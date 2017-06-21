@@ -182,6 +182,11 @@ class Sync extends RequestProcessor {
                         }
                     }
 
+                    // determine if this is the KOE GAB folder so it can be prioritized by SyncCollections
+                    if (KOE_CAPABILITY_GAB && self::$deviceManager->IsKoe() && $spa->GetBackendFolderId() == self::$deviceManager->GetKoeGabBackendFolderId()) {
+                        $spa->SetKoeGabFolder(true);
+                    }
+
                     // done basic SPA initialization/loading -> add to SyncCollection
                     $sc->AddCollection($spa);
                     $sc->AddParameter($spa, "requested", true);
@@ -380,7 +385,7 @@ class Sync extends RequestProcessor {
                     }
 
                     // unset filtertype for KOE GAB folder
-                    if (KOE_CAPABILITY_GAB && self::$deviceManager->IsKoe() && $spa->GetBackendFolderId() == self::$deviceManager->GetKoeGabBackendFolderId()) {
+                    if ($spa->GetKoeGabFolder() === true) {
                         $spa->SetFilterType(SYNC_FILTERTYPE_ALL);
                         ZLog::Write(LOGLEVEL_DEBUG, "HandleSync(): KOE GAB folder - setting filter type to unlimited");
                     }
@@ -768,8 +773,8 @@ class Sync extends RequestProcessor {
             // TODO we could check against $sc->GetChangedFolderIds() on heartbeat so we do not need to configure all exporter again
             if($status == SYNC_STATUS_SUCCESS && ($sc->GetParameter($spa, "getchanges") || ! $spa->HasSyncKey())) {
 
-                // no need to run the exporter if the globalwindowsize is already full
-                if ($sc->GetGlobalWindowSize() == $this->globallyExportedItems) {
+                // no need to run the exporter if the globalwindowsize is already full - if collection already has a synckey (ZP-1215)
+                if ($sc->GetGlobalWindowSize() == $this->globallyExportedItems && $spa->HasSyncKey()) {
                     ZLog::Write(LOGLEVEL_DEBUG, sprintf("Sync(): no exporter setup for '%s' as GlobalWindowSize is full.", $spa->GetFolderId()));
                     $setupExporter = false;
                 }
@@ -1583,6 +1588,8 @@ class Sync extends RequestProcessor {
 
         $interval = Utils::GetFiltertypeInterval($spa->GetFilterType());
         $timeout = time() + (($interval && $interval < $maxTimeout) ? $interval : $maxTimeout);
+        // randomize timout in 12h
+        $timeout -= rand(0, 43200);
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("Sync()->setFolderStat() on %s: %s expiring %s", $spa->getFolderId(), $newFolderStat, date('Y-m-d H:i:s', $timeout)));
         $spa->SetFolderStatTimeout($timeout);
     }

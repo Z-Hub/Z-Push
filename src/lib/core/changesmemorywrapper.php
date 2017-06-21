@@ -267,7 +267,7 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
                 // The Zarafa/Kopano HierarchyExporter exports all kinds of changes for folders (e.g. update no. of unread messages in a folder).
                 // These changes are not relevant for the mobiles, as something changes but the relevant displayname and parentid
                 // stay the same. These changes will be dropped and are not sent!
-                if ($folder->equals($this->GetFolder($folder->serverid))) {
+                if ($folder->equals($this->GetFolder($folder->serverid), false, true)) {
                     ZLog::Write(LOGLEVEL_DEBUG, sprintf("ChangesMemoryWrapper->ImportFolderChange(): Change for folder '%s' will not be sent as modification is not relevant.", $folder->displayname));
                     return false;
                 }
@@ -402,5 +402,20 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
     public function __wakeup() {
         $this->changes = array();
         $this->step = 0;
+    }
+
+    /**
+     * Removes internal data from the object, so this data can not be exposed.
+     *
+     * @access public
+     * @return boolean
+     */
+    public function StripData() {
+        unset($this->changes);
+        unset($this->step);
+        unset($this->destinationImporter);
+        unset($this->exportImporter);
+
+        return parent::StripData();
     }
 }

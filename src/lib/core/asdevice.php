@@ -175,18 +175,20 @@ class ASDevice extends StateObject {
     }
 
    /**
-     * Removes internal data from the object, so this data can not be exposed
+     * Removes internal data from the object, so this data can not be exposed.
+     *
+     * @param boolean $stripHierarchyCache  (opt) strips the hierarchy cache - default: true
      *
      * @access public
      * @return boolean
      */
-    public function StripData() {
+    public function StripData($stripHierarchyCache = true) {
         unset($this->changed);
         unset($this->unsetdata);
-        unset($this->hierarchyCache);
         unset($this->forceSave);
         unset($this->newdevice);
         unset($this->ignoredMessageIds);
+        unset($this->backend2folderidCache);
 
         if (isset($this->ignoredmessages) && is_array($this->ignoredmessages)) {
             $imessages = $this->ignoredmessages;
@@ -197,6 +199,14 @@ class ASDevice extends StateObject {
                 $unserializedMessage[] = $im;
             }
             $this->ignoredmessages = $unserializedMessage;
+        }
+
+
+        if (!$stripHierarchyCache && $this->hierarchyCache !== false && $this->hierarchyCache instanceof ChangesMemoryWrapper) {
+            $this->hierarchyCache->StripData();
+        }
+        else {
+            unset($this->hierarchyCache);
         }
 
         return true;
@@ -855,7 +865,7 @@ class ASDevice extends StateObject {
         }
 
         // check if type is of a additional user type
-        if (!in_array($type, array(SYNC_FOLDER_TYPE_USER_CONTACT, SYNC_FOLDER_TYPE_USER_APPOINTMENT, SYNC_FOLDER_TYPE_USER_TASK, SYNC_FOLDER_TYPE_USER_MAIL, SYNC_FOLDER_TYPE_USER_NOTE, SYNC_FOLDER_TYPE_USER_JOURNAL))) {
+        if (!in_array($type, array(SYNC_FOLDER_TYPE_USER_CONTACT, SYNC_FOLDER_TYPE_USER_APPOINTMENT, SYNC_FOLDER_TYPE_USER_TASK, SYNC_FOLDER_TYPE_USER_MAIL, SYNC_FOLDER_TYPE_USER_NOTE, SYNC_FOLDER_TYPE_USER_JOURNAL, SYNC_FOLDER_TYPE_OTHER))) {
             ZLog::Write(LOGLEVEL_ERROR, sprintf("ASDevice->AddAdditionalFolder(): folder can not be added because the specified type '%s' is not a permitted user type.", $type));
             return false;
         }
@@ -1039,7 +1049,7 @@ class ASDevice extends StateObject {
         // transform our array in a key/value array where folderids are keys and do some basic checks
         $toOrder = array();
         $ordered = array();
-        $validTypes = array(SYNC_FOLDER_TYPE_USER_CONTACT, SYNC_FOLDER_TYPE_USER_APPOINTMENT, SYNC_FOLDER_TYPE_USER_TASK, SYNC_FOLDER_TYPE_USER_MAIL, SYNC_FOLDER_TYPE_USER_NOTE, SYNC_FOLDER_TYPE_USER_JOURNAL);
+        $validTypes = array(SYNC_FOLDER_TYPE_USER_CONTACT, SYNC_FOLDER_TYPE_USER_APPOINTMENT, SYNC_FOLDER_TYPE_USER_TASK, SYNC_FOLDER_TYPE_USER_MAIL, SYNC_FOLDER_TYPE_USER_NOTE, SYNC_FOLDER_TYPE_USER_JOURNAL, SYNC_FOLDER_TYPE_OTHER);
         foreach($folders as $f) {
             // fail early
             if (!$f['folderid'] || !$f['name']) {

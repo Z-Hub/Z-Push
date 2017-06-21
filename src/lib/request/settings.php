@@ -37,23 +37,24 @@ class Settings extends RequestProcessor {
         if (!self::$decoder->getElementStartTag(SYNC_SETTINGS_SETTINGS))
             return false;
 
-        // add capability header for KOE
-        if(self::$deviceManager->IsKoe()) {
-            // define the supported capabilites
-            $cap = array();
-            if (defined('KOE_CAPABILITY_GAB') && KOE_CAPABILITY_GAB)                                $cap[] = "gab";
-            if (defined('KOE_CAPABILITY_RECEIVEFLAGS') && KOE_CAPABILITY_RECEIVEFLAGS)              $cap[] = "receiveflags";
-            if (defined('KOE_CAPABILITY_SENDFLAGS') && KOE_CAPABILITY_SENDFLAGS)                    $cap[] = "sendflags";
-            if (defined('KOE_CAPABILITY_OOFTIMES') && KOE_CAPABILITY_OOFTIMES)                      $cap[] = "ooftime";
-            elseif(defined('KOE_CAPABILITY_OOF') && KOE_CAPABILITY_OOF)                             $cap[] = "oof";        // 'ooftime' superseeds 'oof'. If 'ooftime' is set, 'oof' should not be defined.
-            if (defined('KOE_CAPABILITY_NOTES') && KOE_CAPABILITY_NOTES)                            $cap[] = "notes";
-            if (defined('KOE_CAPABILITY_SHAREDFOLDER') && KOE_CAPABILITY_SHAREDFOLDER)              $cap[] = "sharedfolder";
-            if (defined('KOE_CAPABILITY_SENDAS') && KOE_CAPABILITY_SENDAS)                          $cap[] = "sendas";
-            if (defined('KOE_CAPABILITY_SECONDARYCONTACTS') && KOE_CAPABILITY_SECONDARYCONTACTS)    $cap[] = "secondarycontacts";
-            if (defined('KOE_CAPABILITY_SIGNATURES') && KOE_CAPABILITY_SIGNATURES)                  $cap[] = "signatures";
+        // always add capability header - define the supported capabilites
+        $cap = array();
+        if (defined('KOE_CAPABILITY_GAB') && KOE_CAPABILITY_GAB)                                $cap[] = "gab";
+        if (defined('KOE_CAPABILITY_RECEIVEFLAGS') && KOE_CAPABILITY_RECEIVEFLAGS)              $cap[] = "receiveflags";
+        if (defined('KOE_CAPABILITY_SENDFLAGS') && KOE_CAPABILITY_SENDFLAGS)                    $cap[] = "sendflags";
+        if (defined('KOE_CAPABILITY_OOFTIMES') && KOE_CAPABILITY_OOFTIMES)                      $cap[] = "ooftime";
+        elseif(defined('KOE_CAPABILITY_OOF') && KOE_CAPABILITY_OOF)                             $cap[] = "oof";        // 'ooftime' superseeds 'oof'. If 'ooftime' is set, 'oof' should not be defined.
+        if (defined('KOE_CAPABILITY_NOTES') && KOE_CAPABILITY_NOTES)                            $cap[] = "notes";
+        if (defined('KOE_CAPABILITY_SHAREDFOLDER') && KOE_CAPABILITY_SHAREDFOLDER)              $cap[] = "sharedfolder";
+        if (defined('KOE_CAPABILITY_SENDAS') && KOE_CAPABILITY_SENDAS)                          $cap[] = "sendas";
+        if (defined('KOE_CAPABILITY_SECONDARYCONTACTS') && KOE_CAPABILITY_SECONDARYCONTACTS)    $cap[] = "secondarycontacts";
+        if (defined('KOE_CAPABILITY_SIGNATURES') && KOE_CAPABILITY_SIGNATURES)                  $cap[] = "signatures";
+        if (defined('KOE_CAPABILITY_RECEIPTS') && KOE_CAPABILITY_RECEIPTS)                      $cap[] = "receipts";
 
-            self::$specialHeaders = array();
-            self::$specialHeaders[] = "X-Push-Capabilities: ". implode(",",$cap);
+        self::$specialHeaders = array();
+        self::$specialHeaders[] = "X-Push-Capabilities: ". implode(",", $cap);
+
+        if(self::$deviceManager->IsKoe()) {
             self::$specialHeaders[] = "X-Push-GAB-Name: ". bin2hex(KOE_GAB_NAME);
 
             if (defined('KOE_CAPABILITY_SIGNATURES') && KOE_CAPABILITY_SIGNATURES) {

@@ -320,7 +320,7 @@ class WBXMLDecoder extends WBXMLDefs {
                 // when sending an email with an attachment this single log line (which is never logged in INFO)
                 // requires easily additional 20 MB of RAM. See https://jira.z-hub.io/browse/ZP-1159
                 $messagesize = strlen($el[EN_CONTENT]);
-                if ($messagesize > 10240) {
+                if ($messagesize > 10240 && !defined('WBXML_DEBUGGING')) {
                     $content = substr($el[EN_CONTENT], 0, 10240) . sprintf(" <log message with %d bytes truncated>", $messagesize);
                 }
                 else {
@@ -405,6 +405,21 @@ class WBXMLDecoder extends WBXMLDefs {
      * @return string
      */
     private function getTermStr() {
+        if (defined('WBXML_DEBUGGING') && WBXML_DEBUGGING === true) {
+            $str = "";
+            while (1) {
+                $in = $this->getByte();
+                if ($in == 0) {
+                    break;
+                }
+                else {
+                    $str .= chr($in);
+                }
+            }
+
+            return $str;
+        }
+
         // there is no unlimited "length" for stream_get_line,
         // so we use a huge value for "length" param (1Gb)
         // (0 == PHP_SOCK_CHUNK_SIZE (8192))

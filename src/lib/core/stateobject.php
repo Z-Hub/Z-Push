@@ -84,7 +84,10 @@ class StateObject implements Serializable {
      */
     public function __set($name, $value) {
         $lname = strtolower($name);
-        if (isset($this->data[$lname]) && is_scalar($value) && !is_array($value) && $this->data[$lname] === $value)
+        if (isset($this->data[$lname]) &&
+                ( (is_scalar($value) && !is_array($value) && $this->data[$lname] === $value) ||
+                  (is_array($value) && is_array($this->data[$lname]) && $this->data[$lname] === $value)
+                ))
             return false;
 
         $this->data[$lname] = $value;

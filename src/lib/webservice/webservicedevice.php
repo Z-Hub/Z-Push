@@ -50,16 +50,18 @@ class WebserviceDevice {
     /**
      * Returns the details of a given deviceid of the Request::GetGETUser().
      *
+     * @param boolean   $withHierarchyCache (opt) includes the HierarchyCache - default: false
+     *
      * @access public
      * @return ASDevice object
      */
-    public function GetDeviceDetails($deviceId) {
+    public function GetDeviceDetails($deviceId, $withHierarchyCache = false) {
         $user = Request::GetGETUser();
         $deviceId = preg_replace("/[^A-Za-z0-9]/", "", $deviceId);
         ZLog::Write(LOGLEVEL_INFO, sprintf("WebserviceDevice::GetDeviceDetails('%s'): getting device details from state of user '%s'", $deviceId, $user));
 
         ZPush::GetTopCollector()->AnnounceInformation(sprintf("Retrieved details of device '%s'", $deviceId), true);
-        return ZPushAdmin::GetDeviceDetails($deviceId, $user);
+        return ZPushAdmin::GetDeviceDetails($deviceId, $user, $withHierarchyCache);
     }
 
     /**

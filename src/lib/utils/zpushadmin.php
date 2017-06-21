@@ -69,16 +69,16 @@ class ZPushAdmin {
      *
      * @param string    $devid      device id
      * @param string    $user       user to be looked up
+     * @param boolean   $withHierarchyCache (opt) includes the HierarchyCache - default: false
      *
      * @return ASDevice object
      * @access public
      */
-    static public function GetDeviceDetails($devid, $user) {
+    static public function GetDeviceDetails($devid, $user, $withHierarchyCache = false) {
 
         try {
             $device = new ASDevice($devid, ASDevice::UNDEFINED, $user, ASDevice::UNDEFINED);
             $device->SetData(ZPush::GetStateMachine()->GetState($devid, IStateMachine::DEVICEDATA), false);
-            $device->StripData();
 
             try {
                 // we need a StateManager for this operation
@@ -128,6 +128,7 @@ class ZPushAdmin {
                     }
                 }
             }
+            $device->StripData(!$withHierarchyCache);
             return $device;
         }
         catch (StateNotFoundException $e) {

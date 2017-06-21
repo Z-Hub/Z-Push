@@ -110,5 +110,9 @@ class SyncRecurrence extends SyncObject {
         }
 
         parent::__construct($mapping);
+
+        // Indicates that this SyncObject supports the private flag and stripping of private data.
+        // There is nothing concrete to be stripped here, but as it's part of an appointment it supports it.
+        $this->supportsPrivateStripping = true;
     }
 }
