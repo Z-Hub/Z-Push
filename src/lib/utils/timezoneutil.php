@@ -1359,4 +1359,23 @@ class TimezoneUtil {
         }
         return self::getMSTZnameFromTZName(trim($timezone, '"'));
     }
+
+    /**
+     * Returns a timezone supported by PHP for DateTimeZone constructor.
+     * @see http://php.net/manual/en/timezones.php
+     *
+     * @param string $timezone
+     *
+     * @access public
+     * @return string
+     */
+    public static function GetPhpSupportedTimezone($timezone) {
+        if (in_array($timezone, DateTimeZone::listIdentifiers())) {
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("TimezoneUtil::GetPhpSupportedTimezone(): '%s' is a PHP supported timezone", $timezone));
+            return $timezone;
+        }
+        $dtz = date_default_timezone_get();
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("TimezoneUtil::GetPhpSupportedTimezone(): '%s' is not a PHP supported timezone. Returning default timezone: '%s'", $timezone, $dtz));
+        return $dtz;
+    }
 }
