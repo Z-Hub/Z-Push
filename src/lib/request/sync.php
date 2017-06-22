@@ -631,7 +631,11 @@ class Sync extends RequestProcessor {
             foreach($sc as $folderid => $spa) {
                 // manually set getchanges parameter for this collection if it is synchronized
                 if ($spa->HasSyncKey()) {
-                    $sc->AddParameter($spa, "getchanges", true);
+                    $actiondata = $sc->GetParameter($spa, "actiondata");
+                    // request changes if no other actions are executed
+                    if (empty($actiondata["modifyids"]) && empty($actiondata["clientids"]) && empty($actiondata["removeids"])) {
+                        $sc->AddParameter($spa, "getchanges", true);
+                    }
 
                     // announce WindowSize to DeviceManager
                     self::$deviceManager->SetWindowSize($folderid, $spa->GetWindowSize());
@@ -649,8 +653,8 @@ class Sync extends RequestProcessor {
             }
         }
 
-        // HEARTBEAT & Empty sync
-        if ($status == SYNC_STATUS_SUCCESS && (isset($hbinterval) || $emptysync == true)) {
+        // HEARTBEAT
+        if ($status == SYNC_STATUS_SUCCESS && isset($hbinterval)) {
             $interval = (defined('PING_INTERVAL') && PING_INTERVAL > 0) ? PING_INTERVAL : 30;
 
             if (isset($hbinterval))

@@ -41,6 +41,7 @@ class SyncBaseBody extends SyncObject {
                     SYNC_AIRSYNCBASE_TRUNCATED                          => array (self::STREAMER_VAR        => "truncated"),
                     SYNC_AIRSYNCBASE_DATA                               => array (self::STREAMER_VAR        => "data",
                                                                                   self::STREAMER_TYPE       => self::STREAMER_TYPE_STREAM_ASPLAIN,
+                                                                                  self::STREAMER_PROP       => self::STREAMER_TYPE_MULTIPART,
                                                                                   self::STREAMER_RONOTIFY   => true,
                                                                                   self::STREAMER_PRIVATE    => true),       // just remove the body when stripping private
         );
