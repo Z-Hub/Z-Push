@@ -887,7 +887,7 @@ class Sync extends RequestProcessor {
 
             // Fir AS 14.0+ omit output for folder, if there were no incoming or outgoing changes and no Fetch
             if (Request::GetProtocolVersion() >= 14.0 && ! $spa->HasNewSyncKey() && $changecount == 0 && empty($actiondata["fetchids"]) && $status == SYNC_STATUS_SUCCESS &&
-                    ($newFolderStat === false || ! $spa->IsExporterRunRequired($newFolderStat))) {
+                    ! $spa->HasConfirmationChanged() && ($newFolderStat === false || ! $spa->IsExporterRunRequired($newFolderStat))) {
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleSync: No changes found for %s folder id '%s'. Omitting output.", $spa->GetContentClass(), $spa->GetFolderId()));
                 continue;
             }
@@ -1208,12 +1208,14 @@ class Sync extends RequestProcessor {
                 self::$deviceManager->SetFolderSyncStatus($spa->GetFolderId(), DeviceManager::FLD_SYNC_COMPLETED);
 
                 // we should update the folderstat, but we recheck to see if it changed. If so, it's not updated to force another sync
-                $newFolderStatAfterExport = self::$backend->GetFolderStat(ZPush::GetAdditionalSyncFolderStore($spa->GetBackendFolderId()), $spa->GetBackendFolderId());
-                if ($newFolderStat === $newFolderStatAfterExport) {
-                    $this->setFolderStat($spa, $newFolderStat);
-                }
-                else {
-                    ZLog::Write(LOGLEVEL_DEBUG, "Sync() Folderstat differs after export, force another exporter run.");
+                if (self::$backend->HasFolderStats()) {
+                    $newFolderStatAfterExport = self::$backend->GetFolderStat(ZPush::GetAdditionalSyncFolderStore($spa->GetBackendFolderId()), $spa->GetBackendFolderId());
+                    if ($newFolderStat === $newFolderStatAfterExport) {
+                        $this->setFolderStat($spa, $newFolderStat);
+                    }
+                    else {
+                        ZLog::Write(LOGLEVEL_DEBUG, "Sync() Folderstat differs after export, force another exporter run.");
+                    }
                 }
             }
             else
