@@ -683,7 +683,7 @@ define("SYNC_RIGHTSMANAGEMENT_EXTRACTALLOWED", "RightsManagement:ExtractAllowed"
 define("SYNC_RIGHTSMANAGEMENT_PRINTALLOWED", "RightsManagement:PrintAllowed");
 define("SYNC_RIGHTSMANAGEMENT_EXPORTALLOWED", "RightsManagement:ExportAllowed");
 define("SYNC_RIGHTSMANAGEMENT_PROGRAMMATICACCESSALLOWED", "RightsManagement:ProgrammaticAccessAllowed");
-define("SYNC_RIGHTSMANAGEMENT_RMOWNER", "RightsManagement:RMOwner");
+define("SYNC_RIGHTSMANAGEMENT_OWNER", "RightsManagement:Owner");
 define("SYNC_RIGHTSMANAGEMENT_CONTENTEXPIRYDATE", "RightsManagement:ContentExpiryDate");
 define("SYNC_RIGHTSMANAGEMENT_TEMPLATEID", "RightsManagement:TemplateID");
 define("SYNC_RIGHTSMANAGEMENT_TEMPLATENAME", "RightsManagement:TemplateName");

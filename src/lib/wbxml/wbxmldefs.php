@@ -712,7 +712,7 @@ class WBXMLDefs {
                         0x0F => "PrintAllowed",
                         0x10 => "ExportAllowed",
                         0x11 => "ProgrammaticAccessAllowed",
-                        0x12 => "RMOwner",
+                        0x12 => "Owner",
                         0x13 => "ContentExpiryDate",
                         0x14 => "TemplateID",
                         0x15 => "TemplateName",
