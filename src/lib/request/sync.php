@@ -913,6 +913,14 @@ class Sync extends RequestProcessor {
         if ($this->startFolderTagSent)
             self::$encoder->endTag();
 
+        // Check if there was any response - in case of an empty sync request, we shouldn't send an empty answer (ZP-1241)
+        if (!$this->startTagsSent && $emptysync === true) {
+            $this->sendStartTags();
+            self::$encoder->startTag(SYNC_STATUS);
+            self::$encoder->content(SYNC_STATUS_SYNCREQUESTINCOMPLETE);
+            self::$encoder->endTag();
+        }
+
         //SYNC_SYNCHRONIZE - only if the starttag was sent
         if ($this->startTagsSent)
             self::$encoder->endTag();
