@@ -36,9 +36,11 @@ class SyncRightsManagementTemplate extends SyncObject {
 
     public function __construct() {
         $mapping = array (
-            SYNC_RIGHTSMANAGEMENT_TEMPLATEDESCRIPTION   => array (self::STREAMER_VAR   => "description"),
-            SYNC_RIGHTSMANAGEMENT_TEMPLATEID            => array (self::STREAMER_VAR   => "id"),
-            SYNC_RIGHTSMANAGEMENT_TEMPLATENAME          => array (self::STREAMER_VAR   => "name"),
+            SYNC_RIGHTSMANAGEMENT_TEMPLATEDESCRIPTION   => array (  self::STREAMER_VAR      => "description",
+                                                                    self::STREAMER_CHECKS   => array( self::STREAMER_CHECK_LENGTHMAX      => 10240 )),
+            SYNC_RIGHTSMANAGEMENT_TEMPLATEID            => array (  self::STREAMER_VAR      => "id"),
+            SYNC_RIGHTSMANAGEMENT_TEMPLATENAME          => array (  self::STREAMER_VAR      => "name",
+                                                                    self::STREAMER_CHECKS   => array( self::STREAMER_CHECK_LENGTHMAX      => 256 )),
         );
 
         parent::__construct($mapping);
