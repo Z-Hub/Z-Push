@@ -1,6 +1,6 @@
 <?php
 /***********************************************
-* File      :   syncrightsmanagementstemplate.php
+* File      :   syncrightsmanagementtemplate.php
 * Project   :   Z-Push
 * Descr     :   WBXML rights management template entities
 *               that can be parsed directly (as a stream)
