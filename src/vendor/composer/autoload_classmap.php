@@ -160,6 +160,7 @@ return array(
     'SyncResolveRecipientsOptions' => $baseDir . '/lib/syncobjects/syncresolverecipientsoptions.php',
     'SyncResolveRecipientsPicture' => $baseDir . '/lib/syncobjects/syncresolverecipientspicture.php',
     'SyncResolveRecipientsResponse' => $baseDir . '/lib/syncobjects/syncresolverecipientsresponse.php',
+    'SyncRightsManagementLicense' => $baseDir . '/lib/syncobjects/syncrightsmanagementlicense.php',
     'SyncRightsManagementTemplate' => $baseDir . '/lib/syncobjects/syncrightsmanagementtemplate.php',
     'SyncRightsManagementTemplates' => $baseDir . '/lib/syncobjects/syncrightsmanagementtemplates.php',
     'SyncSendMail' => $baseDir . '/lib/syncobjects/syncsendmail.php',
