@@ -30,6 +30,8 @@
 class SyncAttendee extends SyncObject {
     public $email;
     public $name;
+    public $attendeestatus;
+    public $attendeetype;
 
     function __construct() {
         $mapping = array(
