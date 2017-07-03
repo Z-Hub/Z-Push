@@ -37,7 +37,8 @@ class SyncRightsManagementTemplates extends SyncObject {
         $mapping = array (
             SYNC_RIGHTSMANAGEMENT_TEMPLATES     => array (  self::STREAMER_VAR   => "rmtemplates",
                                                             self::STREAMER_TYPE  => "SyncRigtsManagementTemplate",
-                                                            self::STREAMER_ARRAY => SYNC_RIGHTSMANAGEMENT_TEMPLATE),
+                                                            self::STREAMER_ARRAY => SYNC_RIGHTSMANAGEMENT_TEMPLATE,
+                                                            self::STREAMER_PROP  => self::STREAMER_TYPE_SEND_EMPTY),
 
             SYNC_SETTINGS_PROP_STATUS           => array (  self::STREAMER_VAR      => "Status",
                                                             self::STREAMER_TYPE     => self::STREAMER_TYPE_IGNORE)
