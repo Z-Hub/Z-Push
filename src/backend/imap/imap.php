@@ -1766,7 +1766,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             $this->settingsUserInformation($settings);
         }
         elseif ($settings instanceof SyncRightsManagementTemplates) {
-            $settings->Status = SYNC_SETTINGSSTATUS_SUCCESS;
+            $settings->Status = SYNC_COMMONSTATUS_IRMFEATUREDISABLED;
         }
 
         return $settings;

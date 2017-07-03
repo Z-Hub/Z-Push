@@ -195,7 +195,7 @@ abstract class Backend implements IBackend {
 
         }
         if ($settings instanceof SyncRightsManagementTemplates) {
-            $settings->Status = SYNC_SETTINGSSTATUS_SUCCESS;
+            $settings->Status = SYNC_COMMONSTATUS_IRMFEATUREDISABLED;
         }
         return $settings;
     }

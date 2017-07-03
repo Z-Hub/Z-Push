@@ -1897,7 +1897,19 @@ class BackendKopano implements IBackend, ISearchProvider {
      * @return void
      */
     private function settingsRightsManagementTemplates(&$rmTemplates) {
-        $rmTemplates->Status = SYNC_SETTINGSSTATUS_SUCCESS;
+        /* Currently there is no information rights management feature in
+         * Kopano backend, so just return the status and empty
+         * SyncRightsManagementTemplates tag.
+         * Once it's available, it would be something like:
+
+        $rmTemplate = new SyncRightsManagementTemplate();
+        $rmTemplate->id = "some-template-id-eg-guid";
+        $rmTemplate->name = "Template name";
+        $rmTemplate->description = "What does the template do. E.g. it disables forward and reply.";
+        $rmTemplates->rmtemplates[] = $rmTemplate;
+         */
+        $rmTemplates->Status = SYNC_COMMONSTATUS_IRMFEATUREDISABLED;
+        $rmTemplates->rmtemplates = array();
     }
 
     /**
