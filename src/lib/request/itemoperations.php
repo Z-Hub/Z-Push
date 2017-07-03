@@ -178,7 +178,7 @@ class ItemOperations extends RequestProcessor {
                             }
 
                             if(self::$decoder->getElementStartTag(SYNC_RIGHTSMANAGEMENT_SUPPORT)) {
-                                $rmsupport = self::$decoder->getElementContent(); // TODO - do something with RightsManagementSupport
+                                $operation["cpo"]->SetRmSupport(self::$decoder->getElementContent());
                                 if(!self::$decoder->getElementEndTag())
                                     return false;
                             }
@@ -188,6 +188,16 @@ class ItemOperations extends RequestProcessor {
                             if($e[EN_TYPE] == EN_TYPE_ENDTAG) {
                                 self::$decoder->getElementEndTag();
                                 break;
+                            }
+                        }
+                    }
+
+                    if (self::$decoder->getElementStartTag(SYNC_RIGHTSMANAGEMENT_REMOVERIGHTSMGNTPROTECTION)) {
+                        $operation["cpo"]->SetRemoveRmProtection(true);
+                        if (($rrmp = self::$decoder->getElementContent()) !== false) {
+                            $operation["cpo"]->SetRemoveRmProtection($rrmp);
+                            if(!self::$decoder->getElementEndTag()) {
+                                return false;
                             }
                         }
                     }

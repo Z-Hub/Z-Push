@@ -248,7 +248,7 @@ class Search extends RequestProcessor {
                 }
 
                 if(self::$decoder->getElementStartTag(SYNC_RIGHTSMANAGEMENT_SUPPORT)) {
-                    $rmsupport = self::$decoder->getElementContent(); // TODO - do something with RightsManagementSupport
+                    $cpo->SetRmSupport(self::$decoder->getElementContent());
                     if(!self::$decoder->getElementEndTag())
                         return false;
                 }

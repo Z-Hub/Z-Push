@@ -369,9 +369,9 @@ class Sync extends RequestProcessor {
                                     return false;
                             }
 
-                            if(self::$decoder->getElementStartTag(SYNC_RIGHTSMANAGEMENT_SUPPORT)) {
-                                $rmsupport = self::$decoder->getElementContent(); // TODO - do something with RightsManagementSupport
-                                if(!self::$decoder->getElementEndTag())
+                            if (self::$decoder->getElementStartTag(SYNC_RIGHTSMANAGEMENT_SUPPORT)) {
+                                $spa->SetRmSupport(self::$decoder->getElementContent());
+                                if (!self::$decoder->getElementEndTag())
                                     return false;
                             }
 
