@@ -71,6 +71,7 @@ class SyncMail extends SyncObject {
 
     // AS 14.1 props
     public $rightsManagementLicense;
+    public $asbodypart;
 
     function __construct() {
         $mapping = array (
@@ -190,8 +191,9 @@ class SyncMail extends SyncObject {
 
         if (Request::GetProtocolVersion() >= 14.1) {
             $mapping[SYNC_RIGHTSMANAGEMENT_LICENSE]                     = array (   self::STREAMER_VAR      => "rightsManagementLicense",
-                                                                                    self::STREAMER_TYPE     => "SyncRightsManagementLicense"
-            );
+                                                                                    self::STREAMER_TYPE     => "SyncRightsManagementLicense");
+            $mapping[SYNC_AIRSYNCBASE_BODYPART]                         = array (   self::STREAMER_VAR      => "asbodypart",
+                                                                                    self::STREAMER_TYPE     => "SyncBaseBodyPart");
         }
 
         parent::__construct($mapping);
