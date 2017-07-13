@@ -673,14 +673,13 @@ class ASDevice extends StateObject {
      */
     public function GetFolderIdForBackendId($backendid, $generateNewIdIfNew, $folderOrigin, $folderName) {
         // build the backend-to-folderId backwards cache once
-        if ($this->backend2folderidCache === false || is_null($this->backend2folderidCache)) {
-            $backend2folderidCache = array();
+        if ($this->backend2folderidCache === false) {
+            $this->backend2folderidCache = array();
             foreach ($this->contentData as $folderid => $data) {
                 if (isset($data[self::FOLDERBACKENDID])) {
-                    $backend2folderidCache[$data[self::FOLDERBACKENDID]] = $folderid;
+                    $this->backend2folderidCache[$data[self::FOLDERBACKENDID]] = $folderid;
                 }
             }
-            $this->backend2folderidCache = $backend2folderidCache;
 
             // if we couldn't find any backend-folderids but there is data in contentdata, then this is an old profile.
             // do not generate new folderids in this case
