@@ -247,6 +247,37 @@ class Search extends RequestProcessor {
                         return false;
                 }
 
+                if (self::$decoder->getElementStartTag(SYNC_AIRSYNCBASE_BODYPARTPREFERENCE)) {
+                    if (self::$decoder->getElementStartTag(SYNC_AIRSYNCBASE_TYPE)) {
+                        $bpptype = self::$decoder->getElementContent();
+                        $cpo->BodyPartPreference($bpptype);
+                        if (!self::$decoder->getElementEndTag()) {
+                            return false;
+                        }
+                    }
+
+                    if (self::$decoder->getElementStartTag(SYNC_AIRSYNCBASE_TRUNCATIONSIZE)) {
+                        $cpo->BodyPartPreference($bpptype)->SetTruncationSize(self::$decoder->getElementContent());
+                        if(!self::$decoder->getElementEndTag())
+                            return false;
+                    }
+
+                    if (self::$decoder->getElementStartTag(SYNC_AIRSYNCBASE_ALLORNONE)) {
+                        $cpo->BodyPartPreference($bpptype)->SetAllOrNone(self::$decoder->getElementContent());
+                        if(!self::$decoder->getElementEndTag())
+                            return false;
+                    }
+
+                    if (self::$decoder->getElementStartTag(SYNC_AIRSYNCBASE_PREVIEW)) {
+                        $cpo->BodyPartPreference($bpptype)->SetPreview(self::$decoder->getElementContent());
+                        if(!self::$decoder->getElementEndTag())
+                            return false;
+                    }
+
+                    if (!self::$decoder->getElementEndTag())
+                        return false;
+                }
+
                 if(self::$decoder->getElementStartTag(SYNC_RIGHTSMANAGEMENT_SUPPORT)) {
                     $cpo->SetRmSupport(self::$decoder->getElementContent());
                     if(!self::$decoder->getElementEndTag())

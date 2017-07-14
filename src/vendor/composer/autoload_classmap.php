@@ -33,6 +33,7 @@ return array(
     'BackendZarafa' => $baseDir . '/backend/kopano/kopano.php',
     'BaseException' => $baseDir . '/backend/kopano/mapi/class.baseexception.php',
     'BaseRecurrence' => $baseDir . '/backend/kopano/mapi/class.baserecurrence.php',
+    'BodyPartPreference' => $baseDir . '/lib/core/bodypartpreference.php',
     'BodyPreference' => $baseDir . '/lib/core/bodypreference.php',
     'CalDAVClient' => $baseDir . '/include/z_caldav.php',
     'CalendarInfo' => $baseDir . '/include/z_caldav.php',

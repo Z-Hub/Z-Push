@@ -55,13 +55,19 @@ class ContentParameters extends StateObject {
 
     /**
      * Overwrite StateObject->__call so we are able to handle ContentParameters->BodyPreference()
+     * and ContentParameters->BodyPartPreference().
      *
      * @access public
      * @return mixed
      */
     public function __call($name, $arguments) {
-        if ($name === "BodyPreference")
+        if ($name === "BodyPreference") {
             return $this->BodyPreference($arguments[0]);
+        }
+
+        if ($name === "BodyPartPreference") {
+            return $this->BodyPartPreference($arguments[0]);
+        }
 
         return parent::__call($name, $arguments);
     }
@@ -91,6 +97,30 @@ class ContentParameters extends StateObject {
     }
 
     /**
+     * Instantiates/returns the bodypartpreference object for a type.
+     *
+     * @param int   $type
+     *
+     * @access public
+     * @return int/boolean          returns false if value is not defined
+     */
+    public function BodyPartPreference($type) {
+        if (!isset($this->bodypartpref)) {
+            $this->bodypartpref = array();
+        }
+
+        if (isset($this->bodypartpref[$type])) {
+            return $this->bodypartpref[$type];
+        }
+
+        $asb = new BodyPartPreference();
+        $arr = (array)$this->bodypartpref;
+        $arr[$type] = $asb;
+        $this->bodypartpref = $arr;
+        return $asb;
+    }
+
+    /**
      * Returns available body preference objects
      *
      *  @access public
@@ -102,6 +132,20 @@ class ContentParameters extends StateObject {
             return false;
         }
         return array_keys($this->bodypref);
+    }
+
+    /**
+     * Returns available body part preference objects.
+     *
+     *  @access public
+     *  @return array/boolean       returns false if the client's body preference is not available
+     */
+    public function GetBodyPartPreference() {
+        if (!isset($this->bodypartpref) || !(is_array($this->bodypartpref) || empty($this->bodypartpref))) {
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ContentParameters->GetBodyPartPreference(): bodypartpref is empty or not set"));
+            return false;
+        }
+        return array_keys($this->bodypartpref);
     }
 
     /**

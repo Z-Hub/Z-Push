@@ -40,6 +40,7 @@ class ComposerStaticInitd6749fc2fb9944bbe86b2b7d79a7852f
         'BackendZarafa' => __DIR__ . '/../..' . '/backend/kopano/kopano.php',
         'BaseException' => __DIR__ . '/../..' . '/backend/kopano/mapi/class.baseexception.php',
         'BaseRecurrence' => __DIR__ . '/../..' . '/backend/kopano/mapi/class.baserecurrence.php',
+        'BodyPartPreference' => __DIR__ . '/../..' . '/lib/core/bodypartpreference.php',
         'BodyPreference' => __DIR__ . '/../..' . '/lib/core/bodypreference.php',
         'CalDAVClient' => __DIR__ . '/../..' . '/include/z_caldav.php',
         'CalendarInfo' => __DIR__ . '/../..' . '/include/z_caldav.php',
