@@ -444,7 +444,7 @@ class BackendKopano implements IBackend, ISearchProvider {
             $senderEmail = array();
             // KOE: grep for the Sender header indicating we should send-as
             // the 'X-Push-Sender-Name' header is not used
-            if (preg_match("/^X-Push-Sender:\s(.*?)$/im", $sm->mime, $senderEmail)) {
+            if (preg_match("/^X-Push-Sender:\s(.*?)$/im", substr($sm->mime, 0, strpos($sm->mime, "\r\n\r\n")), $senderEmail)) {
                 $sendAsEmail = trim($senderEmail[1]);
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->SendMail(): Send-As '%s' requested by KOE", $sendAsEmail));
 
