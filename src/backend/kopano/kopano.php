@@ -721,7 +721,7 @@ class BackendKopano implements IBackend, ISearchProvider {
 
         $storeprops = mapi_getprops($this->defaultstore, array(PR_IPM_WASTEBASKET_ENTRYID));
         if (isset($storeprops[PR_IPM_WASTEBASKET_ENTRYID])) {
-            $wastebasket = mapi_msgstore_openentry($this->store, $storeprops[PR_IPM_WASTEBASKET_ENTRYID]);
+            $wastebasket = mapi_msgstore_openentry($this->defaultstore, $storeprops[PR_IPM_WASTEBASKET_ENTRYID]);
             $wastebasketprops = mapi_getprops($wastebasket, array(PR_SOURCE_KEY));
             if (isset($wastebasketprops[PR_SOURCE_KEY])) {
                 $this->wastebasket = bin2hex($wastebasketprops[PR_SOURCE_KEY]);
