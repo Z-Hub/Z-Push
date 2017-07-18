@@ -474,10 +474,20 @@ class BackendKopano implements IBackend, ISearchProvider {
                 if ($sharedUser != false && $sharedUser != 'SYSTEM') {
                     $folders = ZPush::GetAdditionalSyncFolders();
                     if (isset($folders[$sm->source->folderid]) && ($folders[$sm->source->folderid]->Flags & DeviceManager::FLD_FLAGS_SENDASOWNER)) {
-                        $sendAs = $this->resolveRecipientGAL($sharedUser, 1);
-                        if (isset($sendAs[0])) {
-                            ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->SendMail(): Server side Send-As activated for shared folder. Sending as '%s'.", $sendAs[0]->emailaddress));
-                            $sm->mime =  preg_replace("/^From: .*?$/im", "From: ". $sendAs[0]->emailaddress, $sm->mime, 1);
+                        $sendAs = false;
+                        // for multi-company this is (mostly always) already an email address and we can just use it - ZP-1255
+                        if (Utils::CheckEmail($sharedUser)) {
+                            $sendAs = $sharedUser;
+                        }
+                        else {
+                            $gabResult = $this->resolveRecipientGAL($sharedUser, 1);
+                            if (isset($gabResult[0])) {
+                                $sendAs = $gabResult[0]->emailaddress;
+                            }
+                        }
+                        if ($sendAs) {
+                            ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->SendMail(): Server side Send-As activated for shared folder. Sending as '%s'.", $sendAs));
+                            $sm->mime =  preg_replace("/^From: .*?$/im", "From: ". $sendAs, $sm->mime, 1);
                             $sendingAsSomeone = true;
                         }
                     }
