@@ -92,6 +92,7 @@ class ZPushAdminCLI {
     static private $device = false;
     static private $type = false;
     static private $errormessage;
+    static private $daysold = false;
 
     /**
      * Returns usage instructions
@@ -102,7 +103,8 @@ class ZPushAdminCLI {
     static public function UsageInstructions() {
         return  "Usage:\n\tz-push-admin.php -a ACTION [options]\n\n" .
                 "Parameters:\n\t-a list/lastsync/wipe/remove/resync/clearloop/fixstates\n\t[-u] username\n\t[-d] deviceid\n" .
-                "\t[-t] type\tthe following types are available: '".self::TYPE_OPTION_EMAIL."', '".self::TYPE_OPTION_CALENDAR."', '".self::TYPE_OPTION_CONTACT."', '".self::TYPE_OPTION_TASK."', '".self::TYPE_OPTION_NOTE."', '".self::TYPE_OPTION_HIERARCHY."' of '".self::TYPE_OPTION_GAB."' (for KOE) or a folder id.\n\n" .
+                "\t[-t] type\tthe following types are available: '".self::TYPE_OPTION_EMAIL."', '".self::TYPE_OPTION_CALENDAR."', '".self::TYPE_OPTION_CONTACT."', '".self::TYPE_OPTION_TASK."', '".self::TYPE_OPTION_NOTE."', '".self::TYPE_OPTION_HIERARCHY."' of '".self::TYPE_OPTION_GAB."' (for KOE) or a folder id.\n" .
+                "\t[--days-old] n\tshow or remove profiles older than n days with lastsync or remove. n must be a positive integer.\n\n".
                 "Actions:\n" .
                 "\tlist\t\t\t\t\t Lists all devices and synchronized users\n" .
                 "\tlist -u USER\t\t\t\t Lists all devices of user USER\n" .
@@ -150,7 +152,7 @@ class ZPushAdminCLI {
         if (self::$errormessage)
             return;
 
-        $options = getopt("u:d:a:t:");
+        $options = getopt("u:d:a:t:", array('user:', 'device:', 'action:', 'type:', 'days-old:'));
 
         // get 'user'
         if (isset($options['u']) && !empty($options['u']))
@@ -176,6 +178,16 @@ class ZPushAdminCLI {
             self::$type = strtolower(trim($options['t']));
         elseif (isset($options['type']) && !empty($options['type']))
             self::$type = strtolower(trim($options['type']));
+
+
+        if (isset($options['days-old']) && !empty($options['days-old'])) {
+            if (!is_numeric($options['days-old']) || $options['days-old'] < 0) {
+                self::$errormessage = "--days-old parameter must be a positive integer\n";
+                self::$command = null;
+                return;
+            }
+            self::$daysold = trim($options['days-old']);
+        }
 
         // if type is set, it must be one of known types or a 44 or 48 byte long folder id
         if (self::$type !== false) {
@@ -438,17 +450,22 @@ class ZPushAdminCLI {
             echo "\tno devices found\n";
         else {
             echo "All known devices and users and their last synchronization time\n\n";
-            echo str_pad("Device id", 36) . str_pad("Synchronized user", 31) . str_pad("Last sync time", 20) . "Short Ids\n";
-            echo "-----------------------------------------------------------------------------------------------------\n";
+            echo str_pad("Device id", 36) . str_pad("Synchronized user", 31) . str_pad("Last sync time", 33) . "Short Ids\n";
+            echo "------------------------------------------------------------------------------------------------------------------\n";
         }
 
+        $now = time();
         foreach ($devicelist as $deviceId) {
             $users = ZPushAdmin::ListUsers($deviceId);
             foreach ($users as $user) {
                 $device = ZPushAdmin::GetDeviceDetails($deviceId, $user);
-                $lastsync = $device->GetLastSyncTime() ? strftime("%Y-%m-%d %H:%M", $device->GetLastSyncTime()) : "never";
+                $daysOld = floor(($now - $device->GetLastSyncTime()) / 86400);
+                if (self::$daysold > $daysOld) {
+                    continue;
+                }
+                $lastsync = $device->GetLastSyncTime() ? strftime("%Y-%m-%d %H:%M", $device->GetLastSyncTime()) . ' (' . str_pad($daysOld, 3, ' ', STR_PAD_LEFT) . ' days ago)' : "never";
                 $hasShortFolderIds = $device->HasFolderIdMapping() ? "Yes":"No";
-                echo str_pad($deviceId, 36) . str_pad($user, 30) . " " . str_pad($lastsync, 20) . $hasShortFolderIds . "\n";
+                echo str_pad($deviceId, 36) . str_pad($user, 30) . " " . str_pad($lastsync, 33) . $hasShortFolderIds . "\n";
             }
         }
     }
