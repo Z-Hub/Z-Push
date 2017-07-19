@@ -152,7 +152,7 @@ class ZPushAdminCLI {
         if (self::$errormessage)
             return;
 
-        $options = getopt("u:d:a:t:", array('user:', 'device:', 'action:', 'type:', 'days-old:'));
+        $options = getopt("u:d:a:t:", array('user:', 'device:', 'action:', 'type:', 'days-old:', 'days-ago:'));
 
         // get 'user'
         if (isset($options['u']) && !empty($options['u']))
@@ -179,6 +179,9 @@ class ZPushAdminCLI {
         elseif (isset($options['type']) && !empty($options['type']))
             self::$type = strtolower(trim($options['type']));
 
+        if (isset($options['days-ago']) && !empty($options['days-ago'])) {
+            $options['days-old'] = $options['days-ago'];
+        }
 
         if (isset($options['days-old']) && !empty($options['days-old'])) {
             if (!is_numeric($options['days-old']) || $options['days-old'] < 0) {
