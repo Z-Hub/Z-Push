@@ -525,20 +525,24 @@ class ZPushAdminCLI {
     }
 
     /**
-     * Command "Remove device"
-     * Remove a device of that user from the device list
+     * Command "Remove device".
+     * Removes a device of that user from the device list.
      *
      * @return
      * @access public
      */
     static public function CommandRemoveDevice() {
-        $stat = ZPushAdmin::RemoveDevice(self::$user, self::$device);
+        $stat = ZPushAdmin::RemoveDevice(self::$user, self::$device, self::$daysold, time());
         if (self::$user === false)
            echo sprintf("State data of device '%s' removed: %s", self::$device, ($stat)?'OK':ZLog::GetLastMessage(LOGLEVEL_ERROR)). "\n";
         elseif (self::$device === false)
            echo sprintf("State data of all devices of user '%s' removed: %s", self::$user, ($stat)?'OK':ZLog::GetLastMessage(LOGLEVEL_ERROR)). "\n";
         else
            echo sprintf("State data of device '%s' of user '%s' removed: %s", self::$device, self::$user, ($stat)?'OK':ZLog::GetLastMessage(LOGLEVEL_ERROR)). "\n";
+
+        if (ZPushAdmin::$status == ZPushAdmin::STATUS_DEVICE_SYNCED_AFTER_DAYSOLD) {
+            print("Some devices might not have been removed because of --days-old parameter. Check Z-Push log file for more details.\n");
+        }
     }
 
     /**

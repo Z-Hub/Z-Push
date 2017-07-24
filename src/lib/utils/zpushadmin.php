@@ -28,6 +28,11 @@ class ZPushAdmin {
      * //TODO resync of a foldertype for all users (e.g. Appointment)
      */
 
+    const STATUS_SUCCESS = 0;
+    const STATUS_DEVICE_SYNCED_AFTER_DAYSOLD = 1;
+
+    public static $status = self::STATUS_SUCCESS;
+
     /**
      * List devices known to Z-Push.
      * If no user is given, all devices are listed
@@ -219,11 +224,13 @@ class ZPushAdmin {
      *
      * @param string    $user           (opt) user of the device
      * @param string    $devid          (opt) device id which should be removed
+     * @param int       $daysOld        (opt) devices which haven't synced for $daysOld days
+     * @param int       $time           (opt) unix timestamp to use with $daysOld
      *
      * @return boolean
      * @access public
      */
-    static public function RemoveDevice($user = false, $devid = false) {
+    static public function RemoveDevice($user = false, $devid = false, $daysOld = false, $time = false) {
         if ($user === false && $devid === false)
             return false;
 
@@ -232,7 +239,7 @@ class ZPushAdmin {
             $devicesIds = ZPush::GetStateMachine()->GetAllDevices($user);
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::RemoveDevice(): all '%d' devices for user '%s' found to be removed", count($devicesIds), $user));
             foreach ($devicesIds as $deviceid) {
-                if (!self::RemoveDevice($user, $deviceid)) {
+                if (!self::RemoveDevice($user, $deviceid, $daysOld, $time)) {
                     ZLog::Write(LOGLEVEL_ERROR, sprintf("ZPushAdmin::RemoveDevice(): removing devices failed for device '%s' of user '%s'. Aborting", $deviceid, $user));
                     return false;
                 }
@@ -243,7 +250,7 @@ class ZPushAdmin {
             $users = self::ListUsers($devid);
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::RemoveDevice(): device '%d' is used by '%d' users and will be removed", $devid, count($users)));
             foreach ($users as $aUser) {
-                if (!self::RemoveDevice($aUser, $devid)) {
+                if (!self::RemoveDevice($aUser, $devid, $daysOld, $time)) {
                     ZLog::Write(LOGLEVEL_ERROR, sprintf("ZPushAdmin::RemoveDevice(): removing user '%s' from device '%s' failed. Aborting", $aUser, $devid));
                     return false;
                 }
@@ -260,6 +267,21 @@ class ZPushAdmin {
                 $device->SetData($devicedata, false);
                 if (!isset($devicedata->devices))
                     throw new StateInvalidException("No devicedata stored in ASDevice");
+
+                if ($daysOld) {
+                    if (!$time) {
+                        $time = time();
+                    }
+                    $lastSynced = floor(($time - $device->getLastupdatetime()) / 86400);
+                    if ($daysOld > $lastSynced) {
+                        ZLog::Write(LOGLEVEL_INFO,
+                                sprintf("ZPushAdmin::RemoveDevice(): device '%s' of user '%s' synced %d day(s) ago but only devices which synced more than %d days ago will be removed. Skipping.",
+                                        $devid, $user, $lastSynced, $daysOld));
+                        self::$status = self::STATUS_DEVICE_SYNCED_AFTER_DAYSOLD;
+                        return true;
+                    }
+                }
+
                 $devices = $devicedata->devices;
             }
             catch (StateNotFoundException $e) {
