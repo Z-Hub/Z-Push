@@ -598,10 +598,12 @@ class MAPIProvider {
             }
 
             // Set Timezone
-            if(isset($props[$meetingrequestproperties["timezonetag"]]))
+            if (isset($props[$meetingrequestproperties["timezonetag"]])) {
                 $tz = $this->getTZFromMAPIBlob($props[$meetingrequestproperties["timezonetag"]]);
-            else
-                $tz = $this->getGMTTZ();
+            }
+            else {
+                $tz = TimezoneUtil::GetFullTZ();
+            }
 
             $message->meetingrequest->timezone = base64_encode(TimezoneUtil::GetSyncBlobFromTZ($tz));
 
