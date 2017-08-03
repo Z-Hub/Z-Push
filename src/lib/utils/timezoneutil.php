@@ -1178,7 +1178,7 @@ class TimezoneUtil {
     }
 
     /**
-     * Tries to find a AS timezone for a php timezone
+     * Tries to find a AS timezone for a php timezone.
      *
      * @param string    $phpname        a php timezone name
      *
@@ -1188,17 +1188,14 @@ class TimezoneUtil {
     static private function guessTZNameFromPHPName($phpname) {
         foreach (self::$phptimezones as $tzn => $phptzs) {
             if (in_array($phpname, $phptzs)) {
-                $tzname = $tzn;
+                if (!is_int($tzn)) {
+                    return $tzn;
+                }
                 break;
             }
         }
-
-        if (!isset($tzname) || is_int($tzname)) {
-            ZLog::Write(LOGLEVEL_ERROR, sprintf("TimezoneUtil::guessTZNameFromPHPName() no compatible timezone found for '%s'. Returning 'GMT Standard Time'. Please contact the Z-Push dev team.", $phpname));
-            return self::$mstzones["085"][0];
-        }
-
-        return $tzname;
+        ZLog::Write(LOGLEVEL_ERROR, sprintf("TimezoneUtil::guessTZNameFromPHPName() no compatible timezone found for '%s'. Returning 'GMT Standard Time'. Please contact the Z-Push dev team.", $phpname));
+        return self::$mstzones["085"][0];
     }
 
     /**
