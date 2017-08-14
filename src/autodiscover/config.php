@@ -45,6 +45,28 @@
      */
     define('USE_FULLEMAIL_FOR_LOGIN', false);
 
+    /*
+     * AutoDiscover requires the username to match either the email address
+     * or the local part of the email address.
+     * This is not always possible as the username might have a different
+     * schema than email address. Configure this parameter to match your
+     * username settings.
+     * @see https://wiki.z-hub.io/display/ZP/Configuring+Z-Push+Autodiscover#ConfiguringZ-PushAutodiscover-Configuration
+     * @see https://jira.z-hub.io/browse/ZP-1209
+     *
+     * Possible values:
+     * AUTODISCOVER_LOGIN_EMAIL             - uses the email address as provided when setting up the account
+     * AUTODISCOVER_LOGIN_NO_DOT            - removes the '.' from email address:
+     *                                          email: first.last@domain.com -> username: firstlast
+     * AUTODISCOVER_LOGIN_F_NO_DOT_LAST     - cuts the first part before '.' after the first letter and
+     *                                          removes the '.' from email address:
+     *                                          email: first.last@domain.com -> username flast
+     * AUTODISCOVER_LOGIN_F_DOT_LAST        - cuts the first part before '.' after the first letter
+     *                                          and leaves the last part as is:
+     *                                          email: first.last@domain.com -> username f.last
+     */
+    define('AUTODISCOVER_LOGIN_TYPE', AUTODISCOVER_LOGIN_EMAIL);
+
 /**********************************************************************************
  *  Logging settings
  *  Possible LOGLEVEL and LOGUSERLEVEL values are:

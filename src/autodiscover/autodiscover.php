@@ -190,11 +190,25 @@ class ZPushAutodiscover {
         // the local part only.
         if (USE_FULLEMAIL_FOR_LOGIN) {
             $username = $incomingXml->Request->EMailAddress;
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("Using the complete email address for login: '%s'", $username));
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAutodiscover->login(): Using the complete email address for login: '%s'", $username));
         }
         else {
             $username = Utils::GetLocalPartFromEmail($incomingXml->Request->EMailAddress);
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("Using the username only for login: '%s'", $username));
+            if (defined('AUTODISCOVER_LOGIN_TYPE') && AUTODISCOVER_LOGIN_TYPE != AUTODISCOVER_LOGIN_EMAIL) {
+                switch (AUTODISCOVER_LOGIN_TYPE) {
+                    case AUTODISCOVER_LOGIN_NO_DOT:
+                        $username = str_replace('.', '', $username);
+                        break;
+                    case AUTODISCOVER_LOGIN_F_NO_DOT_LAST:
+                        $username = str_replace('.', '', substr_replace($username, '', 1, strpos($username, '.') - 1));
+                        break;
+                    case AUTODISCOVER_LOGIN_F_DOT_LAST:
+                        $username = substr_replace($username, '', 1, strpos($username, '.') - 1);
+                        break;
+                }
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAutodiscover->login(): AUTODISCOVER_LOGIN_TYPE is set to %d", AUTODISCOVER_LOGIN_TYPE));
+            }
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAutodiscover->login(): Using the username only for login: '%s'", $username));
         }
 
         // Mobile devices send Authorization header using UTF-8 charset. Outlook sends it using ISO-8859-1 encoding.
