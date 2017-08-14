@@ -57,13 +57,13 @@
      * Possible values:
      * AUTODISCOVER_LOGIN_EMAIL             - uses the email address as provided when setting up the account
      * AUTODISCOVER_LOGIN_NO_DOT            - removes the '.' from email address:
-     *                                          email: first.last@domain.com -> username: firstlast
+     *                                          email: first.last@domain.com -> resulting username: firstlast
      * AUTODISCOVER_LOGIN_F_NO_DOT_LAST     - cuts the first part before '.' after the first letter and
      *                                          removes the '.' from email address:
-     *                                          email: first.last@domain.com -> username flast
-     * AUTODISCOVER_LOGIN_F_DOT_LAST        - cuts the first part before '.' after the first letter
-     *                                          and leaves the last part as is:
-     *                                          email: first.last@domain.com -> username f.last
+     *                                          email: first.last@domain.com -> resulting username: flast
+     * AUTODISCOVER_LOGIN_F_DOT_LAST        - cuts the part before '.' after the first letter and
+     *                                          leaves the part after '.' as is:
+     *                                          email: first.last@domain.com -> resulting username: f.last
      */
     define('AUTODISCOVER_LOGIN_TYPE', AUTODISCOVER_LOGIN_EMAIL);
 
