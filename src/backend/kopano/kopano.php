@@ -433,10 +433,14 @@ class BackendKopano implements IBackend, ISearchProvider {
             throw new StatusException("KopanoBackend->SendMail(): ZCP/KC version is too old, INETMAPI_IMTOMAPI is not available. Install at least ZCP version 7.0.6 or later.", SYNC_COMMONSTATUS_MAILSUBMISSIONFAILED, null, LOGLEVEL_FATAL);
             return false;
         }
+        $mimeLength = strlen($sm->mime);
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->SendMail(): RFC822: %d bytes  forward-id: '%s' reply-id: '%s' parent-id: '%s' SaveInSent: '%s' ReplaceMIME: '%s'",
-                                            strlen($sm->mime), Utils::PrintAsString($sm->forwardflag), Utils::PrintAsString($sm->replyflag),
+                                            $mimeLength, Utils::PrintAsString($sm->forwardflag), Utils::PrintAsString($sm->replyflag),
                                             Utils::PrintAsString((isset($sm->source->folderid) ? $sm->source->folderid : false)),
                                             Utils::PrintAsString(($sm->saveinsent)), Utils::PrintAsString(isset($sm->replacemime)) ));
+        if ($mimeLength == 0) {
+            throw new StatusException("KopanoBackend->SendMail(): empty mail data", SYNC_COMMONSTATUS_MAILSUBMISSIONFAILED);
+        }
 
         // Send-As functionality - https://jira.z-hub.io/browse/ZP-908
         $sendingAsSomeone = false;
