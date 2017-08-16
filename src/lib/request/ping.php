@@ -216,15 +216,26 @@ class Ping extends RequestProcessor {
                 else
                     $changes = $fakechanges;
 
+                $announceAggregated = false;
+                if (count($changes) > 1) {
+                    $announceAggregated = 0;
+                }
                 foreach ($changes as $folderid => $changecount) {
                     if ($changecount > 0) {
                         self::$encoder->startTag(SYNC_PING_FOLDER);
                         self::$encoder->content($folderid);
                         self::$encoder->endTag();
-                        if (empty($fakechanges))
+                        if ($announceAggregated === false) {
                             self::$topCollector->AnnounceInformation(sprintf("Found change in %s", $sc->GetCollection($folderid)->GetContentClass()), true);
+                        }
+                        else {
+                            $announceAggregated += $changecount;
+                        }
                         self::$deviceManager->AnnounceProcessStatus($folderid, SYNC_PINGSTATUS_CHANGES);
                     }
+                }
+                if ($announceAggregated !== false) {
+                    self::$topCollector->AnnounceInformation(sprintf("Found %d changes in %d folders", $announceAggregated, count($changes)), true);
                 }
                 self::$encoder->endTag();
             }
