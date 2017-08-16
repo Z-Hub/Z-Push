@@ -433,10 +433,14 @@ class BackendKopano implements IBackend, ISearchProvider {
             throw new StatusException("KopanoBackend->SendMail(): ZCP/KC version is too old, INETMAPI_IMTOMAPI is not available. Install at least ZCP version 7.0.6 or later.", SYNC_COMMONSTATUS_MAILSUBMISSIONFAILED, null, LOGLEVEL_FATAL);
             return false;
         }
+        $mimeLength = strlen($sm->mime);
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->SendMail(): RFC822: %d bytes  forward-id: '%s' reply-id: '%s' parent-id: '%s' SaveInSent: '%s' ReplaceMIME: '%s'",
-                                            strlen($sm->mime), Utils::PrintAsString($sm->forwardflag), Utils::PrintAsString($sm->replyflag),
+                                            $mimeLength, Utils::PrintAsString($sm->forwardflag), Utils::PrintAsString($sm->replyflag),
                                             Utils::PrintAsString((isset($sm->source->folderid) ? $sm->source->folderid : false)),
                                             Utils::PrintAsString(($sm->saveinsent)), Utils::PrintAsString(isset($sm->replacemime)) ));
+        if ($mimeLength == 0) {
+            throw new StatusException("KopanoBackend->SendMail(): empty mail data", SYNC_COMMONSTATUS_MAILSUBMISSIONFAILED);
+        }
 
         // Send-As functionality - https://jira.z-hub.io/browse/ZP-908
         $sendingAsSomeone = false;
@@ -444,7 +448,7 @@ class BackendKopano implements IBackend, ISearchProvider {
             $senderEmail = array();
             // KOE: grep for the Sender header indicating we should send-as
             // the 'X-Push-Sender-Name' header is not used
-            if (preg_match("/^X-Push-Sender:\s(.*?)$/im", $sm->mime, $senderEmail)) {
+            if (preg_match("/^X-Push-Sender:\s(.*?)$/im", substr($sm->mime, 0, strpos($sm->mime, "\r\n\r\n")), $senderEmail)) {
                 $sendAsEmail = trim($senderEmail[1]);
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->SendMail(): Send-As '%s' requested by KOE", $sendAsEmail));
 
@@ -474,10 +478,20 @@ class BackendKopano implements IBackend, ISearchProvider {
                 if ($sharedUser != false && $sharedUser != 'SYSTEM') {
                     $folders = ZPush::GetAdditionalSyncFolders();
                     if (isset($folders[$sm->source->folderid]) && ($folders[$sm->source->folderid]->Flags & DeviceManager::FLD_FLAGS_SENDASOWNER)) {
-                        $sendAs = $this->resolveRecipientGAL($sharedUser, 1);
-                        if (isset($sendAs[0])) {
-                            ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->SendMail(): Server side Send-As activated for shared folder. Sending as '%s'.", $sendAs[0]->emailaddress));
-                            $sm->mime =  preg_replace("/^From: .*?$/im", "From: ". $sendAs[0]->emailaddress, $sm->mime, 1);
+                        $sendAs = false;
+                        // for multi-company this is (mostly always) already an email address and we can just use it - ZP-1255
+                        if (Utils::CheckEmail($sharedUser)) {
+                            $sendAs = $sharedUser;
+                        }
+                        else {
+                            $gabResult = $this->resolveRecipientGAL($sharedUser, 1);
+                            if (isset($gabResult[0])) {
+                                $sendAs = $gabResult[0]->emailaddress;
+                            }
+                        }
+                        if ($sendAs) {
+                            ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->SendMail(): Server side Send-As activated for shared folder. Sending as '%s'.", $sendAs));
+                            $sm->mime =  preg_replace("/^From: .*?$/im", "From: ". $sendAs, $sm->mime, 1);
                             $sendingAsSomeone = true;
                         }
                     }
@@ -711,7 +725,7 @@ class BackendKopano implements IBackend, ISearchProvider {
 
         $storeprops = mapi_getprops($this->defaultstore, array(PR_IPM_WASTEBASKET_ENTRYID));
         if (isset($storeprops[PR_IPM_WASTEBASKET_ENTRYID])) {
-            $wastebasket = mapi_msgstore_openentry($this->store, $storeprops[PR_IPM_WASTEBASKET_ENTRYID]);
+            $wastebasket = mapi_msgstore_openentry($this->defaultstore, $storeprops[PR_IPM_WASTEBASKET_ENTRYID]);
             $wastebasketprops = mapi_getprops($wastebasket, array(PR_SOURCE_KEY));
             if (isset($wastebasketprops[PR_SOURCE_KEY])) {
                 $this->wastebasket = bin2hex($wastebasketprops[PR_SOURCE_KEY]);

@@ -380,17 +380,29 @@ class Utils {
      *
      * If it's not possible to truncate properly, an empty string is returned
      *
-     * @param string $string - the string
-     * @param string $length - position where string should be cut
+     * @param string    $string     the string
+     * @param string    $length     position where string should be cut
+     * @param boolean   $htmlsafe   doesn't cut html tags in half, doesn't ensure correct html - default: false
+     *
      * @return string truncated string
      */
-    static public function Utf8_truncate($string, $length) {
+    static public function Utf8_truncate($string, $length, $htmlsafe = false) {
         // make sure length is always an interger
         $length = (int)$length;
 
         // if the input string is shorter then the trunction, make sure it's valid UTF-8!
         if (strlen($string) <= $length) {
             $length = strlen($string) - 1;
+        }
+
+        // The intent is not to cut HTML tags in half which causes displaying issues (see ZP-1240).
+        // The used method just tries to cut outside of tags, without checking tag validity and closing tags.
+        if ($htmlsafe) {
+            $offset = 0 - strlen($string) + $length;
+            $validPos = strrpos($string, "<", $offset);
+            if ($validPos > strrpos($string, ">", $offset)) {
+                $length = $validPos;
+            }
         }
 
         while($length >= 0) {

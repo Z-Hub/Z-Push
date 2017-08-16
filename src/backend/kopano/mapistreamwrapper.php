@@ -31,6 +31,7 @@ class MAPIStreamWrapper {
     private $position;
     private $streamlength;
     private $toTruncate;
+    private $truncateHtmlSafe;
 
     /**
      * Opens the stream
@@ -52,6 +53,7 @@ class MAPIStreamWrapper {
 
         $this->position = 0;
         $this->toTruncate = false;
+        $this->truncateHtmlSafe = (isset($contextOptions[self::PROTOCOL]['truncatehtmlsafe'])) ? $contextOptions[self::PROTOCOL]['truncatehtmlsafe'] : false;
 
         // this is our stream!
         $this->mapistream = $contextOptions[self::PROTOCOL]['stream'];
@@ -65,7 +67,7 @@ class MAPIStreamWrapper {
             $this->streamlength = 0;
         }
 
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("MAPIStreamWrapper::stream_open(): initialized mapistream: %s streamlength: %d", $this->mapistream, $this->streamlength));
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("MAPIStreamWrapper::stream_open(): initialized mapistream: %s - streamlength: %d - HTML-safe-truncate: %s", $this->mapistream, $this->streamlength, Utils::PrintAsString($this->truncateHtmlSafe)));
 
         return true;
     }
@@ -95,7 +97,7 @@ class MAPIStreamWrapper {
 
         // we need to truncate UTF8 compatible if ftruncate() was called
         if ($this->toTruncate && $this->position >= $this->streamlength) {
-            $data = Utils::Utf8_truncate($data, $this->streamlength);
+            $data = Utils::Utf8_truncate($data, $this->streamlength, $this->truncateHtmlSafe);
         }
 
         return $data;
@@ -175,13 +177,14 @@ class MAPIStreamWrapper {
    /**
      * Instantiates a MAPIStreamWrapper
      *
-     * @param mapistream    $mapistream     The stream to be wrapped
+     * @param mapistream    $mapistream         The stream to be wrapped
+     * @param boolean       $truncatehtmlsafe   Indicates if a truncation should be done html-safe - default: false
      *
      * @access public
      * @return MAPIStreamWrapper
      */
-     static public function Open($mapistream) {
-        $context = stream_context_create(array(self::PROTOCOL => array('stream' => &$mapistream)));
+     static public function Open($mapistream, $truncatehtmlsafe = false) {
+        $context = stream_context_create(array(self::PROTOCOL => array('stream' => &$mapistream, 'truncatehtmlsafe' => $truncatehtmlsafe)));
         return fopen(self::PROTOCOL . "://",'r', false, $context);
     }
 }

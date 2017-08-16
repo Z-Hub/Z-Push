@@ -1124,7 +1124,8 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
                     }
                 }
 
-                $output->asbody->data = StringStreamWrapper::Open($data);
+                // indicate in open that the data is HTML so it can be truncated correctly if required
+                $output->asbody->data = StringStreamWrapper::Open($data, ($bpReturnType == SYNC_BODYPREFERENCE_HTML));
                 $output->asbody->estimatedDataSize = strlen($data);
                 unset($data);
                 $output->asbody->type = $bpReturnType;
