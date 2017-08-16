@@ -835,7 +835,7 @@ class ZPushAdminCLI {
             $syncfolderid = $device->GetFolderIdForBackendId($df['folderid'], false, false, null);
             switch($df['type']) {
                 case SYNC_FOLDER_TYPE_USER_APPOINTMENT:
-                    if ($name == KOE_GAB_NAME) {
+                    if ($df['name'] == KOE_GAB_NAME) {
                         $gentype = "GAB";
                     }
                     else {
