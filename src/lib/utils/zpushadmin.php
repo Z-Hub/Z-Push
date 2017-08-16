@@ -480,6 +480,9 @@ class ZPushAdmin {
                 return false;
             }
 
+            // init deviceManage with correct device
+            ZPush::GetDeviceManagerWithDevice($device);
+
             // unify the lists saved for the user/device and the staticly configured one
             $new_list = array();
             foreach ($device->GetAdditionalFolders() as $folder) {
@@ -495,6 +498,7 @@ class ZPushAdmin {
                     $new_list[$fid] = array(
                                         'store' => $so->Store,
                                         'folderid' => $fid,
+                                        'parentid' => $so->parentid,
                                         'syncfolderid' => $syncfolderid,
                                         'name' => $so->displayname,
                                         'type' => $so->type,

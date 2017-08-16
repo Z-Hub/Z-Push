@@ -461,6 +461,21 @@ class ZPush {
     }
 
     /**
+     * Load another device in the DeviceManager and return it.
+     *
+     * @param ASDevice $asDevice
+     * @param boolean $initialize - default: true
+     * @return DeviceManager
+     */
+    static public function GetDeviceManagerWithDevice($asDevice, $initialize = true) {
+        $dm = ZPush::GetDeviceManager($initialize);
+        if ($dm) {
+            $dm->SetDevice($asDevice);
+        }
+        return $dm;
+    }
+
+    /**
      * Returns the Top data collector object
      *
      * @access public

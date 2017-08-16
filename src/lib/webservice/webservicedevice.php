@@ -166,6 +166,9 @@ class WebserviceDevice {
         $user = Request::GetGETUser();
         $deviceId = preg_replace("/[^A-Za-z0-9]/", "", $deviceId);
         $folders = ZPushAdmin::AdditionalFolderList($user, $deviceId);
+        if ($folders === false) {
+             $folders = array();
+        }
         ZLog::Write(LOGLEVEL_INFO, sprintf("WebserviceDevice::AdditionalFolderList(): found %d folders for device '%s' of user '%s'", count($folders), $deviceId, $user));
         // retrieve the permission flags from the backend and convert associative array into stdClass object for PHP7 support
         $folderObjects = array();
