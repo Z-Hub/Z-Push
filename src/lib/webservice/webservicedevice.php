@@ -177,7 +177,7 @@ class WebserviceDevice {
             $folderObject = new stdClass();
             $folderObject->store = $folder['store'];
             $folderObject->folderid = $folder['folderid'];
-            $folderObject->parentid = (isset($folder['parentid']))?$folder['parentid']:"0";
+            $folderObject->parentid = (isset($folder['parentid'])) ? $folder['parentid'] : "0";
             $folderObject->syncfolderid = $folder['syncfolderid'];
             $folderObject->name = $folder['name'];
             $folderObject->type = $folder['type'];
