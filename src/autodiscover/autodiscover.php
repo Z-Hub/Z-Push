@@ -83,6 +83,8 @@ class ZPushAutodiscover {
             if ($incomingXml->Request->AcceptableResponseSchema == ZPushAutodiscover::ACCEPTABLERESPONSESCHEMAMOBILESYNC) {
                 $response = $this->createResponse($email, $userFullname);
                 setcookie("membername", $username);
+            }else {
+                ZLog::Write(LOGLEVEL_ERROR, "Request for outlook response schema, this is not supported");
             }
         }
 
@@ -135,7 +137,9 @@ class ZPushAutodiscover {
      * @return SimpleXMLElement
      */
     private function getIncomingXml() {
-        if ($_SERVER['CONTENT_LENGTH'] > ZPushAutodiscover::MAXINPUTSIZE) {
+        if (!isset($_SERVER['CONTENT_LENGTH'])) {
+            ZLog::Write(LOGLEVEL_WARN, sprintf("ZPushAutodiscover->getIncomingXml() client did not provide content length header, can not check request input size"));
+        } elseif ($_SERVER['CONTENT_LENGTH'] > ZPushAutodiscover::MAXINPUTSIZE) {
             throw new ZPushException('The request input size exceeds 8kb.');
         }
 
