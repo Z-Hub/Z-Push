@@ -1266,6 +1266,9 @@ class BackendCardDAV extends BackendDiff implements ISearchProvider {
             }
             if (empty($val) || preg_match('/^(\;)+$/', $val) == 1)
                 continue;
+            // Support newlines in values
+            $val = str_replace("\n", "\\n", $val);
+
             // Remove trailing ;
             $val = substr($val, 0, -1);
             if (strlen($val) > 50) {
