@@ -1514,9 +1514,9 @@ class BackendKopano implements IBackend, ISearchProvider {
         list($user, $domain) = Utils::SplitDomainUser($store);
         if ($user === false) {
             $user = $this->mainUser;
-        }
-        if ($this->impersonateUser) {
-            $user = $this->impersonateUser;
+            if ($this->impersonateUser) {
+                $user = $this->impersonateUser;
+            }
         }
 
         // if there is a ReplyBackImExporter, the exporter needs to run!
