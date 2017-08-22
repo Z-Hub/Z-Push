@@ -277,10 +277,9 @@ class Mail_smtp extends Mail {
     function send($recipients, $headers, $body)
     {
         /* If we don't already have an SMTP object, create one. */
-        $result = &$this->getSMTPObject();
-        //if (PEAR::isError($result)) {
-        if ($result === false) {
-            return $result;
+        $this->getSMTPObject();
+        if ($this->_smtp === false) {
+            return $this->_smtp;
         }
 
         if (!is_array($headers)) {
