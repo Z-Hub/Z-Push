@@ -186,6 +186,7 @@ class MAPIMapping {
             // Override 'From' to show "Full Name <user@domain.com>"
             "representingname"      => PR_SENT_REPRESENTING_NAME,
             "representingentryid"   => PR_SENT_REPRESENTING_ENTRYID,
+            "representingsearchkey" => PR_SENT_REPRESENTING_SEARCH_KEY,
             "sourcekey"             => PR_SOURCE_KEY,
             "entryid"               => PR_ENTRYID,
             "parentsourcekey"       => PR_PARENT_SOURCE_KEY,
