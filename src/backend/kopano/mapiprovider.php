@@ -208,6 +208,10 @@ class MAPIProvider {
             isset($messageprops[$appointmentprops["representingname"]])) {
 
             $message->organizeremail = w2u($this->getSMTPAddressFromEntryID($messageprops[$appointmentprops["representingentryid"]]));
+            // if the email address can't be resolved, fall back to PR_SENT_REPRESENTING_SEARCH_KEY
+            if ($message->organizeremail == "" && isset($messageprops[$appointmentprops["sentrepresentinsrchk"]])) {
+                $message->organizeremail = $this->getEmailAddressFromSearchKey($messageprops[$appointmentprops["sentrepresentinsrchk"]]);
+            }
             $message->organizername = w2u($messageprops[$appointmentprops["representingname"]]);
         }
 
@@ -563,6 +567,11 @@ class MAPIProvider {
         }
         if(isset($messageprops[$emailproperties["representingentryid"]]))
             $fromaddr = $this->getSMTPAddressFromEntryID($messageprops[$emailproperties["representingentryid"]]);
+
+        // if the email address can't be resolved, fall back to PR_SENT_REPRESENTING_SEARCH_KEY
+        if ($fromaddr == "" && isset($messageprops[$emailproperties["representingsearchkey"]])) {
+            $fromaddr = $this->getEmailAddressFromSearchKey($messageprops[$emailproperties["representingsearchkey"]]);
+        }
 
         if($fromname == $fromaddr)
             $fromname = "";
@@ -2833,7 +2842,7 @@ class MAPIProvider {
      */
     private function getEmailAddressFromSearchKey($searchKey) {
         if (strpos($searchKey, ':') !== false && strpos($searchKey, '@') !== false) {
-            ZLog::Write(LOGLEVEL_INFO, "MAPIProvider->getEmailAddressFromSearchKey(): fall back to PR_SEARCH_KEY to resolve user and get email address");
+            ZLog::Write(LOGLEVEL_INFO, "MAPIProvider->getEmailAddressFromSearchKey(): fall back to PR_SEARCH_KEY or PR_SENT_REPRESENTING_SEARCH_KEY to resolve user and get email address");
             return trim(strtolower(explode(':', $searchKey)[1]));
         }
         return "";
