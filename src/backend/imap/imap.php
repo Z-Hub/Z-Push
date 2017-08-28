@@ -1543,7 +1543,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
 
         $folderImapid = $this->getImapIdFromFolderId($folderid);
         if (strcasecmp($folderImapid, $this->create_name_folder(IMAP_FOLDER_TRASH)) != 0) {
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->Message_Moved_To_Trash('%s','%s')", $folderid, $id));
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->DeleteMessage('%s','%s') move message to trash folder", $folderid, $id));
             return($this->MoveMessage($folderid, $id, $this->create_name_folder(IMAP_FOLDER_TRASH), $contentparameters);
         }
         $this->imap_reopen_folder($folderImapid);
