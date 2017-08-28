@@ -761,7 +761,7 @@ class BackendCardDAV extends BackendDiff implements ISearchProvider {
                 return false;
             }
 
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCardDAV->GetGALSearchResults searching: %s", $this->url));
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCardDAV->GetGALSearchResults searching: %s", $this->gal_url));
             try {
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCardDAV->GetGALSearchResults server is null? %d", $this->server == null));
                 $this->server->set_url($this->gal_url);
