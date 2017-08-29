@@ -28,7 +28,6 @@ require_once 'config.php';
 
 class ZPushAutodiscover {
     const ACCEPTABLERESPONSESCHEMAMOBILESYNC = 'http://schemas.microsoft.com/exchange/autodiscover/mobilesync/responseschema/2006';
-    const ACCEPTABLERESPONSESCHEMAOUTLOOK = 'http://schemas.microsoft.com/exchange/autodiscover/outlook/responseschema/2006a';
     const MAXINPUTSIZE = 8192; // Bytes, the autodiscover request shouldn't exceed that value
 
     private static $instance;
@@ -133,16 +132,16 @@ class ZPushAutodiscover {
      */
     private function getIncomingXml() {
         if (isset($_SERVER['CONTENT_LENGTH']) && $_SERVER['CONTENT_LENGTH'] > ZPushAutodiscover::MAXINPUTSIZE) {
-            throw new ZPushException('The request input size exceeds 8kb.');
+            throw new ZPushException('The request will not be processed as the input exceeds our maximum expected input size.');
         }
 
         if (!isset($_SERVER['PHP_AUTH_USER']) || !isset($_SERVER['PHP_AUTH_PW'])) {
             throw new AuthenticationRequiredException();
         }
 
-        $input = @file_get_contents('php://input', NULL, NULL, NULL, ZPushAutodiscover::MAXINPUTSIZE);
-        if (strlen($input) >= ZPushAutodiscover::MAXINPUTSIZE) {
-            throw new ZPushException('The request input size exceeds 8kb.');
+        $input = @file_get_contents('php://input', NULL, NULL, 0, ZPushAutodiscover::MAXINPUTSIZE);
+        if (strlen($input) == ZPushAutodiscover::MAXINPUTSIZE) {
+            throw new ZPushException('The request will not be processed as the input exceeds our maximum expected input size.');
         }
 
         $xml = simplexml_load_string($input);
@@ -164,12 +163,8 @@ class ZPushAutodiscover {
             throw new FatalException('Invalid input XML: no AcceptableResponseSchema.');
         }
 
-        if ($xml->Request->AcceptableResponseSchema == ZPushAutodiscover::ACCEPTABLERESPONSESCHEMAOUTLOOK) {
-            throw new FatalException('Request for outlook response schema, this is not supported.');
-        }
-
-        if ($xml->Request->AcceptableResponseSchema != ZPushAutodiscover::ACCEPTABLERESPONSESCHEMAMOBILESYNC) {
-            throw new FatalException('Invalid input XML: not a mobilesync responseschema.');
+        if (strcasecmp($xml->Request->AcceptableResponseSchema, ZPushAutodiscover::ACCEPTABLERESPONSESCHEMAMOBILESYNC) != 0) {
+            throw new FatalException(sprintf('Request for a responseschema that is not supported (only mobilesync is supported): %s', $xml->Request->AcceptableResponseSchema));
         }
 
         return $xml;
