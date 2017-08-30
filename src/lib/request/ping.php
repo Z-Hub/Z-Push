@@ -226,7 +226,9 @@ class Ping extends RequestProcessor {
                         self::$encoder->content($folderid);
                         self::$encoder->endTag();
                         if ($announceAggregated === false) {
-                            self::$topCollector->AnnounceInformation(sprintf("Found change in %s", $sc->GetCollection($folderid)->GetContentClass()), true);
+                            if (empty($fakechanges)) {
+                                self::$topCollector->AnnounceInformation(sprintf("Found change in %s", $sc->GetCollection($folderid)->GetContentClass()), true);
+                            }
                         }
                         else {
                             $announceAggregated += $changecount;
