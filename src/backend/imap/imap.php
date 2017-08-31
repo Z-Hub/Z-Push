@@ -1034,8 +1034,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             $mobj = new Mail_mimeDecode($mail);
             $message = $mobj->decode(array('decode_headers' => true, 'decode_bodies' => true, 'include_bodies' => true, 'rfc_822bodies' => true, 'charset' => 'utf-8'));
 
-            Utils::CheckAndFixEncoding($message->headers["subject"]);
-            Utils::CheckAndFixEncoding($message->headers["from"]);
+            Utils::CheckAndFixEncodingInHeaders($mail, $message);
 
             $is_multipart = is_multipart($message);
             $is_smime = is_smime($message);
