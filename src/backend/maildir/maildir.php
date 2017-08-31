@@ -335,8 +335,7 @@ class BackendMaildir extends BackendDiff {
 
         $message = Mail_mimeDecode::decode(array('decode_headers' => true, 'decode_bodies' => true, 'include_bodies' => true, 'input' => $rfc822, 'crlf' => "\n", 'charset' => 'utf-8'));
 
-        Utils::CheckAndFixEncoding($message->headers["subject"]);
-        Utils::CheckAndFixEncoding($message->headers["from"]);
+        Utils::CheckAndFixEncodingInHeaders($mail, $message);
 
         $output = new SyncMail();
 

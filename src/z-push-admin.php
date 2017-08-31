@@ -759,7 +759,7 @@ class ZPushAdminCLI {
      */
     static private function printDeviceData($deviceId, $user) {
         global $additionalFolders;
-        $device = ZPushAdmin::GetDeviceDetails($deviceId, $user);
+        $device = ZPushAdmin::GetDeviceDetails($deviceId, $user, true);
 
         if (! $device instanceof ASDevice) {
             echo sprintf("Folder resync failed: %s\n", ZLog::GetLastMessage(LOGLEVEL_ERROR));

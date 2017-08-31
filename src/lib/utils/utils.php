@@ -1192,6 +1192,98 @@ class Utils {
     }
 
     /**
+     * If string is ISO-2022-JP, convert this into utf-8.
+     *
+     * @param string $nonencstr
+     * @param string $utf8str
+     *
+     * @access private
+     * @return string
+     */
+    private static function convertRawHeader2Utf8($nonencstr, $utf8str) {
+        if (!isset($nonencstr)) {
+            return $utf8str;
+        }
+        // if php-imap option is not installed, there is no noconversion
+        if (!function_exists("imap_mime_header_decode")) {
+            return $utf8str;
+        }
+        $isiso2022jp = false;
+        $issamecharset = true;
+        $charset = NULL;
+        $str = "";
+        $striso2022jp = "";
+        foreach (@imap_mime_header_decode($nonencstr) as $val) {
+            if (is_null($charset)) {
+                $charset = strtolower($val->charset);
+            }
+            if ($charset != strtolower($val->charset)) {
+                $issamecharset = false;
+            }
+            if (strtolower($val->charset) == "iso-2022-jp") {
+                $isiso2022jp = true;
+                $striso2022jp .= $val->text;
+                $str .= @mb_convert_encoding($val->text, "utf-8", "ISO-2022-JP-MS");
+            }
+            elseif (strtolower($val->charset) == "default") {
+                $str .= $val->text;
+            }
+            else {
+                $str .= @mb_convert_encoding($val->text, "utf-8", $val->charset);
+            }
+        }
+        if (!$isiso2022jp) {
+            return $utf8str;
+        }
+        if ($charset == 'iso-2022-jp' && $issamecharset) {
+            $str = @mb_convert_encoding($striso2022jp, "utf-8", "ISO-2022-JP-MS");
+        }
+        return $str;
+    }
+
+    /**
+     * Get raw mail headers as key-value pair array.
+     *
+     * @param &$mail: this is reference of the caller's $mail,
+     *                not copy. So the call to
+     *                Utils::getRawMailHeaders() will not require
+     *                memory for $mail.
+     *
+     * @access private
+     * @return string array
+     */
+    private static function getRawMailHeaders(&$mail) {
+        // if no headers, return FALSE
+        if (!preg_match("/^(.*?)\r?\n\r?\n/s", $mail, $match)) {
+            ZLog::Write(LOGLEVEL_DEBUG, "Utils::getRawMailHeaders(): no header");
+            return false;
+        }
+        $input = $match[1];
+        // if no headers, return FALSE
+        if ($input == "") {
+            ZLog::Write(LOGLEVEL_DEBUG, "Utils::getRawMailHeaders(): no header");
+            return false;
+        }
+        // parse headers
+        $input = preg_replace("/\r?\n/", "\r\n", $input);
+        $input = preg_replace("/=\r\n(\t| )+/", '=', $input);
+        $input = preg_replace("/\r\n(\t| )+/", ' ', $input);
+        $headersonly = explode("\r\n", trim($input));
+        unset($input);
+        $headers = array("subject" => NULL, "from" => NULL);
+        foreach ($headersonly as $value) {
+            if (!preg_match("/^(.+):[ \t]*(.+)$/", $value, $match)) {
+                continue;
+            }
+            $headers[strtolower($match[1])] = $match[2];
+        }
+        unset($headersonly);
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("Utils::getRawMailHeaders(): subject = %s", $headers["subject"]));
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("Utils::getRawMailHeaders(): from = %s", $headers["from"]));
+        return $headers;
+    }
+
+    /**
      * Check if the UTF-8 string has ISO-2022-JP esc seq
      * if so, it is ISO-2022-JP, not UTF-8 and convert it into UTF-8
      * string
@@ -1204,6 +1296,66 @@ class Utils {
         if ( isset($string) && strpos($string, chr(0x1b).'$B') !== false ) {
             $string = mb_convert_encoding($string, "utf-8", "ISO-2022-JP-MS");
         }
+    }
+
+    /**
+     * Get to or cc header in mime-header-encoded UTF-8 text.
+     *
+     * @access public
+     * @param $addrstruncs
+     *        $addrstruncts is a return value of
+     *        Mail_RFC822->parseAddressList(). Convert this into
+     *        plain text. If the phrase part is in plain UTF-8,
+     *        convert this into mime-header encoded UTF-8
+     */
+    public static function CheckAndFixEncodingInHeadersOfSentMail($addrstructs) {
+        mb_internal_encoding("UTF-8");
+        $addrarray = array();
+        // process each address
+        foreach ( $addrstructs as $struc ) {
+            $addrphrase = $struc->personal;
+            if (isset($addrphrase) && strlen($addrphrase) > 0 && mb_detect_encoding($addrphrase, "UTF-8") != false && preg_match('/[^\x00-\x7F]/', $addrphrase) == 1) {
+                // phrase part is plain utf-8 text including non ascii characters
+                // convert ths into mime-header-encoded text
+                $addrphrase = mb_encode_mimeheader($addrphrase);
+            }
+            if ( strlen($addrphrase) > 0 ) {
+                // there is a phrase part in the address
+                $addrarray[] = $addrphrase . " " . " <" . $struc->mailbox . "@" . $struc->host . ">";
+            } else {
+                // there is no phrase part in the address
+                $addrarray[] = $struc->mailbox . "@" . $struc->host;
+            }
+        }
+        // combine each address into a string
+        $addresses = implode(",", $addrarray);
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("Utils::CheckAndFixEncodingInHeadersOfSentMail(): addresses %s", $addresses));
+        return $addresses;
+    }
+
+    /**
+     * Set expected subject and from in utf-8 even if in wrong
+     * decoded.
+     *
+     * @param &$mail
+     *        &$mail is reference of the caller's, not copy. So the
+     *        call to Utils::CheckAndFixEncodingInHeaders() will not
+     *        require memory for $mail.
+     * @param $message
+     *        $message is an instance of a class. So the call to
+     *        Utils::CheckAndFixEncodingInHeaders() will not
+     *        require memory for $message
+     *
+     * @access public
+     * @return void
+     */
+    public static function CheckAndFixEncodingInHeaders(&$mail, $message) {
+        $rawheaders = Utils::getRawMailHeaders($mail);
+        if (!$rawheaders) {
+            return;
+        }
+        $message->headers["subject"] = Utils::convertRawHeader2Utf8($rawheaders["subject"], $message->headers["subject"]);
+        $message->headers["from"] = Utils::convertRawHeader2Utf8($rawheaders["from"], $message->headers["from"]);
     }
 }
 

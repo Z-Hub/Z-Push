@@ -63,6 +63,12 @@ class BackendCalDAV extends BackendDiff {
         $this->_caldav = new CalDAVClient($url, $username, $password);
         if ($connected = $this->_caldav->CheckConnection()) {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->Logon(): User '%s' is authenticated on CalDAV '%s'", $username, $url));
+            if ($domain == "") {
+                $this->originalUsername = $username;
+            }
+            else {
+                $this->originalUsername = $username . '@' . $domain;
+            }
         }
         else {
             ZLog::Write(LOGLEVEL_WARN, sprintf("BackendCalDAV->Logon(): User '%s' is not authenticated on CalDAV '%s'", $username, $url));
@@ -919,6 +925,16 @@ class BackendCalDAV extends BackendDiff {
             $ical->AddComponent($vevent);
             if (isset($data->exceptions) && is_array($data->exceptions)) {
                 foreach ($data->exceptions as $ex) {
+                    if (isset($ex->deleted) && $ex->deleted == "1") {
+                        if ($exdate = $vevent->GetPValue("EXDATE")) {
+                            $vevent->SetPValue("EXDATE", $exdate.",".gmdate("Ymd\THis\Z", $ex->exceptionstarttime));
+                        }
+                        else {
+                            $vevent->AddProperty("EXDATE", gmdate("Ymd\THis\Z", $ex->exceptionstarttime));
+                        }
+                        continue;
+                    }
+
                     $exception = $this->_ParseASEventToVEvent($ex, $id);
                     if ($data->alldayevent == 1) {
                         $exception->AddProperty("RECURRENCE-ID", $this->_GetDateFromUTC("Ymd", $ex->exceptionstarttime, $data->timezone), array("VALUE" => "DATE"));
