@@ -61,5 +61,5 @@ define('STICKYNOTE_PASSWORD', 'stickynote');
 //define('STICKYNOTE_REALLYDELETE', 'true');
 
 // You MUST comment this out or the code will not run
-//define('STICKYNOTE_MUSTNOTBESET', 'true');
+define('STICKYNOTE_MUSTNOTBESET', 'true');
 
