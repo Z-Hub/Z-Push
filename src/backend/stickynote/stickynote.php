@@ -187,10 +187,10 @@ class BackendStickyNote extends BackendDiff {
 	$_param = array();
 	if ($cutoffdate) {
 	    array_push($_param, $this->_user, $this->_domain, $cutoffdate);
-	    $this->_result = pg_query_params($this->_dbconn, "select ordinal, extract(epoch from modified)::integer from note where modified <= timestamptz 'epoch' + $3 * interval '1 second' and login=$1 and domain=$2", $_param);
+	    $this->_result = pg_query_params($this->_dbconn, "select ordinal, extract(epoch from modified)::integer from note where modified <= timestamptz 'epoch' + $3 * interval '1 second' and login=$1 and domain=$2 and deleted is not true", $_param);
 	} else {
 	    array_push($_param, $this->_user, $this->_domain);
-	    $this->_result = pg_query_params($this->_dbconn, "select ordinal, extract(epoch from modified)::integer from note where login=$1 and domain=$2", $_param);
+	    $this->_result = pg_query_params($this->_dbconn, "select ordinal, extract(epoch from modified)::integer from note where login=$1 and domain=$2 and deleted is not true", $_param);
 	}
 	if (pg_result_status($this->_result) != PGSQL_TUPLES_OK) {
             ZLog::Write(LOGLEVEL_WARN, sprintf("BackendStickyNote->GetMessageList(Failed to return a valid message list from database)"));
@@ -220,7 +220,7 @@ class BackendStickyNote extends BackendDiff {
 	$_params = array();
 	array_push($_params, $id, $this->_user, $this->_domain);
 
-	$this->_result = pg_query_params($this->_dbconn, "select *, extract(epoch from modified)::integer as changed from note where ordinal = $1 and login = $2 and domain = $3", $_params);
+	$this->_result = pg_query_params($this->_dbconn, "select *, extract(epoch from modified)::integer as changed from note where ordinal = $1 and login = $2 and domain = $3 and deleted is not true", $_params);
 	if (pg_result_status($this->_result) != PGSQL_TUPLES_OK) {
             ZLog::Write(LOGLEVEL_ERROR, sprintf("BackendStickyNote->GetMessage(FAILED query for '%s','%s')", $folderid,  $id));
 	    return false;
@@ -274,7 +274,7 @@ class BackendStickyNote extends BackendDiff {
         $message = array();
 	$_params = array();
 	array_push($_params, $id, $this->_user, $this->_domain);
-	$this->_result = pg_query_params($this->_dbconn, "select extract(epoch from modified)::integer from note where ordinal=$1 and login=$2 and domain=$3", $_params);
+	$this->_result = pg_query_params($this->_dbconn, "select extract(epoch from modified)::integer from note where ordinal=$1 and login=$2 and domain=$3 and deleted is not true", $_params);
 	if (pg_result_status($this->_result) != PGSQL_TUPLES_OK) {
             ZLog::Write(LOGLEVEL_ERROR, sprintf("BackendStickyNote->StatMessage(Stat call failed for '%s')", $id));
 	    return $message;
