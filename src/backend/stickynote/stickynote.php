@@ -40,6 +40,9 @@ class BackendStickyNote extends BackendDiff {
     private $_dbconn;
     private $_result;
 
+    private $_changessinkinit;
+    private $_sinkdata;
+
     /**
      * Constructor
      */
@@ -47,6 +50,9 @@ class BackendStickyNote extends BackendDiff {
         if (!function_exists("pg_connect")) {
             throw new FatalException("BackendStickyNote(): Postgres extension php-pgsql not found", 0, null, LOGLEVEL_FATAL);
         }
+
+	$this->_changessinkinit = false;
+	$this->_sinkdata = 0;
     }
 
     /**
@@ -89,6 +95,8 @@ class BackendStickyNote extends BackendDiff {
         $this->SaveStorages();
 
         ZLog::Write(LOGLEVEL_DEBUG, "BackendStickyNote->Logoff(): disconnected from Postgres server");
+
+	unset($this->_sinkdata);
 
         return true;
     }
@@ -187,10 +195,10 @@ class BackendStickyNote extends BackendDiff {
 	$_param = array();
 	if ($cutoffdate) {
 	    array_push($_param, $this->_user, $this->_domain, $cutoffdate);
-	    $this->_result = pg_query_params($this->_dbconn, "select ordinal, extract(epoch from modified)::integer from note where modified <= timestamptz 'epoch' + $3 * interval '1 second' and login=$1 and domain=$2 and deleted is not true", $_param);
+	    $this->_result = pg_query_params($this->_dbconn, "select ordinal, extract(epoch from modified)::integer from note where modified <= timestamptz 'epoch' + $3 * interval '1 second' and login=$1 and domain=$2 and deleted is false", $_param);
 	} else {
 	    array_push($_param, $this->_user, $this->_domain);
-	    $this->_result = pg_query_params($this->_dbconn, "select ordinal, extract(epoch from modified)::integer from note where login=$1 and domain=$2 and deleted is not true", $_param);
+	    $this->_result = pg_query_params($this->_dbconn, "select ordinal, extract(epoch from modified)::integer from note where login=$1 and domain=$2 and deleted is false", $_param);
 	}
 	if (pg_result_status($this->_result) != PGSQL_TUPLES_OK) {
             ZLog::Write(LOGLEVEL_WARN, sprintf("BackendStickyNote->GetMessageList(Failed to return a valid message list from database)"));
@@ -220,7 +228,7 @@ class BackendStickyNote extends BackendDiff {
 	$_params = array();
 	array_push($_params, $id, $this->_user, $this->_domain);
 
-	$this->_result = pg_query_params($this->_dbconn, "select *, extract(epoch from modified)::integer as changed from note where ordinal = $1 and login = $2 and domain = $3 and deleted is not true", $_params);
+	$this->_result = pg_query_params($this->_dbconn, "select *, extract(epoch from modified)::integer as changed from note where ordinal = $1 and login = $2 and domain = $3 and deleted is false", $_params);
 	if (pg_result_status($this->_result) != PGSQL_TUPLES_OK) {
             ZLog::Write(LOGLEVEL_ERROR, sprintf("BackendStickyNote->GetMessage(FAILED query for '%s','%s')", $folderid,  $id));
 	    return false;
@@ -274,7 +282,7 @@ class BackendStickyNote extends BackendDiff {
         $message = array();
 	$_params = array();
 	array_push($_params, $id, $this->_user, $this->_domain);
-	$this->_result = pg_query_params($this->_dbconn, "select extract(epoch from modified)::integer from note where ordinal=$1 and login=$2 and domain=$3 and deleted is not true", $_params);
+	$this->_result = pg_query_params($this->_dbconn, "select extract(epoch from modified)::integer from note where ordinal=$1 and login=$2 and domain=$3 and deleted is false", $_params);
 	if (pg_result_status($this->_result) != PGSQL_TUPLES_OK) {
             ZLog::Write(LOGLEVEL_ERROR, sprintf("BackendStickyNote->StatMessage(Stat call failed for '%s')", $id));
 	    return $message;
@@ -454,6 +462,76 @@ class BackendStickyNote extends BackendDiff {
      */
     public function MoveMessage($folderid, $id, $newfolderid, $contentParameters) {
         return false;
+    }
+
+    /*
+     * Tell the upper layers that we have a ChangesSink.  It's simple since we
+     * can easily track the last modification time of any item for a given user,
+     * so we can tell the system very quickly when something has changed.
+     *
+     * @access public
+     * @return boolean
+     */
+    public function HasChangesSink() {
+        return true;
+    }
+
+    /*
+     * Initialize the sink for a folder (there's only one)
+     *
+     * @param string	$folderid
+     *
+     * @access public
+     * return boolean	Always true since there's only one folder
+     */
+    public function ChangesSinkInitialize($folderid) {
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendStickyNote->ChangesSinkInitialize(): folderid '%s'", $folderid));
+        $this->changessinkinit = true;
+	return $this->changessinkinit;
+    }
+
+    /*
+     * The Changesink.
+     * If there's nothing to return in changes, wait 30 seconds. Otherwise
+     * send back the FolderId -- there's only one.
+     *
+     * @param int	$timeout	How long to block if specified
+     *
+     * @access public
+     * @return array
+     */
+    public function ChangesSink($timeout = 30) {
+	$_notifications = array();
+
+        // Apparently this can get called before we've initialized, which in
+	// our case wouldn't matter, but for consistency return nothing if
+	// that happens - or if it gets called before the database is connected.
+        if ((!$this->changessinkinit) || ($this->_dbconn == false)) {
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendStickyNote->ChangesSink - Not initialized ChangesSink, sleep and exit"));
+            sleep($timeout);
+            return $notifications;
+        }
+	$_param = array();
+	array_push($_param, $_user, $_domain);
+	$this->_result = pg_query_params($this->_dbconn, "select extract(epoch from modified)::integer from note where login=$1 and domain=$2 and deleted is false order by modified desc limit 1", $_param);
+	if (pg_result_status($this->_result) != PGSQL_TUPLES_OK) {
+            ZLog::Write(LOGLEVEL_WARN, sprintf("BackendStickyNote->ChangesSink(Failed to return a valid change list)"));
+	} else {	
+	    if (pg_affected_rows($this->_result) == 1) {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendStickyNote->ChangesSink(There are valid notes stored)"));
+		$_lastchange = pg_fetch_result($this->_result, 0, 0);
+		if ($_lastchange != $this->_sinkdata) {
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendStickyNote->ChangesSink(Change noted; tell the upper layers)"));
+	            array_push($_notifications, "N");
+		    $this->sinkdata = $_lastchange;
+		}
+            }
+	}
+	pg_free_result($this->_result);
+	if (empty($_notifications)) {
+            sleep($_timeout);
+	}
+	return($_notifications);
     }
 
     /**
