@@ -557,7 +557,7 @@ class BackendCalDAV extends BackendDiff {
             if (count($rec) > 0) {
                 $recurrence_id = reset($rec);
                 $exception = new SyncAppointmentException();
-                $tzid = TimezoneUtil::ParseTimezone($recurrence_id->GetParameterValue("TZID"));
+                $tzid = TimezoneUtil::GetPhpSupportedTimezone($recurrence_id->GetParameterValue("TZID"));
                 if (!$tzid) {
                     $tzid = $timezone;
                 }
@@ -594,7 +594,7 @@ class BackendCalDAV extends BackendDiff {
                     break;
 
                 case "DTSTART":
-                    $message->starttime = TimezoneUtil::MakeUTCDate($property->Value(), TimezoneUtil::ParseTimezone($property->GetParameterValue("TZID")));
+                    $message->starttime = TimezoneUtil::MakeUTCDate($property->Value(), TimezoneUtil::GetPhpSupportedTimezone($property->GetParameterValue("TZID")));
                     if (strlen($property->Value()) == 8) {
                         $message->alldayevent = "1";
                     }
@@ -622,7 +622,7 @@ class BackendCalDAV extends BackendDiff {
                     break;
 
                 case "DTEND":
-                    $message->endtime = TimezoneUtil::MakeUTCDate($property->Value(), TimezoneUtil::ParseTimezone($property->GetParameterValue("TZID")));
+                    $message->endtime = TimezoneUtil::MakeUTCDate($property->Value(), TimezoneUtil::GetPhpSupportedTimezone($property->GetParameterValue("TZID")));
                     if (strlen($property->Value()) == 8) {
                         $message->alldayevent = "1";
                     }
