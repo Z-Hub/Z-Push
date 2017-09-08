@@ -113,3 +113,9 @@ Architecture: all
 Depends: ${misc:Depends}, z-push-autodiscover (= ${binary:Version}), apache2, libapache2-mod-php | libapache2-mod-php5
 Description: Z-Push autodiscover apache configuration
  Z-push autodiscover apache configuration files
+
+Package: z-push-config-nginx
+Architecture: all
+Depends: ${misc:Depends}, z-push-common (= ${binary:Version}), nginx, nginx-common
+Description: Z-Push nginx configuration
+ Z-push nginx configuration files
