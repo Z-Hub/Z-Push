@@ -512,7 +512,7 @@ class BackendStickyNote extends BackendDiff {
             return $_notifications;
         }
 	$_param = array();
-	array_push($_param, $_user, $_domain);
+	array_push($_param, $this->_user, $this->_domain);
 	$this->_result = pg_query_params($this->_dbconn, "select extract(epoch from modified)::integer from note where login=$1 and domain=$2 and deleted is false order by modified desc limit 1", $_param);
 	if (pg_result_status($this->_result) != PGSQL_TUPLES_OK) {
             ZLog::Write(LOGLEVEL_WARN, sprintf("BackendStickyNote->ChangesSink(Failed to return a valid change list)"));
@@ -524,12 +524,12 @@ class BackendStickyNote extends BackendDiff {
                     ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendStickyNote->ChangesSink(Change noted; tell the upper layers)"));
 	            array_push($_notifications, "N");
 		    $this->_sinkdata = $_lastchange;
-		}
+	}
             }
 	}
 	pg_free_result($this->_result);
 	if (empty($_notifications)) {
-            sleep($_timeout);
+            sleep($timeout);
 	}
 	return($_notifications);
     }
