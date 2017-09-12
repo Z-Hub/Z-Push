@@ -132,7 +132,8 @@ class BackendStickyNote extends BackendDiff {
      */
     public function GetFolderList() {
         $folders = array();
-	$folders[] = "Notes";
+	$folder = $this->StatFolder("N");
+	$folders[] = $folder;
         return $folders;
     }
 
