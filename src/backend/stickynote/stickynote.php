@@ -486,8 +486,8 @@ class BackendStickyNote extends BackendDiff {
      */
     public function ChangesSinkInitialize($folderid) {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendStickyNote->ChangesSinkInitialize(): folderid '%s'", $folderid));
-        $this->changessinkinit = true;
-	return $this->changessinkinit;
+        $this->_changessinkinit = true;
+	return $this->_changessinkinit;
     }
 
     /*
@@ -506,10 +506,10 @@ class BackendStickyNote extends BackendDiff {
         // Apparently this can get called before we've initialized, which in
 	// our case wouldn't matter, but for consistency return nothing if
 	// that happens - or if it gets called before the database is connected.
-        if ((!$this->changessinkinit) || ($this->_dbconn == false)) {
+        if ((!$this->_changessinkinit) || ($this->_dbconn == false)) {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendStickyNote->ChangesSink - Not initialized ChangesSink, sleep and exit"));
             sleep($timeout);
-            return $notifications;
+            return $_notifications;
         }
 	$_param = array();
 	array_push($_param, $_user, $_domain);
@@ -523,7 +523,7 @@ class BackendStickyNote extends BackendDiff {
 		if ($_lastchange != $this->_sinkdata) {
                     ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendStickyNote->ChangesSink(Change noted; tell the upper layers)"));
 	            array_push($_notifications, "N");
-		    $this->sinkdata = $_lastchange;
+		    $this->_sinkdata = $_lastchange;
 		}
             }
 	}
