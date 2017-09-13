@@ -13,11 +13,11 @@ BuildRoot:  %_tmppath/%name-%version-build
 %if 0%{?suse_version}
     %define apache_dir %_sysconfdir/apache2
 %else
-	%if "%_repository" == "RHEL_6_PHP_56" || "%_repository" == "RHEL_7_PHP_56"
-		%define apache_dir /opt/rh/httpd24/root/etc/httpd/
-	%else
-		%define apache_dir %_sysconfdir/httpd
-	%endif
+    %if "%_repository" == "RHEL_6_PHP_56" || "%_repository" == "RHEL_7_PHP_56"
+        %define apache_dir /opt/rh/httpd24/root/etc/httpd/
+    %else
+        %define apache_dir %_sysconfdir/httpd
+    %endif
 %endif
 
 %description
@@ -281,6 +281,15 @@ Requires:   httpd
 %description -n %name-config-apache-autodiscover
 Z-push autodiscover apache configuration files
 
+# CONFIG NGINX
+%package -n %name-config-nginx
+Summary:    Z-Push nginx configuration
+Group:      Productivity/Networking/Email/Utilities
+Requires:   nginx
+
+%description -n %name-config-nginx
+Z-push nginx configuration files
+
 %prep
 %setup -q
 
@@ -383,6 +392,10 @@ install -Dpm 644 config/apache2/z-push.conf \
 install -Dpm 644 config/apache2/z-push-autodiscover.conf \
     "$b/%apache_dir/conf.d/z-push-autodiscover.conf";
 
+# NGINX
+mkdir -p "$b/%_sysconfdir/nginx/sites-available/";
+install -Dpm 644 config/nginx/z-push.conf "$b/%_sysconfdir/nginx/sites-available/z-push.conf"
+
 # MANPAGES
 mkdir -p "$b/%_mandir/man1"
 cp man/*.1 "$b/%_mandir/man1"
@@ -402,6 +415,10 @@ cp man/*.1 "$b/%_mandir/man1"
     service httpd reload || true
 %endif
 
+%post -n %name-config-nginx
+ln -s "$b/%_sysconfdir/nginx/sites-available/z-push.conf" "$b/%_sysconfdir/nginx/sites-enabled/"
+service nginx reload
+
 %postun -n %name-config-apache
 %if 0%{?suse_version}
     service apache2 reload || true
@@ -416,16 +433,20 @@ cp man/*.1 "$b/%_mandir/man1"
     service httpd reload || true
 %endif
 
+%postun -n %name-config-nginx
+rm -f "$b/%_sysconfdir/nginx/sites-available/z-push.conf" "$b/%_sysconfdir/nginx/sites-enabled/"
+service nginx reload
+
 # COMMON
 %files -n %name-common
 %defattr(-, root, root)
 %dir %_sysconfdir/z-push
 
 %if 0%{?suse_version}
-	%config(noreplace) %attr(0640,root,www) %_sysconfdir/z-push/policies.ini
+    %config(noreplace) %attr(0640,root,www) %_sysconfdir/z-push/policies.ini
     %config(noreplace) %attr(0640,root,www) %_sysconfdir/z-push/z-push.conf.php
 %else
-	%config(noreplace) %attr(0640,root,apache) %_sysconfdir/z-push/policies.ini
+    %config(noreplace) %attr(0640,root,apache) %_sysconfdir/z-push/policies.ini
     %config(noreplace) %attr(0640,root,apache) %_sysconfdir/z-push/z-push.conf.php
 %endif
 
@@ -630,5 +651,15 @@ cp man/*.1 "$b/%_mandir/man1"
 %dir %apache_dir
 %dir %apache_dir/conf.d
 %config(noreplace) %attr(0640,root,root) %apache_dir/conf.d/z-push-autodiscover.conf
+
+# NGINX CONFIG
+%files -n %name-config-nginx
+%dir %_sysconfdir/nginx
+%dir %_sysconfdir/nginx/sites-available
+%dir %_sysconfdir/nginx/sites-enabled
+%config(noreplace) %attr(0640,nginx,nginx) %_sysconfdir/nginx/sites-available/z-push.conf
+%config(noreplace) %attr(0640,nginx,nginx) %_sysconfdir/z-push/*.php
+%attr(750,nginx,nginx) %dir %_localstatedir/lib/z-push
+%attr(750,nginx,nginx) %dir %_localstatedir/log/z-push
 
 %changelog
