@@ -683,7 +683,18 @@ class ZPushAdmin {
                 return false;
             }
 
-            $status = $device->SetAdditionalFolderList($set_store, $set_folders);
+            // check if any of the folders sent is in the statically configured list
+            $set_folders_checked = array();
+            $current_folders = ZPush::GetAdditionalSyncFolders();
+            foreach($set_folders as $f) {
+                if (isset($current_folders[$f['folderid']]) && substr($current_folders[$f['folderid']]->serverid, 0, 1) == DeviceManager::FLD_ORIGIN_CONFIG) {
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::AdditionalFolderSetList(): Ignoring folder '%s' id '%s' as it's a statically configured folder", $f['name'], $f['folderid']));
+                    continue;
+                }
+                $set_folders_checked[] = $f;
+            }
+
+            $status = $device->SetAdditionalFolderList($set_store, $set_folders_checked);
             if ($status && $device->GetData() !== false) {
                 ZPush::GetStateMachine()->SetState($device->GetData(), $devid, IStateMachine::DEVICEDATA);
             }

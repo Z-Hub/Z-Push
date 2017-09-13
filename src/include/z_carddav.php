@@ -343,11 +343,14 @@ class carddav_backend
         <D:getetag/>
         <C:address-data>
             <C:allprop/>
+            <C:prop name="EMAIL"/>
+            <C:prop name="FN"/>
+            <C:prop name="UID"/>
         </C:address-data>
     </D:prop>
     <C:filter test="anyof">
         <C:prop-filter name="FN">
-            <C:text-match collation="i;unicode-casemap" negate-condition="no" match-type="contains">$pattern</C:text-match>
+            <C:text-match collation="i;unicode-casemap" match-type="contains">$pattern</C:text-match>
         </C:prop-filter>
     </C:filter>
     <C:limit>

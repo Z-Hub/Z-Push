@@ -208,6 +208,10 @@ class MAPIProvider {
             isset($messageprops[$appointmentprops["representingname"]])) {
 
             $message->organizeremail = w2u($this->getSMTPAddressFromEntryID($messageprops[$appointmentprops["representingentryid"]]));
+            // if the email address can't be resolved, fall back to PR_SENT_REPRESENTING_SEARCH_KEY
+            if ($message->organizeremail == "" && isset($messageprops[$appointmentprops["sentrepresentinsrchk"]])) {
+                $message->organizeremail = $this->getEmailAddressFromSearchKey($messageprops[$appointmentprops["sentrepresentinsrchk"]]);
+            }
             $message->organizername = w2u($messageprops[$appointmentprops["representingname"]]);
         }
 
@@ -563,6 +567,11 @@ class MAPIProvider {
         }
         if(isset($messageprops[$emailproperties["representingentryid"]]))
             $fromaddr = $this->getSMTPAddressFromEntryID($messageprops[$emailproperties["representingentryid"]]);
+
+        // if the email address can't be resolved, fall back to PR_SENT_REPRESENTING_SEARCH_KEY
+        if ($fromaddr == "" && isset($messageprops[$emailproperties["representingsearchkey"]])) {
+            $fromaddr = $this->getEmailAddressFromSearchKey($messageprops[$emailproperties["representingsearchkey"]]);
+        }
 
         if($fromname == $fromaddr)
             $fromname = "";
@@ -1430,7 +1439,7 @@ class MAPIProvider {
             $org[PR_EMAIL_ADDRESS] = isset($representingprops[$appointmentprops["sentrepresentingemail"]]) ? $representingprops[$appointmentprops["sentrepresentingemail"]] : $props[$appointmentprops["sentrepresentingemail"]];
             $org[PR_SEARCH_KEY] = isset($representingprops[$appointmentprops["sentrepresentinsrchk"]]) ? $representingprops[$appointmentprops["sentrepresentinsrchk"]] : $props[$appointmentprops["sentrepresentinsrchk"]];
             $org[PR_RECIPIENT_FLAGS] = recipOrganizer | recipSendable;
-            $org[PR_RECIPIENT_TYPE] = MAPI_TO;
+            $org[PR_RECIPIENT_TYPE] = MAPI_TO; // TODO: shouldn't that be MAPI_ORIG ?
 
             array_push($recips, $org);
 
@@ -1449,14 +1458,14 @@ class MAPIProvider {
                     $recip[PR_SEARCH_KEY] = $userinfo[0][PR_SEARCH_KEY];
                     $recip[PR_ADDRTYPE] = $userinfo[0][PR_ADDRTYPE];
                     $recip[PR_ENTRYID] = $userinfo[0][PR_ENTRYID];
-                    $recip[PR_RECIPIENT_TYPE] = MAPI_TO;
+                    $recip[PR_RECIPIENT_TYPE] = isset($attendee->attendeetype) ? $attendee->attendeetype : MAPI_TO;
                     $recip[PR_RECIPIENT_FLAGS] = recipSendable;
                 }
                 else {
                     $recip[PR_DISPLAY_NAME] = u2w($attendee->name);
                     $recip[PR_SEARCH_KEY] = "SMTP:".$recip[PR_EMAIL_ADDRESS]."\0";
                     $recip[PR_ADDRTYPE] = "SMTP";
-                    $recip[PR_RECIPIENT_TYPE] = MAPI_TO;
+                    $recip[PR_RECIPIENT_TYPE] = isset($attendee->attendeetype) ? $attendee->attendeetype : MAPI_TO;
                     $recip[PR_ENTRYID] = mapi_createoneoff($recip[PR_DISPLAY_NAME], $recip[PR_ADDRTYPE], $recip[PR_EMAIL_ADDRESS]);
                 }
 
@@ -2437,11 +2446,13 @@ class MAPIProvider {
      * @return boolean
      */
     private function setMessageBodyForType($mapimessage, $bpReturnType, &$message) {
+        $truncateHtmlSafe = false;
         //default value is PR_BODY
         $property = PR_BODY;
         switch ($bpReturnType) {
             case SYNC_BODYPREFERENCE_HTML:
                 $property = PR_HTML;
+                $truncateHtmlSafe = true;
                 break;
             case SYNC_BODYPREFERENCE_RTF:
                 $property = PR_RTF_COMPRESSED;
@@ -2473,11 +2484,12 @@ class MAPIProvider {
             elseif (isset($message->internetcpid) && $bpReturnType == SYNC_BODYPREFERENCE_HTML) {
                 // if PR_HTML is UTF-8 we can stream it directly, else we have to convert to UTF-8 & wrap it
                 if (Utils::GetCodepageCharset($message->internetcpid) == "utf-8") {
-                    $message->asbody->data = MAPIStreamWrapper::Open($stream);
+                    $message->asbody->data = MAPIStreamWrapper::Open($stream, $truncateHtmlSafe);
                 }
                 else {
                     $body = $this->mapiReadStream($stream, $streamsize);
-                    $message->asbody->data = StringStreamWrapper::Open(Utils::ConvertCodepageStringToUtf8($message->internetcpid, $body));
+                    $message->asbody->data = StringStreamWrapper::Open(Utils::ConvertCodepageStringToUtf8($message->internetcpid, $body), $truncateHtmlSafe);
+                    $message->internetcpid = INTERNET_CPID_UTF8;
                 }
             }
             else {
@@ -2830,7 +2842,7 @@ class MAPIProvider {
      */
     private function getEmailAddressFromSearchKey($searchKey) {
         if (strpos($searchKey, ':') !== false && strpos($searchKey, '@') !== false) {
-            ZLog::Write(LOGLEVEL_INFO, "MAPIProvider->getEmailAddressFromSearchKey(): fall back to PR_SEARCH_KEY to resolve user and get email address");
+            ZLog::Write(LOGLEVEL_INFO, "MAPIProvider->getEmailAddressFromSearchKey(): fall back to PR_SEARCH_KEY or PR_SENT_REPRESENTING_SEARCH_KEY to resolve user and get email address");
             return trim(strtolower(explode(':', $searchKey)[1]));
         }
         return "";

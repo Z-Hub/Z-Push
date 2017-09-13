@@ -190,7 +190,7 @@ Group:      Productivity/Networking/Email/Utilities
 Requires:   %name-common = %version
 Requires:   memcached
 %if "%_repository" == "RHEL_6_PHP_56" || "%_repository" == "RHEL_7_PHP_56"
-Requires:   rh-php56-php-pecl-memcache
+Requires:   rh-php56-php-memcached
 %else
 %if 0%{?suse_version}
 Requires:   php5-memcached

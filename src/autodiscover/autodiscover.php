@@ -28,7 +28,6 @@ require_once 'config.php';
 
 class ZPushAutodiscover {
     const ACCEPTABLERESPONSESCHEMAMOBILESYNC = 'http://schemas.microsoft.com/exchange/autodiscover/mobilesync/responseschema/2006';
-    const ACCEPTABLERESPONSESCHEMAOUTLOOK = 'http://schemas.microsoft.com/exchange/autodiscover/outlook/responseschema/2006a';
     const MAXINPUTSIZE = 8192; // Bytes, the autodiscover request shouldn't exceed that value
 
     private static $instance;
@@ -79,11 +78,8 @@ class ZPushAutodiscover {
             $email = ($this->getAttribFromUserDetails($userDetails, 'emailaddress')) ? $this->getAttribFromUserDetails($userDetails, 'emailaddress') : $incomingXml->Request->EMailAddress;
             $userFullname = ($this->getAttribFromUserDetails($userDetails, 'fullname')) ? $this->getAttribFromUserDetails($userDetails, 'fullname') : $email;
             ZLog::Write(LOGLEVEL_WBXML, sprintf("Resolved user's '%s' fullname to '%s'", $username, $userFullname));
-            // At the moment Z-Push only supports mobile response schema for autodiscover. Send empty response if the client request outlook response schema.
-            if ($incomingXml->Request->AcceptableResponseSchema == ZPushAutodiscover::ACCEPTABLERESPONSESCHEMAMOBILESYNC) {
-                $response = $this->createResponse($email, $userFullname);
-                setcookie("membername", $username);
-            }
+            $response = $this->createResponse($email, $userFullname);
+            setcookie("membername", $username);
         }
 
         catch (Exception $ex) {
@@ -135,15 +131,19 @@ class ZPushAutodiscover {
      * @return SimpleXMLElement
      */
     private function getIncomingXml() {
-        if ($_SERVER['CONTENT_LENGTH'] > ZPushAutodiscover::MAXINPUTSIZE) {
-            throw new ZPushException('The request input size exceeds 8kb.');
+        if (isset($_SERVER['CONTENT_LENGTH']) && $_SERVER['CONTENT_LENGTH'] > ZPushAutodiscover::MAXINPUTSIZE) {
+            throw new ZPushException('The request will not be processed as the input exceeds our maximum expected input size.');
         }
 
         if (!isset($_SERVER['PHP_AUTH_USER']) || !isset($_SERVER['PHP_AUTH_PW'])) {
             throw new AuthenticationRequiredException();
         }
 
-        $input = @file_get_contents('php://input');
+        $input = @file_get_contents('php://input', NULL, NULL, 0, ZPushAutodiscover::MAXINPUTSIZE);
+        if (strlen($input) == ZPushAutodiscover::MAXINPUTSIZE) {
+            throw new ZPushException('The request will not be processed as the input exceeds our maximum expected input size.');
+        }
+
         $xml = simplexml_load_string($input);
 
         if (LOGLEVEL >= LOGLEVEL_WBXML) {
@@ -163,8 +163,8 @@ class ZPushAutodiscover {
             throw new FatalException('Invalid input XML: no AcceptableResponseSchema.');
         }
 
-        if ($xml->Request->AcceptableResponseSchema != ZPushAutodiscover::ACCEPTABLERESPONSESCHEMAMOBILESYNC && $xml->Request->AcceptableResponseSchema != ZPushAutodiscover::ACCEPTABLERESPONSESCHEMAOUTLOOK) {
-            throw new FatalException('Invalid input XML: not a mobilesync responseschema.');
+        if (strcasecmp($xml->Request->AcceptableResponseSchema, ZPushAutodiscover::ACCEPTABLERESPONSESCHEMAMOBILESYNC) != 0) {
+            throw new FatalException(sprintf('Request for a responseschema that is not supported (only mobilesync is supported): %s', $xml->Request->AcceptableResponseSchema));
         }
 
         return $xml;

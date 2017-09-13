@@ -286,6 +286,17 @@ class SyncParameters extends StateObject {
         $this->checkCPO($this->currentCPO);
     }
 
+
+    /**
+     * Indicates if the confirmation status changed for the SyncKey.
+     *
+     * @access public
+     * @return boolean
+     */
+    public function HasConfirmationChanged() {
+        return $this->confirmationChanged;
+    }
+
     /**
      * Indicates if a exporter run is required. This is the case if the given folderstat is different from the saved one
      * or when the expiration time expired.

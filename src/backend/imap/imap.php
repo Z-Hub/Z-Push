@@ -204,6 +204,10 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             $toaddr = $this->parseAddr($Mail_RFC822->parseAddressList($message->headers["to"]));
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->SendMail(): To defined: %s", $toaddr));
         }
+
+        $message->headers["to"] = Utils::CheckAndFixEncodingInHeadersOfSentMail($Mail_RFC822->parseAddressList($message->headers["to"]));
+        $message->headers["cc"] = Utils::CheckAndFixEncodingInHeadersOfSentMail($Mail_RFC822->parseAddressList($message->headers["cc"]));
+
         unset($Mail_RFC822);
 
         if (isset($message->headers["subject"]) && mb_detect_encoding($message->headers["subject"], "UTF-8") != false && preg_match('/[^\x00-\x7F]/', $message->headers["subject"]) == 1) {
@@ -1030,8 +1034,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             $mobj = new Mail_mimeDecode($mail);
             $message = $mobj->decode(array('decode_headers' => true, 'decode_bodies' => true, 'include_bodies' => true, 'rfc_822bodies' => true, 'charset' => 'utf-8'));
 
-            Utils::CheckAndFixEncoding($message->headers["subject"]);
-            Utils::CheckAndFixEncoding($message->headers["from"]);
+            Utils::CheckAndFixEncodingInHeaders($mail, $message);
 
             $is_multipart = is_multipart($message);
             $is_smime = is_smime($message);
@@ -1124,7 +1127,8 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
                     }
                 }
 
-                $output->asbody->data = StringStreamWrapper::Open($data);
+                // indicate in open that the data is HTML so it can be truncated correctly if required
+                $output->asbody->data = StringStreamWrapper::Open($data, ($bpReturnType == SYNC_BODYPREFERENCE_HTML));
                 $output->asbody->estimatedDataSize = strlen($data);
                 unset($data);
                 $output->asbody->type = $bpReturnType;
@@ -1542,6 +1546,10 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->DeleteMessage('%s','%s')", $folderid, $id));
 
         $folderImapid = $this->getImapIdFromFolderId($folderid);
+        if (strcasecmp($folderImapid, $this->create_name_folder(IMAP_FOLDER_TRASH)) != 0) {
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->DeleteMessage('%s','%s') move message to trash folder", $folderid, $id));
+            return $this->MoveMessage($folderid, $id, $this->create_name_folder(IMAP_FOLDER_TRASH), $contentparameters);
+        }
         $this->imap_reopen_folder($folderImapid);
 
         if ($this->imap_inside_cutoffdate(Utils::GetCutOffDate($contentparameters->GetFilterType()), $id)) {

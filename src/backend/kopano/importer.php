@@ -457,7 +457,7 @@ class ImportChangesICS implements IImportChanges {
         list(,$sk) = Utils::SplitMessageId($id);
 
         // check if message is in the synchronization interval and/or shared+private
-        if (!$this->isModificationAllowed($id))
+        if (!$this->isModificationAllowed($sk))
             throw new StatusException(sprintf("ImportChangesICS->ImportMessageDeletion('%s'): Message deletion is not allowed. Deletion not executed.", $id), SYNC_STATUS_OBJECTNOTFOUND);
 
         // check for conflicts

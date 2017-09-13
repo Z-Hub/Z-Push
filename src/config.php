@@ -252,7 +252,7 @@
     // point. You can add DeviceType strings to the categories.
     // In general longer timeouts are better, because more data can be streamed at once.
     define('SYNC_TIMEOUT_MEDIUM_DEVICETYPES', "SAMSUNGGTI");
-    define('SYNC_TIMEOUT_LONG_DEVICETYPES',   "iPod, iPad, iPhone, WP, WindowsOutlook");
+    define('SYNC_TIMEOUT_LONG_DEVICETYPES',   "iPod, iPad, iPhone, WP, WindowsOutlook, WindowsMail");
 
     // Time in seconds the device should wait whenever the service is unavailable,
     // e.g. when a backend service is unavailable.
