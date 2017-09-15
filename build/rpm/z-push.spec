@@ -416,7 +416,7 @@ cp man/*.1 "$b/%_mandir/man1"
 %endif
 
 %post -n %name-config-nginx
-ln -s "$b/%_sysconfdir/nginx/sites-available/z-push.conf" "$b/%_sysconfdir/nginx/sites-enabled/"
+ln -s "%_sysconfdir/nginx/sites-available/z-push.conf" "%_sysconfdir/nginx/sites-enabled/"
 service nginx reload
 
 %postun -n %name-config-apache
@@ -434,7 +434,7 @@ service nginx reload
 %endif
 
 %postun -n %name-config-nginx
-rm -f "$b/%_sysconfdir/nginx/sites-available/z-push.conf" "$b/%_sysconfdir/nginx/sites-enabled/"
+rm -f "%_sysconfdir/nginx/sites-available/z-push.conf" "%_sysconfdir/nginx/sites-enabled/"
 service nginx reload
 
 # COMMON
