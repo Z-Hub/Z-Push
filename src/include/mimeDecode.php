@@ -52,7 +52,7 @@
  * @author     Sean Coates <sean@php.net>
  * @copyright  2003-2006 PEAR <pear-group@php.net>
  * @license    http://www.opensource.org/licenses/bsd-license.php BSD License
- * @version    CVS: $Id: mimeDecode.php 335147 2014-10-27 08:41:39Z alan_k $
+ * @version    CVS: $Id: mimeDecode.php 337165 2015-07-15 09:42:08Z alan_k $
  * @link       http://pear.php.net/package/Mail_mime
  */
 
@@ -64,7 +64,7 @@
  * implemented automated decoding of strings from mail charset
  *
  * Reference implementation used:
- * http://download.pear.php.net/package/Mail_mimeDecode-1.5.5.tgz
+ * http://download.pear.php.net/package/Mail_mimeDecode-1.5.6.tgz
  *
  * used "old" method of checking if called statically, as this is deprecated between php 5.0.0 and 5.3.0
  *   (isStatic of decode() around line 215)
@@ -154,8 +154,8 @@ class Mail_mimeDecode
 
     /**
      * Flag to determine whether to decode headers
-     *
-     * @var    boolean
+     * (set to UTF8 to iconv convert headers)
+     * @var    mixed
      * @access private
      */
     var $_decode_headers;
@@ -190,6 +190,11 @@ class Mail_mimeDecode
         $this->_include_bodies = true;
         $this->_rfc822_bodies  = false;
     }
+    // BC
+    function Mail_mimeDecode($input)
+    {
+        $this->__construct($input);
+    }
 
     /**
      * Begins the decoding process. If called statically
@@ -202,7 +207,8 @@ class Mail_mimeDecode
      *                               object.
      *              decode_bodies  - Whether to decode the bodies
      *                               of the parts. (Transfer encoding)
-     *              decode_headers - Whether to decode headers
+     *              decode_headers - Whether to decode headers,
+     *                             - use "UTF8//IGNORE" to convert charset.
      *
      *              input          - If called statically, this will be treated
      *                               as the input
@@ -216,7 +222,7 @@ class Mail_mimeDecode
         $isStatic = empty($this) || !is_a($this, __CLASS__);
 
         // Have we been called statically?
-	// If so, create an object and pass details to that.
+        // If so, create an object and pass details to that.
         if ($isStatic AND isset($params['input'])) {
 
             $obj = new Mail_mimeDecode($params['input']);
@@ -229,19 +235,21 @@ class Mail_mimeDecode
         // Called via an object
         } else {
             $this->_include_bodies = isset($params['include_bodies']) ?
-	                             $params['include_bodies'] : false;
+                                 $params['include_bodies'] : false;
             $this->_decode_bodies  = isset($params['decode_bodies']) ?
-	                             $params['decode_bodies']  : false;
+                                 $params['decode_bodies']  : false;
             $this->_decode_headers = isset($params['decode_headers']) ?
-	                             $params['decode_headers'] : false;
+                                 $params['decode_headers'] : false;
             $this->_rfc822_bodies  = isset($params['rfc_822bodies']) ?
-	                             $params['rfc_822bodies']  : false;
+                                 $params['rfc_822bodies']  : false;
             $this->_charset = isset($params['charset']) ?
                                  strtolower($params['charset']) : 'utf-8';
 
-
-            if (is_string($this->_decode_headers) && !function_exists('iconv')) {
-                 $this->raiseError('header decode conversion requested, however iconv is missing');
+            if (is_string($this->_decode_headers)) {
+                if (!function_exists('iconv')) {
+                    $this->raiseError('header decode conversion requested, however iconv is missing');
+                }
+                $this->_decode_headers = strtolower($this->_decode_headers);
             }
 
             $structure = $this->_decode($this->_header, $this->_body);
@@ -339,10 +347,18 @@ class Mail_mimeDecode
                     break;
 
                 case 'multipart/signed': // PGP
+                    $parts = $this->_boundarySplit($body, $content_type['other']['boundary'], true);
+                    $return->parts['msg_body'] = $parts[0];
+                    list($part_header, $part_body) = $this->_splitBodyHeader($parts[1]);
+                    $return->parts['sig_hdr'] = $part_header;
+                    $return->parts['sig_body'] = $part_body;
+                    break;
+
                 case 'multipart/encrypted': // #190 encrypted parts will be treated as normal ones
                 case 'multipart/parallel':
                 case 'multipart/appledouble': // Appledouble mail
                 case 'multipart/report': // RFC1892
+                case 'multipart/signed': // PGP
                 case 'multipart/digest':
                 case 'multipart/alternative':
                 case 'multipart/related':
@@ -384,8 +400,8 @@ class Mail_mimeDecode
                     $return->disposition = 'inline';
                     break;
 
-                    // #190, KD 2015-06-09 - Add type for S/MIME Encrypted messages; these must have the filename set explicitly (it won't work otherwise)
-                        //and then falls through for the rest on purpose.
+                // #190, KD 2015-06-09 - Add type for S/MIME Encrypted messages; these must have the filename set explicitly (it won't work otherwise)
+                // and then falls through for the rest on purpose.
                 case 'application/x-pkcs7-mime':
                 case 'application/pkcs7-mime':
                     if (!isset($content_transfer_encoding['value'])) {
@@ -781,7 +797,7 @@ class Mail_mimeDecode
      * @return string Decoded header value
      * @access private
      */
-    function _decodeHeader($input)
+    function _decodeHeader($input, $default_charset=false)
     {
         if (!$this->_decode_headers) {
             return $input;
@@ -789,19 +805,14 @@ class Mail_mimeDecode
         // Remove white space between encoded-words
         $input = preg_replace('/(=\?[^?]+\?(q|b)\?[^?]*\?=)(\s)+=\?/i', '\1=?', $input);
 
-        $encodedwords = false;
-        $charset = '';
-
         // For each encoded-word...
         while (preg_match('/(=\?([^?]+)\?(q|b)\?([^?]*)\?=)/i', $input, $matches)) {
-            $encodedwords = true;
+            $encoded  = $matches[1];
+            $charset  = strtolower($matches[2]);
+            $encoding = strtolower($matches[3]);
+            $text     = $matches[4];
 
-            $encoded = $matches[1];
-            $charset = $matches[2];
-            $encoding = $matches[3];
-            $text = $matches[4];
-
-            switch (strtolower($encoding)) {
+            switch ($encoding) {
                 case 'b':
                     $text = base64_decode($text);
                     break;
@@ -813,13 +824,16 @@ class Mail_mimeDecode
                         $text = str_replace('=' . $value, chr(hexdec($value)), $text);
                     break;
             }
-
-            $text = $this->_autoconvert_encoding($text, $charset);
+            if (is_string($this->_decode_headers) && $charset != $this->_decode_headers) {
+                $conv = @iconv($charset, $this->_decode_headers, $text);
+                $text = ($conv === false) ? $text : $conv;
+            }
             $input = str_replace($encoded, $text, $input);
         }
 
-        if (!$encodedwords) {
-            $input = $this->_autoconvert_encoding($input, $charset);
+        if ($default_charset  && is_string($this->_decode_headers) && $charset != $this->_decode_headers) {
+            $conv = @iconv($charset, $this->_decode_headers, $input); // TODO: shouldn't this be $default_charset ?
+            $input = ($conv === false) ? $input : $conv;
         }
 
         return $input;
@@ -836,7 +850,7 @@ class Mail_mimeDecode
      * @return string Decoded body
      * @access private
      */
-    function _decodeBody($input, $encoding = '7bit', $charset = '', $detectCharset =  true)
+    function _decodeBody($input, $encoding = '7bit', $charset = '', $detectCharset = true)
     {
         switch (strtolower($encoding)) {
             case 'quoted-printable':
@@ -846,67 +860,13 @@ class Mail_mimeDecode
             case 'base64':
                 $input = base64_decode($input);
                 break;
-
-            case '7bit':
-            case '8bit':
-            default:
-                break;
+        }
+        if ($detectCharset && strtolower($charset) != $this->_charset) {
+            $conv = @iconv($charset, $this->_charset, $input);
+            $input = ($conv === false) ? $input : $conv;
         }
 
-        return $detectCharset ? $this->_autoconvert_encoding($input, $charset) : $input;
-    }
-
-    /**
-     * Error handler dummy for _autoconvert_encoding
-     *
-     * @param integer $errno
-     * @param string $errstr
-     * @return boolean true
-     * @access public static
-     */
-    static function _iconv_notice_handler($errno, $errstr) {
-        return true;
-    }
-
-    /**
-     * Autoconvert the text from any encoding. THIS WILL NEVER WORK 100%.
-     * Will ignore the E_NOTICE for iconv when detecting ilegal charsets
-     *
-     * @param string $input Input string to convert
-     * @param string $supposed_encoding Encoding that the text is possibly using
-     * @return string Converted string
-     * @access private
-     */
-    function _autoconvert_encoding($input, $supposed_encoding = "UTF-8") {
-        $input_converted = $input;
-
-        if (function_exists("mb_detect_order")) {
-            $mb_order = array_merge(array($supposed_encoding), mb_detect_order());
-            set_error_handler('Mail_mimeDecode::_iconv_notice_handler');
-
-            // Default value in case of error
-            $detected_encoding = $supposed_encoding;
-
-            try {
-                $detected_encoding = mb_detect_encoding($input, $mb_order, true);
-                // In some cases mb_detect_encoding returns an empty string
-                if ($detected_encoding === false || strlen($detected_encoding) == 0) {
-                    $detected_encoding = $supposed_encoding;
-                }
-                $input_converted = iconv($detected_encoding, $this->_charset, $input);
-            }
-            catch(Exception $ex) {
-                $this->raiseError($ex->getMessage());
-            }
-            restore_error_handler();
-
-            if ($input_converted === false || mb_strlen($input_converted, $this->_charset) !== mb_strlen($input, $detected_encoding)) {
-                ZLog::Write(LOGLEVEL_DEBUG, "Mail_mimeDecode()::_autoconvert_encoding(): Text cannot be correctly decoded, using original text. This will be ok if the part is not text, otherwise expect encoding errors");
-                $input_converted = $input;
-            }
-        }
-
-        return $input_converted;
+        return $input;
     }
 
     /**
@@ -1008,7 +968,7 @@ class Mail_mimeDecode
 
     /**
      * Get all parts in the message with specified type and concatenate them together, unless the
-     * Content-Disposition is 'attachment', in which case the text is apparently an attachment
+     * Content-Disposition is 'attachment', in which case the text is apparently an attachment.
      *
      * @param string        $message        mimedecode message(part)
      * @param string        $message        message subtype
@@ -1019,8 +979,9 @@ class Mail_mimeDecode
      * @access public
      */
     static function getBodyRecursive($message, $subtype, &$body, $replace_nr = false) {
-        if(!isset($message->ctype_primary)) return;
-        if(strcasecmp($message->ctype_primary, "text") == 0 && strcasecmp($message->ctype_secondary, $subtype) == 0 && isset($message->body)) {
+        // TODO: move this function into general utils
+        if (!isset($message->ctype_primary)) return;
+        if (strcasecmp($message->ctype_primary, "text") == 0 && strcasecmp($message->ctype_secondary, $subtype) == 0 && isset($message->body)) {
             if ($replace_nr) {
                 $body .= str_replace("\n", "\r\n", str_replace("\r", "", $message->body));
             }
@@ -1029,12 +990,12 @@ class Mail_mimeDecode
             }
         }
 
-        if(strcasecmp($message->ctype_primary,"multipart")==0 && isset($message->parts) && is_array($message->parts)) {
+        if (strcasecmp($message->ctype_primary,"multipart") == 0 && isset($message->parts) && is_array($message->parts)) {
             foreach($message->parts as $part) {
                 // Check testing/samples/m1009.txt
                 // Content-Type: text/plain; charset=us-ascii; name="hareandtoroise.txt" Content-Transfer-Encoding: 7bit Content-Disposition: inline; filename="hareandtoroise.txt"
                 // We don't want to show that file text (outlook doesn't show it), so if we have content-disposition we don't apply recursivity
-                if(!isset($part->disposition))  {
+                if (!isset($part->disposition))  {
                     Mail_mimeDecode::getBodyRecursive($part, $subtype, $body, $replace_nr);
                 }
             }
