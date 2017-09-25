@@ -1136,10 +1136,10 @@ define('PR_EC_STATS_SESSION_BUSYSTATES'               ,mapi_prop_tag(PT_MV_STRIN
 define('PR_EC_COMPANY_NAME'                           ,mapi_prop_tag(PT_STRING8,     0x6748));
 
 /* kopano specific properties for optimization of imap functionality */
-define('PR_EC_IMAP_EMAIL'                             ,mapi_prop_tag(PT_BINARY,      PR_EC_BASE+0x8C)); // the complete rfc822 email
-define('PR_EC_IMAP_EMAIL_SIZE'                        ,mapi_prop_tag(PT_LONG,        PR_EC_BASE+0x8D));
-define('PR_EC_IMAP_BODY'                              ,mapi_prop_tag(PT_STRING8,     PR_EC_BASE+0x8E)); // simplified bodystructure (mostly unused by clients)
-define('PR_EC_IMAP_BODYSTRUCTURE'                     ,mapi_prop_tag(PT_STRING8,     PR_EC_BASE+0x8F)); // extended bodystructure (often used by clients)
+define('PR_EC_IMAP_EMAIL'                             ,mapi_prop_tag(PT_BINARY,      0x678C)); // the complete rfc822 email
+define('PR_EC_IMAP_EMAIL_SIZE'                        ,mapi_prop_tag(PT_LONG,        0x678D));
+define('PR_EC_IMAP_BODY'                              ,mapi_prop_tag(PT_STRING8,     0x678E)); // simplified bodystructure (mostly unused by clients)
+define('PR_EC_IMAP_BODYSTRUCTURE'                     ,mapi_prop_tag(PT_STRING8,     0x678F)); // extended bodystructure (often used by clients)
 
 /* user features */
 define('PR_EC_ENABLED_FEATURES'                       ,mapi_prop_tag(PT_MV_TSTRING,  0x67B3));
