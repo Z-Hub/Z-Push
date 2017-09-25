@@ -102,6 +102,16 @@ class DeviceManager {
     }
 
     /**
+     * Load another different device.
+     * @param ASDevice $asDevice
+     */
+    public function SetDevice($asDevice) {
+        $this->device = $asDevice;
+        $this->loadDeviceData();
+        $this->stateManager->SetDevice($this->device);
+    }
+
+    /**
      * Returns the StateManager for the current device
      *
      * @access public
