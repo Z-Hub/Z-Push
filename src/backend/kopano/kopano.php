@@ -210,7 +210,7 @@ class BackendKopano implements IBackend, ISearchProvider {
         $this->store = $this->defaultstore;
         $this->storeName = $defaultUser;
 
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->Logon(): User '%s' is authenticated%s", $this->mainUser, ($this->impersonateUser ? " impersonating '".$this->impersonateUser."'":'')));
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->Logon(): User '%s' is authenticated%s", $this->mainUser, ($this->impersonateUser ? " impersonating '".$this->impersonateUser."'" : '')));
 
         $this->isZPushEnabled();
 
@@ -527,7 +527,7 @@ class BackendKopano implements IBackend, ISearchProvider {
         }
 
         // When impersonating we are also "sendingAsSomeone". We also need to switch to the defaultstore
-        // to put the message in our own Outbox. Kopano will save a copy in the impersonted Sent Items folder.
+        // to put the message in our own Outbox. Kopano will save a copy in the impersonated Sent Items folder.
         if ($this->impersonateUser) {
             $this->defaultstore = $this->openMessageStore($this->mainUser);
             $sendingAsSomeone = true;
