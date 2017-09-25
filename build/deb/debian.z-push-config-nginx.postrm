@@ -1,0 +1,31 @@
+#!/bin/sh
+# postrm script for z-push-config-nginx
+
+set -e
+
+# Use debconf
+. /usr/share/debconf/confmodule
+
+case "$1" in
+    purge|abort-install)
+        if [ -f /etc/nginx/sites-available/z-push.conf ]; then
+            echo "Remove /etc/nginx/sites-available/z-push.conf and restart nginx"
+            rm /etc/nginx/sites-enabled/z-push.conf
+            rm /etc/nginx/sites-available/z-push.conf
+            ucf --purge /etc/nginx/sites-available/z-push.conf
+            service nginx reload
+        fi
+        ;;
+
+    remove|upgrade|failed-upgrade|abort-upgrade|disappear)
+        ;;
+
+    *)
+        echo "postrm called with unknown argument \`$1'" >&2
+        exit 1
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0
