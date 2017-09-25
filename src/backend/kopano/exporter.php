@@ -83,7 +83,7 @@ class ExportChangesICS implements IExportChanges{
 
             // Get the actual ICS exporter
             if ($folder) {
-                if($folderid) {
+                if ($folderid) {
                     $this->exporter = mapi_openproperty($folder, PR_CONTENTS_SYNCHRONIZER, IID_IExchangeExportChanges, 0 , 0);
                 }
                 else {
