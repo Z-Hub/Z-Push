@@ -240,14 +240,14 @@ define('PR_TNEF_CORRELATION_KEY'                      ,mapi_prop_tag(PT_BINARY, 
 define('PR_MDN_DISPOSITION_TYPE'                      ,mapi_prop_tag(PT_STRING8,     0x0080));
 define('PR_MDN_DISPOSITION_SENDINGMODE'               ,mapi_prop_tag(PT_STRING8,     0x0081));
 
-define('PR_USER_ENTRYID'                              ,mapi_prop_tag(PT_BINARY,      0x6618+0x01));
-define('PR_USER_NAME'                                 ,mapi_prop_tag(PT_STRING8,     0x6618+0x02));
-define('PR_MAILBOX_OWNER_ENTRYID'                     ,mapi_prop_tag(PT_BINARY,      0x6618+0x03));
-define('PR_MAILBOX_OWNER_NAME'                        ,mapi_prop_tag(PT_STRING8,     0x6618+0x04));
+define('PR_USER_ENTRYID'                              ,mapi_prop_tag(PT_BINARY,      0x6619));
+define('PR_USER_NAME'                                 ,mapi_prop_tag(PT_STRING8,     0x661A));
+define('PR_MAILBOX_OWNER_ENTRYID'                     ,mapi_prop_tag(PT_BINARY,      0x661B));
+define('PR_MAILBOX_OWNER_NAME'                        ,mapi_prop_tag(PT_STRING8,     0x661C));
 
-define('PR_HIERARCHY_SYNCHRONIZER'                    ,mapi_prop_tag(PT_OBJECT,      0x6618+0x14));
-define('PR_CONTENTS_SYNCHRONIZER'                     ,mapi_prop_tag(PT_OBJECT,      0x6618+0x15));
-define('PR_COLLECTOR'                                 ,mapi_prop_tag(PT_OBJECT,      0x6618+0x16));
+define('PR_HIERARCHY_SYNCHRONIZER'                    ,mapi_prop_tag(PT_OBJECT,      0x662C));
+define('PR_CONTENTS_SYNCHRONIZER'                     ,mapi_prop_tag(PT_OBJECT,      0x662D));
+define('PR_COLLECTOR'                                 ,mapi_prop_tag(PT_OBJECT,      0x662E));
 
 define('PR_SMTP_ADDRESS'                              ,mapi_prop_tag(PT_TSTRING,     0x39FE));
 
@@ -1100,79 +1100,78 @@ define('PR_RECIPIENT_TRACKSTATUS'                     ,mapi_prop_tag(PT_LONG,   
 define('PR_RECIPIENT_FLAGS'                           ,mapi_prop_tag(PT_LONG,        0x5FFD));
 define('PR_RECIPIENT_TRACKSTATUS_TIME'                ,mapi_prop_tag(PT_SYSTIME,     0x5FFB));
 
-define('PR_EC_BASE'                                   ,  0x6700);
-define('PR_EC_OUTOFOFFICE'                            ,mapi_prop_tag(PT_BOOLEAN,     PR_EC_BASE+0x60));
-define('PR_EC_OUTOFOFFICE_MSG'                        ,mapi_prop_tag(PT_STRING8,     PR_EC_BASE+0x61));
-define('PR_EC_OUTOFOFFICE_SUBJECT'                    ,mapi_prop_tag(PT_STRING8,     PR_EC_BASE+0x62));
-define('PR_EC_OUTOFOFFICE_FROM',                       mapi_prop_tag(PT_SYSTIME,     PR_EC_BASE+0x63));
-define('PR_EC_OUTOFOFFICE_UNTIL',                      mapi_prop_tag(PT_SYSTIME,     PR_EC_BASE+0x64));
+define('PR_EC_OUTOFOFFICE'                            ,mapi_prop_tag(PT_BOOLEAN,     0x6760));
+define('PR_EC_OUTOFOFFICE_MSG'                        ,mapi_prop_tag(PT_STRING8,     0x6761));
+define('PR_EC_OUTOFOFFICE_SUBJECT'                    ,mapi_prop_tag(PT_STRING8,     0x6762));
+define('PR_EC_OUTOFOFFICE_FROM',                       mapi_prop_tag(PT_SYSTIME,     0x6763));
+define('PR_EC_OUTOFOFFICE_UNTIL',                      mapi_prop_tag(PT_SYSTIME,     0x6764));
 
 /* quota support */
-define('PR_QUOTA_WARNING_THRESHOLD'                   ,mapi_prop_tag(PT_LONG,        PR_EC_BASE+0x21));
-define('PR_QUOTA_SEND_THRESHOLD'                      ,mapi_prop_tag(PT_LONG,        PR_EC_BASE+0x22));
-define('PR_QUOTA_RECEIVE_THRESHOLD'                   ,mapi_prop_tag(PT_LONG,        PR_EC_BASE+0x23));
+define('PR_QUOTA_WARNING_THRESHOLD'                   ,mapi_prop_tag(PT_LONG,        0x6721));
+define('PR_QUOTA_SEND_THRESHOLD'                      ,mapi_prop_tag(PT_LONG,        0x6722));
+define('PR_QUOTA_RECEIVE_THRESHOLD'                   ,mapi_prop_tag(PT_LONG,        0x6723));
 
 /* storage for the settings for the webaccess 6.xx */
-define('PR_EC_WEBACCESS_SETTINGS'                     ,mapi_prop_tag(PT_STRING8,     PR_EC_BASE+0x70));
-define('PR_EC_RECIPIENT_HISTORY'                      ,mapi_prop_tag(PT_STRING8,     PR_EC_BASE+0x71));
+define('PR_EC_WEBACCESS_SETTINGS'                     ,mapi_prop_tag(PT_STRING8,     0x6770));
+define('PR_EC_RECIPIENT_HISTORY'                      ,mapi_prop_tag(PT_STRING8,     0x6771));
 
 /* storage for the settings for the webaccess 7.xx */
-define('PR_EC_WEBACCESS_SETTINGS_JSON'                ,mapi_prop_tag(PT_STRING8,     PR_EC_BASE+0x72));
-define('PR_EC_RECIPIENT_HISTORY_JSON'                 ,mapi_prop_tag(PT_STRING8,     PR_EC_BASE+0x73));
+define('PR_EC_WEBACCESS_SETTINGS_JSON'                ,mapi_prop_tag(PT_STRING8,     0x6772));
+define('PR_EC_RECIPIENT_HISTORY_JSON'                 ,mapi_prop_tag(PT_STRING8,     0x6773));
 
 /* statistics properties */
-define('PR_EC_STATSTABLE_SYSTEM'                      ,mapi_prop_tag(PT_OBJECT,      PR_EC_BASE+0x30));
-define('PR_EC_STATSTABLE_SESSIONS'                    ,mapi_prop_tag(PT_OBJECT,      PR_EC_BASE+0x31));
-define('PR_EC_STATSTABLE_USERS'                       ,mapi_prop_tag(PT_OBJECT,      PR_EC_BASE+0x32));
-define('PR_EC_STATSTABLE_COMPANY'                     ,mapi_prop_tag(PT_OBJECT,      PR_EC_BASE+0x33));
+define('PR_EC_STATSTABLE_SYSTEM'                      ,mapi_prop_tag(PT_OBJECT,      0x6730));
+define('PR_EC_STATSTABLE_SESSIONS'                    ,mapi_prop_tag(PT_OBJECT,      0x6731));
+define('PR_EC_STATSTABLE_USERS'                       ,mapi_prop_tag(PT_OBJECT,      0x6732));
+define('PR_EC_STATSTABLE_COMPANY'                     ,mapi_prop_tag(PT_OBJECT,      0x6733));
 
-define('PR_EC_STATS_SYSTEM_DESCRIPTION'               ,mapi_prop_tag(PT_STRING8,     PR_EC_BASE+0x40));
-define('PR_EC_STATS_SYSTEM_VALUE'                     ,mapi_prop_tag(PT_STRING8,     PR_EC_BASE+0x41));
-define('PR_EC_STATS_SESSION_ID'                       ,mapi_prop_tag(PT_LONG,        PR_EC_BASE+0x42));
-define('PR_EC_STATS_SESSION_IPADDRESS'                ,mapi_prop_tag(PT_STRING8,     PR_EC_BASE+0x43));
-define('PR_EC_STATS_SESSION_IDLETIME'                 ,mapi_prop_tag(PT_LONG,        PR_EC_BASE+0x44));
-define('PR_EC_STATS_SESSION_CAPABILITY'               ,mapi_prop_tag(PT_LONG,        PR_EC_BASE+0x45));
-define('PR_EC_STATS_SESSION_LOCKED'                   ,mapi_prop_tag(PT_BOOLEAN,     PR_EC_BASE+0x46));
-define('PR_EC_STATS_SESSION_BUSYSTATES'               ,mapi_prop_tag(PT_MV_STRING8,  PR_EC_BASE+0x47));
-define('PR_EC_COMPANY_NAME'                           ,mapi_prop_tag(PT_STRING8,     PR_EC_BASE+0x48));
+define('PR_EC_STATS_SYSTEM_DESCRIPTION'               ,mapi_prop_tag(PT_STRING8,     0x6740));
+define('PR_EC_STATS_SYSTEM_VALUE'                     ,mapi_prop_tag(PT_STRING8,     0x6741));
+define('PR_EC_STATS_SESSION_ID'                       ,mapi_prop_tag(PT_LONG,        0x6742));
+define('PR_EC_STATS_SESSION_IPADDRESS'                ,mapi_prop_tag(PT_STRING8,     0x6743));
+define('PR_EC_STATS_SESSION_IDLETIME'                 ,mapi_prop_tag(PT_LONG,        0x6744));
+define('PR_EC_STATS_SESSION_CAPABILITY'               ,mapi_prop_tag(PT_LONG,        0x6745));
+define('PR_EC_STATS_SESSION_LOCKED'                   ,mapi_prop_tag(PT_BOOLEAN,     0x6746));
+define('PR_EC_STATS_SESSION_BUSYSTATES'               ,mapi_prop_tag(PT_MV_STRING8,  0x6747));
+define('PR_EC_COMPANY_NAME'                           ,mapi_prop_tag(PT_STRING8,     0x6748));
 
 /* kopano specific properties for optimization of imap functionality */
-define('PR_EC_IMAP_EMAIL'                             ,mapi_prop_tag(PT_BINARY,      PR_EC_BASE+0x8C)); // the complete rfc822 email
-define('PR_EC_IMAP_EMAIL_SIZE'                        ,mapi_prop_tag(PT_LONG,        PR_EC_BASE+0x8D));
-define('PR_EC_IMAP_BODY'                              ,mapi_prop_tag(PT_STRING8,     PR_EC_BASE+0x8E)); // simplified bodystructure (mostly unused by clients)
-define('PR_EC_IMAP_BODYSTRUCTURE'                     ,mapi_prop_tag(PT_STRING8,     PR_EC_BASE+0x8F)); // extended bodystructure (often used by clients)
+define('PR_EC_IMAP_EMAIL'                             ,mapi_prop_tag(PT_BINARY,      0x678C)); // the complete rfc822 email
+define('PR_EC_IMAP_EMAIL_SIZE'                        ,mapi_prop_tag(PT_LONG,        0x678D));
+define('PR_EC_IMAP_BODY'                              ,mapi_prop_tag(PT_STRING8,     0x678E)); // simplified bodystructure (mostly unused by clients)
+define('PR_EC_IMAP_BODYSTRUCTURE'                     ,mapi_prop_tag(PT_STRING8,     0x678F)); // extended bodystructure (often used by clients)
 
 /* user features */
-define('PR_EC_ENABLED_FEATURES'                       ,mapi_prop_tag(PT_MV_TSTRING,  PR_EC_BASE+0xB3));
-define('PR_EC_ENABLED_FEATURES_A'                     ,mapi_prop_tag(PT_MV_STRING8,  PR_EC_BASE+0xB3));
-define('PR_EC_ENABLED_FEATURES_W'                     ,mapi_prop_tag(PT_MV_UNICODE,  PR_EC_BASE+0xB3));
+define('PR_EC_ENABLED_FEATURES'                       ,mapi_prop_tag(PT_MV_TSTRING,  0x67B3));
+define('PR_EC_ENABLED_FEATURES_A'                     ,mapi_prop_tag(PT_MV_STRING8,  0x67B3));
+define('PR_EC_ENABLED_FEATURES_W'                     ,mapi_prop_tag(PT_MV_UNICODE,  0x67B3));
 
-define('PR_EC_DISABLED_FEATURES'                      ,mapi_prop_tag(PT_MV_TSTRING,  PR_EC_BASE+0xB4));
-define('PR_EC_DISABLED_FEATURES_A'                    ,mapi_prop_tag(PT_MV_STRING8,  PR_EC_BASE+0xB4));
-define('PR_EC_DISABLED_FEATURES_W'                    ,mapi_prop_tag(PT_MV_UNICODE,  PR_EC_BASE+0xB4));
+define('PR_EC_DISABLED_FEATURES'                      ,mapi_prop_tag(PT_MV_TSTRING,  0x67B4));
+define('PR_EC_DISABLED_FEATURES_A'                    ,mapi_prop_tag(PT_MV_STRING8,  0x67B4));
+define('PR_EC_DISABLED_FEATURES_W'                    ,mapi_prop_tag(PT_MV_UNICODE,  0x67B4));
 
 /* WA properties */
-define('PR_EC_WA_ATTACHMENT_HIDDEN_OVERRIDE'          ,mapi_prop_tag(PT_BOOLEAN,     PR_EC_BASE+0xE0));
+define('PR_EC_WA_ATTACHMENT_HIDDEN_OVERRIDE'          ,mapi_prop_tag(PT_BOOLEAN,     0x67E0));
 
 // edkmdb, rules properties
 #define pidSpecialMin                                   0x6670
-define('PR_RULE_ID'                                   ,mapi_prop_tag(PT_I8,          0x6670+0x04)); // only lower 32bits are used.
-define('PR_RULE_IDS'                                  ,mapi_prop_tag(PT_BINARY,      0x6670+0x05));
-define('PR_RULE_SEQUENCE'                             ,mapi_prop_tag(PT_LONG,        0x6670+0x06));
-define('PR_RULE_STATE'                                ,mapi_prop_tag(PT_LONG,        0x6670+0x07));
-define('PR_RULE_USER_FLAGS'                           ,mapi_prop_tag(PT_LONG,        0x6670+0x08));
-define('PR_RULE_CONDITION'                            ,mapi_prop_tag(PT_SRESTRICTION,0x6670+0x09));
-define('PR_RULE_ACTIONS'                              ,mapi_prop_tag(PT_ACTIONS,     0x6670+0x10));
-define('PR_RULE_PROVIDER'                             ,mapi_prop_tag(PT_STRING8,     0x6670+0x11));
-define('PR_RULE_NAME'                                 ,mapi_prop_tag(PT_TSTRING,     0x6670+0x12));
-define('PR_RULE_LEVEL'                                ,mapi_prop_tag(PT_LONG,        0x6670+0x13));
-define('PR_RULE_PROVIDER_DATA'                        ,mapi_prop_tag(PT_BINARY,      0x6670+0x14));
+define('PR_RULE_ID'                                   ,mapi_prop_tag(PT_I8,          0x6674)); // only lower 32bits are used.
+define('PR_RULE_IDS'                                  ,mapi_prop_tag(PT_BINARY,      0x6675));
+define('PR_RULE_SEQUENCE'                             ,mapi_prop_tag(PT_LONG,        0x6676));
+define('PR_RULE_STATE'                                ,mapi_prop_tag(PT_LONG,        0x6677));
+define('PR_RULE_USER_FLAGS'                           ,mapi_prop_tag(PT_LONG,        0x6678));
+define('PR_RULE_CONDITION'                            ,mapi_prop_tag(PT_SRESTRICTION,0x6679));
+define('PR_RULE_ACTIONS'                              ,mapi_prop_tag(PT_ACTIONS,     0x6680));
+define('PR_RULE_PROVIDER'                             ,mapi_prop_tag(PT_STRING8,     0x6681));
+define('PR_RULE_NAME'                                 ,mapi_prop_tag(PT_TSTRING,     0x6682));
+define('PR_RULE_LEVEL'                                ,mapi_prop_tag(PT_LONG,        0x6683));
+define('PR_RULE_PROVIDER_DATA'                        ,mapi_prop_tag(PT_BINARY,      0x6684));
 
 // edkmdb, ICS properties
-define('PR_SOURCE_KEY'                                ,mapi_prop_tag(PT_BINARY,      0x65E0+0x00));
-define('PR_PARENT_SOURCE_KEY'                         ,mapi_prop_tag(PT_BINARY,      0x65E0+0x01));
-define('PR_CHANGE_KEY'                                ,mapi_prop_tag(PT_BINARY,      0x65E0+0x02));
-define('PR_PREDECESSOR_CHANGE_LIST'                   ,mapi_prop_tag(PT_BINARY,      0x65E0+0x03));
+define('PR_SOURCE_KEY'                                ,mapi_prop_tag(PT_BINARY,      0x65E0));
+define('PR_PARENT_SOURCE_KEY'                         ,mapi_prop_tag(PT_BINARY,      0x65E1));
+define('PR_CHANGE_KEY'                                ,mapi_prop_tag(PT_BINARY,      0x65E2));
+define('PR_PREDECESSOR_CHANGE_LIST'                   ,mapi_prop_tag(PT_BINARY,      0x65E3));
 
 
 define('PR_PROCESS_MEETING_REQUESTS'                  ,mapi_prop_tag(PT_BOOLEAN,     0x686D));
@@ -1223,9 +1222,9 @@ define('PR_EMS_AB_TAGGED_X509_CERT'                   ,mapi_prop_tag(PT_MV_BINAR
 define('PR_EC_ARCHIVE_SERVERS'                        ,mapi_prop_tag(PT_MV_TSTRING,  0x67c4));
 
 /* zarafa contacts provider properties */
-define('PR_ZC_CONTACT_STORE_ENTRYIDS'                 ,mapi_prop_tag(PT_MV_BINARY,   PR_EC_BASE+0x11));
-define('PR_ZC_CONTACT_FOLDER_ENTRYIDS'                ,mapi_prop_tag(PT_MV_BINARY,   PR_EC_BASE+0x12));
-define('PR_ZC_CONTACT_FOLDER_NAMES'                   ,mapi_prop_tag(PT_MV_TSTRING,  PR_EC_BASE+0x13));
+define('PR_ZC_CONTACT_STORE_ENTRYIDS'                 ,mapi_prop_tag(PT_MV_BINARY,   0x6711));
+define('PR_ZC_CONTACT_FOLDER_ENTRYIDS'                ,mapi_prop_tag(PT_MV_BINARY,   0x6712));
+define('PR_ZC_CONTACT_FOLDER_NAMES'                   ,mapi_prop_tag(PT_MV_TSTRING,  0x6713));
 
 //Properties defined for Z-Push
 define('PR_TODO_ITEM_FLAGS'                           ,mapi_prop_tag(PT_LONG,        0x0E2B));
