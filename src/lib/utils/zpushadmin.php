@@ -32,6 +32,7 @@ class ZPushAdmin {
     const STATUS_DEVICE_SYNCED_AFTER_DAYSOLD = 1;
 
     public static $status = self::STATUS_SUCCESS;
+    public static $devices;
 
     /**
      * List devices known to Z-Push.
@@ -773,7 +774,7 @@ class ZPushAdmin {
         $dropedUsers = 0;
         $fixedUsers = 0;
 
-        $devices = ZPush::GetStateMachine()->GetAllDevices(false);
+        $devices = self::GetAllDevices();
         foreach ($devices as $devid) {
             $users = self::ListUsers($devid);
             $obsoleteUsers = array();
@@ -842,7 +843,7 @@ class ZPushAdmin {
     static public function FixStatesDeviceToUserLinking() {
         $seen = 0;
         $fixed = 0;
-        $devices = ZPush::GetStateMachine()->GetAllDevices(false);
+        $devices = self::GetAllDevices();
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::FixStatesDeviceToUserLinking(): found %d devices", count($devices)));
 
         foreach ($devices as $devid) {
@@ -868,7 +869,7 @@ class ZPushAdmin {
     static public function FixStatesUserToStatesLinking() {
         $processed = 0;
         $deleted = 0;
-        $devices = ZPush::GetStateMachine()->GetAllDevices(false);
+        $devices = self::GetAllDevices();
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::FixStatesUserToStatesLinking(): found %d devices", count($devices)));
 
         foreach ($devices as $devid) {
@@ -902,7 +903,7 @@ class ZPushAdmin {
             $existingStates = ZPush::GetStateMachine()->GetAllStatesForDevice($devid);
             $processed = count($existingStates);
 
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::FixStatesUserToStatesLinking(): found %d valid uuids and %d states for device device '%s'", count($knownUuids), $processed, $devid));
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::FixStatesUserToStatesLinking(): found %d valid uuids and %d states for device '%s'", count($knownUuids), $processed, $devid));
 
             // remove states for all unknown uuids
             foreach ($existingStates as $obsoleteState) {
@@ -932,7 +933,7 @@ class ZPushAdmin {
         $seen = 0;
         $nouuid = 0;
         $fixed = 0;
-        $asdevices = ZPush::GetStateMachine()->GetAllDevices(false);
+        $asdevices = self::GetAllDevices();
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::FixStatesHierarchyFolderData(): found %d devices", count($asdevices)));
 
         foreach ($asdevices as $devid) {
@@ -1008,7 +1009,7 @@ class ZPushAdmin {
         $devices = 0;
         $devicesWithAddFolders = 0;
         $fixed = 0;
-        $asdevices = ZPush::GetStateMachine()->GetAllDevices(false);
+        $asdevices = self::GetAllDevices();
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::FixStatesAdditionalFolders(): found %d devices", count($asdevices)));
 
         foreach ($asdevices as $devid) {
@@ -1055,5 +1056,17 @@ class ZPushAdmin {
         return array($devices, $devicesWithAddFolders, $fixed);
     }
 
+    /**
+     * Returns the list of all devices.
+     *
+     * @access public
+     * @return array
+     */
+    public static function GetAllDevices() {
+        if (empty(self::$devices)) {
+            self::$devices = ZPush::GetStateMachine()->GetAllDevices(false);
+        }
+        return self::$devices;
+    }
 
 }

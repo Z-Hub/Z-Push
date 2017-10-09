@@ -33,7 +33,8 @@ class FileStateMachine implements IStateMachine {
 
     private $userfilename;
     private $settingsfilename;
-
+    private $statefiles; // List of the state files. Used by z-push-admin and scripts.
+    private $devicedatafiles; // List of the device data files. Used by z-push-admin and scripts.
     /**
      * Constructor
      *
@@ -59,6 +60,9 @@ class FileStateMachine implements IStateMachine {
         if ((!file_exists($this->userfilename) && !touch($this->userfilename)) || !is_writable($this->userfilename))
             throw new FatalMisconfigurationException("Not possible to write to the configured state directory.");
         Utils::FixFileOwner($this->userfilename);
+
+        $this->statefiles = array();
+        $this->devicedatafiles = array();
     }
 
     /**
@@ -160,7 +164,8 @@ class FileStateMachine implements IStateMachine {
      * @throws StateInvalidException
      */
     public function CleanStates($devid, $type, $key, $counter = false, $thisCounterOnly = false) {
-        $matching_files = glob($this->getFullFilePath($devid, $type, $key). "*", GLOB_NOSORT);
+        $filePath = $this->getFullFilePath($devid, $type, $key);
+        $matching_files = array_filter($this->getStateFiles(), function($var) use ($filePath) {return strpos($var, $filePath) !== false;});
         if (is_array($matching_files)) {
             foreach($matching_files as $state) {
                 $file = false;
@@ -287,7 +292,8 @@ class FileStateMachine implements IStateMachine {
     public function GetAllDevices($username = false) {
         $out = array();
         if ($username === false) {
-            foreach (glob(STATE_DIR. "/*/*/*-".IStateMachine::DEVICEDATA, GLOB_NOSORT) as $devdata)
+            foreach ($this->getDeviceDataFiles() as $devdata)
+                // TODO do we still need this check here?
                 if (preg_match('/\/([A-Za-z0-9]+)-'. IStateMachine::DEVICEDATA. '$/', $devdata, $matches))
                     $out[] = $matches[1];
             return $out;
@@ -368,8 +374,8 @@ class FileStateMachine implements IStateMachine {
         $types = array(IStateMachine::DEVICEDATA, IStateMachine::FOLDERDATA, IStateMachine::FAILSAVE, IStateMachine::HIERARCHY, IStateMachine::BACKENDSTORAGE);
         $out = array();
         $devdir = $this->getDirectoryForDevice($devid) . "/$devid-";
-
-        foreach (glob($devdir . "*", GLOB_NOSORT) as $devdata) {
+        $deviceFiles = array_filter($this->getStateFiles(), function($var) use ($devdir) {return strpos($var, $devdir) !== false;});
+        foreach ($deviceFiles as $devdata) {
             // cut the device dir away and split into parts
             $parts = explode("-", substr($devdata, strlen($devdir)));
 
@@ -379,11 +385,10 @@ class FileStateMachine implements IStateMachine {
             if (isset($parts[0]) && in_array($parts[0], $types))
                 $state['type'] = $parts[0];
 
-            if (isset($parts[0]) && strlen($parts[0]) == 8 &&
-                isset($parts[1]) && strlen($parts[1]) == 4 &&
-                isset($parts[2]) && strlen($parts[2]) == 4 &&
-                isset($parts[3]) && strlen($parts[3]) == 4 &&
-                isset($parts[4]) && strlen($parts[4]) == 12) {
+            if (isset($parts[0], $parts[1], $parts[2], $parts[3], $parts[4]) &&
+                    strlen($parts[0]) == 8 && strlen($parts[1]) == 4 &&
+                    strlen($parts[2]) == 4 && strlen($parts[3]) == 4 &&
+                    strlen($parts[4]) == 12) {
 
                 $state['uuid'] = $parts[0]."-".$parts[1]."-".$parts[2]."-".$parts[3]."-".$parts[4];
             }
@@ -482,4 +487,29 @@ class FileStateMachine implements IStateMachine {
         return false;
     }
 
+    /**
+     * Returns the list of the state files.
+     *
+     * @access public
+     * @return array
+     */
+    protected function getStateFiles() {
+        if (empty($this->statefiles)) {
+            $this->statefiles = glob(STATE_DIR. '*/*/*', GLOB_NOSORT);
+        }
+        return $this->statefiles;
+    }
+
+    /**
+     * Filters the list of the state files and returns the device data files only.
+     *
+     * @access public
+     * @return array
+     */
+    protected function getDeviceDataFiles() {
+        if (empty($this->devicedatafiles)) {
+            $this->devicedatafiles = array_filter($this->GetStateFiles(), function($var) {return strpos($var, IStateMachine::DEVICEDATA) !== false;} );
+        }
+        return $this->devicedatafiles;
+    }
 }
