@@ -35,6 +35,8 @@ class FileStateMachine implements IStateMachine {
     private $settingsfilename;
     private $statefiles; // List of the state files. Used by z-push-admin and scripts.
     private $devicedatafiles; // List of the device data files. Used by z-push-admin and scripts.
+    private $pattern; // State patter for glob()
+
     /**
      * Constructor
      *
@@ -63,6 +65,7 @@ class FileStateMachine implements IStateMachine {
 
         $this->statefiles = array();
         $this->devicedatafiles = array();
+        $this->pattern = STATE_DIR.'*/*/*';
     }
 
     /**
@@ -164,8 +167,7 @@ class FileStateMachine implements IStateMachine {
      * @throws StateInvalidException
      */
     public function CleanStates($devid, $type, $key, $counter = false, $thisCounterOnly = false) {
-        $filePath = $this->getFullFilePath($devid, $type, $key);
-        $matching_files = array_filter($this->getStateFiles(), function($var) use ($filePath) {return strpos($var, $filePath) !== false;});
+        $matching_files = $this->getStateFiles($this->getFullFilePath($devid, $type, $key). "*");
         if (is_array($matching_files)) {
             foreach($matching_files as $state) {
                 $file = false;
@@ -490,12 +492,15 @@ class FileStateMachine implements IStateMachine {
     /**
      * Returns the list of the state files.
      *
+     * @param string    $pattern state pattern for glob()
+     *
      * @access public
      * @return array
      */
-    protected function getStateFiles() {
-        if (empty($this->statefiles)) {
-            $this->statefiles = glob(STATE_DIR. '*/*/*', GLOB_NOSORT);
+    protected function getStateFiles($pattern = STATE_DIR.'*/*/*') {
+        if (empty($this->statefiles) || $pattern != $this->pattern) {
+            $this->statefiles = glob($pattern, GLOB_NOSORT);
+            $this->pattern = $pattern;
         }
         return $this->statefiles;
     }
