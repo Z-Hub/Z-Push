@@ -369,6 +369,43 @@ class Sync extends RequestProcessor {
                                     return false;
                             }
 
+                            if (self::$decoder->getElementStartTag(SYNC_AIRSYNCBASE_BODYPARTPREFERENCE)) {
+                                if (self::$decoder->getElementStartTag(SYNC_AIRSYNCBASE_TYPE)) {
+                                    $bpptype = self::$decoder->getElementContent();
+                                    $spa->BodyPartPreference($bpptype);
+                                    if (!self::$decoder->getElementEndTag()) {
+                                        return false;
+                                    }
+                                }
+
+                                if (self::$decoder->getElementStartTag(SYNC_AIRSYNCBASE_TRUNCATIONSIZE)) {
+                                    $spa->BodyPartPreference($bpptype)->SetTruncationSize(self::$decoder->getElementContent());
+                                    if(!self::$decoder->getElementEndTag())
+                                        return false;
+                                }
+
+                                if (self::$decoder->getElementStartTag(SYNC_AIRSYNCBASE_ALLORNONE)) {
+                                    $spa->BodyPartPreference($bpptype)->SetAllOrNone(self::$decoder->getElementContent());
+                                    if(!self::$decoder->getElementEndTag())
+                                        return false;
+                                }
+
+                                if (self::$decoder->getElementStartTag(SYNC_AIRSYNCBASE_PREVIEW)) {
+                                    $spa->BodyPartPreference($bpptype)->SetPreview(self::$decoder->getElementContent());
+                                    if(!self::$decoder->getElementEndTag())
+                                        return false;
+                                }
+
+                                if (!self::$decoder->getElementEndTag())
+                                    return false;
+                            }
+
+                            if (self::$decoder->getElementStartTag(SYNC_RIGHTSMANAGEMENT_SUPPORT)) {
+                                $spa->SetRmSupport(self::$decoder->getElementContent());
+                                if (!self::$decoder->getElementEndTag())
+                                    return false;
+                            }
+
                             $e = self::$decoder->peek();
                             if($e[EN_TYPE] == EN_TYPE_ENDTAG) {
                                 self::$decoder->getElementEndTag();

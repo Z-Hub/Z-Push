@@ -257,7 +257,7 @@ interface IBackend {
     /**
      * Applies settings to and gets informations from the device
      *
-     * @param SyncObject    $settings (SyncOOF or SyncUserInformation possible)
+     * @param SyncObject    $settings (SyncOOF, SyncUserInformation, SyncRightsManagementTemplates possible)
      *
      * @access public
      * @return SyncObject   $settings
