@@ -44,17 +44,27 @@ class ZPushAutodiscover {
         ZLog::Write(LOGLEVEL_DEBUG, '-------- Start ZPushAutodiscover');
         ZLog::Write(LOGLEVEL_INFO, sprintf("Z-Push version='%s'", @constant('ZPUSH_VERSION')));
         // TODO use filterevilinput?
+        if (!isset(self::$instance)) {
+            self::$instance = new ZPushAutodiscover();
+        }
         if (stripos($_SERVER["REQUEST_METHOD"], "GET") !== false) {
-            ZLog::Write(LOGLEVEL_WARN, "GET request for autodiscover. Exiting.");
+            ZLog::Write(LOGLEVEL_INFO, "ZPushAutodiscover::DoZPushAutodiscover(): GET request for autodiscover.");
+            try {
+                self::$instance->getLogin();
+            }
+            catch (Exception $ex) {
+                if ($ex instanceof AuthenticationRequiredException) {
+                    http_response_code(401);
+                    header('WWW-Authenticate: Basic realm="ZPush"');
+                }
+            }
             if (!headers_sent()) {
                 ZPush::PrintZPushLegal('GET not supported');
             }
             ZLog::Write(LOGLEVEL_DEBUG, '-------- End ZPushAutodiscover');
             exit(1);
         }
-        if (!isset(self::$instance)) {
-            self::$instance = new ZPushAutodiscover();
-        }
+
         self::$instance->DoAutodiscover();
         ZLog::Write(LOGLEVEL_DEBUG, '-------- End ZPushAutodiscover');
     }
@@ -278,6 +288,27 @@ class ZPushAutodiscover {
         }
         ZLog::Write(LOGLEVEL_WARN, sprintf("The backend was not able to find attribute '%s' of the user. Fall back to the default value.", $attrib));
         return false;
+    }
+
+    /**
+     * Tries to login with the credentials from Auth header for GET requests.
+     *
+     * @access private
+     * @return void
+     */
+    private function getLogin() {
+        if (!isset($_SERVER['PHP_AUTH_PW'], $_SERVER['PHP_AUTH_USER'])) {
+            throw new AuthenticationRequiredException("Access denied. No username or password provided.");
+        }
+        list($username,) = Utils::SplitDomainUser($_SERVER['PHP_AUTH_USER']);
+        if(! USE_FULLEMAIL_FOR_LOGIN) {
+            $username = Utils::GetLocalPartFromEmail($username);
+        }
+        $backend = ZPush::GetBackend();
+        if ($backend->Logon($username, "", $_SERVER['PHP_AUTH_PW']) == false) {
+            ZLog::Write(LOGLEVEL_ERROR, sprintf("ZPushAutodiscover->getLogin(): Login failed for user '%s' from IP %s.", $username, $_SERVER["REMOTE_ADDR"]));
+            throw new AuthenticationRequiredException("Access denied. Username or password incorrect.");
+        }
     }
 
     public static function CheckConfig() {
