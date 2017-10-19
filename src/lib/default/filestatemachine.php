@@ -35,7 +35,7 @@ class FileStateMachine implements IStateMachine {
     private $settingsfilename;
     private $statefiles; // List of the state files. Used by z-push-admin and scripts.
     private $devicedatafiles; // List of the device data files. Used by z-push-admin and scripts.
-    private $pattern; // State patter for glob()
+    private $pattern; // State pattern for glob()
 
     /**
      * Constructor
