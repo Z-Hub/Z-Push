@@ -434,7 +434,7 @@ echo -e "\033[0;33mEdit %_sysconfdir/nginx/sites-available/z-push.conf, enable i
 
 %postun -n %name-config-nginx
 rm -f "%_sysconfdir/nginx/sites-available/z-push.conf"
-service nginx reload
+service nginx reload || true
 
 # COMMON
 %files -n %name-common
