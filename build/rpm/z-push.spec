@@ -394,7 +394,7 @@ install -Dpm 644 config/apache2/z-push-autodiscover.conf \
 
 # NGINX
 mkdir -p "$b/%_sysconfdir/nginx/sites-available/";
-mkdir -p "%_sysconfdir/nginx/sites-enabled/";
+mkdir -p "$b/%_sysconfdir/nginx/sites-enabled/";
 install -Dpm 644 config/nginx/z-push.conf "$b/%_sysconfdir/nginx/sites-available/z-push.conf"
 
 # MANPAGES
