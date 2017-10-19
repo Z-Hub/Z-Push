@@ -654,9 +654,9 @@ service nginx reload || true
 %files -n %name-config-nginx
 %dir %_sysconfdir/nginx
 %dir %_sysconfdir/nginx/sites-available
-%config(noreplace) %attr(0640,nginx,nginx) %_sysconfdir/nginx/sites-available/z-push.conf
-%config(noreplace) %attr(0640,nginx,nginx) %_sysconfdir/z-push/*.php
-%attr(750,nginx,nginx) %dir %_localstatedir/lib/z-push
-%attr(750,nginx,nginx) %dir %_localstatedir/log/z-push
+#%config(noreplace) %attr(0640,nginx,nginx) %_sysconfdir/nginx/sites-available/z-push.conf
+#%config(noreplace) %attr(0640,nginx,nginx) %_sysconfdir/z-push/*.php
+#%attr(750,nginx,nginx) %dir %_localstatedir/lib/z-push
+#%attr(750,nginx,nginx) %dir %_localstatedir/log/z-push
 
 %changelog
