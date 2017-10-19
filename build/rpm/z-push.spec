@@ -433,7 +433,6 @@ echo -e "\033[0;33mEdit %_sysconfdir/nginx/sites-available/z-push.conf, enable i
 %endif
 
 %postun -n %name-config-nginx
-rm -f "%_sysconfdir/nginx/sites-available/z-push.conf"
 service nginx reload || true
 
 # COMMON
