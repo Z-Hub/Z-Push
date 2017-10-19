@@ -394,6 +394,7 @@ install -Dpm 644 config/apache2/z-push-autodiscover.conf \
 
 # NGINX
 mkdir -p "$b/%_sysconfdir/nginx/sites-available/";
+mkdir -p "%_sysconfdir/nginx/sites-enabled/";
 install -Dpm 644 config/nginx/z-push.conf "$b/%_sysconfdir/nginx/sites-available/z-push.conf"
 
 # MANPAGES
@@ -416,7 +417,6 @@ cp man/*.1 "$b/%_mandir/man1"
 %endif
 
 %post -n %name-config-nginx
-mkdir -p "%_sysconfdir/nginx/sites-enabled/"
 ln -s "%_sysconfdir/nginx/sites-available/z-push.conf" "%_sysconfdir/nginx/sites-enabled/"
 service nginx reload
 
