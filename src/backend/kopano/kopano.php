@@ -1322,7 +1322,7 @@ class BackendKopano implements IBackend, ISearchProvider {
             if (isset($abentries[$i][PR_OFFICE_LOCATION]))
                 $items[$i][SYNC_GAL_OFFICE] = w2u($abentries[$i][PR_OFFICE_LOCATION]);
 
-            if (isset($abentries[$i][PR_EMS_AB_THUMBNAIL_PHOTO])) {
+            if ($searchpicture !== false && isset($abentries[$i][PR_EMS_AB_THUMBNAIL_PHOTO])) {
                 $items[$i][SYNC_GAL_PICTURE] = StringStreamWrapper::Open($abentries[$i][PR_EMS_AB_THUMBNAIL_PHOTO]);
             }
         }
