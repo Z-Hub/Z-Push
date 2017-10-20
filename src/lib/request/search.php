@@ -35,7 +35,7 @@ class Search extends RequestProcessor {
      */
     public function Handle($commandCode) {
         $searchrange = '0';
-        $searchpicture = new SyncResolveRecipientsPicture();
+        $searchpicture = false;
         $cpo = new ContentParameters();
 
         if(!self::$decoder->getElementStartTag(SYNC_SEARCH_SEARCH))
@@ -285,6 +285,7 @@ class Search extends RequestProcessor {
                 }
 
                 if(self::$decoder->getElementStartTag(SYNC_SEARCH_PICTURE)) { // TODO - do something with maxsize and maxpictures in the backend
+                    $searchpicture = new SyncResolveRecipientsPicture();
                     if(self::$decoder->getElementStartTag(SYNC_SEARCH_MAXSIZE)) {
                         $searchpicture->maxsize = self::$decoder->getElementContent();
                         if(!self::$decoder->getElementEndTag())
@@ -298,10 +299,10 @@ class Search extends RequestProcessor {
                     }
 
                     // iOs devices send empty picture tag: <Search:Picture/>
-                    $e = self::$decoder->peek();
-                    if($e[EN_TYPE] == EN_TYPE_ENDTAG) {
-                        if(!self::$decoder->getElementEndTag()) // SYNC_SEARCH_PICTURE
+                    if (($sp = self::$decoder->getElementContent()) !== false) {
+                        if(!self::$decoder->getElementEndTag()) {
                             return false;
+                        }
                     }
                 }
 
