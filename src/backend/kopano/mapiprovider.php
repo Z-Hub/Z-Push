@@ -594,17 +594,8 @@ class MAPIProvider {
             $props = $this->getProps($mapimessage, $meetingrequestproperties);
 
             // Get the GOID
-            if(isset($props[$meetingrequestproperties["goidtag"]])) {
-                $req = new Meetingrequest($this->store, $mapimessage, $this->session);
-                $items = $req->findCalendarItems($props[$meetingrequestproperties["goidtag"]]);
-                // GlobalObjId support was removed in AS 16.0
-                if (Request::IsGlobalObjIdHexClient() && !empty($items)) {
-                    $message->meetingrequest->globalobjid = strtoupper(bin2hex($props[$meetingrequestproperties["goidtag"]]));
-                }
-                else {
-                    $message->meetingrequest->globalobjid = base64_encode($props[$meetingrequestproperties["goidtag"]]);
-                }
-            }
+            if(isset($props[$meetingrequestproperties["goidtag"]]))
+                $message->meetingrequest->globalobjid = base64_encode($props[$meetingrequestproperties["goidtag"]]);
 
             // Set Timezone
             if(isset($props[$meetingrequestproperties["timezonetag"]]))
