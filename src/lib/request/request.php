@@ -25,6 +25,7 @@
 ************************************************/
 
 class Request {
+    const MAXMEMORYUSAGE = 0.9;     // use max. 90% of allowed memory when synching
     const UNKNOWN = "unknown";
 
     /**
@@ -83,6 +84,7 @@ class Request {
     static private $koeBuildDate;
     static private $koeCapabilites;
     static private $expectedConnectionTimeout;
+    static private $memoryLimit;
 
     /**
      * Initializes request data
@@ -183,6 +185,11 @@ class Request {
         if(defined('USE_FULLEMAIL_FOR_LOGIN') && ! USE_FULLEMAIL_FOR_LOGIN) {
             self::$authUser = Utils::GetLocalPartFromEmail(self::$authUser);
         }
+
+        // get & convert configured memory limit
+        (int)preg_replace_callback('/(\-?\d+)(.?)/', function ($m) {
+            self::$memoryLimit = $m[1] * pow(1024, strpos('BKMG', $m[2])) * self::MAXMEMORYUSAGE;
+        }, strtoupper(ini_get('memory_limit')));
     }
 
     /**
@@ -630,6 +637,18 @@ class Request {
      */
     static public function IsRequestTimeoutReached() {
         return (time() - $_SERVER["REQUEST_TIME"]) >= self::GetExpectedConnectionTimeout();
+    }
+
+    /**
+     * Indicates if the memory usage limit is almost reached.
+     * Processing should stop then to prevent hard out-of-memory issues.
+     * The threshold is hardcoded at 90% in Request::MAXMEMORYUSAGE.
+     *
+     * @access public
+     * @return boolean
+     */
+    static public function IsRequestMemoryLimitReached() {
+        return memory_get_peak_usage(true) >= self::$memoryLimit;
     }
 
     /**

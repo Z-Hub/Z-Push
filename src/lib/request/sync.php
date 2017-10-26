@@ -825,6 +825,12 @@ class Sync extends RequestProcessor {
                     $setupExporter = false;
                 }
 
+                // if max memory allocation is reached, stop processing other collections
+                if (Request::IsRequestMemoryLimitReached()) {
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("Sync(): no exporter setup for '%s' as max memory allocatation reached, omitting output for collection.", $spa->GetFolderId()));
+                    $setupExporter = false;
+                }
+
                 // ZP-907: never send changes of UNKNOWN folders to an Outlook client
                 if (Request::IsOutlook() && self::$deviceManager->GetFolderTypeFromCacheById($spa->GetFolderId()) == SYNC_FOLDER_TYPE_UNKNOWN && $spa->HasSyncKey()) {
                     ZLog::Write(LOGLEVEL_DEBUG, sprintf("Sync(): no exporter setup for '%s' as type is UNKNOWN.", $spa->GetFolderId()));
@@ -1213,7 +1219,7 @@ class Sync extends RequestProcessor {
                     }
                 }
 
-                if($n >= $windowSize || Request::IsRequestTimeoutReached()) {
+                if($n >= $windowSize || Request::IsRequestTimeoutReached() || Request::IsRequestMemoryLimitReached()) {
                     ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleSync(): Exported maxItems of messages: %d / %d", $n, $changecount));
                     break;
                 }
@@ -1228,9 +1234,9 @@ class Sync extends RequestProcessor {
             self::$encoder->endTag();
 
             // log the request timeout
-            if (Request::IsRequestTimeoutReached()) {
-                ZLog::Write(LOGLEVEL_DEBUG, "HandleSync(): Stopping export as maximum request timeout is almost reached!");
-                // Send a <MoreAvailable/> tag if we reached the request timeout, there are more changes and a moreavailable was not already send
+            if (Request::IsRequestTimeoutReached() || Request::IsRequestMemoryLimitReached()) {
+                ZLog::Write(LOGLEVEL_DEBUG, "HandleSync(): Stopping export as limits of request timeout or available memory are almost reached!");
+                // Send a <MoreAvailable/> tag if we reached the request timeout or max memory, there are more changes and a moreavailable was not already send
                 if (!$moreAvailableSent && ($n > $windowSize)) {
                     self::$encoder->startTag(SYNC_MOREAVAILABLE, false, true);
                     $spa->DelFolderStat();
