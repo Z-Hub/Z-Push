@@ -648,7 +648,7 @@ class Request {
             case "iPad":
             case "iPhone":
                 $matches = array();
-                if (preg_match("/^Apple-.*?\/(\d{4})\./", self::GetUserAgent(), $matches) && isset($matches[1]) && $matches[1] >= 1305) {
+                if (stripos(self::GetUserAgent(), "Apple-") == 0 && preg_match("/\/(\d{4})\./", self::GetUserAgent(), $matches) && isset($matches[1]) && $matches[1] >= 1305) {
                     ZLog::Write(LOGLEVEL_DEBUG, sprintf("Request->IsGlobalObjIdHexClient(): %s->%s", self::GetDeviceType(), self::GetUserAgent()));
                     return true;
                 }
