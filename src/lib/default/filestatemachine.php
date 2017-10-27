@@ -497,7 +497,10 @@ class FileStateMachine implements IStateMachine {
      * @access public
      * @return array
      */
-    protected function getStateFiles($pattern = STATE_DIR.'*/*/*') {
+    protected function getStateFiles($pattern = null) {
+        if ($pattern === null) {
+            $pattern = STATE_DIR.'*/*/*';
+        }
         if (empty($this->statefiles) || $pattern != $this->pattern) {
             $this->statefiles = glob($pattern, GLOB_NOSORT);
             $this->pattern = $pattern;
