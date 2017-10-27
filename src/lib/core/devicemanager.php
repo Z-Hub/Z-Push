@@ -98,6 +98,7 @@ class DeviceManager {
         if ($this->IsKoe() && $this->device->GetKoeVersion() !== false) {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("KOE: %s / %s / %s", $this->device->GetKoeVersion(), $this->device->GetKoeBuild(), strftime("%Y-%m-%d %H:%M", $this->device->GetKoeBuildDate())));
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("KOE Capabilities: %s ", count($this->device->GetKoeCapabilities()) ? implode(',', $this->device->GetKoeCapabilities()) : 'unknown'));
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("KOE Last confirmed access: %s (may be up to 7h old)", ($this->device->GetKoeLastAccess() ? strftime("%Y-%m-%d %H:%M", $this->device->GetKoeLastAccess()) : 'unknown')));
         }
     }
 
@@ -164,6 +165,10 @@ class DeviceManager {
             $this->device->SetKoeBuild(Request::GetKoeBuild());
             $this->device->SetKoeBuildDate(Request::GetKoeBuildDate());
             $this->device->SetKoeCapabilities(Request::GetKoeCapabilities());
+            // update KOE last access time if it's at least 6h old
+            if ($this->device->GetKoeLastAccess() < time() - 21600) {
+                $this->device->SetKoeLastAccess(time());
+            }
         }
 
         // data to be saved
