@@ -632,30 +632,6 @@ class Request {
         return (time() - $_SERVER["REQUEST_TIME"]) >= self::GetExpectedConnectionTimeout();
     }
 
-    /**
-     * Checks the device type if it expects the globalobjid in meeting requests encoded as hex.
-     * If it's not the case, globalobjid will be base64 encoded.
-     *
-     * iOS device since 9.3 (?) version expect globalobjid to be hex encoded.
-     * @see https://jira.z-hub.io/projects/ZP/issues/ZP-1013
-     *
-     * @access public
-     * @return boolean
-     */
-    static public function IsGlobalObjIdHexClient() {
-        switch (self::GetDeviceType()) {
-            case "iPod":
-            case "iPad":
-            case "iPhone":
-                $matches = array();
-                if (preg_match("/^Apple-.*?\/(\d{4})\./", self::GetUserAgent(), $matches) && isset($matches[1]) && $matches[1] >= 1305) {
-                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("Request->IsGlobalObjIdHexClient(): %s->%s", self::GetDeviceType(), self::GetUserAgent()));
-                    return true;
-                }
-        }
-        return false;
-    }
-
     /**----------------------------------------------------------------------------------------------------------
      * Private stuff
      */
