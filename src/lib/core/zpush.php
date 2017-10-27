@@ -694,7 +694,13 @@ class ZPush {
                         continue;
                     }
 
-                    $folder = self::GetDeviceManager()->BuildSyncFolderObject($af['store'], $af['folderid'], '0', $af['name'], $af['type'], 0, DeviceManager::FLD_ORIGIN_CONFIG);
+                    // don't fail hard if no flags are set, but we at least warn about it
+                    if (!isset($af['flags'])) {
+                        ZLog::Write(LOGLEVEL_WARN, sprintf("ZPush::getAddSyncFolders() : the additional folder '%s' is not configured completely. Missing 'flags' parameter, defaulting to DeviceManager::FLD_FLAGS_NONE.", $af['name']));
+                        $af['flags'] = DeviceManager::FLD_FLAGS_NONE;
+                    }
+
+                    $folder = self::GetDeviceManager()->BuildSyncFolderObject($af['store'], $af['folderid'], '0', $af['name'], $af['type'], $af['flags'], DeviceManager::FLD_ORIGIN_CONFIG);
                     self::$addSyncFolders[$folder->BackendId] = $folder;
                 }
             }
