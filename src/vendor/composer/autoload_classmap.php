@@ -165,7 +165,6 @@ return array(
     'SyncUserInformation' => $baseDir . '/lib/syncobjects/syncuserinformation.php',
     'SyncValidateCert' => $baseDir . '/lib/syncobjects/syncvalidatecert.php',
     'Syslog' => $baseDir . '/lib/log/syslog.php',
-    'TNEFParser' => $baseDir . '/backend/kopano/tnefparser.php',
     'TaskRecurrence' => $baseDir . '/backend/kopano/mapi/class.taskrecurrence.php',
     'TaskRequest' => $baseDir . '/backend/kopano/mapi/class.taskrequest.php',
     'TimezoneUtil' => $baseDir . '/lib/utils/timezoneutil.php',
