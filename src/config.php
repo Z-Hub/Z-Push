@@ -343,6 +343,13 @@
  *                      SYNC_FOLDER_TYPE_USER_TASK
  *                      SYNC_FOLDER_TYPE_USER_MAIL
  *                      SYNC_FOLDER_TYPE_USER_NOTE
+ *      flags:      sets additional options on the shared folder. Supported are:
+ *                      DeviceManager::FLD_FLAGS_NONE
+ *                          No flags configured, default flag to be set
+ *                      DeviceManager::FLD_FLAGS_SENDASOWNER
+ *                          When replying in this folder, automatically do Send-As
+ *                      DeviceManager::FLD_FLAGS_CALENDARREMINDERS
+ *                          If set, Outlook shows reminders for these shares with KOE
  *
  *  Additional notes:
  *  - on Kopano systems use backend/kopano/listfolders.php script to get a list
@@ -370,6 +377,7 @@
             'folderid'  => "",
             'name'      => "Public Contacts",
             'type'      => SYNC_FOLDER_TYPE_USER_CONTACT,
+            'flags'     => DeviceManager::FLD_FLAGS_NONE,
         ),
 */
     );

@@ -526,7 +526,7 @@ class ZPushAdmin {
                                         'name' => $so->displayname,
                                         'type' => $so->type,
                                         'origin' => ($syncfolderid !== $fid)?Utils::GetFolderOriginStringFromId($syncfolderid):'unknown',
-                                        'flags' => 0,           // static folders have no flags
+                                        'flags' => $so->Flags,
                                     );
                 }
             }
