@@ -598,10 +598,12 @@ class MAPIProvider {
                 $message->meetingrequest->globalobjid = base64_encode($props[$meetingrequestproperties["goidtag"]]);
 
             // Set Timezone
-            if(isset($props[$meetingrequestproperties["timezonetag"]]))
+            if (isset($props[$meetingrequestproperties["timezonetag"]])) {
                 $tz = $this->getTZFromMAPIBlob($props[$meetingrequestproperties["timezonetag"]]);
-            else
-                $tz = $this->getGMTTZ();
+            }
+            else {
+                $tz = TimezoneUtil::GetFullTZ();
+            }
 
             $message->meetingrequest->timezone = base64_encode(TimezoneUtil::GetSyncBlobFromTZ($tz));
 
@@ -2504,7 +2506,7 @@ class MAPIProvider {
             }
             elseif (isset($message->internetcpid) && $bpReturnType == SYNC_BODYPREFERENCE_HTML) {
                 // if PR_HTML is UTF-8 we can stream it directly, else we have to convert to UTF-8 & wrap it
-                if (Utils::GetCodepageCharset($message->internetcpid) == "utf-8") {
+                if ($message->internetcpid == INTERNET_CPID_UTF8) {
                     $message->asbody->data = MAPIStreamWrapper::Open($stream, $truncateHtmlSafe);
                 }
                 else {

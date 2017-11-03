@@ -179,7 +179,6 @@ class ComposerStaticInitd6749fc2fb9944bbe86b2b7d79a7852f
         'SyncUserInformation' => __DIR__ . '/../..' . '/lib/syncobjects/syncuserinformation.php',
         'SyncValidateCert' => __DIR__ . '/../..' . '/lib/syncobjects/syncvalidatecert.php',
         'Syslog' => __DIR__ . '/../..' . '/lib/log/syslog.php',
-        'TNEFParser' => __DIR__ . '/../..' . '/backend/kopano/tnefparser.php',
         'TaskRecurrence' => __DIR__ . '/../..' . '/backend/kopano/mapi/class.taskrecurrence.php',
         'TaskRequest' => __DIR__ . '/../..' . '/backend/kopano/mapi/class.taskrequest.php',
         'TimezoneUtil' => __DIR__ . '/../..' . '/lib/utils/timezoneutil.php',
