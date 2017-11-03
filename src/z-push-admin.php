@@ -977,15 +977,21 @@ class ZPushAdminCLI {
             echo "Kopano Outlook Extension:\n";
             echo "\tVersion:\t". $device->GetKoeVersion() ."\n";
             echo "\tBuild:\t\t". $device->GetKoeBuild() ."\n";
-            echo "\tBuild Date:\t". strftime("%Y-%m-%d %H:%M",$device->GetKoeBuildDate()) ."\n";
+            echo "\tBuild Date:\t". strftime("%Y-%m-%d %H:%M", $device->GetKoeBuildDate()) ."\n";
             echo "\tCapabilities:\t". (count($device->GetKoeCapabilities()) ? implode(',', $device->GetKoeCapabilities()) : 'unknown') ."\n";
+            echo "\tLast access:\t". ($device->GetKoeLastAccess() ? strftime("%Y-%m-%d", $device->GetKoeLastAccess()) : 'unknown') ."\n";
         }
 
         echo "Attention needed:\t";
 
-        if ($device->GetDeviceError())
+        if ($device->GetDeviceError()) {
             echo $device->GetDeviceError() ."\n";
-        else if (!isset($device->ignoredmessages) || empty($device->ignoredmessages)) {
+        }
+        // if KOE's access time is older than 7:01 h than the last successful sync it's probably inactive
+        elseif ($device->GetKoeLastAccess() && $device->GetKoeLastAccess() + 25260 < $device->GetLastSyncTime()) {
+            echo "KOE seems to be inactive on client\n";
+        }
+        if (!isset($device->ignoredmessages) || empty($device->ignoredmessages)) {
             echo "No errors known\n";
         }
         else {
