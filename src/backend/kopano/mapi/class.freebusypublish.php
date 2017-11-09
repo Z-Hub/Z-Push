@@ -79,13 +79,16 @@ class FreeBusyPublish {
     }
 
     /**
-     * Publishes the infomation
-     * @paam timestamp $starttime Time from which to publish data  (usually now)
-     * @paam integer $length Amount of seconds from $starttime we should publish
+     * Function is used to get the calender data based on give date range.
+     *
+     * @param timestamp $starttime Time from which to get the calender data.
+     * @param timestamp $length Time up till now get the calender data.
+     * @return Array return the calender data array.
      */
-    function publishFB($starttime, $length) {
+    function getCalendarData($starttime, $length)
+    {
         $start = $starttime;
-        $end = $starttime + $length;
+        $end = $length;
 
         // Get all the items in the calendar that we need
 
@@ -220,7 +223,7 @@ class FreeBusyPublish {
                 if(isset($row[$this->proptags['recurring']]) && $row[$this->proptags['recurring']]) {
                     $recur = new Recurrence($this->store, $row);
 
-                    $occurrences = $recur->getItems($starttime, $starttime + $length);
+                    $occurrences = $recur->getItems($starttime, $length);
                 } else {
                     $occurrences[] = $row;
                 }
@@ -232,10 +235,19 @@ class FreeBusyPublish {
         // $calendaritems now contains all the calendar items in the specified time
         // frame. We now need to merge these into a flat array of begin/end/status
         // objects. This also filters out all the 'free' items (status 0)
-
         $freebusy = $this->mergeItemsFB($calendaritems);
 
-        // $freebusy now contains the start, end and status of all items, merged.
+        return $freebusy;
+    }
+
+    /**
+     * Publishes Free/Busy infomation of user.
+     * @param timestamp $starttime Time from which to publish data  (usually now)
+     * @param timestamp $length Time of seconds from $starttime we should publish
+     */
+    function publishFB($start, $end)
+    {
+        $freebusy = $this->getCalendarData($start, $end);
 
         // Get the FB interface
         try {
@@ -243,9 +255,7 @@ class FreeBusyPublish {
         } catch (MAPIException $e) {
             if($e->getCode() == MAPI_E_NOT_FOUND) {
                 $e->setHandled();
-                if(function_exists("dump")) {
-                    dump("Error in opening freebusysupport object.");
-                }
+                ZLog::Write(LOGLEVEL_WARN, "Error in opening freebusysupport object.");
             }
         }
 
@@ -300,13 +310,13 @@ class FreeBusyPublish {
             $ts["type"] = 0;
             $ts["time"] = $item[$this->proptags["startdate"]];
             $ts["subject"] = $item[PR_SUBJECT];
-            $ts["status"] = (isset($item[$this->proptags["busystatus"]])) ? $item[$this->proptags["busystatus"]] : 0; //ZP-197
+            $ts["status"] = (isset($item[$this->proptags["busystatus"]])) ? $item[$this->proptags["busystatus"]] : fbFree; //ZP-197
             $timestamps[] = $ts;
 
             $ts["type"] = 1;
             $ts["time"] = $item[$this->proptags["duedate"]];
             $ts["subject"] = $item[PR_SUBJECT];
-            $ts["status"] = (isset($item[$this->proptags["busystatus"]])) ? $item[$this->proptags["busystatus"]] : 0; //ZP-197
+            $ts["status"] = (isset($item[$this->proptags["busystatus"]])) ? $item[$this->proptags["busystatus"]] : fbFree; //ZP-197
             $timestamps[] = $ts;
         }
 

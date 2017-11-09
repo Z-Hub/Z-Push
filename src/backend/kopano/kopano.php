@@ -335,7 +335,7 @@ class BackendKopano implements IBackend, ISearchProvider {
                 $calendar = mapi_msgstore_openentry($store, $entryid);
 
                 $pub = new FreeBusyPublish($this->session, $store, $calendar, $storeprops[PR_USER_ENTRYID]);
-                $pub->publishFB(time() - (7 * 24 * 60 * 60), 6 * 30 * 24 * 60 * 60); // publish from one week ago, 6 months ahead
+                $pub->publishFB(time() - (7 * 24 * 60 * 60), time() + (6 * 30 * 24 * 60 * 60)); // publish from one week ago, 6 months ahead
             }
         }
 

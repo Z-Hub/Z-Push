@@ -740,14 +740,24 @@
                             // Go the the correct month day
                             $this->recur["start"] += (((int) $this->recur["monthday"])-1) * 24*60*60;
 
-                            // If the previous calculation gave us a start date *before* the original start date, then we need to skip to the next occurrence
+                            // If the previous calculation gave us a start date different than the original start date, then we need to skip to the first occurrence
                             if ( ($term == 0x0C /*monthly*/ && ((int) $this->recur["monthday"]) < $curmonthday) ||
-                                ($term == 0x0D /*yearly*/ &&( $selmonth < $curmonth || ($selmonth == $curmonth && ((int) $this->recur["monthday"]) < $curmonthday)) ))
+                                ($term == 0x0D /*yearly*/ && ( $selmonth != $curmonth || ($selmonth == $curmonth && ((int) $this->recur["monthday"]) < $curmonthday)) ))
                             {
-                                if($term == 0x0D /*yearly*/)
-                                    $count = ($everyn - ($curmonth - $selmonth)); // Yearly, go to next occurrence in 'everyn' months minus difference in first occurence and original date
-                                else
+                                if ($term == 0x0D /*yearly*/) {
+                                    if ($curmonth > $selmonth) {//go to next occurrence in 'everyn' months minus difference in first occurrence and original date
+                                        $count = $everyn - ($curmonth - $selmonth);
+                                    } else if ($curmonth < $selmonth) {//go to next occurrence upto difference in first occurrence and original date
+                                        $count = $selmonth - $curmonth;
+                                    } else {
+                                        // Go to next occurrence while recurrence start date is greater than occurrence date but within same month
+                                        if (((int) $this->recur["monthday"]) < $curmonthday) {
+                                            $count = $everyn;
+                                        }
+                                    }
+                                } else {
                                     $count = $everyn; // Monthly, go to next occurrence in 'everyn' months
+                                }
 
                                 // Forward by $count months. This is done by getting the number of days in that month and forwarding that many days
                                 for($i=0; $i < $count; $i++) {
@@ -1173,7 +1183,7 @@
             mapi_setprops($this->message, Array($this->proptags["commonend"] => $utcfirstoccenddatetime ));
 
             // Set Outlook properties, if it is an appointment
-            if (isset($this->recur["message_class"]) && $this->recur["message_class"] == "IPM.Appointment") {
+            if (isset($this->messageprops[$this->proptags["message_class"]]) && $this->messageprops[$this->proptags["message_class"]] == "IPM.Appointment") {
                 // update real begin and real end date
                 mapi_setprops($this->message, Array($this->proptags["startdate_recurring"] => $utcstart));
                 mapi_setprops($this->message, Array($this->proptags["enddate_recurring"] => $utcend));
@@ -1657,8 +1667,8 @@
 
                 // From here on, the dates of the occurrences are calculated in local time, so the days we're looking
                 // at are calculated from the local time dates of $start and $end
-
-                if ($this->recur['regen'] && isset($this->action['datecompleted'])) {
+                // TODO use one isset
+                if (isset($this->recur['regen']) && $this->recur['regen'] && isset($this->action['datecompleted'])) {
                     $daystart = $this->dayStartOf($this->action['datecompleted']);
                 } else {
                     $daystart = $this->dayStartOf($this->recur["start"]); // start on first day of occurrence

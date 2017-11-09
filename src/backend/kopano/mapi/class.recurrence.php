@@ -19,8 +19,6 @@
 
     /**
      * Recurrence
-     * @author Steve Hardy <steve@zarafa.com>
-     * @author Michel de Ron <michel@zarafa.com>
      */
     class Recurrence extends BaseRecurrence
     {
@@ -226,7 +224,6 @@
             }
 
             $baseday = $this->dayStartOf($base_date);
-            $basetime = $baseday + $this->recur["startocc"] * 60;
             $extomodify = false;
 
             for($i = 0, $len = count($this->recur["changed_occurences"]); $i < $len; $i++) {
@@ -373,8 +370,6 @@
          */
         function isValidReminderTime($basedate, $reminderminutes, $startdate)
         {
-            $isreminderrangeset = false;
-
             // get all occurence items before the seleceted items occurence starttime
             $occitems = $this->getItems($this->messageprops[$this->proptags["startdate"]], $this->toGMT($this->tz, $basedate));
 
@@ -789,13 +784,14 @@
          */
         function getExceptionAttachment($base_date)
         {
-            // Retrieve only embedded messages
+            // Retrieve only exceptions which are stored as embedded messages
             $attach_res = Array(RES_AND,
                             Array(
                                 Array(RES_PROPERTY,
-                                    Array(RELOP => RELOP_EQ,
+                                    Array(
+                                        RELOP => RELOP_EQ,
                                         ULPROPTAG => PR_ATTACH_METHOD,
-                                        VALUE => array(PR_ATTACH_METHOD => 5)
+                                        VALUE => array(PR_ATTACH_METHOD => ATTACH_EMBEDDED_MSG)
                                     )
                                 )
                             )
@@ -811,7 +807,13 @@
 
                     $data = mapi_message_getprops($exception, array($this->proptags["basedate"]));
 
-                    if(isset($data[$this->proptags["basedate"]]) && $this->isSameDay($this->fromGMT($this->tz,$data[$this->proptags["basedate"]]), $base_date)) {
+                    if(!isset($data[$this->proptags["basedate"]])) {
+                        // if no basedate found then it could be embedded message so ignore it
+                        // we need proper restriction to exclude embedded messages aswell
+                        continue;
+                    }
+
+                    if($this->isSameDay($this->fromGMT($this->tz, $data[$this->proptags["basedate"]]), $base_date)) {
                         return $tempattach;
                     }
                 }
@@ -1061,7 +1063,7 @@
             }
 
             // Add organizer to meeting only if it is not organized.
-            $msgprops = mapi_getprops($exception, array(PR_SENT_REPRESENTING_ENTRYID, PR_SENT_REPRESENTING_EMAIL_ADDRESS, PR_SENT_REPRESENTING_NAME, PR_SENT_REPRESENTING_ADDRTYPE, $this->proptags['responsestatus']));
+            $msgprops = mapi_getprops($exception, array(PR_SENT_REPRESENTING_ENTRYID, PR_SENT_REPRESENTING_EMAIL_ADDRESS, PR_SENT_REPRESENTING_NAME, PR_SENT_REPRESENTING_ADDRTYPE, PR_SENT_REPRESENTING_SEARCH_KEY, $this->proptags['responsestatus']));
             if (isset($msgprops[$this->proptags['responsestatus']]) && $msgprops[$this->proptags['responsestatus']] != olResponseOrganized){
                 $this->addOrganizer($msgprops, $exception_recips['add']);
             }
@@ -1116,7 +1118,7 @@
             }
 
             // Add organizer to meeting only if it is not organized.
-            $msgprops = mapi_getprops($message, array(PR_SENT_REPRESENTING_ENTRYID, PR_SENT_REPRESENTING_EMAIL_ADDRESS, PR_SENT_REPRESENTING_NAME, PR_SENT_REPRESENTING_ADDRTYPE, $this->proptags['responsestatus']));
+            $msgprops = mapi_getprops($message, array(PR_SENT_REPRESENTING_ENTRYID, PR_SENT_REPRESENTING_EMAIL_ADDRESS, PR_SENT_REPRESENTING_NAME, PR_SENT_REPRESENTING_ADDRTYPE, PR_SENT_REPRESENTING_SEARCH_KEY, $this->proptags['responsestatus']));
             if (isset($msgprops[$this->proptags['responsestatus']]) && $msgprops[$this->proptags['responsestatus']] != olResponseOrganized){
                 $this->addOrganizer($msgprops, $exception_recips);
             }
@@ -1125,7 +1127,7 @@
                 foreach($recipientRows as $key => $recipient) {
                     $found = false;
                     foreach($exception_recips as $excep_recip) {
-                        if (isset($recipient[PR_SEARCH_KEY]) && isset($excep_recip[PR_SEARCH_KEY]) && $recipient[PR_SEARCH_KEY] == $excep_recip[PR_SEARCH_KEY])
+                        if (isset($recipient[PR_SEARCH_KEY], $excep_recip[PR_SEARCH_KEY]) && $recipient[PR_SEARCH_KEY] == $excep_recip[PR_SEARCH_KEY])
                             $found = true;
                     }
 
@@ -1201,8 +1203,8 @@
          * @param array $recipients    recipients list of message.
          * @param boolean $isException true if we are processing recipient of exception
          */
-        function addOrganizer($messageProps, &$recipients, $isException = false){
-
+        function addOrganizer($messageProps, &$recipients, $isException = false)
+        {
             $hasOrganizer = false;
             // Check if meeting already has an organizer.
             foreach ($recipients as $key => $recipient){
@@ -1225,6 +1227,7 @@
                 $organizer[PR_ADDRTYPE] = empty($messageProps[PR_SENT_REPRESENTING_ADDRTYPE])?'SMTP':$messageProps[PR_SENT_REPRESENTING_ADDRTYPE];
                 $organizer[PR_RECIPIENT_TRACKSTATUS] = olRecipientTrackStatusNone;
                 $organizer[PR_RECIPIENT_FLAGS] = recipSendable | recipOrganizer;
+                $organizer[PR_SEARCH_KEY] = $messageProps[PR_SENT_REPRESENTING_SEARCH_KEY];
 
                 // Add organizer to recipients list.
                 array_unshift($recipients, $organizer);
