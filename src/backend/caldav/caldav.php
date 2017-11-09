@@ -1074,11 +1074,14 @@ class BackendCalDAV extends BackendDiff {
             }
         }
         if ($is_meeting) {
-            if (isset($data->organizername)) {
+            if (isset($data->organizeremail) && isset($data->organizername)) {
                 $vevent->AddProperty("ORGANIZER", sprintf("MAILTO:%s", $data->organizeremail), array("CN" => $data->organizername));
             }
+            elseif (isset($data->organizeremail)) {
+                $vevent->AddProperty("ORGANIZER", sprintf("MAILTO:%s", $data->organizeremail));
+            }
             else {
-                //Some phones don't send the organizeremail, so we gotto get it somewhere else.
+                //Some phones doesn't send the organizeremail, so we gotto get it somewhere else.
                 //Lets use the login here ($username)
                 $vevent->AddProperty("ORGANIZER", sprintf("MAILTO:%s", $data->originalUsername));
             }
