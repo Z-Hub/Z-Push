@@ -1082,7 +1082,7 @@ class BackendCalDAV extends BackendDiff {
                 }
             }
         }
-        if (isset($data->body)) {
+        if (isset($data->body) && strlen($data->body) > 0) {
             $vevent->AddProperty("DESCRIPTION", $data->body);
         }
         if (isset($data->asbody->data)) {
