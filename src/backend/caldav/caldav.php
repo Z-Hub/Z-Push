@@ -628,6 +628,12 @@ class BackendCalDAV extends BackendDiff {
                     }
                     break;
 
+                case "X-MICROSOFT-CDO-ALLDAYEVENT":
+                    if ($property->Value() == "TRUE") {
+                        $message->alldayevent = "1";
+                    }
+                    break;
+
                 case "DURATION":
                     if (!isset($message->endtime)) {
                         $start = date_create("@" . $message->starttime);
@@ -1002,6 +1008,9 @@ class BackendCalDAV extends BackendDiff {
                 $vevent->AddProperty("DTEND", gmdate("Ymd\THis\Z", $data->endtime));
                 $vevent->AddProperty("X-MICROSOFT-CDO-ALLDAYEVENT", "FALSE");
             }
+        }
+        else {
+            $vevent->AddProperty("X-MICROSOFT-CDO-ALLDAYEVENT", "TRUE");
         }
         if (isset($data->recurrence)) {
             $vevent->AddProperty("RRULE", $this->_GenerateRecurrence($data->recurrence));
