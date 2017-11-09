@@ -1086,7 +1086,10 @@ class BackendCalDAV extends BackendDiff {
             $vevent->AddProperty("DESCRIPTION", $data->body);
         }
         if (isset($data->asbody->data)) {
-            $vevent->AddProperty("DESCRIPTION", stream_get_contents($data->asbody->data));
+            $asbody = stream_get_contents($data->asbody->data);
+            if (strlen($asbody) > 0){
+                $vevent->AddProperty("DESCRIPTION", $asbody);
+				}
         }
         if (isset($data->categories) && is_array($data->categories)) {
             $vevent->AddProperty("CATEGORIES", implode(",", $data->categories));
