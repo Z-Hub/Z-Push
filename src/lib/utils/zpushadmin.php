@@ -319,16 +319,71 @@ class ZPushAdmin {
         return true;
     }
 
+    /**
+     * Sets the max filter type a device should synchronize.
+     * This value is superseeded by the globally configured SYNC_FILTERTIME_MAX.
+     *
+     * @param string    $user           user of the device
+     * @param string    $devid          device id that should be modified
+     * @param int       $filtertype     SYNC_FILTERTYPE_1DAY to SYNC_FILTERTYPE_ALL
+     *
+     * @access public
+     * @return boolean
+     */
+    public static function SetDeviceFilterType($user, $devid, $filtertype) {
+        if ($user === false || $devid === false) {
+            ZLog::Write(LOGLEVEL_ERROR, "ZPushAdmin::SetDeviceFilterType(): user and device must be specified");
+            return false;
+        }
+
+        if ($filtertype < SYNC_FILTERTYPE_ALL || $filtertype > SYNC_FILTERTYPE_INCOMPLETETASKS) {
+            ZLog::Write(LOGLEVEL_ERROR, sprintf("ZPushAdmin::SetDeviceFilterType(): specified FilterType '%s' is out of bounds", $filtertype));
+            return false;
+        }
+
+        // load device data
+        $device = new ASDevice($devid, ASDevice::UNDEFINED, $user, ASDevice::UNDEFINED);
+        try {
+            $device->SetData(ZPush::GetStateMachine()->GetState($devid, IStateMachine::DEVICEDATA), false);
+        }
+        catch (StateNotFoundException $e) {
+            ZLog::Write(LOGLEVEL_ERROR, sprintf("ZPushAdmin::SetDeviceFilterType(): device '%s' of user '%s' can not be found", $devid, $user));
+            return false;
+        }
+
+        if ($filtertype === $device->GetSyncFilterType()) {
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::SetDeviceFilterType(): device '%s' of user '%s' - device FilterType already at '%s'. Terminating.", $devid, $user, $filtertype));
+            return true;
+        }
+
+        $device->SetSyncFilterType($filtertype);
+
+        // save device data
+        try {
+            if ($device->IsNewDevice() || $device->GetData() === false) {
+                ZLog::Write(LOGLEVEL_ERROR, sprintf("ZPushAdmin::SetDeviceFilterType(): data of user '%s' not synchronized on device '%s'. Aborting.", $user, $devid));
+                return false;
+            }
+            ZPush::GetStateMachine()->SetState($device->GetData(), $devid, IStateMachine::DEVICEDATA);
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::SetDeviceFilterType(): device '%s' of user '%s' - device FilterType updated to '%s'", $devid, $user, $filtertype));
+        }
+        catch (StateNotFoundException $e) {
+            ZLog::Write(LOGLEVEL_ERROR, sprintf("ZPushAdmin::SetDeviceFilterType(): state for device '%s' of user '%s' can not be saved", $devid, $user));
+            return false;
+        }
+        return true;
+    }
+
 
     /**
-     * Marks a folder of a device of a user for re-synchronization
+     * Marks a folder of a device of a user for re-synchronization.
      *
      * @param string    $user           user of the device
      * @param string    $devid          device id which should be re-synchronized
      * @param mixed     $folderid       a single folder id or an array of folder ids
      *
-     * @return boolean
      * @access public
+     * @return boolean
      */
     static public function ResyncFolder($user, $devid, $folderid) {
         // load device data
