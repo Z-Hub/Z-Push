@@ -705,7 +705,7 @@ class DeviceManager {
         $maxDevice = $this->device->GetSyncFilterType();
 
         // ALL has a value of 0, all limitations have higher integer values, see SYNC_FILTERTYPE_ALL definition
-        if ($maxDevice !== false && $maxDevice > $maxAllowed) {
+        if ($maxDevice !== false && $maxDevice < $maxAllowed) {
             $maxAllowed = $maxDevice;
         }
 
