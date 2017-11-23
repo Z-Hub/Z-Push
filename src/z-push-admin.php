@@ -915,6 +915,37 @@ class ZPushAdminCLI {
         echo "ActiveSync version:\t".($device->GetASVersion() ? $device->GetASVersion() : "unknown") ."\n";
         echo "First sync:\t\t". strftime("%Y-%m-%d %H:%M", $device->GetFirstSyncTime()) ."\n";
         echo "Last sync:\t\t". ($device->GetLastSyncTime() ? strftime("%Y-%m-%d %H:%M", $device->GetLastSyncTime()) : "never")."\n";
+
+        $filterType = (defined('SYNC_FILTERTIME_MAX') && SYNC_FILTERTIME_MAX > SYNC_FILTERTYPE_ALL) ? SYNC_FILTERTIME_MAX : SYNC_FILTERTYPE_ALL;
+        if ($device->GetSyncFilterType() != false && $device->GetSyncFilterType() < $filterType) {
+            $filterType = $device->GetSyncFilterType();
+        }
+        switch($filterType) {
+            case SYNC_FILTERTYPE_1DAY:
+                $filterTypeString = "1 day back";
+                break;
+            case SYNC_FILTERTYPE_3DAYS:
+                $filterTypeString = "3 days back";
+                break;
+            case SYNC_FILTERTYPE_1WEEK:
+                $filterTypeString = "1 week back";
+                break;
+            case SYNC_FILTERTYPE_2WEEKS:
+                $filterTypeString = "2 weeks back";
+                break;
+            case SYNC_FILTERTYPE_1MONTH:
+                $filterTypeString = "1 month back";
+                break;
+            case SYNC_FILTERTYPE_3MONTHS:
+                $filterTypeString = "3 months back";
+                break;
+            case SYNC_FILTERTYPE_6MONTHS:
+                $filterTypeString = "6 months back";
+                break;
+            default:
+                $filterTypeString = "unlimited";
+        }
+        echo "Sync Period:\t\t". $filterTypeString . " (".$filterType.")\n";
         echo "Total folders:\t\t". count($folders). "\n";
         echo "Short folder Ids:\t". ($device->HasFolderIdMapping() ? "Yes":"No") ."\n";
         echo "Synchronized folders:\t". $synchedFolders;
