@@ -415,10 +415,11 @@ class Sync extends RequestProcessor {
                     }
 
                     // limit items to be synchronized to the mobiles if configured
-                    if (defined('SYNC_FILTERTIME_MAX') && SYNC_FILTERTIME_MAX > SYNC_FILTERTYPE_ALL &&
-                        (!$spa->HasFilterType() || $spa->GetFilterType() == SYNC_FILTERTYPE_ALL || $spa->GetFilterType() > SYNC_FILTERTIME_MAX)) {
-                            ZLog::Write(LOGLEVEL_DEBUG, sprintf("SYNC_FILTERTIME_MAX defined. Filter set to value: %s", SYNC_FILTERTIME_MAX));
-                            $spa->SetFilterType(SYNC_FILTERTIME_MAX);
+                    $maxAllowed = self::$deviceManager->GetFilterType($spa->GetFolderId());
+                    if ($maxAllowed > SYNC_FILTERTYPE_ALL &&
+                        (!$spa->HasFilterType() || $spa->GetFilterType() == SYNC_FILTERTYPE_ALL || $spa->GetFilterType() > $maxAllowed)) {
+                            ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleSync(): FilterType applied globally or specifically, using value: %s", $maxAllowed));
+                            $spa->SetFilterType($maxAllowed);
                     }
 
                     // unset filtertype for KOE GAB folder
@@ -428,7 +429,7 @@ class Sync extends RequestProcessor {
                     }
 
                     if ($currentFilterType != $spa->GetFilterType()) {
-                        ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleSync(): filter type has changed (old: '%s', new: '%s'), removing folderstat to force Exporter setup", $currentFilterType, $spa->GetFilterType()));
+                        ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleSync(): FilterType has changed (old: '%s', new: '%s'), removing folderstat to force Exporter setup", $currentFilterType, $spa->GetFilterType()));
                         $spa->DelFolderStat();
                     }
 

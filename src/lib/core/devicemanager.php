@@ -689,6 +689,30 @@ class DeviceManager {
     }
 
     /**
+     * Returns the maximum filter type for a folder.
+     * This might be limited globally, per device or per folder.
+     *
+     * @param string    $folderid
+     *
+     * @access public
+     * @return int
+     */
+    public function GetFilterType($folderid) {
+        // either globally configured SYNC_FILTERTIME_MAX or ALL (no limit)
+        $maxAllowed = (defined('SYNC_FILTERTIME_MAX') && SYNC_FILTERTIME_MAX > SYNC_FILTERTYPE_ALL) ? SYNC_FILTERTIME_MAX : SYNC_FILTERTYPE_ALL;
+
+        // TODO we could/should check for a specific value for the folder, if it's available
+        $maxDevice = $this->device->GetSyncFilterType();
+
+        // ALL has a value of 0, all limitations have higher integer values, see SYNC_FILTERTYPE_ALL definition
+        if ($maxDevice !== false && $maxDevice > $maxAllowed) {
+            $maxAllowed = $maxDevice;
+        }
+
+        return $maxAllowed;
+    }
+
+    /**
      * Removes all linked states of a specific folder.
      * During next request the folder is resynchronized.
      *
