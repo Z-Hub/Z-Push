@@ -917,8 +917,9 @@ class ZPushAdminCLI {
         echo "Last sync:\t\t". ($device->GetLastSyncTime() ? strftime("%Y-%m-%d %H:%M", $device->GetLastSyncTime()) : "never")."\n";
 
         $filterType = (defined('SYNC_FILTERTIME_MAX') && SYNC_FILTERTIME_MAX > SYNC_FILTERTYPE_ALL) ? SYNC_FILTERTIME_MAX : SYNC_FILTERTYPE_ALL;
-        if ($device->GetSyncFilterType() != false && $device->GetSyncFilterType() < $filterType) {
-            $filterType = $device->GetSyncFilterType();
+        $maxDevice = $device->GetSyncFilterType();
+        if ($maxDevice !== false && $maxDevice > SYNC_FILTERTYPE_ALL && ($filterType == SYNC_FILTERTYPE_ALL || $maxDevice < $filterType)) {
+            $filterType = $maxDevice;
         }
         switch($filterType) {
             case SYNC_FILTERTYPE_1DAY:
