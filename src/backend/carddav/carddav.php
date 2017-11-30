@@ -1286,6 +1286,10 @@ class BackendCardDAV extends BackendDiff implements ISearchProvider {
 
             // Remove trailing ;
             $val = substr($val, 0, -1);
+            // Clean full name from emailaddress
+            if (substr($k, 0, 5) == 'email') {
+                $val = preg_replace(array('/.*</', '/>.*/'), array('', ''), $val);
+            }
             if (strlen($val) > 50) {
                 $data .= $v.":\n\t".substr(chunk_split($val, 50, "\n\t"), 0, -1);
             }
