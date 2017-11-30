@@ -285,6 +285,10 @@ class ZPush {
                 throw new FatalMisconfigurationException(sprintf("Your policies' configuration file doesn't contain the required [default] section. Please check the '%s' file.", $policyfile));
             }
         }
+
+        if (defined('USE_X_FORWARDED_FOR_HEADER')) {
+            ZLog::Write(LOGLEVEL_INFO, "The configuration parameter 'USE_X_FORWARDED_FOR_HEADER' was deprecated in favor of 'USE_CUSTOM_REMOTE_IP_HEADER'. Please update your configuration.");
+        }
         return true;
     }
 
