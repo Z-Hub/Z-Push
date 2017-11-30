@@ -167,7 +167,7 @@ class Syslog extends Log {
         $log = $this->GetLogLevelString($loglevel); // Never pad syslog log because syslog log are usually read with a software.
         $log .= $this->GetUser();
         if ($loglevel >= LOGLEVEL_DEVICEID) {
-            $log .= $this->GetDevid();
+            $log .= '['. $this->GetDevid() .']';
         }
         $log .= ' ' . $message;
         return $log;
