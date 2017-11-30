@@ -75,12 +75,12 @@ class FileLog extends Log {
      *
      * @param int       $loglevel
      * @param string    $message
-     * @param boolean   $includeUserDevice  puts username and device in the string
+     * @param boolean   $includeUserDevice  puts username and device in the string, default: true
      *
      * @access public
      * @return string
      */
-    public function BuildLogString($loglevel, $message, $includeUserDevice) {
+    public function BuildLogString($loglevel, $message, $includeUserDevice = true) {
         $log = Utils::GetFormattedTime() .' ['. str_pad($this->GetPid(),5," ",STR_PAD_LEFT) .'] '. $this->GetLogLevelString($loglevel, $loglevel >= LOGLEVEL_INFO);
 
         if ($includeUserDevice) {
@@ -107,7 +107,7 @@ class FileLog extends Log {
      * @return void
      */
     protected function Write($loglevel, $message) {
-        $data = $this->buildLogString($loglevel, $message, true) . PHP_EOL;
+        $data = $this->BuildLogString($loglevel, $message) . PHP_EOL;
         @file_put_contents(LOGFILE, $data, FILE_APPEND);
     }
 
@@ -120,7 +120,7 @@ class FileLog extends Log {
      * @return void
      */
     public function WriteForUser($loglevel, $message) {
-        $data = $this->buildLogString($loglevel, $message, false) . PHP_EOL;
+        $data = $this->BuildLogString($loglevel, $message, false) . PHP_EOL;
         @file_put_contents(LOGFILEDIR . $this->getLogToUserFile(), $data, FILE_APPEND);
     }
 
@@ -133,7 +133,7 @@ class FileLog extends Log {
      */
     protected function afterLog($loglevel, $message) {
         if ($loglevel & (LOGLEVEL_FATAL | LOGLEVEL_ERROR | LOGLEVEL_WARN)) {
-            $data = $this->buildLogString($loglevel, $message) . PHP_EOL;
+            $data = $this->BuildLogString($loglevel, $message) . PHP_EOL;
             @file_put_contents(LOGERRORFILE, $data, FILE_APPEND);
         }
     }
