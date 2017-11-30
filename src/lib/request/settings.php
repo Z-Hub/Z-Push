@@ -50,7 +50,6 @@ class Settings extends RequestProcessor {
         if (defined('KOE_CAPABILITY_SECONDARYCONTACTS') && KOE_CAPABILITY_SECONDARYCONTACTS)    $cap[] = "secondarycontacts";
         if (defined('KOE_CAPABILITY_SIGNATURES') && KOE_CAPABILITY_SIGNATURES)                  $cap[] = "signatures";
         if (defined('KOE_CAPABILITY_RECEIPTS') && KOE_CAPABILITY_RECEIPTS)                      $cap[] = "receipts";
-        if (defined('KOE_CAPABILITY_IMPERSONATE') && KOE_CAPABILITY_IMPERSONATE)                $cap[] = "impersonate";
 
         self::$specialHeaders = array();
         self::$specialHeaders[] = "X-Push-Capabilities: ". implode(",", $cap);

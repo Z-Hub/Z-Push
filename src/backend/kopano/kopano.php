@@ -145,7 +145,7 @@ class BackendKopano implements IBackend, ISearchProvider {
 
         // check if we are impersonating someone
         // $defaultUser will be used for $this->defaultStore
-        if (defined('KOE_CAPABILITY_IMPERSONATE') && KOE_CAPABILITY_IMPERSONATE && stripos($user, self::IMPERSONATE_DELIM) !== false) {
+        if (stripos($user, self::IMPERSONATE_DELIM) !== false) {
             list($this->mainUser, $this->impersonateUser) = explode(self::IMPERSONATE_DELIM, strtolower($user));
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->Logon(): Impersonation active - authenticating: '%s' - impersonating '%s'", $this->mainUser, $this->impersonateUser));
             $defaultUser = $this->impersonateUser;
