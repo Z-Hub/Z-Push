@@ -109,6 +109,29 @@ class WebserviceDevice {
     }
 
     /**
+     * Sets device options of the Request::GetGETUser().
+     *
+     * @param string    $deviceId       the device id
+     * @param int       $filtertype     SYNC_FILTERTYPE_1DAY to SYNC_FILTERTYPE_ALL, false to ignore
+     *
+     * @access public
+     * @return boolean
+     * @throws SoapFault
+     */
+    public function SetDeviceOptions($deviceId, $filtertype) {
+        $deviceId = preg_replace("/[^A-Za-z0-9]/", "", $deviceId);
+        ZLog::Write(LOGLEVEL_INFO, sprintf("WebserviceDevice::SetDeviceOptions('%s', '%s'): set FilterType to '%s'", $deviceId, Request::GetGETUser(), Utils::PrintAsString($filtertype)));
+
+        if (! ZPushAdmin::SetDeviceOptions(Request::GetGETUser(), $deviceId, $filtertype)) {
+            ZPush::GetTopCollector()->AnnounceInformation(ZLog::GetLastMessage(LOGLEVEL_ERROR), true);
+            throw new SoapFault("ERROR", ZLog::GetLastMessage(LOGLEVEL_ERROR));
+        }
+
+        ZPush::GetTopCollector()->AnnounceInformation(sprintf("FilterType set to '%s' - device id '%s'", Utils::PrintAsString($filtertype), $deviceId), true);
+        return true;
+    }
+
+    /**
      * Marks a device of the Request::GetGETUser() for resynchronization.
      *
      * @param string    $deviceId       the device id

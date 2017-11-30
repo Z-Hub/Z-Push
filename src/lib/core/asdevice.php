@@ -60,6 +60,7 @@ class ASDevice extends StateObject {
                                     'koegabbackendfolderid' => false,
                                     'koecapabilities' => array(),
                                     'koelastaccess' => false,
+                                    'syncfiltertype' => false,
                                 );
 
     static private $loadedData;
