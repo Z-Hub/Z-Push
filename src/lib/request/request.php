@@ -243,11 +243,11 @@ class Request {
             }
         }
 
-        if (defined('USE_X_FORWARDED_FOR_HEADER') && USE_X_FORWARDED_FOR_HEADER == true && isset(self::$headers["x-forwarded-for"])) {
-            $forwardedIP = self::filterIP(self::$headers["x-forwarded-for"]);
-            if ($forwardedIP) {
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("'X-Forwarded-for' indicates remote IP: %s - connect is coming from IP: %s", $forwardedIP, self::$remoteAddr));
-                self::$remoteAddr = $forwardedIP;
+        if (defined('USE_CUSTOM_REMOTE_IP_HEADER') && USE_CUSTOM_REMOTE_IP_HEADER !== false && isset(self::$headers[strtolower(USE_CUSTOM_REMOTE_IP_HEADER)])) {
+            $remoteIP = self::filterIP(self::$headers[strtolower(USE_CUSTOM_REMOTE_IP_HEADER)]);
+            if ($remoteIP) {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("Using custom header '%s' to determine remote IP: %s - connect is coming from IP: %s", USE_CUSTOM_REMOTE_IP_HEADER, $remoteIP, self::$remoteAddr));
+                self::$remoteAddr = $remoteIP;
             }
         }
 

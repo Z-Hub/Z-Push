@@ -35,8 +35,12 @@
     // Try to set unlimited timeout
     define('SCRIPT_TIMEOUT', 0);
 
-    // When accessing through a proxy, the "X-Forwarded-For" header contains the original remote IP
-    define('USE_X_FORWARDED_FOR_HEADER', false);
+    // Use a custom header to determinate the remote IP of a client.
+    // By default, the server provided REMOTE_ADDR is used. If the header here set
+    // is available, the provided value will be used, else REMOTE_ADDR is maintained.
+    // set to false to disable this behaviour.
+    // common values: 'HTTP_X_FORWARDED_FOR', 'HTTP_X_REAL_IP' (casing is ignored)
+    define('USE_CUSTOM_REMOTE_IP_HEADER', 'HTTP_X_REAL_IP');
 
     // When using client certificates, we can check if the login sent matches the owner of the certificate.
     // This setting specifies the owner parameter in the certificate to look at.
