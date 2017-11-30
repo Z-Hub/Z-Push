@@ -30,6 +30,7 @@ $wbxml64 = is_file($argv[1]) ? realpath($argv[1]) : $argv[1];
 chdir(__DIR__);
 
 // include the stuff we need
+include_once('../../src/lib/utils/utils.php');
 include_once('../../src/lib/utils/stringstreamwrapper.php');
 include_once('../../src/lib/wbxml/wbxmldefs.php');
 include_once('../../src/lib/wbxml/wbxmldecoder.php');

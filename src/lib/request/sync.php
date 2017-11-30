@@ -233,10 +233,9 @@ class Sync extends RequestProcessor {
                         $sc->AddParameter($spa, "getchanges", true);
                         if (($gc = self::$decoder->getElementContent()) !== false) {
                             $sc->AddParameter($spa, "getchanges", $gc);
-                            if(!self::$decoder->getElementEndTag()) {
-                                return false;
-                            }
                         }
+                        // read the endtag if it's there, but don't fail if it isn't
+                        self::$decoder->getElementEndTag();
                     }
 
                     if(self::$decoder->getElementStartTag(SYNC_WINDOWSIZE)) {
