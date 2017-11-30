@@ -71,9 +71,10 @@ class FileLog extends Log {
      * @return string
      */
     public function BuildLogString($loglevel, $message) {
-        $log = Utils::GetFormattedTime() . ' ' . $this->GetPidstr() . ' ' . $this->GetLogLevelString($loglevel, $loglevel >= LOGLEVEL_INFO) . ' ' . $this->GetUser();
+
+        $log = Utils::GetFormattedTime() .' ['. str_pad($this->GetPid(),5," ",STR_PAD_LEFT) .'] '. $this->GetLogLevelString($loglevel, $loglevel >= LOGLEVEL_INFO) . ' ' . $this->GetUser();
         if (LOGLEVEL >= LOGLEVEL_DEVICEID || (LOGUSERLEVEL >= LOGLEVEL_DEVICEID && $this->IsAuthUserInSpecialLogUsers())) {
-            $log .= ' ' . $this->GetDevid();
+            $log .= ' ['. $this->GetDevid() .']';
         }
         $log .= ' ' . $message;
         return $log;
