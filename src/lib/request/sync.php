@@ -236,7 +236,7 @@ class Sync extends RequestProcessor {
                         }
                         // read the endtag if SYNC_GETCHANGES wasn't an empty tag
                         if ($starttag[EN_FLAGS] & EN_FLAGS_CONTENT) {
-                            if(!self::$decoder->getElementEndTag()) {
+                            if (!self::$decoder->getElementEndTag()) {
                                 return false;
                             }
                         }
