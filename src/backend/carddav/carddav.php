@@ -1276,7 +1276,7 @@ class BackendCardDAV extends BackendDiff implements ISearchProvider {
                     $val .= $this->escape($message->$i);
                 $val.=';';
             }
-            if ($k == 'body' && isset($message->asbody)) {
+            if ($k == 'body' && isset($message->asbody->data)) {
                 $val = stream_get_contents($message->asbody->data);
             }
             if (empty($val) || preg_match('/^(\;)+$/', $val) == 1)
