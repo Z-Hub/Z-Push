@@ -982,14 +982,6 @@ class BackendCalDAV extends BackendDiff {
         if (isset($data->subject)) {
             $vevent->AddProperty("SUMMARY", $data->subject);
         }
-        if (isset($data->organizeremail)) {
-            if (isset($data->organizername)) {
-                $vevent->AddProperty("ORGANIZER", sprintf("MAILTO:%s", $data->organizeremail), array("CN" => $data->organizername));
-            }
-            else {
-                $vevent->AddProperty("ORGANIZER", sprintf("MAILTO:%s", $data->organizeremail));
-            }
-        }
         if (isset($data->location)) {
             $vevent->AddProperty("LOCATION", $data->location);
         }
@@ -1046,33 +1038,32 @@ class BackendCalDAV extends BackendDiff {
             $rtfparser->parse();
             $vevent->AddProperty("DESCRIPTION", $rtfparser->out);
         }
+        $is_meeting = false;
         if (isset($data->meetingstatus)) {
             switch ($data->meetingstatus) {
                 case "1":
                     $vevent->AddProperty("STATUS", "TENTATIVE");
                     $vevent->AddProperty("X-MICROSOFT-CDO-BUSYSTATUS", "TENTATIVE");
                     $vevent->AddProperty("X-MICROSOFT-DISALLOW-COUNTER", "FALSE");
+                    $is_meeting = true;
                     break;
                 case "3":
                     $vevent->AddProperty("STATUS", "CONFIRMED");
                     $vevent->AddProperty("X-MICROSOFT-CDO-BUSYSTATUS", "CONFIRMED");
                     $vevent->AddProperty("X-MICROSOFT-DISALLOW-COUNTER", "FALSE");
+                    $is_meeting = true;
                     break;
                 case "5":
                 case "7":
                     $vevent->AddProperty("STATUS", "CANCELLED");
                     $vevent->AddProperty("X-MICROSOFT-CDO-BUSYSTATUS", "CANCELLED");
                     $vevent->AddProperty("X-MICROSOFT-DISALLOW-COUNTER", "TRUE");
+                    $is_meeting = true;
                     break;
             }
         }
         if (isset($data->attendees) && is_array($data->attendees)) {
-            //If there are attendees, we need to set ORGANIZER
-            //Some phones doesn't send the organizeremail, so we gotto get it somewhere else.
-            //Lets use the login here ($username)
-            if (!isset($data->organizeremail)) {
-                $vevent->AddProperty("ORGANIZER", sprintf("MAILTO:%s", $this->originalUsername));
-            }
+            $is_meeting = true;
             foreach ($data->attendees as $att) {
                 if (isset($att->name)) {
                     $vevent->AddProperty("ATTENDEE", sprintf("MAILTO:%s", $att->email), array("CN" => $att->name));
@@ -1080,6 +1071,19 @@ class BackendCalDAV extends BackendDiff {
                 else {
                     $vevent->AddProperty("ATTENDEE", sprintf("MAILTO:%s", $att->email));
                 }
+            }
+        }
+        if ($is_meeting) {
+            if (isset($data->organizeremail) && isset($data->organizername)) {
+                $vevent->AddProperty("ORGANIZER", sprintf("MAILTO:%s", $data->organizeremail), array("CN" => $data->organizername));
+            }
+            elseif (isset($data->organizeremail)) {
+                $vevent->AddProperty("ORGANIZER", sprintf("MAILTO:%s", $data->organizeremail));
+            }
+            else {
+                //Some phones doesn't send the organizeremail, so we gotto get it somewhere else.
+                //Lets use the login here ($username)
+                $vevent->AddProperty("ORGANIZER", sprintf("MAILTO:%s", $data->originalUsername));
             }
         }
         if (isset($data->body)) {
