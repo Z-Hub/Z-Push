@@ -229,13 +229,17 @@ class Sync extends RequestProcessor {
 
                     // Get changes can be an empty tag as well as have value
                     // code block partly contributed by dw2412
-                    if(self::$decoder->getElementStartTag(SYNC_GETCHANGES)) {
+                    if($starttag = self::$decoder->getElementStartTag(SYNC_GETCHANGES)) {
                         $sc->AddParameter($spa, "getchanges", true);
                         if (($gc = self::$decoder->getElementContent()) !== false) {
                             $sc->AddParameter($spa, "getchanges", $gc);
                         }
-                        // read the endtag if it's there, but don't fail if it isn't
-                        self::$decoder->getElementEndTag();
+                        // read the endtag if SYNC_GETCHANGES wasn't an empty tag
+                        if ($starttag[EN_FLAGS] & EN_FLAGS_CONTENT) {
+                            if(!self::$decoder->getElementEndTag()) {
+                                return false;
+                            }
+                        }
                     }
 
                     if(self::$decoder->getElementStartTag(SYNC_WINDOWSIZE)) {
