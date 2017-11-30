@@ -1081,6 +1081,15 @@ class BackendCardDAV extends BackendDiff implements ISearchProvider {
                 elseif (in_array('cell', $tel['type'])) {
                     $message->mobilephonenumber = $tel['val'][0];
                 }
+                elseif (in_array('main', $tel['type'])) {
+                    $message->companymainphone = $tel['val'][0];
+                }
+                elseif (in_array('assistant', $tel['type'])) {
+                    $message->assistnamephonenumber = $tel['val'][0];
+                }
+                elseif (in_array('text', $tel['type'])) {
+                    $message->mms = $tel['val'][0];
+                }
                 elseif (in_array('home', $tel['type'])) {
                     if (in_array('fax', $tel['type'])) {
                         $message->homefaxnumber = $tel['val'][0];
@@ -1242,8 +1251,12 @@ class BackendCardDAV extends BackendDiff implements ISearchProvider {
             'home2phonenumber' => 'TEL;TYPE=HOME,VOICE',
             'homefaxnumber' => 'TEL;TYPE=HOME,FAX',
             'mobilephonenumber' => 'TEL;TYPE=CELL',
-            'carphonenumber' => 'TEL;TYPE=VOICE',
+            'carphonenumber' => 'TEL;TYPE=CAR',
             'pagernumber' => 'TEL;TYPE=PAGER',
+            'companymainphone' => 'TEL;TYPE=WORK,MAIN',
+            'mms' => 'TEL;TYPE=TEXT',
+            'radiophonenumber' => 'TEL;TYPE=RADIO,VOICE',
+            'assistnamephonenumber' => 'TEL;TYPE=ASSISTANT,VOICE',
             ';;businessstreet;businesscity;businessstate;businesspostalcode;businesscountry' => 'ADR;TYPE=WORK',
             ';;homestreet;homecity;homestate;homepostalcode;homecountry' => 'ADR;TYPE=HOME',
             ';;otherstreet;othercity;otherstate;otherpostalcode;othercountry' => 'ADR',
@@ -1290,7 +1303,7 @@ class BackendCardDAV extends BackendDiff implements ISearchProvider {
 
         // http://en.wikipedia.org/wiki/VCard
         // TODO: add support for v4.0
-        // not supported: anniversary, assistantname, assistnamephonenumber, children, department, officelocation, radiophonenumber, spouse, rtf
+        // not supported: anniversary, assistantname, children, department, officelocation, spouse, rtf
 
         return $data;
     }
