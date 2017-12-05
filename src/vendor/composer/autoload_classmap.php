@@ -73,6 +73,7 @@ return array(
     'InterProcessData' => $baseDir . '/lib/core/interprocessdata.php',
     'IpcMemcachedProvider' => $baseDir . '/backend/ipcmemcached/ipcmemcachedprovider.php',
     'IpcSharedMemoryProvider' => $baseDir . '/backend/ipcsharedmemory/ipcsharedmemoryprovider.php',
+    'IpcWincacheProvider' => $baseDir . '/backend/ipcwincache/ipcwincache.php',
     'ItemOperations' => $baseDir . '/lib/request/itemoperations.php',
     'KoeSignature' => $baseDir . '/lib/core/koesignatures.php',
     'KoeSignatures' => $baseDir . '/lib/core/koesignatures.php',
