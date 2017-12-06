@@ -885,7 +885,11 @@ class Utils {
      * @return boolean
      */
     public static function FixFileOwner($file) {
-        if(posix_getuid() == 0 && is_file($file)) {
+        if (!function_exists('posix_getuid')) {
+           ZLog::Write(LOGLEVEL_DEBUG, "Utils::FixeFileOwner(): Posix subsystem not available, skipping.");
+           return false;
+        }
+        if (posix_getuid() == 0 && is_file($file)) {
             $dir = dirname($file);
             $perm_dir = stat($dir);
             $perm_file = stat($file);
