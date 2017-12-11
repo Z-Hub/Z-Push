@@ -466,8 +466,8 @@ service nginx reload || true
 %attr(770,wwwrun,z-push) %dir %_localstatedir/lib/z-push
 %attr(770,wwwrun,z-push) %dir %_localstatedir/log/z-push
 %else
-%attr(750,apache,apache) %dir %_localstatedir/lib/z-push
-%attr(750,apache,apache) %dir %_localstatedir/log/z-push
+%attr(750,apache,z-push) %dir %_localstatedir/lib/z-push
+%attr(750,apache,z-push) %dir %_localstatedir/log/z-push
 %endif
 
 %_bindir/z-push-admin
@@ -483,11 +483,7 @@ service nginx reload || true
 %dir %zpush_dir/backend/caldav
 %zpush_dir/backend/caldav/
 %dir %_sysconfdir/z-push
-%if 0%{?suse_version}
-    %config(noreplace) %attr(0640,root,www) %_sysconfdir/z-push/caldav.conf.php
-%else
-    %config(noreplace) %attr(0640,root,apache) %_sysconfdir/z-push/caldav.conf.php
-%endif
+%config(noreplace) %attr(0640,root,z-push) %_sysconfdir/z-push/caldav.conf.php
 
 # CARDDAV
 %files -n %name-backend-carddav
@@ -496,11 +492,7 @@ service nginx reload || true
 %dir %zpush_dir/backend/carddav
 %zpush_dir/backend/carddav/
 %dir %_sysconfdir/z-push
-%if 0%{?suse_version}
-    %config(noreplace) %attr(0640,root,www) %_sysconfdir/z-push/carddav.conf.php
-%else
-    %config(noreplace) %attr(0640,root,apache) %_sysconfdir/z-push/carddav.conf.php
-%endif
+%config(noreplace) %attr(0640,root,z-push) %_sysconfdir/z-push/carddav.conf.php
 
 # COMBINED
 %files -n %name-backend-combined
@@ -509,11 +501,7 @@ service nginx reload || true
 %dir %zpush_dir/backend/combined
 %zpush_dir/backend/combined/
 %dir %_sysconfdir/z-push
-%if 0%{?suse_version}
-    %config(noreplace) %attr(0640,root,www) %_sysconfdir/z-push/combined.conf.php
-%else
-    %config(noreplace) %attr(0640,root,apache) %_sysconfdir/z-push/combined.conf.php
-%endif
+%config(noreplace) %attr(0640,root,z-push) %_sysconfdir/z-push/combined.conf.php
 
 # IMAP
 %files -n %name-backend-imap
@@ -522,11 +510,7 @@ service nginx reload || true
 %dir %zpush_dir/backend/imap
 %zpush_dir/backend/imap/
 %dir %_sysconfdir/z-push
-%if 0%{?suse_version}
-    %config(noreplace) %attr(0640,root,www) %_sysconfdir/z-push/imap.conf.php
-%else
-    %config(noreplace) %attr(0640,root,apache) %_sysconfdir/z-push/imap.conf.php
-%endif
+%config(noreplace) %attr(0640,root,z-push) %_sysconfdir/z-push/imap.conf.php
 
 # LDAP
 %files -n %name-backend-ldap
@@ -535,11 +519,7 @@ service nginx reload || true
 %dir %zpush_dir/backend/ldap
 %zpush_dir/backend/ldap/
 %dir %_sysconfdir/z-push
-%if 0%{?suse_version}
-    %config(noreplace) %attr(0640,root,www) %_sysconfdir/z-push/ldap.conf.php
-%else
-    %config(noreplace) %attr(0640,root,apache) %_sysconfdir/z-push/ldap.conf.php
-%endif
+%config(noreplace) %attr(0640,root,z-push) %_sysconfdir/z-push/ldap.conf.php
 
 # KOPANO
 %files -n %name-backend-kopano
@@ -548,11 +528,7 @@ service nginx reload || true
 %dir %zpush_dir/backend/kopano
 %zpush_dir/backend/kopano/
 %dir %_sysconfdir/z-push
-%if 0%{?suse_version}
-    %config(noreplace) %attr(0640,root,www) %_sysconfdir/z-push/kopano.conf.php
-%else
-    %config(noreplace) %attr(0640,root,apache) %_sysconfdir/z-push/kopano.conf.php
-%endif
+%config(noreplace) %attr(0640,root,z-push) %_sysconfdir/z-push/kopano.conf.php
 
 %files -n %name-kopano-gabsync
 %defattr(-, root, root)
@@ -560,11 +536,7 @@ service nginx reload || true
 %dir %zpush_dir/tools/gab-sync
 %zpush_dir/tools/gab-sync/
 %dir %_sysconfdir/z-push
-%if 0%{?suse_version}
-    %config(noreplace) %attr(0640,root,www) %_sysconfdir/z-push/gabsync.conf.php
-%else
-    %config(noreplace) %attr(0640,root,apache) %_sysconfdir/z-push/gabsync.conf.php
-%endif
+%config(noreplace) %attr(0640,root,z-push) %_sysconfdir/z-push/gabsync.conf.php
 %_bindir/z-push-gabsync
 %_mandir/man1/z-push-gabsync.1*
 
@@ -574,11 +546,7 @@ service nginx reload || true
 %dir %zpush_dir/tools/gab2contacts
 %zpush_dir/tools/gab2contacts/
 %dir %_sysconfdir/z-push
-%if 0%{?suse_version}
-    %config(noreplace) %attr(0640,root,www) %_sysconfdir/z-push/gab2contacts.conf.php
-%else
-    %config(noreplace) %attr(0640,root,apache) %_sysconfdir/z-push/gab2contacts.conf.php
-%endif
+%config(noreplace) %attr(0640,root,z-push) %_sysconfdir/z-push/gab2contacts.conf.php
 %_bindir/z-push-gab2contacts
 %_mandir/man1/z-push-gab2contacts.1*
 
@@ -598,11 +566,7 @@ service nginx reload || true
 %dir %zpush_dir/backend/ipcmemcached
 %zpush_dir/backend/ipcmemcached/
 %dir %_sysconfdir/z-push
-%if 0%{?suse_version}
-    %config(noreplace) %attr(0640,root,www) %_sysconfdir/z-push/memcached.conf.php
-%else
-    %config(noreplace) %attr(0640,root,apache) %_sysconfdir/z-push/memcached.conf.php
-%endif
+%config(noreplace) %attr(0640,root,z-push) %_sysconfdir/z-push/memcached.conf.php
 
 # GALSEARCH-LDAP
 %files -n %name-galsearch-ldap
@@ -611,11 +575,7 @@ service nginx reload || true
 %dir %zpush_dir/backend/searchldap
 %zpush_dir/backend/searchldap/
 %dir %_sysconfdir/z-push
-%if 0%{?suse_version}
-    %config(noreplace) %attr(0640,root,www) %_sysconfdir/z-push/galsearch-ldap.conf.php
-%else
-    %config(noreplace) %attr(0640,root,apache) %_sysconfdir/z-push/galsearch-ldap.conf.php
-%endif
+%config(noreplace) %attr(0640,root,z-push) %_sysconfdir/z-push/galsearch-ldap.conf.php
 
 # STATE-SQL
 %files -n %name-state-sql
@@ -625,11 +585,7 @@ service nginx reload || true
 %zpush_dir/backend/sqlstatemachine/
 %zpush_dir/tools/migrate-filestates-to-db.php
 %dir %_sysconfdir/z-push
-%if 0%{?suse_version}
-    %config(noreplace) %attr(0640,root,www) %_sysconfdir/z-push/state-sql.conf.php
-%else
-    %config(noreplace) %attr(0640,root,apache) %_sysconfdir/z-push/state-sql.conf.php
-%endif
+%config(noreplace) %attr(0640,root,z-push) %_sysconfdir/z-push/state-sql.conf.php
 
 # AUTODISCOVER
 %files -n %name-autodiscover
@@ -637,30 +593,23 @@ service nginx reload || true
 %dir %zpush_dir/autodiscover
 %zpush_dir/autodiscover/
 %dir %_sysconfdir/z-push
-%if 0%{?suse_version}
-    %config(noreplace) %attr(0640,root,www) %_sysconfdir/z-push/autodiscover.conf.php
-%else
-    %config(noreplace) %attr(0640,root,apache) %_sysconfdir/z-push/autodiscover.conf.php
-%endif
+    %config(noreplace) %attr(0640,root,z-push) %_sysconfdir/z-push/autodiscover.conf.php
 
 # CONFIG
 %files -n %name-config-apache
 %dir %apache_dir
 %dir %apache_dir/conf.d
-%config(noreplace) %attr(0640,root,root) %apache_dir/conf.d/z-push.conf
+%config(noreplace) %attr(0640,root,z-push) %apache_dir/conf.d/z-push.conf
 
 %files -n %name-config-apache-autodiscover
 %dir %apache_dir
 %dir %apache_dir/conf.d
-%config(noreplace) %attr(0640,root,root) %apache_dir/conf.d/z-push-autodiscover.conf
+%config(noreplace) %attr(0640,root,z-push) %apache_dir/conf.d/z-push-autodiscover.conf
 
 # NGINX CONFIG
 %files -n %name-config-nginx
 %dir %_sysconfdir/nginx
 %dir %_sysconfdir/nginx/sites-available
-%config(noreplace) %attr(0640,nginx,nginx) %_sysconfdir/nginx/sites-available/z-push.conf
-#%config(noreplace) %attr(0640,nginx,nginx) %_sysconfdir/z-push/*.php
-#%attr(750,nginx,nginx) %dir %_localstatedir/lib/z-push
-#%attr(750,nginx,nginx) %dir %_localstatedir/log/z-push
+%config(noreplace) %attr(0640,nginx,z-push) %_sysconfdir/nginx/sites-available/z-push.conf
 
 %changelog
