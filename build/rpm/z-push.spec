@@ -192,7 +192,7 @@ Group:      Productivity/Networking/Email/Utilities
 Requires:   %name-common = %version
 Requires:   memcached
 %if "%_repository" == "RHEL_6_PHP_56" || "%_repository" == "RHEL_7_PHP_56"
-Requires:   rh-php56-php-memcached
+Requires:   php56-php-pecl-memcached
 %else
 %if 0%{?suse_version}
 Requires:   php5-memcached
@@ -426,6 +426,11 @@ exit 0
 
 %post -n %name-config-nginx
 echo -e "\033[0;33mEdit %_sysconfdir/nginx/sites-available/z-push.conf, enable it and reload nginx.\n\033[0m"
+
+%post -n %name-ipc-memcached
+%if "%_repository" == "RHEL_6_PHP_56" || "%_repository" == "RHEL_7_PHP_56"
+echo -e "\033[0;33mMake sure you have remi repositories enabled.\n\033[0m"
+%endif
 
 %postun -n %name-config-apache
 %if 0%{?suse_version}
