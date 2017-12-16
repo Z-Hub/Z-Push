@@ -703,7 +703,7 @@ class BackendKopano implements IBackend, ISearchProvider {
         }
 
         mapi_setprops($mapimessage, $mapiprops);
-        mapi_message_savechanges($mapimessage);
+        mapi_savechanges($mapimessage);
         mapi_message_submitmessage($mapimessage);
         $hr = mapi_last_hresult();
 
@@ -1920,7 +1920,7 @@ class BackendKopano implements IBackend, ISearchProvider {
             ZLog::Write(LOGLEVEL_ERROR, "The store or user are not available for getting user information");
             return false;
         }
-        $user = mapi_zarafa_getuser($this->defaultstore, $this->mainUser);
+        $user = mapi_zarafa_getuser_by_name($this->defaultstore, $this->mainUser);
         if ($user != false) {
             $userinformation->Status = SYNC_SETTINGSSTATUS_USERINFO_SUCCESS;
             if (Request::GetProtocolVersion() >= 14.1) {
@@ -1936,7 +1936,7 @@ class BackendKopano implements IBackend, ISearchProvider {
             }
             return true;
         }
-        ZLog::Write(LOGLEVEL_ERROR, sprintf("Getting user information failed: mapi_zarafa_getuser(%X)", mapi_last_hresult()));
+        ZLog::Write(LOGLEVEL_ERROR, sprintf("Getting user information failed: mapi_zarafa_getuser_by_name(%X)", mapi_last_hresult()));
         return false;
     }
 
