@@ -930,7 +930,7 @@
             if (isset($msgProps[$this->props['mileage']])) $body .= "\n" . _("Mileage") . ":\t". $msgProps[$this->props['mileage']];
             $body .="\n";
 
-            $content = mapi_message_openproperty($this->message, PR_BODY);
+            $content = mapi_openproperty($this->message, PR_BODY);
             $body .= "\n". trim($content, "\0");
 
             return $body;
