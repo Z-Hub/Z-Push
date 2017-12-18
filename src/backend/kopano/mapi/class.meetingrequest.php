@@ -379,7 +379,7 @@ class Meetingrequest {
                 $recurr->createException($exception_props, $basedate, false, $recips);
             }
 
-            mapi_message_savechanges($calendaritem);
+            mapi_savechanges($calendaritem);
 
             $attach = $recurr->getExceptionAttachment($basedate);
             if ($attach) {
@@ -469,13 +469,13 @@ If it is the first time this attendee has proposed a new date/time, increment th
                 $props[$this->proptags['counter_proposal']] = false;
             }
 
-            mapi_message_setprops($calendaritem, $props);
+            mapi_setprops($calendaritem, $props);
         }
 
-        mapi_message_savechanges($calendaritem);
+        mapi_savechanges($calendaritem);
         if (isset($attach)) {
-            mapi_message_savechanges($attach);
-            mapi_message_savechanges($recurringItem);
+            mapi_savechanges($attach);
+            mapi_savechanges($recurringItem);
         }
 
         return $data;
@@ -559,7 +559,7 @@ If it is the first time this attendee has proposed a new date/time, increment th
             foreach($calendaritems as $entryid) {
                 // Open each calendar item and set the properties of the cancellation object
                 $calendaritem = mapi_msgstore_openentry($store, $entryid);
-                mapi_message_setprops($calendaritem, $messageprops);
+                mapi_setprops($calendaritem, $messageprops);
                 mapi_savechanges($calendaritem);
             }
         }
@@ -639,7 +639,7 @@ If it is the first time this attendee has proposed a new date/time, increment th
                 return false;
             } else {
                 mapi_setprops($this->message, Array(PR_PROCESSED => true));
-                mapi_message_savechanges($this->message);
+                mapi_savechanges($this->message);
             }
         }
 
@@ -881,7 +881,7 @@ If it is the first time this attendee has proposed a new date/time, increment th
                             mapi_message_modifyrecipients($calmsg, MODRECIP_ADD, $recips);
                         }
 
-                        mapi_message_savechanges($calmsg);
+                        mapi_savechanges($calmsg);
 
                         // Move the message to the wastebasket
                         $wastebasket = $this->openDefaultWastebasket();
@@ -942,7 +942,7 @@ If it is the first time this attendee has proposed a new date/time, increment th
                         } else {
                             mapi_message_modifyrecipients($new, MODRECIP_ADD, $recips);
                         }
-                        mapi_message_savechanges($new);
+                        mapi_savechanges($new);
 
                         $props = mapi_getprops($new, array(PR_ENTRYID));
                         $entryid = $props[PR_ENTRYID];
@@ -1757,7 +1757,7 @@ If it is the first time this attendee has proposed a new date/time, increment th
         $message = mapi_folder_createmessage($outbox);
         mapi_setprops($message, $props);
         mapi_message_modifyrecipients($message, MODRECIP_ADD, Array($recip));
-        mapi_message_savechanges($message);
+        mapi_savechanges($message);
         mapi_message_submitmessage($message);
     }
 
@@ -2385,7 +2385,7 @@ If it is the first time this attendee has proposed a new date/time, increment th
         // Publish updated free/busy information
         if(!$this->errorSetResource){
             for($i = 0, $len = count($resourceRecipData); $i < $len; $i++){
-                $storeProps = mapi_msgstore_getprops($resourceRecipData[$i]['store'], array(PR_MAILBOX_OWNER_ENTRYID));
+                $storeProps = mapi_getprops($resourceRecipData[$i]['store'], array(PR_MAILBOX_OWNER_ENTRYID));
                 if (isset($storeProps[PR_MAILBOX_OWNER_ENTRYID])){
                     $pub = new FreeBusyPublish($this->session, $resourceRecipData[$i]['store'], $resourceRecipData[$i]['folder'], $storeProps[PR_MAILBOX_OWNER_ENTRYID]);
                     $pub->publishFB(time() - (7 * 24 * 60 * 60), 6 * 30 * 24 * 60 * 60); // publish from one week ago, 6 months ahead
@@ -2672,7 +2672,7 @@ If it is the first time this attendee has proposed a new date/time, increment th
             }
 
             mapi_setprops($new, $newmessageprops);
-            mapi_message_savechanges($new);
+            mapi_savechanges($new);
 
             // Submit message to non-resource recipients
             mapi_message_submitmessage($new);
@@ -2693,7 +2693,7 @@ If it is the first time this attendee has proposed a new date/time, increment th
             }
 
             mapi_setprops($new, $newmessageprops);
-            mapi_message_savechanges($new);
+            mapi_savechanges($new);
 
             // Submit message to non-resource recipients
             mapi_message_submitmessage($new);

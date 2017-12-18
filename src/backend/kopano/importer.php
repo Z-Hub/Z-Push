@@ -431,10 +431,10 @@ class ImportChangesICS implements IImportChanges {
 
         if(mapi_importcontentschanges_importmessagechange($this->importer, $props, $flags, $mapimessage)) {
             $this->mapiprovider->SetMessage($mapimessage, $message);
-            mapi_message_savechanges($mapimessage);
+            mapi_savechanges($mapimessage);
 
             if (mapi_last_hresult())
-                throw new StatusException(sprintf("ImportChangesICS->ImportMessageChange('%s','%s'): Error, mapi_message_savechanges() failed: 0x%X", $id, get_class($message), mapi_last_hresult()), SYNC_STATUS_SYNCCANNOTBECOMPLETED);
+                throw new StatusException(sprintf("ImportChangesICS->ImportMessageChange('%s','%s'): Error, mapi_savechanges() failed: 0x%X", $id, get_class($message), mapi_last_hresult()), SYNC_STATUS_SYNCCANNOTBECOMPLETED);
 
             $sourcekeyprops = mapi_getprops($mapimessage, array (PR_SOURCE_KEY));
 

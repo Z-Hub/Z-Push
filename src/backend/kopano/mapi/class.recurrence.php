@@ -706,7 +706,7 @@
               $props[PR_DISPLAY_NAME] = "Exception";
               $props[PR_EXCEPTION_STARTTIME] = $this->fromGMT($this->tz, $exception_props[$this->proptags["startdate"]]);
               $props[PR_EXCEPTION_ENDTIME] = $this->fromGMT($this->tz, $exception_props[$this->proptags["duedate"]]);
-              mapi_message_setprops($attachment, $props);
+              mapi_setprops($attachment, $props);
 
             $imessage = mapi_attach_openobj($attachment, MAPI_CREATE | MAPI_MODIFY);
 
@@ -736,12 +736,12 @@
                 }
             }
 
-            mapi_message_setprops($imessage, $props);
+            mapi_setprops($imessage, $props);
 
             $this->setExceptionRecipients($imessage, $exception_recips, true);
 
-            mapi_message_savechanges($imessage);
-            mapi_message_savechanges($attachment);
+            mapi_savechanges($imessage);
+            mapi_savechanges($attachment);
         }
 
         /**
