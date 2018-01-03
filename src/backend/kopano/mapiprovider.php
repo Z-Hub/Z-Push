@@ -215,18 +215,31 @@ class MAPIProvider {
             $message->organizername = w2u($messageprops[$appointmentprops["representingname"]]);
         }
 
-        if(isset($messageprops[$appointmentprops["timezonetag"]]))
+        $appTz = false; // if the appointment has some timezone information saved on the server
+        if (!empty($messageprops[$appointmentprops["timezonetag"]])) {
             $tz = $this->getTZFromMAPIBlob($messageprops[$appointmentprops["timezonetag"]]);
+            $appTz = true;
+        }
+        elseif (!empty($messageprops[$appointmentprops["timezonedesc"]])) {
+            // Windows uses UTC in timezone description in opposite to mstzones in TimezoneUtil which uses GMT
+            $wintz = str_replace("UTC", "GMT", $messageprops[$appointmentprops["timezonedesc"]]);
+            $tz = TimezoneUtil::GetFullTZFromTZName(TimezoneUtil::GetTZNameFromWinTZ($wintz));
+            $appTz = true;
+        }
         else {
             // set server default timezone (correct timezone should be configured!)
             $tz = TimezoneUtil::GetFullTZ();
         }
-        $message->timezone = base64_encode(TimezoneUtil::GetSyncBlobFromTZ($tz));
 
         if(isset($messageprops[$appointmentprops["isrecurring"]]) && $messageprops[$appointmentprops["isrecurring"]]) {
             // Process recurrence
             $message->recurrence = new SyncRecurrence();
             $this->getRecurrence($mapimessage, $messageprops, $message, $message->recurrence, $tz);
+
+            // outlook seems to honour the timezone information contrary to other clients
+            if (Request::IsOutlook()) {
+                $message->timezone = base64_encode(TimezoneUtil::GetSyncBlobFromTZ($tz));
+            }
         }
 
         // Do attendees
@@ -341,6 +354,24 @@ class MAPIProvider {
         // If the busystatus has the value of -1, we should be interpreted as tentative (1) / ZP-581
         if (isset($message->busystatus) && $message->busystatus == -1) {
             $message->busystatus = fbTentative;
+        }
+
+        // All-day events might appear as 24h (or multiple of it) long when they start not exactly at midnight (+/- bias of the timezone)
+        if (isset($message->alldayevent) && $message->alldayevent) {
+            $localStartTime = localtime($message->starttime, 1);
+
+            // The appointment is all-day but doesn't start at midnight.
+            // If it was created in another timezone and we have that information,
+            // set the startime to the midnight of the current timezone.
+            if ($appTz && ($localStartTime['tm_hour'] || $localStartTime['tm_min'])) {
+                $duration = $message->endtime - $message->starttime;
+                ZLog::Write(LOGLEVEL_DEBUG, "MAPIProvider->getAppointment(): all-day event starting not midnight.");
+                $serverTz = TimezoneUtil::GetFullTZ();
+
+                ZLog::Write(LOGLEVEL_DEBUG, print_r($serverTz, 1));
+                $message->starttime = $this->getGMTTimeByTZ($this->getLocaltimeByTZ($message->starttime, $tz), $serverTz);
+                $message->endtime = $message->starttime + $duration;
+            }
         }
 
         return $message;
@@ -1291,6 +1322,10 @@ class MAPIProvider {
 
         if (isset($appointment->asbody)) {
             $this->setASbody($appointment->asbody, $props, $appointmentprops);
+        }
+
+        if ($tz !== false) {
+            $props[$appointmentprops["timezonetag"]] = $this->getMAPIBlobFromTZ($tz);
         }
 
         if(isset($appointment->recurrence)) {

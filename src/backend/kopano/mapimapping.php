@@ -315,6 +315,7 @@ class MAPIMapping {
             "isrecurring"           => "PT_BOOLEAN:PSETID_Appointment:0x8223",
             "recurringstate"        => "PT_BINARY:PSETID_Appointment:0x8216",
             "timezonetag"           => "PT_BINARY:PSETID_Appointment:0x8233",
+            "timezonedesc"          => "PT_STRING8:PSETID_Appointment:0x8234",
             "recurrenceend"         => "PT_SYSTIME:PSETID_Appointment:0x8236",
             "responsestatus"        => "PT_LONG:PSETID_Appointment:0x8218",
             "commonstart"           => "PT_SYSTIME:PSETID_Common:0x8516",
