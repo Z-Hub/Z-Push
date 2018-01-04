@@ -237,7 +237,7 @@ class MAPIProvider {
             $this->getRecurrence($mapimessage, $messageprops, $message, $message->recurrence, $tz);
 
             // outlook seems to honour the timezone information contrary to other clients
-            if (Request::IsOutlook()) {
+            if (empty($message->alldayevent) || Request::IsOutlook()) {
                 $message->timezone = base64_encode(TimezoneUtil::GetSyncBlobFromTZ($tz));
             }
         }
@@ -364,11 +364,9 @@ class MAPIProvider {
             // If it was created in another timezone and we have that information,
             // set the startime to the midnight of the current timezone.
             if ($appTz && ($localStartTime['tm_hour'] || $localStartTime['tm_min'])) {
-                $duration = $message->endtime - $message->starttime;
                 ZLog::Write(LOGLEVEL_DEBUG, "MAPIProvider->getAppointment(): all-day event starting not midnight.");
+                $duration = $message->endtime - $message->starttime;
                 $serverTz = TimezoneUtil::GetFullTZ();
-
-                ZLog::Write(LOGLEVEL_DEBUG, print_r($serverTz, 1));
                 $message->starttime = $this->getGMTTimeByTZ($this->getLocaltimeByTZ($message->starttime, $tz), $serverTz);
                 $message->endtime = $message->starttime + $duration;
             }
