@@ -401,7 +401,7 @@ class Meetingrequest {
                 $recurr->createException($exception_props, $basedate, false, $recips);
             }
 
-            mapi_message_savechanges($calendarItem);
+            mapi_savechanges($calendarItem);
 
             $attach = $recurr->getExceptionAttachment($basedate);
             if ($attach) {
@@ -493,13 +493,13 @@ If it is the first time this attendee has proposed a new date/time, increment th
                 $props[$this->proptags['counter_proposal']] = false;
             }
 
-            mapi_message_setprops($calendarItem, $props);
+            mapi_setprops($calendarItem, $props);
         }
 
-        mapi_message_savechanges($calendarItem);
+        mapi_savechanges($calendarItem);
         if (isset($attach)) {
-            mapi_message_savechanges($attach);
-            mapi_message_savechanges($recurringItem);
+            mapi_savechanges($attach);
+            mapi_savechanges($recurringItem);
         }
     }
 
@@ -580,7 +580,7 @@ If it is the first time this attendee has proposed a new date/time, increment th
                 }
             } else {
                 // set the properties of the cancellation object
-                mapi_message_setprops($calendarItem, $messageProps);
+                mapi_setprops($calendarItem, $messageProps);
             }
 
             mapi_savechanges($calendarItem);
@@ -655,6 +655,17 @@ If it is the first time this attendee has proposed a new date/time, increment th
         if($this->isMeetingRequest($messageprops[PR_MESSAGE_CLASS]) && $userAction == false) {
             if(isset($messageprops[PR_PROCESSED]) && $messageprops[PR_PROCESSED] == true) {
                 // if meeting request is already processed then don't do anything
+                return false;
+            }
+
+            // if correspondent calendar item is already processed then don't do anything
+            $calendarItem = $this->getCorrespondentCalendarItem();
+            $calendarItemProps = mapi_getprops($calendarItem, array(PR_PROCESSED));
+            if(isset($calendarItemProps) && $calendarItemProps[PR_PROCESSED] == true) {
+                // mark meeting-request mail as processed as well
+                mapi_setprops($this->message, Array(PR_PROCESSED => true));
+                mapi_savechanges($this->message);
+
                 return false;
             }
         }
@@ -934,7 +945,7 @@ If it is the first time this attendee has proposed a new date/time, increment th
                             mapi_message_modifyrecipients($calmsg, MODRECIP_ADD, $recips);
                         }
 
-                        mapi_message_savechanges($calmsg);
+                        mapi_savechanges($calmsg);
 
                         // Move the message to the wastebasket
                         $wastebasket = $this->openDefaultWastebasket($this->openDefaultStore());
@@ -1009,7 +1020,7 @@ If it is the first time this attendee has proposed a new date/time, increment th
                         } else {
                             mapi_message_modifyrecipients($new, MODRECIP_ADD, $recips);
                         }
-                        mapi_message_savechanges($new);
+                        mapi_savechanges($new);
 
                         $props = mapi_getprops($new, array(PR_ENTRYID));
                         $entryid = $props[PR_ENTRYID];
@@ -1293,7 +1304,7 @@ If it is the first time this attendee has proposed a new date/time, increment th
             $this->sendMeetingRequest(true, _('Canceled: '), $basedate);
 
             // save changes in the message
-            mapi_message_savechanges($this->message);
+            mapi_savechanges($this->message);
         } else {
             // cancellation of normal meeting request
             // Send the cancellation
@@ -1301,7 +1312,7 @@ If it is the first time this attendee has proposed a new date/time, increment th
             $this->sendMeetingRequest(true, _('Canceled: '));
 
             // save changes in the message
-            mapi_message_savechanges($this->message);
+            mapi_savechanges($this->message);
         }
 
         // if basedate is specified then we have already created exception of it so nothing should be done now
@@ -2002,7 +2013,7 @@ If it is the first time this attendee has proposed a new date/time, increment th
 
         mapi_setprops($message, $props);
         mapi_message_modifyrecipients($message, MODRECIP_ADD, Array($recip));
-        mapi_message_savechanges($message);
+        mapi_savechanges($message);
         mapi_message_submitmessage($message);
     }
 
@@ -2689,7 +2700,7 @@ If it is the first time this attendee has proposed a new date/time, increment th
         // Publish updated free/busy information
         if(!$this->errorSetResource){
             for($i = 0, $len = count($resourceRecipData); $i < $len; $i++){
-                $storeProps = mapi_msgstore_getprops($resourceRecipData[$i]['store'], array(PR_MAILBOX_OWNER_ENTRYID));
+                $storeProps = mapi_getprops($resourceRecipData[$i]['store'], array(PR_MAILBOX_OWNER_ENTRYID));
                 if (isset($storeProps[PR_MAILBOX_OWNER_ENTRYID])){
                     $start = time() - 7 * 24 * 60 * 60;
                     $range = strtotime("+6 month");
@@ -3033,7 +3044,7 @@ If it is the first time this attendee has proposed a new date/time, increment th
             }
 
             mapi_setprops($new, $newmessageprops);
-            mapi_message_savechanges($new);
+            mapi_savechanges($new);
 
             // Submit message to non-resource recipients
             mapi_message_submitmessage($new);
@@ -3084,7 +3095,7 @@ If it is the first time this attendee has proposed a new date/time, increment th
             }
 
             mapi_setprops($new, $newmessageprops);
-            mapi_message_savechanges($new);
+            mapi_savechanges($new);
 
             // Submit message to non-resource recipients
             mapi_message_submitmessage($new);

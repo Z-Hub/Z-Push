@@ -84,6 +84,11 @@
     define('tmrSent', 1);        // Task has been sent to multiple assignee
     define('tmrReceived', 2);    // Task Request received has multiple assignee
 
+    //Task icon index.
+    define('ICON_TASK_ASSIGNEE', 0x00000502);
+    define('ICON_TASK_DECLINE', 0x00000506);
+    define('ICON_TASK_ASSIGNER', 0x00000503);
+
     class TaskRequest {
 
         // All recipient properties
@@ -398,9 +403,21 @@
                     mapi_message_deleteattach($task, $taskAttach[PR_ATTACH_NUM]);
                 }
 
+                $ignoreProps = array(
+                    $this->props['taskstate'],
+                    $this->props['taskhistory'],
+                    $this->props['taskmode'],
+                    $this->props['taskfcreator']
+                );
+                // Ignore PR_ICON_INDEX when task request response
+                // is not received item.
+                if ($isReceivedItem === false) {
+                    $ignoreProps[] = PR_ICON_INDEX;
+                }
+
                 // We copy all properties except taskstate, taskhistory, taskmode and taskfcreator properties
                 // from $sub message to $task even also we copy all attachments from $sub to $task message.
-                mapi_copyto($sub, array(), array($this->props['taskstate'], $this->props['taskhistory'], $this->props['taskmode'], $this->props['taskfcreator']), $task);
+                mapi_copyto($sub, array(), $ignoreProps, $task);
                 $senderProps = mapi_getprops($this->message, array(
                     PR_SENDER_NAME,
                     PR_SENDER_EMAIL_ADDRESS,
@@ -494,7 +511,7 @@
                 $this->props['ownership'] => olDelegatedTask, /* Task has been assigned */
                 $this->props['taskhistory'] => thAssigned,    /* Task has been assigned */
                 PR_CONVERSATION_TOPIC => $messageprops[PR_SUBJECT],
-                PR_ICON_INDEX => 1283                        /* Task request icon*/
+                PR_ICON_INDEX => ICON_TASK_ASSIGNER         /* Task request icon*/
             ));
             $this->setLastUser();
             $this->setOwnerForAssignor();
@@ -503,8 +520,8 @@
             // Create outgoing task request message
             $outgoing = $this->createOutgoingMessage();
 
-            // No need to copy PR_SENT_* information in to outgoing message.
-            $ignoreProps = array(PR_SENT_REPRESENTING_NAME, PR_SENT_REPRESENTING_EMAIL_ADDRESS, PR_SENT_REPRESENTING_ADDRTYPE, PR_SENT_REPRESENTING_ENTRYID, PR_SENT_REPRESENTING_SEARCH_KEY);
+            // No need to copy PR_ICON_INDEX and  PR_SENT_* information in to outgoing message.
+            $ignoreProps = array(PR_ICON_INDEX, PR_SENT_REPRESENTING_NAME, PR_SENT_REPRESENTING_EMAIL_ADDRESS, PR_SENT_REPRESENTING_ADDRTYPE, PR_SENT_REPRESENTING_ENTRYID, PR_SENT_REPRESENTING_SEARCH_KEY);
             mapi_copyto($this->message, array(), $ignoreProps, $outgoing);
 
             // Make it a task request, and put it in sent items after it is sent
@@ -514,8 +531,7 @@
                 $this->props['taskmode'] => tdmtTaskReq,    /* for the recipient it's a request */
                 $this->props['updatecount'] => 1,            /* version 2 is in the attachment */
                 PR_SUBJECT_PREFIX => $prefix,
-                PR_SUBJECT => $prefix . $messageprops[PR_SUBJECT],
-                PR_ICON_INDEX => 0xFFFFFFFF,                /* show assigned icon */
+                PR_SUBJECT => $prefix . $messageprops[PR_SUBJECT]
             ));
 
             $attach = mapi_message_createattach($outgoing);
@@ -599,7 +615,7 @@
                 $taskProps[$this->props["taskfcreator"]] = false;
                 $taskProps[$this->props["ownership"]] = $isReceivedItem ? olOwnTask : olDelegatedTask;
                 $taskProps[$this->props["task_acceptance_state"]] = olTaskNotDelegated;
-                $taskProps[PR_ICON_INDEX] = 1282;
+                $taskProps[PR_ICON_INDEX] = ICON_TASK_ASSIGNEE;
 
                 mapi_setprops($task, $taskProps);
                 $this->setAssignorInRecipients($task);
@@ -851,7 +867,7 @@
 
             $message = !$this->isTaskRequest() ? $this->message : $this->getAssociatedTask(false);
 
-            $ignoreProps = array(PR_SENT_REPRESENTING_NAME, PR_SENT_REPRESENTING_EMAIL_ADDRESS, PR_SENT_REPRESENTING_ADDRTYPE, PR_SENT_REPRESENTING_ENTRYID, PR_SENT_REPRESENTING_SEARCH_KEY);
+            $ignoreProps = array(PR_ICON_INDEX, PR_SENT_REPRESENTING_NAME, PR_SENT_REPRESENTING_EMAIL_ADDRESS, PR_SENT_REPRESENTING_ADDRTYPE, PR_SENT_REPRESENTING_ENTRYID, PR_SENT_REPRESENTING_SEARCH_KEY);
 
             mapi_copyto($message, array(), $ignoreProps, $outgoing);
             mapi_copyto($message, array(), array(), $sub);
@@ -864,11 +880,14 @@
             switch($type) {
                 case tdmtTaskAcc:
                     $props[PR_MESSAGE_CLASS] = "IPM.TaskRequest.Accept";
+                    mapi_setprops($sub, array(PR_ICON_INDEX => ICON_TASK_ASSIGNER));
                     break;
                 case tdmtTaskDec:
                     $props[PR_MESSAGE_CLASS] = "IPM.TaskRequest.Decline";
+                    mapi_setprops($sub, array(PR_ICON_INDEX => ICON_TASK_DECLINE));
                     break;
                 case tdmtTaskUpd:
+                    mapi_setprops($sub, array(PR_ICON_INDEX => ICON_TASK_ASSIGNER));
                     if($messageprops[$this->props['complete']]) {
                         $props[PR_MESSAGE_CLASS] = "IPM.TaskRequest.Complete";
                     } else {
@@ -884,7 +903,6 @@
             $props[PR_SUBJECT] = $prefix . $messageprops[PR_CONVERSATION_TOPIC];
             $props[$this->props['taskmode']] = $type;
             $props[$this->props['task_assigned_time']] = time();
-            $props[PR_ICON_INDEX] = 0xFFFFFFFF;
 
             mapi_setprops($outgoing, $props);
 

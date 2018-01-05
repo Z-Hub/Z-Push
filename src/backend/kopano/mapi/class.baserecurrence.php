@@ -341,7 +341,6 @@
 
             $ret["startocc"] = $data["startmin"];
             $ret["endocc"] = $data["endmin"];
-            $readerversion = $data["readerversion"];
             $writerversion = $data["writerversion"];
 
             $data = unpack("vnumber", $rdata);

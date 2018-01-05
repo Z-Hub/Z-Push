@@ -703,7 +703,7 @@ class BackendKopano implements IBackend, ISearchProvider {
         }
 
         mapi_setprops($mapimessage, $mapiprops);
-        mapi_message_savechanges($mapimessage);
+        mapi_savechanges($mapimessage);
         mapi_message_submitmessage($mapimessage);
         $hr = mapi_last_hresult();
 
