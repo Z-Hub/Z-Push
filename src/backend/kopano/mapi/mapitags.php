@@ -830,6 +830,7 @@ define('PR_EC_DISABLED_FEATURES'                      ,mapi_prop_tag(PT_MV_TSTRI
 
 /* WA properties */
 define('PR_EC_WA_ATTACHMENT_HIDDEN_OVERRIDE'          ,mapi_prop_tag(PT_BOOLEAN,     0x67E0));
+define('PR_EC_WA_ATTACHMENT_ID'                       ,mapi_prop_tag(PT_STRING8,     0x67E1));
 
 // edkmdb, rules properties
 #define pidSpecialMin                                   0x6670
