@@ -51,8 +51,8 @@ class BackendStickyNote extends BackendDiff {
             throw new FatalException("BackendStickyNote(): Postgres extension php-pgsql not found", 0, null, LOGLEVEL_FATAL);
         }
 
-    $this->_changessinkinit = false;
-    $this->_sinkdata = 0;
+        $this->_changessinkinit = false;
+        $this->_sinkdata = 0;
     }
 
     /**
@@ -158,7 +158,7 @@ class BackendStickyNote extends BackendDiff {
     public function StatFolder($id) {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendStickyNote->StatFolder('%s')", $id));
 
-// Return the Display Name of the folder.  No parent, as there's only one.
+    // Return the Display Name of the folder.  No parent, as there's only one.
 
         $folder = array();
         $folder["mod"] = "Notes";
@@ -202,9 +202,10 @@ class BackendStickyNote extends BackendDiff {
             $this->_result = pg_query_params($this->_dbconn, "select ordinal, extract(epoch from modified)::integer from note where login=$1 and domain=$2 and deleted is false", $_param);
         }
         if (pg_result_status($this->_result) != PGSQL_TUPLES_OK) {
-            ZLog::Write(LOGLEVEL_WARN, sprintf("BackendStickyNote->GetMessageList(Failed to return a valid message list from database)"));
+            ZLog::Write(LOGLEVEL_WARN, sprintf("BackendStickyNote->GetMessageList(Failed to return a valid message list, Postgres error [%s])", pg_last_error($this->_dbconn)));
         } else {    
-            for ($_count = 0; $_count < pg_affected_rows($this->_result); $_count++) {
+	    $_affected = pg_affected_rows($this->_result);
+            for ($_count = 0; $_count < $_affected; $_count++) {
                 $message = array();
                 $message["id"] = pg_fetch_result($this->_result, $_count, 0);
                 $message["mod"] = pg_fetch_result($this->_result, $_count, 1);
@@ -224,7 +225,7 @@ class BackendStickyNote extends BackendDiff {
     public function GetMessage($folderid, $id, $contentparameters) {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendStickyNote->GetMessage('%s','%s')", $folderid,  $id));
 
-// Look up the message in the database
+        // Look up the message in the database
 
         $_params = array();
         array_push($_params, $id, $this->_user, $this->_domain);
@@ -239,7 +240,7 @@ class BackendStickyNote extends BackendDiff {
             return false;
         }
 
-// Build the packet for a StickyNote
+        // Build the packet for a StickyNote
 
         $_content = pg_fetch_result($this->_result, 0, "content");
 
@@ -252,18 +253,19 @@ class BackendStickyNote extends BackendDiff {
         unset($_content);
         $message->subject = pg_fetch_result($this->_result, 0, "subject");
         $message->lastmodified = pg_fetch_result($this->_result, 0, "changed");
-        $message->type = 'IPW.StickyNote';
+        $message->type = 'IPM.StickyNote';
         pg_free_result($this->_result);
         unset($_params);
 
-// Get categories, if any, for this note and add them to the SyncObject
+        // Get categories, if any, for this note and add them to the SyncObject
 
         $_params = array();
         array_push($_params, $id);
         $this->_result = pg_query_params($this->_dbconn, "select tag from categories where ordinal=$1", $_params);
-        if (pg_affected_rows($this->_result) > 0) {
+	$_affected = pg_affected_rows($this->_result);
+        if ($_affected > 0) {
             $_categories = array();
-            for ($_count = 0; $_count < pg_affected_rows($this->_result); $_count++) {
+            for ($_count = 0; $_count < $_affected; $_count++) {
                 $_categories[] = pg_fetch_result($this->_result, $_count, 0);
             }
             $message->categories = $_categories;
@@ -307,10 +309,11 @@ class BackendStickyNote extends BackendDiff {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendStickyNote->ChangeMessage('%s','%s')", $folderid,  $id));
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendStickyNote->ChangeMessage(Message '%s')", $message));
 
-// If we have a null ID then it's a new note; allocate an ordinal for it,
-// Then insert into the database and return the stat pointer for it.
-// If we get an ID then it's an update; perform it and return stat pointer.
-// 
+        // If we have a null ID then it's a new note; allocate an ordinal for 
+	// it. Then insert into the database and return the stat pointer for it.
+        // If we get an ID then it's an update; perform it and return stat 
+	// pointer.
+        // 
         $_contents = stream_get_contents($message->asbody->data, 1024000);
         if (!$id) {
             $this->_result = pg_query($this->_dbconn, "select nextval('ordinal')");
@@ -434,11 +437,11 @@ class BackendStickyNote extends BackendDiff {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendStickyNote->DeleteMessage('%s','%s')", $folderid,  $id));
         $_params = array();
         array_push($_params, $id, $this->_user, $this->_domain);
+        //
+        // Relation (foreign key) constraint deletes category entries when
+        // the parent is removed.
+        //
         if (defined('STICKYNOTE_REALLYDELETE')) {
-//
-// Relation (foreign key) constraint deletes category entries when
-// the parent is removed.
-//
             $this->_result = pg_query_params($this->_dbconn, "delete from note where ordinal=$1 and login=$2 and domain=$3");
             if (pg_affected_rows($this->_result) != 1) {
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendStickyNote->DeleteMessage('%s','%s' failed)", $folderid,  $id));
@@ -504,9 +507,10 @@ class BackendStickyNote extends BackendDiff {
     public function ChangesSink($timeout = 30) {
         $_notifications = array();
 
-    // Apparently this can get called before we've initialized, which in
-    // our case wouldn't matter, but for consistency return nothing if
-    // that happens - or if it gets called before the database is connected.
+        // Apparently this can get called before we've initialized, which in
+        // our case wouldn't matter, but for consistency return nothing if
+        // that happens - or if it gets called before the database is connected.
+
         if ((!$this->_changessinkinit) || ($this->_dbconn == false)) {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendStickyNote->ChangesSink - Not initialized ChangesSink, sleep and exit"));
             sleep($timeout);
