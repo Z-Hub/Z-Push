@@ -20,7 +20,6 @@
 /**
  * Defines a base exception class for all custom exceptions, so every exceptions that
  * is thrown/caught by this application should extend this base class and make use of it.
- * it removes some peculiarities between different versions of PHP and exception handling.
  *
  * Some basic function of Exception class
  * getMessage()- message of exception
@@ -32,12 +31,6 @@
  */
 class BaseException extends Exception
 {
-    /**
-     * Reference of previous exception, only used for PHP < 5.3
-     * can't use $previous here as its a private variable of parent class
-     */
-    private $_previous = null;
-
     /**
      * Base name of the file, so we don't have to use static path of the file
      */
@@ -62,36 +55,12 @@ class BaseException extends Exception
      * @param  string $displayMessage
      * @return void
      */
-    public function __construct($errorMessage, $code = 0, Exception $previous = null, $displayMessage = null) {
+    public function __construct($errorMessage, $code = 0, Exception $previous = null, $displayMessage = null)
+    {
         // assign display message
         $this->displayMessage = $displayMessage;
 
-        if (version_compare(PHP_VERSION, '5.3.0', '<')) {
-            parent::__construct($errorMessage, (int) $code);
-
-            // set previous exception
-            if(!is_null($previous)) {
-                $this->_previous = $previous;
-            }
-        } else {
-            parent::__construct($errorMessage, (int) $code, $previous);
-        }
-    }
-
-    /**
-     * Overloading of final methods to get rid of incompatibilities between different PHP versions.
-     *
-     * @param  string $method
-     * @param  array $args
-     * @return mixed
-     */
-    public function __call($method, array $args)
-    {
-        if ('getprevious' == strtolower($method)) {
-            return $this->_getPrevious();
-        }
-
-        return null;
+        parent::__construct($errorMessage, (int) $code, $previous);
     }
 
     /**
@@ -144,39 +113,6 @@ class BaseException extends Exception
         }
 
         return $this->baseFile;
-    }
-
-    /**
-     * Function will check for PHP version if it is greater than 5.3 then we can use its default implementation
-     * otherwise we have to use our own implementation of chanining functionality.
-     *
-     * @return Exception returns previous exception
-     */
-    public function _getPrevious()
-    {
-        if (version_compare(PHP_VERSION, '5.3.0', '<')) {
-            return $this->_previous;
-        } else {
-            return parent::getPrevious();
-        }
-    }
-
-    /**
-     * String representation of the exception, also handles previous exception.
-     *
-     * @return string
-     */
-    public function __toString()
-    {
-        if (version_compare(PHP_VERSION, '5.3.0', '<')) {
-            if (($e = $this->getPrevious()) !== null) {
-                return $e->__toString()
-                        . "\n\nNext "
-                        . parent::__toString();
-            }
-        }
-
-        return parent::__toString();
     }
 
     /**
