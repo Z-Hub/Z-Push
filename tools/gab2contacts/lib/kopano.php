@@ -262,7 +262,7 @@ class Kopano extends ContactWorker {
             // save the hash in the message as well
             mapi_setprops($mapimessage, array($this->mapiprops['hash'] => $contact->GetHash()));
             $mapiprovider->SetMessage($mapimessage, $contact);
-            mapi_message_savechanges($mapimessage);
+            mapi_savechanges($mapimessage);
             unset($existingByAccount[$contact->accountname]);
         }
 

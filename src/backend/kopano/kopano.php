@@ -126,7 +126,7 @@ class BackendKopano implements IBackend, ISearchProvider {
      * @return string       AS version constant
      */
     public function GetSupportedASVersion() {
-        return ZPush::ASV_14;
+        return ZPush::ASV_141;
     }
 
     /**
@@ -145,7 +145,7 @@ class BackendKopano implements IBackend, ISearchProvider {
 
         // check if we are impersonating someone
         // $defaultUser will be used for $this->defaultStore
-        if (stripos($user, self::IMPERSONATE_DELIM) !== false) {
+        if (defined('KOE_CAPABILITY_IMPERSONATE') && KOE_CAPABILITY_IMPERSONATE && stripos($user, self::IMPERSONATE_DELIM) !== false) {
             list($this->mainUser, $this->impersonateUser) = explode(self::IMPERSONATE_DELIM, strtolower($user));
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->Logon(): Impersonation active - authenticating: '%s' - impersonating '%s'", $this->mainUser, $this->impersonateUser));
             $defaultUser = $this->impersonateUser;
@@ -1074,9 +1074,9 @@ class BackendKopano implements IBackend, ISearchProvider {
     }
 
     /**
-     * Applies settings to and gets informations from the device
+     * Applies settings to and gets informations from the device.
      *
-     * @param SyncObject        $settings (SyncOOF or SyncUserInformation possible)
+     * @param SyncObject    $settings (SyncOOF, SyncUserInformation, SyncRightsManagementTemplates possible)
      *
      * @access public
      * @return SyncObject       $settings
@@ -1088,6 +1088,10 @@ class BackendKopano implements IBackend, ISearchProvider {
 
         if ($settings instanceof SyncUserInformation) {
             $this->settingsUserInformation($settings);
+        }
+
+        if ($settings instanceof SyncRightsManagementTemplates) {
+            $this->settingsRightsManagementTemplates($settings);
         }
 
         return $settings;
@@ -1225,14 +1229,15 @@ class BackendKopano implements IBackend, ISearchProvider {
      * Searches the GAB of Kopano
      * Can be overwitten globally by configuring a SearchBackend
      *
-     * @param string        $searchquery
-     * @param string        $searchrange
+     * @param string                        $searchquery        string to be searched for
+     * @param string                        $searchrange        specified searchrange
+     * @param SyncResolveRecipientsPicture  $searchpicture      limitations for picture
      *
      * @access public
-     * @return array
+     * @return array        search results
      * @throws StatusException
      */
-    public function GetGALSearchResults($searchquery, $searchrange){
+    public function GetGALSearchResults($searchquery, $searchrange, $searchpicture) {
         // only return users whose displayName or the username starts with $name
         //TODO: use PR_ANR for this restriction instead of PR_DISPLAY_NAME and PR_ACCOUNT
         $addrbook = $this->getAddressbook();
@@ -1271,7 +1276,7 @@ class BackendKopano implements IBackend, ISearchProvider {
         $querylimit = (($rangeend + 1) < $querycnt) ? ($rangeend + 1) : $querycnt;
 
         if ($querycnt > 0)
-            $abentries = mapi_table_queryrows($table, array(PR_ACCOUNT, PR_DISPLAY_NAME, PR_SMTP_ADDRESS, PR_BUSINESS_TELEPHONE_NUMBER, PR_GIVEN_NAME, PR_SURNAME, PR_MOBILE_TELEPHONE_NUMBER, PR_HOME_TELEPHONE_NUMBER, PR_TITLE, PR_COMPANY_NAME, PR_OFFICE_LOCATION), $rangestart, $querylimit);
+            $abentries = mapi_table_queryrows($table, array(PR_ENTRYID, PR_ACCOUNT, PR_DISPLAY_NAME, PR_SMTP_ADDRESS, PR_BUSINESS_TELEPHONE_NUMBER, PR_GIVEN_NAME, PR_SURNAME, PR_MOBILE_TELEPHONE_NUMBER, PR_HOME_TELEPHONE_NUMBER, PR_TITLE, PR_COMPANY_NAME, PR_OFFICE_LOCATION, PR_EMS_AB_THUMBNAIL_PHOTO), $rangestart, $querylimit);
 
         for ($i = 0; $i < $querylimit; $i++) {
             if (!isset($abentries[$i][PR_SMTP_ADDRESS])) {
@@ -1316,6 +1321,10 @@ class BackendKopano implements IBackend, ISearchProvider {
 
             if (isset($abentries[$i][PR_OFFICE_LOCATION]))
                 $items[$i][SYNC_GAL_OFFICE] = w2u($abentries[$i][PR_OFFICE_LOCATION]);
+
+            if ($searchpicture !== false && isset($abentries[$i][PR_EMS_AB_THUMBNAIL_PHOTO])) {
+                $items[$i][SYNC_GAL_PICTURE] = StringStreamWrapper::Open($abentries[$i][PR_EMS_AB_THUMBNAIL_PHOTO]);
+            }
         }
         $nrResults = count($items);
         $items['range'] = ($nrResults > 0) ? $rangestart.'-'.($nrResults - 1) : '0-0';
@@ -1911,14 +1920,48 @@ class BackendKopano implements IBackend, ISearchProvider {
             ZLog::Write(LOGLEVEL_ERROR, "The store or user are not available for getting user information");
             return false;
         }
-        $user = mapi_zarafa_getuser($this->defaultstore, $this->mainUser);
+        $user = mapi_zarafa_getuser_by_name($this->defaultstore, $this->mainUser);
         if ($user != false) {
             $userinformation->Status = SYNC_SETTINGSSTATUS_USERINFO_SUCCESS;
-            $userinformation->emailaddresses[] = $user["emailaddress"];
+            if (Request::GetProtocolVersion() >= 14.1) {
+                $account = new SyncAccount();
+                $emailaddresses = new SyncEmailAddresses();
+                $emailaddresses->smtpaddress[] = $user["emailaddress"];
+                $emailaddresses->primarysmtpaddress = $user["emailaddress"];
+                $account->emailaddresses = $emailaddresses;
+                $userinformation->accounts[] = $account;
+            }
+            else {
+                $userinformation->emailaddresses[] = $user["emailaddress"];
+            }
             return true;
         }
-        ZLog::Write(LOGLEVEL_ERROR, sprintf("Getting user information failed: mapi_zarafa_getuser(%X)", mapi_last_hresult()));
+        ZLog::Write(LOGLEVEL_ERROR, sprintf("Getting user information failed: mapi_zarafa_getuser_by_name(%X)", mapi_last_hresult()));
         return false;
+    }
+
+    /**
+     * Gets the rights management templates from the server.
+     *
+     * @param SyncObject $rmTemplates
+     *
+     * @access private
+     * @return void
+     */
+    private function settingsRightsManagementTemplates(&$rmTemplates) {
+        /* Currently there is no information rights management feature in
+         * Kopano backend, so just return the status and empty
+         * SyncRightsManagementTemplates tag.
+         * Once it's available, it would be something like:
+
+        $rmTemplate = new SyncRightsManagementTemplate();
+        $rmTemplate->id = "some-template-id-eg-guid";
+        $rmTemplate->name = "Template name";
+        $rmTemplate->description = "What does the template do. E.g. it disables forward and reply.";
+        $rmTemplates->rmtemplates[] = $rmTemplate;
+         */
+        $rmTemplates->Status = SYNC_COMMONSTATUS_IRMFEATUREDISABLED;
+        $rmTemplates->rmtemplates = array();
     }
 
     /**

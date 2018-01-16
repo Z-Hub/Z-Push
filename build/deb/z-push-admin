@@ -1,0 +1,10 @@
+#!/bin/sh
+# Wrapper script for z-push-admin.
+user=$(id -nu)
+if [ "$user" = "root" ]; then
+	su -l www-data -s /bin/sh -c "/usr/share/z-push/z-push-admin.php $*"
+elif [ "$user" = "www-data" ]; then
+	/usr/share/z-push/z-push-admin.php "$@"
+else
+	exit 1
+fi

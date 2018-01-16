@@ -1,0 +1,10 @@
+#!/bin/sh
+# Wrapper script for z-push-top.
+user=$(id -nu)
+if [ "$user" = "root" ]; then
+	su -l www-data -s /bin/sh -c "/usr/share/z-push/z-push-top.php $*"
+elif [ "$user" = "www-data" ]; then
+	/usr/share/z-push/z-push-top.php "$@"
+else
+	exit 1
+fi

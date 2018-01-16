@@ -43,7 +43,7 @@ abstract class Log {
     /**
      * @var string
      */
-    protected $pidstr = '';
+    protected $pid = '';
 
     /**
      * @var array
@@ -165,8 +165,8 @@ abstract class Log {
      * @access public
      * @return string
      */
-    public function GetPidstr() {
-        return $this->pidstr;
+    public function GetPid() {
+        return $this->pid;
     }
 
     /**
@@ -177,8 +177,8 @@ abstract class Log {
      * @access public
      * @return void
      */
-    public function SetPidstr($value) {
-        $this->pidstr = $value;
+    public function SetPid($value) {
+        $this->pid = $value;
     }
 
     /**

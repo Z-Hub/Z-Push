@@ -567,24 +567,25 @@ class BackendCombined extends Backend implements ISearchProvider {
     /**
      * Queries the LDAP backend
      *
-     * @param string        $searchquery        string to be searched for
-     * @param string        $searchrange        specified searchrange
+     * @param string                        $searchquery        string to be searched for
+     * @param string                        $searchrange        specified searchrange
+     * @param SyncResolveRecipientsPicture  $searchpicture      limitations for picture
      *
      * @access public
      * @return array        search results
+     * @throws StatusException
      */
-    public function GetGALSearchResults($searchquery, $searchrange) {
+    public function GetGALSearchResults($searchquery, $searchrange, $searchpicture) {
         ZLog::Write(LOGLEVEL_DEBUG, "Combined->GetGALSearchResults()");
         $i = $this->getSearchBackend(ISearchProvider::SEARCH_GAL);
 
         $result = false;
         if ($i !== false) {
-            $result = $this->backends[$i]->GetGALSearchResults($searchquery, $searchrange);
+            $result = $this->backends[$i]->GetGALSearchResults($searchquery, $searchrange, $searchpicture);
         }
 
         return $result;
     }
-
 
     /**
      * Searches for the emails on the server

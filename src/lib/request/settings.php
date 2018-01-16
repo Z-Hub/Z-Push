@@ -50,6 +50,7 @@ class Settings extends RequestProcessor {
         if (defined('KOE_CAPABILITY_SECONDARYCONTACTS') && KOE_CAPABILITY_SECONDARYCONTACTS)    $cap[] = "secondarycontacts";
         if (defined('KOE_CAPABILITY_SIGNATURES') && KOE_CAPABILITY_SIGNATURES)                  $cap[] = "signatures";
         if (defined('KOE_CAPABILITY_RECEIPTS') && KOE_CAPABILITY_RECEIPTS)                      $cap[] = "receipts";
+        if (defined('KOE_CAPABILITY_IMPERSONATE') && KOE_CAPABILITY_IMPERSONATE)                $cap[] = "impersonate";
 
         self::$specialHeaders = array();
         self::$specialHeaders[] = "X-Push-Capabilities: ". implode(",", $cap);
@@ -86,6 +87,9 @@ class Settings extends RequestProcessor {
             if (self::$decoder->getElementStartTag(SYNC_SETTINGS_USERINFORMATION)) {
                 $propertyName = SYNC_SETTINGS_USERINFORMATION;
             }
+            if (self::$decoder->getElementStartTag(SYNC_SETTINGS_RIGHTSMANAGEMENTINFORMATION)) {
+                $propertyName = SYNC_SETTINGS_RIGHTSMANAGEMENTINFORMATION;
+            }
             //TODO - check if it is necessary
             //no property name available - break
             if (!$propertyName)
@@ -93,7 +97,7 @@ class Settings extends RequestProcessor {
 
             //the property name is followed by either get or set
             if (self::$decoder->getElementStartTag(SYNC_SETTINGS_GET)) {
-                //get is only available for OOF and user information
+                //get is available for OOF (AS 12), user information (AS 12) and rights management (AS 14.1)
                 switch ($propertyName) {
                     case SYNC_SETTINGS_OOF:
                         $oofGet = new SyncOOF();
@@ -104,6 +108,10 @@ class Settings extends RequestProcessor {
 
                     case SYNC_SETTINGS_USERINFORMATION:
                         $userInformation = new SyncUserInformation();
+                        break;
+
+                    case SYNC_SETTINGS_RIGHTSMANAGEMENTINFORMATION:
+                        $rmTemplates = new SyncRightsManagementTemplates();
                         break;
 
                     default:
@@ -199,6 +207,20 @@ class Settings extends RequestProcessor {
                         $userInformation->Encode(self::$encoder);
                     self::$encoder->endTag(); //SYNC_SETTINGS_GET
                 self::$encoder->endTag(); //SYNC_SETTINGS_USERINFORMATION
+            }
+
+            // get rights management templates
+            if (isset($rmTemplates)) {
+                self::$backend->Settings($rmTemplates);
+                self::$encoder->startTag(SYNC_SETTINGS_RIGHTSMANAGEMENTINFORMATION);
+                    self::$encoder->startTag(SYNC_SETTINGS_STATUS);
+                    self::$encoder->content($rmTemplates->Status);
+                    self::$encoder->endTag(); //SYNC_SETTINGS_STATUS
+
+                    self::$encoder->startTag(SYNC_SETTINGS_GET);
+                        $rmTemplates->Encode(self::$encoder);
+                    self::$encoder->endTag(); //SYNC_SETTINGS_GET
+                self::$encoder->endTag(); //SYNC_SETTINGS_RIGHTSMANAGEMENTINFORMATION
             }
 
             //set out of office

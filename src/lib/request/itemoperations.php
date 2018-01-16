@@ -151,6 +151,37 @@ class ItemOperations extends RequestProcessor {
                                     return false;//SYNC_AIRSYNCBASE_BODYPREFERENCE
                             }
 
+                            if (self::$decoder->getElementStartTag(SYNC_AIRSYNCBASE_BODYPARTPREFERENCE)) {
+                                if (self::$decoder->getElementStartTag(SYNC_AIRSYNCBASE_TYPE)) {
+                                    $bpptype = self::$decoder->getElementContent();
+                                    $operation["cpo"]->BodyPartPreference($bpptype);
+                                    if (!self::$decoder->getElementEndTag()) {
+                                        return false;
+                                    }
+                                }
+
+                                if (self::$decoder->getElementStartTag(SYNC_AIRSYNCBASE_TRUNCATIONSIZE)) {
+                                    $operation["cpo"]->BodyPartPreference($bpptype)->SetTruncationSize(self::$decoder->getElementContent());
+                                    if(!self::$decoder->getElementEndTag())
+                                        return false;
+                                }
+
+                                if (self::$decoder->getElementStartTag(SYNC_AIRSYNCBASE_ALLORNONE)) {
+                                    $operation["cpo"]->BodyPartPreference($bpptype)->SetAllOrNone(self::$decoder->getElementContent());
+                                    if(!self::$decoder->getElementEndTag())
+                                        return false;
+                                }
+
+                                if (self::$decoder->getElementStartTag(SYNC_AIRSYNCBASE_PREVIEW)) {
+                                    $operation["cpo"]->BodyPartPreference($bpptype)->SetPreview(self::$decoder->getElementContent());
+                                    if(!self::$decoder->getElementEndTag())
+                                        return false;
+                                }
+
+                                if (!self::$decoder->getElementEndTag())
+                                    return false;
+                            }
+
                             if(self::$decoder->getElementStartTag(SYNC_MIMESUPPORT)) {
                                 $operation["cpo"]->SetMimeSupport(self::$decoder->getElementContent());
                                 if(!self::$decoder->getElementEndTag())
@@ -177,11 +208,27 @@ class ItemOperations extends RequestProcessor {
                                 }
                             }
 
+                            if(self::$decoder->getElementStartTag(SYNC_RIGHTSMANAGEMENT_SUPPORT)) {
+                                $operation["cpo"]->SetRmSupport(self::$decoder->getElementContent());
+                                if(!self::$decoder->getElementEndTag())
+                                    return false;
+                            }
+
                             //break if it reached the endtag
                             $e = self::$decoder->peek();
                             if($e[EN_TYPE] == EN_TYPE_ENDTAG) {
                                 self::$decoder->getElementEndTag();
                                 break;
+                            }
+                        }
+                    }
+
+                    if (self::$decoder->getElementStartTag(SYNC_RIGHTSMANAGEMENT_REMOVERIGHTSMGNTPROTECTION)) {
+                        $operation["cpo"]->SetRemoveRmProtection(true);
+                        if (($rrmp = self::$decoder->getElementContent()) !== false) {
+                            $operation["cpo"]->SetRemoveRmProtection($rrmp);
+                            if(!self::$decoder->getElementEndTag()) {
+                                return false;
                             }
                         }
                     }

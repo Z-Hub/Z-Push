@@ -1761,7 +1761,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
     /**
      * Applies settings to and gets informations from the device
      *
-     * @param SyncObject        $settings (SyncOOF or SyncUserInformation possible)
+     * @param SyncObject    $settings (SyncOOF, SyncUserInformation, SyncRightsManagementTemplates possible)
      *
      * @access public
      * @return SyncObject       $settings
@@ -1770,8 +1770,11 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
         if ($settings instanceof SyncOOF) {
             $this->settingsOOF($settings);
         }
-        else if ($settings instanceof SyncUserInformation) {
+        elseif ($settings instanceof SyncUserInformation) {
             $this->settingsUserInformation($settings);
+        }
+        elseif ($settings instanceof SyncRightsManagementTemplates) {
+            $settings->Status = SYNC_COMMONSTATUS_IRMFEATUREDISABLED;
         }
 
         return $settings;
@@ -1821,13 +1824,15 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
     /**
      * Queries the IMAP backend
      *
-     * @param string        $searchquery        string to be searched for
-     * @param string        $searchrange        specified searchrange
+     * @param string                        $searchquery        string to be searched for
+     * @param string                        $searchrange        specified searchrange
+     * @param SyncResolveRecipientsPicture  $searchpicture      limitations for picture
      *
      * @access public
      * @return array        search results
+     * @throws StatusException
      */
-    public function GetGALSearchResults($searchquery, $searchrange) {
+    public function GetGALSearchResults($searchquery, $searchrange, $searchpicture) {
         return false;
     }
 
@@ -2623,7 +2628,17 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
      */
     private function settingsUserInformation(&$userinformation) {
         $userinformation->Status = SYNC_SETTINGSSTATUS_USERINFO_SUCCESS;
-        $userinformation->emailaddresses[] = $this->username;
+        if (Request::GetProtocolVersion() >= 14.1) {
+            $account = new SyncAccount();
+            $emailaddresses = new SyncEmailAddresses();
+            $emailaddresses->smtpaddress[] = $this->username;
+            $emailaddresses->primarysmtpaddress = $this->username;
+            $account->emailaddresses = $emailaddresses;
+            $userinformation->accounts[] = $account;
+        }
+        else {
+            $userinformation->emailaddresses[] = $this->username;
+        }
         return true;
     }
 

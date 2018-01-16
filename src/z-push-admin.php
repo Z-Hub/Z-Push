@@ -915,6 +915,38 @@ class ZPushAdminCLI {
         echo "ActiveSync version:\t".($device->GetASVersion() ? $device->GetASVersion() : "unknown") ."\n";
         echo "First sync:\t\t". strftime("%Y-%m-%d %H:%M", $device->GetFirstSyncTime()) ."\n";
         echo "Last sync:\t\t". ($device->GetLastSyncTime() ? strftime("%Y-%m-%d %H:%M", $device->GetLastSyncTime()) : "never")."\n";
+
+        $filterType = (defined('SYNC_FILTERTIME_MAX') && SYNC_FILTERTIME_MAX > SYNC_FILTERTYPE_ALL) ? SYNC_FILTERTIME_MAX : SYNC_FILTERTYPE_ALL;
+        $maxDevice = $device->GetSyncFilterType();
+        if ($maxDevice !== false && $maxDevice > SYNC_FILTERTYPE_ALL && ($filterType == SYNC_FILTERTYPE_ALL || $maxDevice < $filterType)) {
+            $filterType = $maxDevice;
+        }
+        switch($filterType) {
+            case SYNC_FILTERTYPE_1DAY:
+                $filterTypeString = "1 day back";
+                break;
+            case SYNC_FILTERTYPE_3DAYS:
+                $filterTypeString = "3 days back";
+                break;
+            case SYNC_FILTERTYPE_1WEEK:
+                $filterTypeString = "1 week back";
+                break;
+            case SYNC_FILTERTYPE_2WEEKS:
+                $filterTypeString = "2 weeks back";
+                break;
+            case SYNC_FILTERTYPE_1MONTH:
+                $filterTypeString = "1 month back";
+                break;
+            case SYNC_FILTERTYPE_3MONTHS:
+                $filterTypeString = "3 months back";
+                break;
+            case SYNC_FILTERTYPE_6MONTHS:
+                $filterTypeString = "6 months back";
+                break;
+            default:
+                $filterTypeString = "unlimited";
+        }
+        echo "Sync Period:\t\t". $filterTypeString . " (".$filterType.")\n";
         echo "Total folders:\t\t". count($folders). "\n";
         echo "Short folder Ids:\t". ($device->HasFolderIdMapping() ? "Yes":"No") ."\n";
         echo "Synchronized folders:\t". $synchedFolders;
@@ -977,15 +1009,21 @@ class ZPushAdminCLI {
             echo "Kopano Outlook Extension:\n";
             echo "\tVersion:\t". $device->GetKoeVersion() ."\n";
             echo "\tBuild:\t\t". $device->GetKoeBuild() ."\n";
-            echo "\tBuild Date:\t". strftime("%Y-%m-%d %H:%M",$device->GetKoeBuildDate()) ."\n";
+            echo "\tBuild Date:\t". strftime("%Y-%m-%d %H:%M", $device->GetKoeBuildDate()) ."\n";
             echo "\tCapabilities:\t". (count($device->GetKoeCapabilities()) ? implode(',', $device->GetKoeCapabilities()) : 'unknown') ."\n";
+            echo "\tLast access:\t". ($device->GetKoeLastAccess() ? strftime("%Y-%m-%d", $device->GetKoeLastAccess()) : 'unknown') ."\n";
         }
 
         echo "Attention needed:\t";
 
-        if ($device->GetDeviceError())
+        if ($device->GetDeviceError()) {
             echo $device->GetDeviceError() ."\n";
-        else if (!isset($device->ignoredmessages) || empty($device->ignoredmessages)) {
+        }
+        // if KOE's access time is older than 7:01 h than the last successful sync it's probably inactive
+        elseif ($device->GetKoeLastAccess() && $device->GetKoeLastAccess() + 25260 < $device->GetLastSyncTime()) {
+            echo "KOE seems to be inactive on client\n";
+        }
+        if (!isset($device->ignoredmessages) || empty($device->ignoredmessages)) {
             echo "No errors known\n";
         }
         else {

@@ -35,8 +35,12 @@
     // Try to set unlimited timeout
     define('SCRIPT_TIMEOUT', 0);
 
-    // When accessing through a proxy, the "X-Forwarded-For" header contains the original remote IP
-    define('USE_X_FORWARDED_FOR_HEADER', false);
+    // Use a custom header to determinate the remote IP of a client.
+    // By default, the server provided REMOTE_ADDR is used. If the header here set
+    // is available, the provided value will be used, else REMOTE_ADDR is maintained.
+    // set to false to disable this behaviour.
+    // common values: 'HTTP_X_FORWARDED_FOR', 'HTTP_X_REAL_IP' (casing is ignored)
+    define('USE_CUSTOM_REMOTE_IP_HEADER', 'HTTP_X_REAL_IP');
 
     // When using client certificates, we can check if the login sent matches the owner of the certificate.
     // This setting specifies the owner parameter in the certificate to look at.
@@ -313,6 +317,8 @@
     define('KOE_CAPABILITY_SIGNATURES', true);
     // Delivery receipt requests
     define('KOE_CAPABILITY_RECEIPTS', true);
+    // Impersonate other users
+    define('KOE_CAPABILITY_IMPERSONATE', true);
 
     // To synchronize the GAB KOE, the GAB store and folderid need to be specified.
     // Use the gab-sync script to generate this data. The name needs to
@@ -343,6 +349,13 @@
  *                      SYNC_FOLDER_TYPE_USER_TASK
  *                      SYNC_FOLDER_TYPE_USER_MAIL
  *                      SYNC_FOLDER_TYPE_USER_NOTE
+ *      flags:      sets additional options on the shared folder. Supported are:
+ *                      DeviceManager::FLD_FLAGS_NONE
+ *                          No flags configured, default flag to be set
+ *                      DeviceManager::FLD_FLAGS_SENDASOWNER
+ *                          When replying in this folder, automatically do Send-As
+ *                      DeviceManager::FLD_FLAGS_CALENDARREMINDERS
+ *                          If set, Outlook shows reminders for these shares with KOE
  *
  *  Additional notes:
  *  - on Kopano systems use backend/kopano/listfolders.php script to get a list
@@ -370,6 +383,7 @@
             'folderid'  => "",
             'name'      => "Public Contacts",
             'type'      => SYNC_FOLDER_TYPE_USER_CONTACT,
+            'flags'     => DeviceManager::FLD_FLAGS_NONE,
         ),
 */
     );

@@ -47,16 +47,17 @@ interface ISearchProvider {
     public function SupportsType($searchtype);
 
     /**
-     * Searches the GAL
+     * Searches the GAL.
      *
-     * @param string        $searchquery
-     * @param string        $searchrange
+     * @param string                        $searchquery        string to be searched for
+     * @param string                        $searchrange        specified searchrange
+     * @param SyncResolveRecipientsPicture  $searchpicture      limitations for picture
      *
      * @access public
-     * @return array
+     * @return array        search results
      * @throws StatusException
      */
-    public function GetGALSearchResults($searchquery, $searchrange);
+    public function GetGALSearchResults($searchquery, $searchrange, $searchpicture);
 
     /**
     * Searches for the emails on the server
