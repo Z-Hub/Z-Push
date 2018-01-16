@@ -33,6 +33,7 @@ abstract class InterProcessData {
     static private $providerLoadOrder = array(
         'IpcSharedMemoryProvider' => 'backend/ipcsharedmemory/ipcsharedmemoryprovider.php',
         'IpcMemcachedProvider'    => 'backend/ipcmemcached/ipcmemcachedprovider.php',
+        'IpcWincacheProvider'     => 'backend/ipcwincache/ipcwincacheprovider.php',
     );
     static protected $devid;
     static protected $pid;
