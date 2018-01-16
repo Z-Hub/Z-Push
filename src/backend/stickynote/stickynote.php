@@ -204,7 +204,7 @@ class BackendStickyNote extends BackendDiff {
         if (pg_result_status($this->_result) != PGSQL_TUPLES_OK) {
             ZLog::Write(LOGLEVEL_WARN, sprintf("BackendStickyNote->GetMessageList(Failed to return a valid message list, Postgres error [%s])", pg_last_error($this->_dbconn)));
         } else {    
-	    $_affected = pg_affected_rows($this->_result);
+            $_affected = pg_affected_rows($this->_result);
             for ($_count = 0; $_count < $_affected; $_count++) {
                 $message = array();
                 $message["id"] = pg_fetch_result($this->_result, $_count, 0);
@@ -262,7 +262,7 @@ class BackendStickyNote extends BackendDiff {
         $_params = array();
         array_push($_params, $id);
         $this->_result = pg_query_params($this->_dbconn, "select tag from categories where ordinal=$1", $_params);
-	$_affected = pg_affected_rows($this->_result);
+        $_affected = pg_affected_rows($this->_result);
         if ($_affected > 0) {
             $_categories = array();
             for ($_count = 0; $_count < $_affected; $_count++) {
@@ -310,9 +310,9 @@ class BackendStickyNote extends BackendDiff {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendStickyNote->ChangeMessage(Message '%s')", $message));
 
         // If we have a null ID then it's a new note; allocate an ordinal for 
-	// it. Then insert into the database and return the stat pointer for it.
+        // it. Then insert into the database and return the stat pointer for it.
         // If we get an ID then it's an update; perform it and return stat 
-	// pointer.
+        // pointer.
         // 
         $_contents = stream_get_contents($message->asbody->data, 1024000);
         if (!$id) {
