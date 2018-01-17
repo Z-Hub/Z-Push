@@ -3334,7 +3334,7 @@ If it is the first time this attendee has proposed a new date/time, increment th
                  * if(message_counter < appointment_counter) meeting object is newer then meeting response (meeting is updated)
                  * if(message_counter >= appointment_counter) meeting is not updated, do normal processing
                  */
-                if(isset($calendarItemProps[$this->proptags['updatecounter']]) && isset($props[$this->proptags['updatecounter']])) {
+                if(isset($calendarItemProps[$this->proptags['updatecounter']], $props[$this->proptags['updatecounter']])) {
                     if($props[$this->proptags['updatecounter']] < $calendarItemProps[$this->proptags['updatecounter']]) {
                         $result = true;
                     }

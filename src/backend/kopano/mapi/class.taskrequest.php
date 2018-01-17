@@ -322,7 +322,7 @@
                  * if(message_counter < task_counter) task object is newer then task response (task is updated)
                  * if(message_counter >= task_counter) task is not updated, do normal processing
                  */
-                if (isset($taskItemProps[$this->props['updatecount']]) && isset($props[$this->props['updatecount']])) {
+                if (isset($taskItemProps[$this->props['updatecount']], $props[$this->props['updatecount']])) {
                     if($props[$this->props['updatecount']] < $taskItemProps[$this->props['updatecount']]) {
                         $result = true;
                     }

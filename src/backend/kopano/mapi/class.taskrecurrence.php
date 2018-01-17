@@ -329,7 +329,7 @@
                 $newItem[$this->proptags['startdate']] = $now;
 
                 // If startdate and enddate are set on task, then slide enddate according to duration
-                if (isset($this->messageprops[$this->proptags["startdate"]]) && isset($this->messageprops[$this->proptags["duedate"]])) {
+                if (isset($this->messageprops[$this->proptags["startdate"]], $this->messageprops[$this->proptags["duedate"]])) {
                     $newItem[$this->proptags['duedate']] = $newItem[$this->proptags['startdate']] + ($this->messageprops[$this->proptags["duedate"]] - $this->messageprops[$this->proptags["startdate"]]);
                 } else {
                     $newItem[$this->proptags['duedate']] = $newItem[$this->proptags['startdate']];
