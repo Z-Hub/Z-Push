@@ -364,12 +364,15 @@ class MAPIUtils {
      */
     public static function IsMessageSharedAndPrivate($folderid, $mapimessage) {
         $sensitivity = mapi_getprops($mapimessage, array(PR_SENSITIVITY));
-        $sharedUser = ZPush::GetAdditionalSyncFolderStore(bin2hex($folderid));
-        if ($sharedUser != false && $sharedUser != 'SYSTEM' && isset($sensitivity[PR_SENSITIVITY]) && $sensitivity[PR_SENSITIVITY] >= SENSITIVITY_PRIVATE) {
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("MAPIUtils->IsMessageSharedAndPrivate(): Message is in shared store '%s' and marked as private", $sharedUser));
-            return true;
+        if (isset($sensitivity[PR_SENSITIVITY]) && $sensitivity[PR_SENSITIVITY] >= SENSITIVITY_PRIVATE) {
+            $hexFolderid = bin2hex($folderid);
+            $sharedUser = ZPush::GetAdditionalSyncFolderStore($hexFolderid);
+            $shortId = ZPush::GetDeviceManager()->GetFolderIdForBackendId($hexFolderid);
+            if (substr($shortId, 0, 1) != DeviceManager::FLD_ORIGIN_USER && $sharedUser != false && $sharedUser != 'SYSTEM') {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("MAPIUtils->IsMessageSharedAndPrivate(): Message is in shared store '%s' and marked as private", $sharedUser));
+                return true;
+            }
         }
-
         return false;
     }
 
