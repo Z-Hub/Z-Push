@@ -357,7 +357,7 @@ class ZPushAdminCLI {
                     if (in_array(self::$type, array(self::TYPE_OPTION_CALENDAR, self::TYPE_OPTION_CONTACT, self::TYPE_OPTION_EMAIL, self::TYPE_OPTION_NOTE, self::TYPE_OPTION_TASK))) {
                         self::$command = self::COMMAND_ADDSHARED;
                     }
-                    if (self::$type == self::TYPE_OPTION_HIERARCHY || self::$type == self::TYPE_OPTION_GAB) {
+                    elseif (self::$type == self::TYPE_OPTION_HIERARCHY || self::$type == self::TYPE_OPTION_GAB) {
                         self::$errormessage = "'hierarchy' and 'gab' are not valid types for addshared action.";
                         return;
                     }
