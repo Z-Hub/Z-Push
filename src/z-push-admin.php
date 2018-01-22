@@ -79,6 +79,7 @@ class ZPushAdminCLI {
     const COMMAND_FIXSTATES = 10;
     const COMMAND_RESYNCHIERARCHY = 11;
     const COMMAND_ADDSHARED = 12;
+    const COMMAND_REMOVESHARED = 13;
 
     const TYPE_OPTION_EMAIL = "email";
     const TYPE_OPTION_CALENDAR = "calendar";
@@ -140,6 +141,10 @@ class ZPushAdminCLI {
                         "\t\t\t\t\t\t FOLDERID is the id of shared folder.\n" .
                         "\t\t\t\t\t\t FLAGS is optional (default: '0'). Make sure you separate -g and value with \"=\", e.g. -g=4.\n" .
                         "\t\t\t\t\t\t Possible values for FLAGS: 0(none), 1 (Send-As from this folder), 4 (show calendar reminders for this folder).\n" .
+                "\tremoveshared -u USER -d DEVICE -f FOLDERID\n" .
+                        "\t\t\t\t\t\t Removes a shared folder for a user.\n" .
+                        "\t\t\t\t\t\t USER is required. If no DEVICE is given, the shared folder will be removed from all of the devices of the user.\n" .
+                        "\t\t\t\t\t\t FOLDERID is the id of shared folder.\n" .
                 "\n";
     }
 
@@ -368,6 +373,14 @@ class ZPushAdminCLI {
                 }
                 break;
 
+            case "removeshared":
+                if (self::$user === false || self::$folderid === false) {
+                    self::$errormessage = 'USER and FOLDERID are required for removeshared command.';
+                    return;
+                }
+                self::$command = self::COMMAND_REMOVESHARED;
+                break;
+
             default:
                 self::UsageInstructions();
         }
@@ -482,6 +495,10 @@ class ZPushAdminCLI {
 
             case self::COMMAND_ADDSHARED:
                 self::CommandAddShared();
+                break;
+
+            case self::COMMAND_REMOVESHARED:
+                self::CommandRemoveShared();
                 break;
         }
         echo "\n";
@@ -757,6 +774,37 @@ class ZPushAdminCLI {
             }
             else {
                 printf("Failed adding folder '%s' for user '%s' on device '%s'. %s.\n", self::$foldername, self::$user, $devid, ZLog::GetLastMessage(LOGLEVEL_ERROR));
+            }
+        }
+
+    }
+
+    /**
+     * Command to remove a shared folder for a user.
+     *
+     * @return
+     * @access public
+     */
+    static public function CommandRemoveShared() {
+        // if no device is specified, search for all devices of a user. If user is not set, all devices are returned.
+        if (self::$device === false) {
+            $devicelist = ZPushAdmin::ListDevices(self::$user);
+            if (empty($devicelist)) {
+                echo "\tno devices/users found\n";
+                return true;
+            }
+        }
+        else {
+            $devicelist = array(self::$device);
+        }
+
+        foreach ($devicelist as $devid) {
+            $status = ZPushAdmin::AdditionalFolderRemove(self::$user, $devid, self::$folderid);
+            if ($status) {
+                printf("Successfully removed folder with id '%s' for user '%s' on device '%s'.\n", self::$folderid, self::$user, $devid);
+            }
+            else {
+                printf("Failed removing folder with id '%s' for user '%s' on device '%s'. %s.\n", self::$folderid, self::$user, $devid, ZLog::GetLastMessage(LOGLEVEL_ERROR));
             }
         }
 
