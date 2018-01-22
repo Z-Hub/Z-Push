@@ -56,7 +56,7 @@ class BackendMaildir extends BackendDiff {
      * @access public
      * @return boolean
      */
-    public function Logon($username, $domain, $password) {
+    public function Logon($username, $impersonatedUsername, $domain, $password) {
         return true;
     }
 

@@ -198,7 +198,7 @@ class FolderSync extends RequestProcessor {
                         // say that we are done with partial synching
                         self::$deviceManager->SetFolderSyncComplete(true);
                         // reset the loop data to prevent any loop detection to kick in now
-                        self::$deviceManager->ClearLoopDetectionData(Request::GetAuthUser(), Request::GetDeviceID());
+                        self::$deviceManager->ClearLoopDetectionData(Request::GetAuthUserString(), Request::GetDeviceID());
                         ZLog::Write(LOGLEVEL_INFO, "Request->HandleFolderSync(): Chunked exporting of folders completed successfully");
                     }
 

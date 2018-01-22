@@ -96,7 +96,7 @@ abstract class InterProcessData {
         if (!isset(self::$devid)) {
             self::$devid = Request::GetDeviceID();
             self::$pid = @getmypid();
-            self::$user = Request::GetAuthUser();
+            self::$user = Request::GetAuthUserString(); // we want to see everything here
             self::$start = time();
         }
         return true;

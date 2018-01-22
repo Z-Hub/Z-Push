@@ -226,7 +226,7 @@ class ZPushAutodiscover {
         // charset was sent by the client and convert it to UTF-8. See https://jira.z-hub.io/browse/ZP-864.
         $username = Utils::ConvertAuthorizationToUTF8($username);
         $password = Utils::ConvertAuthorizationToUTF8($_SERVER['PHP_AUTH_PW']);
-        if ($backend->Logon($username, "", $password) == false) {
+        if ($backend->Logon($username, false, "", $password) == false) {
             throw new AuthenticationRequiredException("Access denied. Username or password incorrect.");
         }
 
@@ -305,7 +305,7 @@ class ZPushAutodiscover {
             $username = Utils::GetLocalPartFromEmail($username);
         }
         $backend = ZPush::GetBackend();
-        if ($backend->Logon($username, "", $_SERVER['PHP_AUTH_PW']) == false) {
+        if ($backend->Logon($username, false, "", $_SERVER['PHP_AUTH_PW']) == false) {
             ZLog::Write(LOGLEVEL_ERROR, sprintf("ZPushAutodiscover->getLogin(): Login failed for user '%s' from IP %s.", $username, $_SERVER["REMOTE_ADDR"]));
             throw new AuthenticationRequiredException("Access denied. Username or password incorrect.");
         }

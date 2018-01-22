@@ -35,7 +35,7 @@ class BackendLDAP extends BackendDiff {
     private $ldap_link;
     private $user;
 
-    public function Logon($username, $domain, $password) {
+    public function Logon($username, $impersonatedUsername, $domain, $password) {
         $this->user = $username;
         $user_dn = str_replace('%u', $username, LDAP_USER_DN);
         $this->ldap_link = ldap_connect(LDAP_SERVER, LDAP_SERVER_PORT);

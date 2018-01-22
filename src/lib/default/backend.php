@@ -86,7 +86,7 @@ abstract class Backend implements IBackend {
     /*********************************************************************
      * Methods to be implemented
      *
-     * public function Logon($username, $domain, $password);
+     * public function Logon($username, $impersonatedUsername, $domain, $password);
      * public function Setup($store, $checkACLonly = false, $folderid = false, $readonly = false);
      * public function Logoff();
      * public function GetHierarchy();
@@ -182,16 +182,16 @@ abstract class Backend implements IBackend {
             if (Request::GetProtocolVersion() >= 14.1) {
                 $account = new SyncAccount();
                 $emailaddresses = new SyncEmailAddresses();
-                $emailaddresses->smtpaddress[] = ZPush::GetBackend()->GetUserDetails(Request::GetAuthUser())['emailaddress'];
-                $emailaddresses->primarysmtpaddress = ZPush::GetBackend()->GetUserDetails(Request::GetAuthUser())['emailaddress'];
+                $emailaddresses->smtpaddress[] = ZPush::GetBackend()->GetUserDetails(Request::GetUser())['emailaddress'];
+                $emailaddresses->primarysmtpaddress = ZPush::GetBackend()->GetUserDetails(Request::GetUser())['emailaddress'];
                 $account->emailaddresses = $emailaddresses;
                 $userinformation->accounts[] = $account;
             }
             else {
-                $userinformation->emailaddresses = array(ZPush::GetBackend()->GetUserDetails(Request::GetAuthUser())['emailaddress']);
+                $userinformation->emailaddresses = array(ZPush::GetBackend()->GetUserDetails(Request::GetUser())['emailaddress']);
             }
 
-            $settings->emailaddresses = array(ZPush::GetBackend()->GetUserDetails(Request::GetAuthUser())['emailaddress']);
+            $settings->emailaddresses = array(ZPush::GetBackend()->GetUserDetails(Request::GetUser())['emailaddress']);
 
         }
         if ($settings instanceof SyncRightsManagementTemplates) {
@@ -233,7 +233,7 @@ abstract class Backend implements IBackend {
      * @return Array
      */
     public function GetCurrentUsername() {
-        return $this->GetUserDetails(Request::GetAuthUser());
+        return $this->GetUserDetails(Request::GetUser());
     }
 
     /**

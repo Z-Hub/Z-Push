@@ -71,7 +71,6 @@ class BackendKopano implements IBackend, ISearchProvider {
     const FREEBUSYENUMBLOCKS = 50;
     const MAXFREEBUSYSLOTS = 32767; // max length of 32k for the MergedFreeBusy element is allowed
     const HALFHOURSECONDS = 1800;
-    const IMPERSONATE_DELIM = '+share+';
 
     /**
      * Constructor of the Kopano Backend
@@ -133,6 +132,7 @@ class BackendKopano implements IBackend, ISearchProvider {
      * Authenticates the user with the configured Kopano server
      *
      * @param string        $username
+     * @param string        $impersonatedUsername
      * @param string        $domain
      * @param string        $password
      *
@@ -140,19 +140,19 @@ class BackendKopano implements IBackend, ISearchProvider {
      * @return boolean
      * @throws AuthenticationRequiredException
      */
-    public function Logon($user, $domain, $pass) {
+    public function Logon($user, $impersonatedUsername, $domain, $pass) {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->Logon(): Trying to authenticate user '%s'..", $user));
+
+        $this->mainUser = strtolower($user);
+        $this->impersonateUser = $impersonatedUsername;
 
         // check if we are impersonating someone
         // $defaultUser will be used for $this->defaultStore
-        if (defined('KOE_CAPABILITY_IMPERSONATE') && KOE_CAPABILITY_IMPERSONATE && stripos($user, self::IMPERSONATE_DELIM) !== false) {
-            list($this->mainUser, $this->impersonateUser) = explode(self::IMPERSONATE_DELIM, strtolower($user));
+        if ($impersonatedUsername !== false) {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->Logon(): Impersonation active - authenticating: '%s' - impersonating '%s'", $this->mainUser, $this->impersonateUser));
             $defaultUser = $this->impersonateUser;
         }
         else {
-            $this->mainUser = strtolower($user);
-            $this->impersonateUser = false;
             $defaultUser = $this->mainUser;
         }
 

@@ -28,7 +28,7 @@ function create_calendar_dav($data) {
 
     if (defined('IMAP_MEETING_USE_CALDAV') && IMAP_MEETING_USE_CALDAV) {
         $caldav = new BackendCalDAV();
-        if ($caldav->Logon(Request::GetAuthUser(), Request::GetAuthDomain(), Request::GetAuthPassword())) {
+        if ($caldav->Logon(Request::GetAuthUser(), Request::GetImpersonatedUser(), Request::GetAuthDomain(), Request::GetAuthPassword())) {
             $etag = $caldav->CreateUpdateCalendar($data);
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->create_calendar_dav(): Calendar created with etag '%s' and data <%s>", $etag, $data));
             $caldav->Logoff();
@@ -48,7 +48,7 @@ function delete_calendar_dav($uid) {
     else {
         if (defined('IMAP_MEETING_USE_CALDAV') && IMAP_MEETING_USE_CALDAV) {
             $caldav = new BackendCalDAV();
-            if ($caldav->Logon(Request::GetAuthUser(), Request::GetAuthDomain(), Request::GetAuthPassword())) {
+            if ($caldav->Logon(Request::GetAuthUser(), Request::GetImpersonatedUser(), Request::GetAuthDomain(), Request::GetAuthPassword())) {
                 $events = $caldav->FindCalendar($uid);
                 if (count($events) == 1) {
                     $href = $events[0]["href"];
@@ -85,7 +85,7 @@ function update_calendar_attendee($uid, $mailto, $status) {
     else {
         if (defined('IMAP_MEETING_USE_CALDAV') && IMAP_MEETING_USE_CALDAV) {
             $caldav = new BackendCalDAV();
-            if ($caldav->Logon(Request::GetAuthUser(), Request::GetAuthDomain(), Request::GetAuthPassword())) {
+            if ($caldav->Logon(Request::GetAuthUser(), Request::GetImpersonatedUser(), Request::GetAuthDomain(), Request::GetAuthPassword())) {
                 $events = $caldav->FindCalendar($uid);
                 if (count($events) == 1) {
                     $href = $events[0]["href"];
