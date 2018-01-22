@@ -658,3 +658,21 @@ define('RSF_ELID_ENTRYID'                        ,0x0001); // variable Indicates
                                                            // that is of the type indicated by the value of the PersistID field of the PersistData structure.
 define('RSF_ELID_HEADER'                         ,0x0002); // 4 bytes Indicates that the ElementData field contains a 4-byte header value equal to 0x00000000.
 
+define('STGM_DIRECT'                             ,0x00000000);
+define('STGM_TRANSACTED'                         ,0x00010000);
+define('STGM_SIMPLE'                             ,0x08000000);
+define('STGM_READ'                               ,0x00000000);
+define('STGM_WRITE'                              ,0x00000001);
+define('STGM_READWRITE'                          ,0x00000002);
+define('STGM_SHARE_DENY_NONE'                    ,0x00000040);
+define('STGM_SHARE_DENY_READ'                    ,0x00000030);
+define('STGM_SHARE_DENY_WRITE'                   ,0x00000020);
+define('STGM_SHARE_EXCLUSIVE'                    ,0x00000010);
+define('STGM_PRIORITY'                           ,0x00040000);
+define('STGM_DELETEONRELEASE'                    ,0x04000000);
+define('STGM_NOSCRATCH'                          ,0x00100000);
+define('STGM_CREATE'                             ,0x00001000);
+define('STGM_CONVERT'                            ,0x00020000);
+define('STGM_FAILIFTHERE'                        ,0x00000000);
+define('STGM_NOSNAPSHOT'                         ,0x00200000);
+define('STGM_DIRECT_SWMR'                        ,0x00400000);

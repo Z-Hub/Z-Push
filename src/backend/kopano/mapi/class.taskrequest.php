@@ -910,7 +910,7 @@
             // edit response before sending task response.
             if ($this->taskCommentsInfo) {
                 $comments = $this->getTaskCommentsInfo();
-                $stream = mapi_openproperty($outgoing, PR_BODY, IID_IStream, 0, MAPI_CREATE | MAPI_MODIFY);
+                $stream = mapi_openproperty($outgoing, PR_BODY, IID_IStream, STGM_TRANSACTED, MAPI_CREATE | MAPI_MODIFY);
                 mapi_stream_setsize($stream, strlen($comments));
                 mapi_stream_write($stream, $comments);
                 mapi_stream_commit($stream);
