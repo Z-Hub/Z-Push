@@ -78,6 +78,7 @@ class ZPushAdminCLI {
     const COMMAND_RESYNCFOLDER = 9;
     const COMMAND_FIXSTATES = 10;
     const COMMAND_RESYNCHIERARCHY = 11;
+    const COMMAND_ADDSHARED = 12;
 
     const TYPE_OPTION_EMAIL = "email";
     const TYPE_OPTION_CALENDAR = "calendar";
@@ -94,6 +95,10 @@ class ZPushAdminCLI {
     static private $errormessage;
     static private $daysold = false;
     static private $shared = false;
+    static private $foldername = false;
+    static private $store = false;
+    static private $folderid = false;
+    static private $flags = 0;
 
     /**
      * Returns usage instructions
@@ -103,30 +108,38 @@ class ZPushAdminCLI {
      */
     static public function UsageInstructions() {
         return  "Usage:\n\tz-push-admin.php -a ACTION [options]\n\n" .
-                "Parameters:\n\t-a list/lastsync/wipe/remove/resync/clearloop/fixstates\n\t[-u] username\n\t[-d] deviceid\n" .
+                "Parameters:\n\t-a list/lastsync/wipe/remove/resync/clearloop/fixstates/addshared\n\t[-u] username\n\t[-d] deviceid\n" .
                 "\t[-t] type\tthe following types are available: '".self::TYPE_OPTION_EMAIL."', '".self::TYPE_OPTION_CALENDAR."', '".self::TYPE_OPTION_CONTACT."', '".self::TYPE_OPTION_TASK."', '".self::TYPE_OPTION_NOTE."', '".self::TYPE_OPTION_HIERARCHY."' of '".self::TYPE_OPTION_GAB."' (for KOE) or a folder id.\n" .
-                "\t[--shared|-s] n\tshow detailed information about shared folders of a user in list.\n".
+                "\t[--shared|-s]\tshow detailed information about shared folders of a user in list.\n".
                 "\t[--days-old] n\tshow or remove profiles older than n days with lastsync or remove. n must be a positive integer.\n\n".
                 "Actions:\n" .
-                "\tlist\t\t\t\t\t Lists all devices and synchronized users\n" .
-                "\tlist -u USER\t\t\t\t Lists all devices of user USER\n" .
-                "\tlist -d DEVICE\t\t\t\t Lists all users of device DEVICE\n" .
-                "\tlastsync\t\t\t\t Lists all devices and synchronized users and the last synchronization time\n" .
-                "\twipe -u USER\t\t\t\t Remote wipes all devices of user USER\n" .
-                "\twipe -d DEVICE\t\t\t\t Remote wipes device DEVICE\n" .
-                "\twipe -u USER -d DEVICE\t\t\t Remote wipes device DEVICE of user USER\n" .
-                "\tremove -u USER\t\t\t\t Removes all state data of all devices of user USER\n" .
-                "\tremove -d DEVICE\t\t\t Removes all state data of all users synchronized on device DEVICE\n" .
-                "\tremove -u USER -d DEVICE\t\t Removes all related state data of device DEVICE of user USER\n" .
-                "\tresync -u USER -d DEVICE\t\t Resynchronizes all data of device DEVICE of user USER\n" .
+                "\tlist\t\t\t\t\t Lists all devices and synchronized users.\n" .
+                "\tlist -u USER\t\t\t\t Lists all devices of user USER.\n" .
+                "\tlist -d DEVICE\t\t\t\t Lists all users of device DEVICE.\n" .
+                "\tlastsync\t\t\t\t Lists all devices and synchronized users and the last synchronization time.\n" .
+                "\twipe -u USER\t\t\t\t Remote wipes all devices of user USER.\n" .
+                "\twipe -d DEVICE\t\t\t\t Remote wipes device DEVICE.\n" .
+                "\twipe -u USER -d DEVICE\t\t\t Remote wipes device DEVICE of user USER.\n" .
+                "\tremove -u USER\t\t\t\t Removes all state data of all devices of user USER.\n" .
+                "\tremove -d DEVICE\t\t\t Removes all state data of all users synchronized on device DEVICE.\n" .
+                "\tremove -u USER -d DEVICE\t\t Removes all related state data of device DEVICE of user USER.\n" .
+                "\tresync -u USER -d DEVICE\t\t Resynchronizes all data of device DEVICE of user USER.\n" .
                 "\tresync -t TYPE \t\t\t\t Resynchronizes all folders of type (possible values above) for all devices and users.\n" .
                 "\tresync -t TYPE -u USER \t\t\t Resynchronizes all folders of type (possible values above) for the user USER.\n" .
                 "\tresync -t TYPE -u USER -d DEVICE\t Resynchronizes all folders of type (possible values above) for a specified device and user.\n" .
                 "\tresync -t FOLDERID -u USER\t\t Resynchronize the specified folder id only. The USER should be specified for better performance.\n" .
                 "\tresync -t hierarchy -u USER -d DEVICE\t Resynchronize the folder hierarchy data for an optional USER and optional DEVICE.\n" .
-                "\tclearloop\t\t\t\t Clears system wide loop detection data\n" .
-                "\tclearloop -d DEVICE -u USER\t\t Clears all loop detection data of a device DEVICE and an optional user USER\n" .
-                "\tfixstates\t\t\t\t Checks the states for integrity and fixes potential issues\n" .
+                "\tclearloop\t\t\t\t Clears system wide loop detection data.\n" .
+                "\tclearloop -d DEVICE -u USER\t\t Clears all loop detection data of a device DEVICE and an optional user USER.\n" .
+                "\tfixstates\t\t\t\t Checks the states for integrity and fixes potential issues.\n\n" .
+                "\taddshared -u USER -d DEVICE -n FOLDERNAME -o STORE -t TYPE -f FOLDERID -g FLAGS\n" .
+                        "\t\t\t\t\t\t Adds a shared folder for a user.\n" .
+                        "\t\t\t\t\t\t USER is required. If no DEVICE is given, the shared folder will be added to all of the devices of the user.\n" .
+                        "\t\t\t\t\t\t FOLDERNAME the name of the shared folder. STORE - where this folder is located, e.g. \"SYSTEM\" (for public folder) or a username.\n" .
+                        "\t\t\t\t\t\t TYPE is the folder type of the shared folder (possible values above, except 'hierarchy' and 'gab').\n" .
+                        "\t\t\t\t\t\t FOLDERID is the id of shared folder.\n" .
+                        "\t\t\t\t\t\t FLAGS is optional (default: '0'). Make sure you separate -g and value with \"=\", e.g. -g=4.\n" .
+                        "\t\t\t\t\t\t Possible values for FLAGS: 0(none), 1 (Send-As from this folder), 4 (show calendar reminders for this folder).\n" .
                 "\n";
     }
 
@@ -154,7 +167,7 @@ class ZPushAdminCLI {
         if (self::$errormessage)
             return;
 
-        $options = getopt("u:d:a:t:s", array('user:', 'device:', 'action:', 'type:', 'days-old:', 'days-ago:', 'shared'));
+        $options = getopt("u:d:a:t:sn:o:f:g::", array('user:', 'device:', 'action:', 'type:', 'days-old:', 'days-ago:', 'shared', 'foldername:', 'store', 'folderid:', 'flags::'));
 
         // get 'user'
         if (isset($options['u']) && !empty($options['u']))
@@ -196,6 +209,40 @@ class ZPushAdminCLI {
 
         if (isset($options['s']) || isset($options['shared'])) {
             self::$shared = true;
+        }
+
+        // get 'foldername'
+        if (isset($options['n']) && !empty($options['n']))
+            self::$foldername = trim($options['n']);
+        elseif (isset($options['foldername']) && !empty($options['foldername']))
+            self::$foldername = trim($options['foldername']);
+
+        // get 'store'
+        if (isset($options['o']) && !empty($options['o']))
+            self::$store = trim($options['o']);
+        elseif (isset($options['store']) && !empty($options['store']))
+            self::$store = trim($options['store']);
+
+        // get 'folderid'
+        if (isset($options['f']) && !empty($options['f']))
+            self::$folderid = trim($options['f']);
+        elseif (isset($options['folderid']) && !empty($options['folderid']))
+            self::$folderid = trim($options['folderid']);
+
+        // get 'flags'
+        if (isset($options['flags'])) {
+            $options['g'] = $options['flags'];
+        }
+
+        if (isset($options['g'])) {
+            $flags = intval($options['g']);
+            if (in_array($flags, array(DeviceManager::FLD_FLAGS_NONE, DeviceManager::FLD_FLAGS_SENDASOWNER, DeviceManager::FLD_FLAGS_CALENDARREMINDERS))) {
+                self::$flags = $flags;
+            }
+            else {
+                self::$flags = false;
+                self::$errormessage = "Possible values for FLAGS: 0(none), 1 (Send-As from this folder), 4 (show calendar reminders for this folder).\n";
+            }
         }
 
         // if type is set, it must be one of known types or a 44 or 48 byte long folder id
@@ -299,6 +346,27 @@ class ZPushAdminCLI {
                 }
                 break;
 
+            case "addshared":
+                if (self::$user === false || self::$foldername === false || self::$store === false || self::$type === false || self::$folderid === false || self::$flags === false) {
+                    if (!self::$errormessage) {
+                        self::$errormessage = 'USER, FOLDERNAME, STORE, TYPE and FOLDERID are required for addshared command.';
+                    }
+                    return;
+                }
+                else {
+                    if (in_array(self::$type, array(self::TYPE_OPTION_CALENDAR, self::TYPE_OPTION_CONTACT, self::TYPE_OPTION_EMAIL, self::TYPE_OPTION_NOTE, self::TYPE_OPTION_TASK))) {
+                        self::$command = self::COMMAND_ADDSHARED;
+                    }
+                    if (self::$type == self::TYPE_OPTION_HIERARCHY || self::$type == self::TYPE_OPTION_GAB) {
+                        self::$errormessage = "'hierarchy' and 'gab' are not valid types for addshared action.";
+                        return;
+                    }
+                    else {
+                        self::$errormessage = sprintf("Adding folder of type '%s' is not supported.", self::$type);
+                        return;
+                    }
+                }
+                break;
 
             default:
                 self::UsageInstructions();
@@ -380,29 +448,29 @@ class ZPushAdminCLI {
                 self::CommandResyncDevices();
                 break;
 
-                case self::COMMAND_RESYNCFOLDER:
-                    if (self::$device == false && self::$user == false) {
-                        echo "Are you sure you want to re-synchronize this folder type of all devices and users [y/N]: ";
-                        $confirm  =  strtolower(trim(fgets(STDIN)));
-                        if ( !($confirm === 'y' || $confirm === 'yes')) {
-                            echo "Aborted!\n";
-                            exit(1);
-                        }
+            case self::COMMAND_RESYNCFOLDER:
+                if (self::$device == false && self::$user == false) {
+                    echo "Are you sure you want to re-synchronize this folder type of all devices and users [y/N]: ";
+                    $confirm  =  strtolower(trim(fgets(STDIN)));
+                    if ( !($confirm === 'y' || $confirm === 'yes')) {
+                        echo "Aborted!\n";
+                        exit(1);
                     }
-                    self::CommandResyncFolder();
-                    break;
+                }
+                self::CommandResyncFolder();
+                break;
 
-                case self::COMMAND_RESYNCHIERARCHY:
-                    if (self::$device == false && self::$user == false) {
-                        echo "Are you sure you want to re-synchronize the hierarchy of all devices and users [y/N]: ";
-                        $confirm  =  strtolower(trim(fgets(STDIN)));
-                        if ( !($confirm === 'y' || $confirm === 'yes')) {
-                            echo "Aborted!\n";
-                            exit(1);
-                        }
+            case self::COMMAND_RESYNCHIERARCHY:
+                if (self::$device == false && self::$user == false) {
+                    echo "Are you sure you want to re-synchronize the hierarchy of all devices and users [y/N]: ";
+                    $confirm  =  strtolower(trim(fgets(STDIN)));
+                    if ( !($confirm === 'y' || $confirm === 'yes')) {
+                        echo "Aborted!\n";
+                        exit(1);
                     }
-                    self::CommandResyncHierarchy();
-                    break;
+                }
+                self::CommandResyncHierarchy();
+                break;
 
             case self::COMMAND_CLEARLOOP:
                 self::CommandClearLoopDetectionData();
@@ -412,6 +480,9 @@ class ZPushAdminCLI {
                 self::CommandFixStates();
                 break;
 
+            case self::COMMAND_ADDSHARED:
+                self::CommandAddShared();
+                break;
         }
         echo "\n";
     }
@@ -641,6 +712,54 @@ class ZPushAdminCLI {
            echo sprintf("Error: %s", ($stat)?'OK':ZLog::GetLastMessage(LOGLEVEL_WARN)). "\n";
         else
            echo sprintf("Loop detection data of device '%s' of user '%s' removed: %s", self::$device, self::$user, ($stat)?'OK':ZLog::GetLastMessage(LOGLEVEL_ERROR)). "\n";
+    }
+
+    /**
+     * Command to add a shared folder for a user.
+     *
+     * @return
+     * @access public
+     */
+    static public function CommandAddShared() {
+        // if no device is specified, search for all devices of a user. If user is not set, all devices are returned.
+        if (self::$device === false) {
+            $devicelist = ZPushAdmin::ListDevices(self::$user);
+            if (empty($devicelist)) {
+                echo "\tno devices/users found\n";
+                return true;
+            }
+        }
+        else {
+            $devicelist = array(self::$device);
+        }
+        switch (self::$type) {
+            case self::TYPE_OPTION_EMAIL:
+                $type = SYNC_FOLDER_TYPE_USER_MAIL;
+                break;
+            case self::TYPE_OPTION_CALENDAR:
+                $type = SYNC_FOLDER_TYPE_USER_APPOINTMENT;
+                break;
+            case self::TYPE_OPTION_CONTACT:
+                $type = SYNC_FOLDER_TYPE_USER_CONTACT;
+                break;
+            case self::TYPE_OPTION_TASK:
+                $type = SYNC_FOLDER_TYPE_USER_TASK;
+                break;
+            case self::TYPE_OPTION_NOTE:
+                $type = SYNC_FOLDER_TYPE_USER_NOTE;
+                break;
+        }
+
+        foreach ($devicelist as $devid) {
+            $status = ZPushAdmin::AdditionalFolderAdd(self::$user, $devid, self::$store, self::$folderid, self::$foldername, $type, self::$flags);
+            if ($status) {
+                printf("Successfully added folder '%s' for user '%s' on device '%s'.\n", self::$foldername, self::$user, $devid);
+            }
+            else {
+                printf("Failed adding folder '%s' for user '%s' on device '%s'. %s.\n", self::$foldername, self::$user, $devid, ZLog::GetLastMessage(LOGLEVEL_ERROR));
+            }
+        }
+
     }
 
     /**
