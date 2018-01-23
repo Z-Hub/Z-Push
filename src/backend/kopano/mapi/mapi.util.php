@@ -159,9 +159,8 @@ function propIsError($property, $propArray)
 {
     if (array_key_exists(mapi_prop_tag(PT_ERROR, mapi_prop_id($property)), $propArray)) {
         return $propArray[mapi_prop_tag(PT_ERROR, mapi_prop_id($property))];
-    } else {
-        return false;
     }
+    return false;
 }
 
 /******** Macro Functions for PR_DISPLAY_TYPE_EX values *********/

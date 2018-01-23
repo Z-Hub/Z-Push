@@ -79,7 +79,7 @@
 
                 $this->recur = $this->parseRecurrence($this->messageprops[$this->proptags["recurring_data"]]);
             }
-            if(isset($this->proptags["timezone_data"]) && isset($this->messageprops[$this->proptags["timezone_data"]])) {
+            if(isset($this->proptags["timezone_data"], $this->messageprops[$this->proptags["timezone_data"]])) {
                 $this->tz = $this->parseTimezone($this->messageprops[$this->proptags["timezone_data"]]);
             }
         }
@@ -581,15 +581,7 @@
                 return;
 
             // Abort if no recurrence was set
-            if(!isset($this->recur["type"]) && !isset($this->recur["subtype"])) {
-                return;
-            }
-
-            if(!isset($this->recur["start"]) && !isset($this->recur["end"])) {
-                return;
-            }
-
-            if(!isset($this->recur["startocc"]) && !isset($this->recur["endocc"])) {
+            if(!isset($this->recur["type"], $this->recur["subtype"], $this->recur["start"], $this->recur["end"], $this->recur["startocc"], $this->recur["endocc"])) {
                 return;
             }
 
@@ -808,7 +800,7 @@
                         case 3:
                             // monthly: on Nth weekday of every M month
                             // yearly: on Nth weekday of M month
-                            if(!isset($this->recur["weekdays"]) && !isset($this->recur["nday"])) {
+                            if(!isset($this->recur["weekdays"], $this->recur["nday"])) {
                                 return;
                             }
 
@@ -1172,29 +1164,28 @@
             $utcfirstoccstartdatetime = (isset($this->recur["startocc"])) ? $utcstart + (((int) $this->recur["startocc"])*60) : $utcstart;
             $utcfirstoccenddatetime = (isset($this->recur["endocc"])) ? $utcstart + (((int) $this->recur["endocc"]) * 60) : $utcstart;
 
+            $propsToSet = array();
             // update reminder time
-            mapi_setprops($this->message, Array($this->proptags["reminder_time"] => $utcfirstoccstartdatetime ));
+            $propsToSet[$this->proptags["reminder_time"]] = $utcfirstoccstartdatetime;
 
             // update first occurrence date
-            mapi_setprops($this->message, Array($this->proptags["startdate"] => $utcfirstoccstartdatetime ));
-            mapi_setprops($this->message, Array($this->proptags["duedate"] => $utcfirstoccenddatetime ));
-            mapi_setprops($this->message, Array($this->proptags["commonstart"] => $utcfirstoccstartdatetime ));
-            mapi_setprops($this->message, Array($this->proptags["commonend"] => $utcfirstoccenddatetime ));
+            $propsToSet[$this->proptags["startdate"]] = $propsToSet[$this->proptags["commonstart"]] = $utcfirstoccstartdatetime;
+            $propsToSet[$this->proptags["duedate"]] = $propsToSet[$this->proptags["commonend"]] = $utcfirstoccenddatetime;
 
             // Set Outlook properties, if it is an appointment
             if (isset($this->messageprops[$this->proptags["message_class"]]) && $this->messageprops[$this->proptags["message_class"]] == "IPM.Appointment") {
                 // update real begin and real end date
-                mapi_setprops($this->message, Array($this->proptags["startdate_recurring"] => $utcstart));
-                mapi_setprops($this->message, Array($this->proptags["enddate_recurring"] => $utcend));
+                $propsToSet[$this->proptags["startdate_recurring"]] = $utcstart;
+                $propsToSet[$this->proptags["enddate_recurring"]] = $utcend;
 
                 // recurrencetype
                 // Strange enough is the property recurrencetype, (type-0x9) and not the CDO recurrencetype
-                mapi_setprops($this->message, Array($this->proptags["recurrencetype"] => ((int) $this->recur["type"]) - 0x9));
+                $propsToSet[$this->proptags["recurrencetype"]] = ((int) $this->recur["type"]) - 0x9;
 
                 // set named prop 'side_effects' to 369, needed for Outlook to ask for single or total recurrence when deleting
-                mapi_setprops($this->message, Array($this->proptags["side_effects"] => 369));
+                $propsToSet[$this->proptags["side_effects"]] = 369;
             } else {
-                mapi_setprops($this->message, Array($this->proptags["side_effects"] => 3441));
+                $propsToSet[$this->proptags["side_effects"]] = 3441;
             }
 
             // FlagDueBy is datetime of the first reminder occurrence. Outlook gives on this time a reminder popup dialog
@@ -1221,10 +1212,11 @@
                 }
 
                 if($occ) {
-                    mapi_setprops($this->message, Array($this->proptags["flagdueby"] => $occ[$this->proptags["startdate"]] - ($reminderprops[$this->proptags["reminder_minutes"]] * 60) ));
+                    $propsToSet[$this->proptags["flagdueby"]] = $occ[$this->proptags["startdate"]] - ($reminderprops[$this->proptags["reminder_minutes"]] * 60);
                 } else {
                     // Last reminder passed, no reminders any more.
-                    mapi_setprops($this->message, Array($this->proptags["reminder"] => false, $this->proptags["flagdueby"] => 0x7ff00000));
+                    $propsToSet[$this->proptags["reminder"]] = false;
+                    $propsToSet[$this->proptags["flagdueby"]] = 0x7ff00000;
                 }
             }
 
@@ -1232,7 +1224,7 @@
             // Second item (0x08) indicates the Outlook version (see documentation at the bottom of this file for more information)
             $rdata .= pack("VCCCC", 0x00003006, 0x08, 0x30, 0x00, 0x00);
 
-            if(isset($this->recur["startocc"]) && isset($this->recur["endocc"])) {
+            if(isset($this->recur["startocc"], $this->recur["endocc"])) {
                 // Set start and endtime in minutes
                 $rdata .= pack("VV", (int) $this->recur["startocc"], (int) $this->recur["endocc"]);
             }
@@ -1355,18 +1347,21 @@
             $rdata .= pack("V", 0);
 
             // Set props
-            mapi_setprops($this->message, Array($this->proptags["recurring_data"] => $rdata, $this->proptags["recurring"] => true));
+            $propsToSet[$this->proptags["recurring_data"]] = $rdata;
+            $propsToSet[$this->proptags["recurring"]] = true;
+
             if(isset($this->tz) && $this->tz){
                 $timezone = "GMT";
-                if ($this->tz["timezone"]!=0){
+                if($this->tz["timezone"]!=0){
                     // Create user readable timezone information
                     $timezone = sprintf("(GMT %s%02d:%02d)",    (-$this->tz["timezone"]>0 ? "+" : "-"),
                                                             abs($this->tz["timezone"]/60),
                                                             abs($this->tz["timezone"]%60));
                 }
-                mapi_setprops($this->message, Array($this->proptags["timezone_data"] => $this->getTimezoneData($this->tz),
-                                                    $this->proptags["timezone"] => $timezone));
+                $propsToSet[$this->proptags["timezone_data"]] = $this->getTimezoneData($this->tz);
+                $propsToSet[$this->proptags["timezone"]] = $timezone;
             }
+            mapi_setprops($this->message, $propsToSet);
         }
 
         /**
@@ -1667,7 +1662,7 @@
                 // From here on, the dates of the occurrences are calculated in local time, so the days we're looking
                 // at are calculated from the local time dates of $start and $end
                 // TODO use one isset
-                if (isset($this->recur['regen']) && $this->recur['regen'] && isset($this->action['datecompleted'])) {
+                if(isset($this->recur['regen'], $this->action['datecompleted']) && $this->recur['regen']) {
                     $daystart = $this->dayStartOf($this->action['datecompleted']);
                 } else {
                     $daystart = $this->dayStartOf($this->recur["start"]); // start on first day of occurrence
@@ -1755,7 +1750,7 @@
                                 $this->processOccurrenceItem($items, $start, $end, $daynow, $this->recur["startocc"], $this->recur["endocc"], $this->tz, $remindersonly);
                             }
                         }
-                        else if(isset($this->recur["nday"]) && isset($this->recur["weekdays"])) { // Nth [weekday] of every N months
+                        else if(isset($this->recur["nday"], $this->recur["weekdays"])) { // Nth [weekday] of every N months
                             // Sanitize input
                             if($this->recur["weekdays"] == 0)
                                 $this->recur["weekdays"] = 1;
@@ -1826,7 +1821,7 @@
                             $daynow = $monthstart + ($monthday-1) * 24 * 60 * 60;
                             $this->processOccurrenceItem($items, $start, $end, $daynow, $this->recur["startocc"], $this->recur["endocc"], $this->tz, $remindersonly);
                         }
-                        else if(isset($this->recur["nday"]) && isset($this->recur["weekdays"])) { // Nth [weekday] in month X of every N years
+                        else if(isset($this->recur["nday"], $this->recur["weekdays"])) { // Nth [weekday] in month X of every N years
 
                             // Go the correct month
                             $monthnow = $now + $this->daysInMonth($now, $this->monthOfYear($this->recur["month"])) * 24 * 60 * 60;
