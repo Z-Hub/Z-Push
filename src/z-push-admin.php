@@ -140,7 +140,7 @@ class ZPushAdminCLI {
                         "\t\t\t\t\t\t TYPE is the folder type of the shared folder (possible values above, except 'hierarchy' and 'gab').\n" .
                         "\t\t\t\t\t\t FOLDERID is the id of shared folder.\n" .
                         "\t\t\t\t\t\t FLAGS is optional (default: '0'). Make sure you separate -g and value with \"=\", e.g. -g=4.\n" .
-                        "\t\t\t\t\t\t Possible values for FLAGS: 0(none), 1 (Send-As from this folder), 4 (show calendar reminders for this folder).\n" .
+                        "\t\t\t\t\t\t Possible values for FLAGS: 0(none), 1 (Send-As from this folder), 4 (show calendar reminders for this folder), 5 (combination of Send-as and calendar reminders).\n" .
                 "\tremoveshared -u USER -d DEVICE -f FOLDERID\n" .
                         "\t\t\t\t\t\t Removes a shared folder for a user.\n" .
                         "\t\t\t\t\t\t USER is required. If no DEVICE is given, the shared folder will be removed from all of the devices of the user.\n" .
@@ -241,12 +241,12 @@ class ZPushAdminCLI {
 
         if (isset($options['g'])) {
             $flags = intval($options['g']);
-            if (in_array($flags, array(DeviceManager::FLD_FLAGS_NONE, DeviceManager::FLD_FLAGS_SENDASOWNER, DeviceManager::FLD_FLAGS_CALENDARREMINDERS))) {
+            if ($flags == DeviceManager::FLD_FLAGS_NONE || ($flags & (DeviceManager::FLD_FLAGS_SENDASOWNER | DeviceManager::FLD_FLAGS_CALENDARREMINDERS))) {
                 self::$flags = $flags;
             }
             else {
                 self::$flags = false;
-                self::$errormessage = "Possible values for FLAGS: 0(none), 1 (Send-As from this folder), 4 (show calendar reminders for this folder).\n";
+                self::$errormessage = "Possible values for FLAGS: 0(none), 1 (Send-As from this folder), 4 (show calendar reminders for this folder), 5 (combination of Send-as and calendar reminders).\n";
             }
         }
 
@@ -738,7 +738,7 @@ class ZPushAdminCLI {
      * @access public
      */
     static public function CommandAddShared() {
-        // if no device is specified, search for all devices of a user. If user is not set, all devices are returned.
+        // If no device is specified, search for all devices of a user.
         if (self::$device === false) {
             $devicelist = ZPushAdmin::ListDevices(self::$user);
             if (empty($devicelist)) {
