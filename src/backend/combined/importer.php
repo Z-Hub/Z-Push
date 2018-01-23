@@ -163,7 +163,7 @@ class ImportChangesCombined implements IImportChanges {
         }
         else {
             $backendid = $this->backend->GetBackendId($parent);
-            $parent = $this->backend->GetBackendFolder($parent);
+            $folder->parentid = $this->backend->GetBackendFolder($parent);
         }
 
         if(!empty($this->backend->config['backends'][$backendid]['subfolder']) && $id == $backendid.$this->backend->config['delimiter'].'0') {
@@ -178,8 +178,7 @@ class ImportChangesCombined implements IImportChanges {
             }
             $id = $this->backend->GetBackendFolder($id);
         }
-
-        $this->icc = $this->backend->getBackend($backendid)->GetImporter();
+        $this->icc = $this->backend->getBackend($backendid.$this->backend->config['delimiter'].$id)->GetImporter();
         $resFolder = $this->icc->ImportFolderChange($folder);
         ZLog::Write(LOGLEVEL_DEBUG, 'ImportChangesCombined->ImportFolderChange() success');
         $folder->serverid = $backendid . $this->backend->config['delimiter'] . $resFolder->serverid;
