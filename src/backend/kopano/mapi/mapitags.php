@@ -358,6 +358,7 @@ define('PR_ACCESS'                                    ,mapi_prop_tag(PT_LONG,   
 
 define('PR_ROWID'                                     ,mapi_prop_tag(PT_LONG,        0x3000));
 define('PR_DISPLAY_NAME'                              ,mapi_prop_tag(PT_TSTRING,     0x3001));
+define('PR_DISPLAY_NAME_W'                            ,mapi_prop_tag(PT_UNICODE,     0x3001));
 define('PR_ADDRTYPE'                                  ,mapi_prop_tag(PT_TSTRING,     0x3002));
 define('PR_EMAIL_ADDRESS'                             ,mapi_prop_tag(PT_TSTRING,     0x3003));
 define('PR_COMMENT'                                   ,mapi_prop_tag(PT_TSTRING,     0x3004));
@@ -456,6 +457,7 @@ define('PR_ATTACHMENT_X400_PARAMETERS'                ,mapi_prop_tag(PT_BINARY, 
 define('PR_ATTACH_DATA_OBJ'                           ,mapi_prop_tag(PT_OBJECT,      0x3701));
 define('PR_ATTACH_DATA_BIN'                           ,mapi_prop_tag(PT_BINARY,      0x3701));
 define('PR_ATTACH_CONTENT_ID'                         ,mapi_prop_tag(PT_STRING8,     0x3712));
+define('PR_ATTACH_CONTENT_ID_W'                       ,mapi_prop_tag(PT_UNICODE,     0x3712));
 define('PR_ATTACH_CONTENT_LOCATION'                   ,mapi_prop_tag(PT_STRING8,     0x3713));
 define('PR_ATTACH_ENCODING'                           ,mapi_prop_tag(PT_BINARY,      0x3702));
 define('PR_ATTACH_EXTENSION'                          ,mapi_prop_tag(PT_TSTRING,     0x3703));
@@ -469,6 +471,7 @@ define('PR_RENDERING_POSITION'                        ,mapi_prop_tag(PT_LONG,   
 define('PR_ATTACH_TRANSPORT_NAME'                     ,mapi_prop_tag(PT_TSTRING,     0x370C));
 define('PR_ATTACH_LONG_PATHNAME'                      ,mapi_prop_tag(PT_TSTRING,     0x370D));
 define('PR_ATTACH_MIME_TAG'                           ,mapi_prop_tag(PT_TSTRING,     0x370E));
+define('PR_ATTACH_MIME_TAG_W'                         ,mapi_prop_tag(PT_UNICODE,     0x370E));
 define('PR_ATTACH_ADDITIONAL_INFO'                    ,mapi_prop_tag(PT_BINARY,      0x370F));
 define('PR_ATTACHMENT_FLAGS'                          ,mapi_prop_tag(PT_LONG,        0x7FFD));
 define('PR_ATTACHMENT_HIDDEN'                         ,mapi_prop_tag(PT_BOOLEAN,     0x7FFE));
