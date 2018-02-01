@@ -413,9 +413,7 @@ class Request {
         if (self::GetImpersonatedUser()) {
             return self::GetImpersonatedUser();
         }
-        else {
-            return self::GetAuthUser();
-        }
+        return self::GetAuthUser();
     }
 
     /**
@@ -428,9 +426,7 @@ class Request {
         if (isset(self::$authUserString)) {
             return self::$authUserString;
         }
-        else {
-            return false;
-        }
+        return false;
     }
 
     /**
@@ -443,10 +439,9 @@ class Request {
         if (isset(self::$impersontedUser)) {
             return self::$impersontedUser;
         }
-        else {
-            return false;
-        }
+        return false;
     }
+
     /**
      * Returns the authenticated user.
      *
@@ -457,9 +452,7 @@ class Request {
         if (isset(self::$authUser)) {
             return self::$authUser;
         }
-        else {
-            return false;
-        }
+        return false;
     }
 
     /**
