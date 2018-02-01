@@ -226,7 +226,7 @@ class ZPushAutodiscover {
         // charset was sent by the client and convert it to UTF-8. See https://jira.z-hub.io/browse/ZP-864.
         $username = Utils::ConvertAuthorizationToUTF8($username);
         $password = Utils::ConvertAuthorizationToUTF8($_SERVER['PHP_AUTH_PW']);
-        if ($backend->Logon($username, false, "", $password) == false) {
+        if ($backend->Logon($username, "", $password) == false) {
             throw new AuthenticationRequiredException("Access denied. Username or password incorrect.");
         }
 
