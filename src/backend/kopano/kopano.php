@@ -132,7 +132,6 @@ class BackendKopano implements IBackend, ISearchProvider {
      * Authenticates the user with the configured Kopano server
      *
      * @param string        $username
-     * @param string        $impersonatedUsername
      * @param string        $domain
      * @param string        $password
      *
@@ -140,15 +139,16 @@ class BackendKopano implements IBackend, ISearchProvider {
      * @return boolean
      * @throws AuthenticationRequiredException
      */
-    public function Logon($user, $impersonatedUsername, $domain, $pass) {
+    public function Logon($user, $domain, $pass) {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->Logon(): Trying to authenticate user '%s'..", $user));
 
         $this->mainUser = strtolower($user);
-        $this->impersonateUser = $impersonatedUsername;
+        // TODO the impersonated user should be passed directly to IBackend->Logon() - ZP-1351
+        $this->impersonateUser = Request::GetImpersonatedUser();
 
         // check if we are impersonating someone
         // $defaultUser will be used for $this->defaultStore
-        if ($impersonatedUsername !== false) {
+        if ($this->impersonateUser !== false) {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->Logon(): Impersonation active - authenticating: '%s' - impersonating '%s'", $this->mainUser, $this->impersonateUser));
             $defaultUser = $this->impersonateUser;
         }

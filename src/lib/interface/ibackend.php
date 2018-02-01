@@ -60,7 +60,6 @@ interface IBackend {
      * Authenticates the user
      *
      * @param string        $username
-     * @param string        $impersonatedUsername
      * @param string        $domain
      * @param string        $password
      *
@@ -68,7 +67,7 @@ interface IBackend {
      * @return boolean
      * @throws FatalException   e.g. some required libraries are unavailable
      */
-    public function Logon($username, $impersonatedUsername, $domain, $password);
+    public function Logon($username, $domain, $password);
 
     /**
      * Setup the backend to work on a specific store or checks ACLs there.

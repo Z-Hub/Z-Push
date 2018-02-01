@@ -78,7 +78,6 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
      * Authenticates the user
      *
      * @param string        $username
-     * @param string        $impersonatedUsername
      * @param string        $domain
      * @param string        $password
      *
@@ -86,7 +85,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
      * @return boolean
      * @throws FatalException   if php-imap module can not be found
      */
-    public function Logon($username, $impersonatedUsername, $domain, $password) {
+    public function Logon($username, $domain, $password) {
         $this->wasteID = false;
         $this->sentID = false;
         $this->server = "{" . IMAP_SERVER . ":" . IMAP_PORT . "/imap" . IMAP_OPTIONS . "}";

@@ -86,7 +86,7 @@ abstract class Backend implements IBackend {
     /*********************************************************************
      * Methods to be implemented
      *
-     * public function Logon($username, $impersonatedUsername, $domain, $password);
+     * public function Logon($username, $domain, $password);
      * public function Setup($store, $checkACLonly = false, $folderid = false, $readonly = false);
      * public function Logoff();
      * public function GetHierarchy();

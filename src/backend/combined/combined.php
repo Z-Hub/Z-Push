@@ -63,14 +63,13 @@ class BackendCombined extends Backend implements ISearchProvider {
      * Authenticates the user on each backend
      *
      * @param string        $username
-     * @param string        $impersonatedUsername
      * @param string        $domain
      * @param string        $password
      *
      * @access public
      * @return boolean
      */
-    public function Logon($username, $impersonatedUsername, $domain, $password) {
+    public function Logon($username, $domain, $password) {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("Combined->Logon('%s', '%s',***))", $username, $domain));
         if(!is_array($this->backends)){
             return false;
@@ -91,8 +90,7 @@ class BackendCombined extends Backend implements ISearchProvider {
                 if(isset($this->config['backends'][$i]['users'][$username]['domain']))
                     $d = $this->config['backends'][$i]['users'][$username]['domain'];
             }
-            // TODO: impersonation is not supported by Combined
-            if($this->backends[$i]->Logon($u, false, $d, $p) == false){
+            if($this->backends[$i]->Logon($u, $d, $p) == false){
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("Combined->Logon() failed on %s ", $this->config['backends'][$i]['name']));
                 return false;
             }

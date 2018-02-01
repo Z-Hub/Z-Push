@@ -65,7 +65,7 @@ abstract class RequestProcessor {
         }
 
         $backend = ZPush::GetBackend();
-        if($backend->Logon(Request::GetAuthUser(), Request::GetImpersonatedUser(), Request::GetAuthDomain(), Request::GetAuthPassword()) == false)
+        if($backend->Logon(Request::GetAuthUser(), Request::GetAuthDomain(), Request::GetAuthPassword()) == false)
             throw new AuthenticationRequiredException("Access denied. Username or password incorrect");
 
         // mark this request as "authenticated"
