@@ -70,7 +70,7 @@ class Request {
     static private $authUser;
     static private $authDomain;
     static private $authPassword;
-    static private $impersontedUser;
+    static private $impersonatedUser;
     static private $asProtocolVersion;
     static private $policykey;
     static private $useragent;
@@ -190,7 +190,7 @@ class Request {
         self::$authUser = self::$authUserString; // auth will fail when impersonating & KOE_CAPABILITY_IMPERSONATE is disabled
 
         if (defined('KOE_CAPABILITY_IMPERSONATE') && KOE_CAPABILITY_IMPERSONATE && stripos(self::$authUserString, self::IMPERSONATE_DELIM) !== false) {
-            list(self::$authUser, self::$impersontedUser) = explode(self::IMPERSONATE_DELIM, strtolower(self::$authUserString));
+            list(self::$authUser, self::$impersonatedUser) = explode(self::IMPERSONATE_DELIM, strtolower(self::$authUserString));
         }
 
         if(defined('USE_FULLEMAIL_FOR_LOGIN') && ! USE_FULLEMAIL_FOR_LOGIN) {
@@ -430,14 +430,14 @@ class Request {
     }
 
     /**
-     * Returns the impersonated user. If not availabe, returns false.
+     * Returns the impersonated user. If not available, returns false.
      *
      * @access public
      * @return string/boolean       false if not available
      */
     static public function GetImpersonatedUser() {
-        if (isset(self::$impersontedUser)) {
-            return self::$impersontedUser;
+        if (isset(self::$impersonatedUser)) {
+            return self::$impersonatedUser;
         }
         return false;
     }
