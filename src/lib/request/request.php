@@ -27,6 +27,7 @@
 class Request {
     const MAXMEMORYUSAGE = 0.9;     // use max. 90% of allowed memory when synching
     const UNKNOWN = "unknown";
+    const IMPERSONATE_DELIM = '#';
 
     /**
      * self::filterEvilInput() options
@@ -65,9 +66,11 @@ class Request {
     static private $getUser;
     static private $devid;
     static private $devtype;
+    static private $authUserString;
     static private $authUser;
     static private $authDomain;
     static private $authPassword;
+    static private $impersonatedUser;
     static private $asProtocolVersion;
     static private $policykey;
     static private $useragent;
@@ -179,9 +182,17 @@ class Request {
         // authUser & authPassword are unfiltered!
         // split username & domain if received as one
         if (isset($_SERVER['PHP_AUTH_USER'])) {
-            list(self::$authUser, self::$authDomain) = Utils::SplitDomainUser($_SERVER['PHP_AUTH_USER']);
+            list(self::$authUserString, self::$authDomain) = Utils::SplitDomainUser($_SERVER['PHP_AUTH_USER']);
             self::$authPassword = (isset($_SERVER['PHP_AUTH_PW']))?$_SERVER['PHP_AUTH_PW'] : "";
         }
+
+        // process impersonation
+        self::$authUser = self::$authUserString; // auth will fail when impersonating & KOE_CAPABILITY_IMPERSONATE is disabled
+
+        if (defined('KOE_CAPABILITY_IMPERSONATE') && KOE_CAPABILITY_IMPERSONATE && stripos(self::$authUserString, self::IMPERSONATE_DELIM) !== false) {
+            list(self::$authUser, self::$impersonatedUser) = explode(self::IMPERSONATE_DELIM, strtolower(self::$authUserString));
+        }
+
         if(defined('USE_FULLEMAIL_FOR_LOGIN') && ! USE_FULLEMAIL_FOR_LOGIN) {
             self::$authUser = Utils::GetLocalPartFromEmail(self::$authUser);
         }
@@ -391,16 +402,57 @@ class Request {
     }
 
     /**
-     * Returns the authenticated user
+     * Returns user that is synchronizing data.
+     * If impersonation is active it returns the impersonated user,
+     * else the auth user.
+     *
+     * @access public
+     * @return string/boolean       false if not available
+     */
+    static public function GetUser() {
+        if (self::GetImpersonatedUser()) {
+            return self::GetImpersonatedUser();
+        }
+        return self::GetAuthUser();
+    }
+
+    /**
+     * Returns the AuthUser string send by the client.
+     *
+     * @access public
+     * @return string/boolean       false if not available
+     */
+    static public function GetAuthUserString() {
+        if (isset(self::$authUserString)) {
+            return self::$authUserString;
+        }
+        return false;
+    }
+
+    /**
+     * Returns the impersonated user. If not available, returns false.
+     *
+     * @access public
+     * @return string/boolean       false if not available
+     */
+    static public function GetImpersonatedUser() {
+        if (isset(self::$impersonatedUser)) {
+            return self::$impersonatedUser;
+        }
+        return false;
+    }
+
+    /**
+     * Returns the authenticated user.
      *
      * @access public
      * @return string/boolean       false if not available
      */
     static public function GetAuthUser() {
-        if (isset(self::$authUser))
+        if (isset(self::$authUser)) {
             return self::$authUser;
-        else
-            return false;
+        }
+        return false;
     }
 
     /**

@@ -310,7 +310,7 @@ class MAPIProvider {
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("MAPIProvider->getAppointment: adding ourself as an attendee for iOS6 workaround"));
                 $attendee = new SyncAttendee();
 
-                $meinfo = mapi_zarafa_getuser_by_name($this->store, Request::GetAuthUser());
+                $meinfo = mapi_zarafa_getuser_by_name($this->store, Request::GetUser());
 
                 if (is_array($meinfo)) {
                     $attendee->email = w2u($meinfo["emailaddress"]);
@@ -327,7 +327,7 @@ class MAPIProvider {
         // the user is the owner or it will not work properly with android devices
         // @see https://jira.z-hub.io/browse/ZP-1020
         if(isset($messageprops[$appointmentprops["meetingstatus"]]) && $messageprops[$appointmentprops["meetingstatus"]] == olNonMeeting && empty($message->attendees)) {
-            $meinfo = mapi_zarafa_getuser_by_name($this->store, Request::GetAuthUser());
+            $meinfo = mapi_zarafa_getuser_by_name($this->store, Request::GetUser());
 
             if (is_array($meinfo)) {
                 $message->organizeremail = w2u($meinfo["emailaddress"]);
@@ -1467,8 +1467,8 @@ class MAPIProvider {
             $props[$appointmentprops["representingentryid"]] = $storeProps[PR_MAILBOX_OWNER_ENTRYID];
             $displayname = $this->getFullnameFromEntryID($storeProps[PR_MAILBOX_OWNER_ENTRYID]);
 
-            $props[$appointmentprops["representingname"]] = ($displayname !== false) ? $displayname : Request::GetAuthUser();
-            $props[$appointmentprops["sentrepresentingemail"]] = Request::GetAuthUser();
+            $props[$appointmentprops["representingname"]] = ($displayname !== false) ? $displayname : Request::GetUser();
+            $props[$appointmentprops["sentrepresentingemail"]] = Request::GetUser();
             $props[$appointmentprops["sentrepresentingaddt"]] = "ZARAFA";
             $props[$appointmentprops["sentrepresentinsrchk"]] = $props[$appointmentprops["sentrepresentingaddt"]].":".$props[$appointmentprops["sentrepresentingemail"]];
 
@@ -1742,7 +1742,7 @@ class MAPIProvider {
         $p = array( $taskprops["owner"]);
         $owner = $this->getProps($mapimessage, $p);
         if (!isset($owner[$taskprops["owner"]])) {
-            $userinfo = mapi_zarafa_getuser_by_name($this->store, Request::GetAuthUser());
+            $userinfo = mapi_zarafa_getuser_by_name($this->store, Request::GetUser());
             if(mapi_last_hresult() == NOERROR && isset($userinfo["fullname"])) {
                 $props[$taskprops["owner"]] = $userinfo["fullname"];
             }

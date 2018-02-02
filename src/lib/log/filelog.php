@@ -50,6 +50,7 @@ class FileLog extends Log {
             else {
                 $this->setLogToUserFile(
                         preg_replace('/[^a-z0-9]/', '_', strtolower($this->GetAuthUser())) .'-'.
+                        (($this->GetAuthUser() != $this->GetUser()) ? preg_replace('/[^a-z0-9]/', '_', strtolower($this->GetUser())) .'-' : '') .
                         preg_replace('/[^a-z0-9]/', '_', strtolower($this->GetDevid())) .
                         '.log'
                         );
@@ -84,7 +85,13 @@ class FileLog extends Log {
         $log = Utils::GetFormattedTime() .' ['. str_pad($this->GetPid(),5," ",STR_PAD_LEFT) .'] '. $this->GetLogLevelString($loglevel, $loglevel >= LOGLEVEL_INFO);
 
         if ($includeUserDevice) {
-            $log .= ' '. $this->GetUser();
+            // when the users differ, we need to log both
+            if ($this->GetUser() != $this->GetAuthUser()) {
+                $log .= ' ['. $this->GetAuthUser() . Request::IMPERSONATE_DELIM . $this->GetUser() .']';
+            }
+            else {
+                $log .= ' ['. $this->GetUser() .']';
+            }
         }
         if ($includeUserDevice && (LOGLEVEL >= LOGLEVEL_DEVICEID || (LOGUSERLEVEL >= LOGLEVEL_DEVICEID && $this->IsAuthUserInSpecialLogUsers()))) {
             $log .= ' ['. $this->GetDevid() .']';
