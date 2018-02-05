@@ -570,12 +570,13 @@ class ImportChangesICS implements IImportChanges {
 
         if(!$entryid || !$srcmessage) {
             $code = SYNC_MOVEITEMSSTATUS_INVALIDSOURCEID;
+            $mapiLastHresult = mapi_last_hresult();
             // if we move to the trash and the source message is not found, we can also just tell the mobile that we successfully moved to avoid errors (ZP-624)
             if ($newfolder == ZPush::GetBackend()->GetWasteBasket()) {
                 $code = SYNC_MOVEITEMSSTATUS_SUCCESS;
             }
             $errorCase = !$entryid ? "resolve source message id" : "open source message";
-            throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Error, unable to %s: 0x%X", $sk, $newfolder, $errorCase, mapi_last_hresult()), $code);
+            throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Error, unable to %s: 0x%X", $sk, $newfolder, $errorCase, $mapiLastHresult), $code);
         }
 
         // check if it is in the synchronization interval and/or shared+private
