@@ -1,42 +1,10 @@
 <?php
 /*
- * Copyright 2005 - 2013  Zarafa B.V.
+ * Copyright 2005 - 2016  Zarafa B.V. and its licensors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License, version 3,
- * as published by the Free Software Foundation with the following additional
- * term according to sec. 7:
- *
- * According to sec. 7 of the GNU Affero General Public License, version
- * 3, the terms of the AGPL are supplemented with the following terms:
- *
- * "Zarafa" is a registered trademark of Zarafa B.V. The licensing of
- * the Program under the AGPL does not imply a trademark license.
- * Therefore any rights, title and interest in our trademarks remain
- * entirely with us.
- *
- * However, if you propagate an unmodified version of the Program you are
- * allowed to use the term "Zarafa" to indicate that you distribute the
- * Program. Furthermore you may use our trademarks where it is necessary
- * to indicate the intended purpose of a product or service provided you
- * use it in accordance with honest practices in industrial or commercial
- * matters.  If you want to propagate modified versions of the Program
- * under the name "Zarafa" or "Zarafa Server", you may only do so if you
- * have a written permission by Zarafa B.V. (to acquire a permission
- * please contact Zarafa at trademark@zarafa.com).
- *
- * The interactive user interface of the software displays an attribution
- * notice containing the term "Zarafa" and/or the logo of Zarafa.
- * Interactive user interfaces of unmodified and modified versions must
- * display Appropriate Legal Notices according to sec. 5 of the GNU
- * Affero General Public License, version 3, when you propagate
- * unmodified or modified versions of the Program. In accordance with
- * sec. 7 b) of the GNU Affero General Public License, version 3, these
- * Appropriate Legal Notices must retain the logo of Zarafa or display
- * the words "Initial Development by Zarafa" if the display of the logo
- * is not reasonably feasible for technical reasons. The use of the logo
- * of Zarafa in Legal Notices is allowed for unmodified and modified
- * versions of the software.
+ * as published by the Free Software Foundation.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -46,12 +14,11 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
+ * Consult LICENSE file for details
  */
 
     /**
      * Recurrence
-     * @author Steve Hardy <steve@zarafa.com>
-     * @author Michel de Ron <michel@zarafa.com>
      */
     class Recurrence extends BaseRecurrence
     {
@@ -257,7 +224,6 @@
             }
 
             $baseday = $this->dayStartOf($base_date);
-            $basetime = $baseday + $this->recur["startocc"] * 60;
             $extomodify = false;
 
             for($i = 0, $len = count($this->recur["changed_occurences"]); $i < $len; $i++) {
@@ -404,8 +370,6 @@
          */
         function isValidReminderTime($basedate, $reminderminutes, $startdate)
         {
-            $isreminderrangeset = false;
-
             // get all occurence items before the seleceted items occurence starttime
             $occitems = $this->getItems($this->messageprops[$this->proptags["startdate"]], $this->toGMT($this->tz, $basedate));
 
@@ -737,7 +701,7 @@
               $props[PR_DISPLAY_NAME] = "Exception";
               $props[PR_EXCEPTION_STARTTIME] = $this->fromGMT($this->tz, $exception_props[$this->proptags["startdate"]]);
               $props[PR_EXCEPTION_ENDTIME] = $this->fromGMT($this->tz, $exception_props[$this->proptags["duedate"]]);
-              mapi_message_setprops($attachment, $props);
+              mapi_setprops($attachment, $props);
 
             $imessage = mapi_attach_openobj($attachment, MAPI_CREATE | MAPI_MODIFY);
 
@@ -767,12 +731,12 @@
                 }
             }
 
-            mapi_message_setprops($imessage, $props);
+            mapi_setprops($imessage, $props);
 
             $this->setExceptionRecipients($imessage, $exception_recips, true);
 
-            mapi_message_savechanges($imessage);
-            mapi_message_savechanges($attachment);
+            mapi_savechanges($imessage);
+            mapi_savechanges($attachment);
         }
 
         /**
@@ -820,13 +784,14 @@
          */
         function getExceptionAttachment($base_date)
         {
-            // Retrieve only embedded messages
+            // Retrieve only exceptions which are stored as embedded messages
             $attach_res = Array(RES_AND,
                             Array(
                                 Array(RES_PROPERTY,
-                                    Array(RELOP => RELOP_EQ,
+                                    Array(
+                                        RELOP => RELOP_EQ,
                                         ULPROPTAG => PR_ATTACH_METHOD,
-                                        VALUE => array(PR_ATTACH_METHOD => 5)
+                                        VALUE => array(PR_ATTACH_METHOD => ATTACH_EMBEDDED_MSG)
                                     )
                                 )
                             )
@@ -842,7 +807,13 @@
 
                     $data = mapi_message_getprops($exception, array($this->proptags["basedate"]));
 
-                    if(isset($data[$this->proptags["basedate"]]) && $this->isSameDay($this->fromGMT($this->tz,$data[$this->proptags["basedate"]]), $base_date)) {
+                    if(!isset($data[$this->proptags["basedate"]])) {
+                        // if no basedate found then it could be embedded message so ignore it
+                        // we need proper restriction to exclude embedded messages aswell
+                        continue;
+                    }
+
+                    if($this->isSameDay($this->fromGMT($this->tz, $data[$this->proptags["basedate"]]), $base_date)) {
                         return $tempattach;
                     }
                 }
@@ -1092,7 +1063,7 @@
             }
 
             // Add organizer to meeting only if it is not organized.
-            $msgprops = mapi_getprops($exception, array(PR_SENT_REPRESENTING_ENTRYID, PR_SENT_REPRESENTING_EMAIL_ADDRESS, PR_SENT_REPRESENTING_NAME, PR_SENT_REPRESENTING_ADDRTYPE, $this->proptags['responsestatus']));
+            $msgprops = mapi_getprops($exception, array(PR_SENT_REPRESENTING_ENTRYID, PR_SENT_REPRESENTING_EMAIL_ADDRESS, PR_SENT_REPRESENTING_NAME, PR_SENT_REPRESENTING_ADDRTYPE, PR_SENT_REPRESENTING_SEARCH_KEY, $this->proptags['responsestatus']));
             if (isset($msgprops[$this->proptags['responsestatus']]) && $msgprops[$this->proptags['responsestatus']] != olResponseOrganized){
                 $this->addOrganizer($msgprops, $exception_recips['add']);
             }
@@ -1100,7 +1071,7 @@
             // Remove all deleted recipients
             if (isset($exception_recips['remove'])) {
                 foreach ($exception_recips['remove'] as &$recip) {
-                    if (!isset($recipient[PR_RECIPIENT_FLAGS]) || $recip[PR_RECIPIENT_FLAGS] != (recipReserved | recipExceptionalDeleted | recipSendable)) {
+                    if (!isset($recip[PR_RECIPIENT_FLAGS]) || $recip[PR_RECIPIENT_FLAGS] != (recipReserved | recipExceptionalDeleted | recipSendable)) {
                         $recip[PR_RECIPIENT_FLAGS] = recipSendable | recipExceptionalDeleted;
                     } else {
                         $recip[PR_RECIPIENT_FLAGS] = recipReserved | recipExceptionalDeleted | recipSendable;
@@ -1147,7 +1118,7 @@
             }
 
             // Add organizer to meeting only if it is not organized.
-            $msgprops = mapi_getprops($message, array(PR_SENT_REPRESENTING_ENTRYID, PR_SENT_REPRESENTING_EMAIL_ADDRESS, PR_SENT_REPRESENTING_NAME, PR_SENT_REPRESENTING_ADDRTYPE, $this->proptags['responsestatus']));
+            $msgprops = mapi_getprops($message, array(PR_SENT_REPRESENTING_ENTRYID, PR_SENT_REPRESENTING_EMAIL_ADDRESS, PR_SENT_REPRESENTING_NAME, PR_SENT_REPRESENTING_ADDRTYPE, PR_SENT_REPRESENTING_SEARCH_KEY, $this->proptags['responsestatus']));
             if (isset($msgprops[$this->proptags['responsestatus']]) && $msgprops[$this->proptags['responsestatus']] != olResponseOrganized){
                 $this->addOrganizer($msgprops, $exception_recips);
             }
@@ -1156,7 +1127,7 @@
                 foreach($recipientRows as $key => $recipient) {
                     $found = false;
                     foreach($exception_recips as $excep_recip) {
-                        if (isset($recipient[PR_SEARCH_KEY]) && isset($excep_recip[PR_SEARCH_KEY]) && $recipient[PR_SEARCH_KEY] == $excep_recip[PR_SEARCH_KEY])
+                        if (isset($recipient[PR_SEARCH_KEY], $excep_recip[PR_SEARCH_KEY]) && $recipient[PR_SEARCH_KEY] == $excep_recip[PR_SEARCH_KEY])
                             $found = true;
                     }
 
@@ -1232,8 +1203,8 @@
          * @param array $recipients    recipients list of message.
          * @param boolean $isException true if we are processing recipient of exception
          */
-        function addOrganizer($messageProps, &$recipients, $isException = false){
-
+        function addOrganizer($messageProps, &$recipients, $isException = false)
+        {
             $hasOrganizer = false;
             // Check if meeting already has an organizer.
             foreach ($recipients as $key => $recipient){
@@ -1256,6 +1227,7 @@
                 $organizer[PR_ADDRTYPE] = empty($messageProps[PR_SENT_REPRESENTING_ADDRTYPE])?'SMTP':$messageProps[PR_SENT_REPRESENTING_ADDRTYPE];
                 $organizer[PR_RECIPIENT_TRACKSTATUS] = olRecipientTrackStatusNone;
                 $organizer[PR_RECIPIENT_FLAGS] = recipSendable | recipOrganizer;
+                $organizer[PR_SEARCH_KEY] = $messageProps[PR_SENT_REPRESENTING_SEARCH_KEY];
 
                 // Add organizer to recipients list.
                 array_unshift($recipients, $organizer);

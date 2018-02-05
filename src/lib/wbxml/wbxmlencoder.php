@@ -6,29 +6,11 @@
 *
 * Created   :   01.10.2007
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -40,7 +22,6 @@
 *
 * Consult LICENSE file for details
 ************************************************/
-
 
 class WBXMLEncoder extends WBXMLDefs {
     private $_dtd;
@@ -63,7 +44,7 @@ class WBXMLEncoder extends WBXMLDefs {
     private $bodyparts;
 
     public function __construct($output, $multipart = false) {
-        $this->log = @constant('WBXML_DEBUG') === true;
+        $this->log = ZLog::IsWbxmlDebugEnabled();
 
         $this->_out = $output;
 
@@ -181,20 +162,22 @@ class WBXMLEncoder extends WBXMLDefs {
      *
      * @param resource $stream
      * @param boolean $asBase64     if true, the data will be encoded as base64, default: false
+     * @param boolean $opaque       if true, output the opaque data, default: false
      *
      * @access public
      * @return
      */
-    public function contentStream($stream, $asBase64 = false) {
-        if (!$asBase64) {
+    public function contentStream($stream, $asBase64 = false, $opaque = false) {
+        // Do not append filters to opaque data as it might contain null char
+        if (!$asBase64 && !$opaque) {
             stream_filter_register('replacenullchar', 'ReplaceNullcharFilter');
             $rnc_filter = stream_filter_append($stream, 'replacenullchar');
         }
 
         $this->_outputStack();
-        $this->_contentStream($stream, $asBase64);
+        $this->_contentStream($stream, $asBase64, $opaque);
 
-        if (!$asBase64) {
+        if (!$asBase64 && !$opaque) {
             stream_filter_remove($rnc_filter);
         }
 
@@ -305,9 +288,17 @@ class WBXMLEncoder extends WBXMLDefs {
      * @param boolean  $asBase64
      * @return
      */
-    private function _contentStream($stream, $asBase64) {
+    private function _contentStream($stream, $asBase64, $opaque) {
+        $stat = fstat($stream);
         // write full stream, including the finalizing terminator to the output stream (stuff outTermStr() would do)
-        $this->outByte(self::WBXML_STR_I);
+        if ($opaque) {
+            $this->outByte(self::WBXML_OPAQUE);
+            $this->outMBUInt($stat['size']);
+        }
+        else {
+            $this->outByte(self::WBXML_STR_I);
+        }
+
         if ($asBase64) {
             $out_filter = stream_filter_append($this->_out, 'convert.base64-encode');
         }
@@ -315,11 +306,12 @@ class WBXMLEncoder extends WBXMLDefs {
         if ($asBase64) {
             stream_filter_remove($out_filter);
         }
-        fwrite($this->_out, chr(0));
+        if (!$opaque) {
+            fwrite($this->_out, chr(0));
+        }
 
         if ($this->log) {
             // data is out, do some logging
-            $stat = fstat($stream);
             $this->logContent(sprintf("<<< written %d of %d bytes of %s data >>>", $written, $stat['size'], $asBase64 ? "base64 encoded":"plain"));
         }
     }
@@ -349,24 +341,39 @@ class WBXMLEncoder extends WBXMLDefs {
     }
 
     /**
-     * Outputs a string table
+     * Output the multibyte integers to the stream.
      *
-     * @param $uint
+     * A multi-byte integer consists of a series of octets,
+     * where the most significant bit is the continuation flag
+     * and the remaining seven bits are a scalar value.
+     * The octets are arranged in a big-endian order,
+     * eg, the most significant seven bits are transmitted first.
+     *
+     * @see https://www.w3.org/1999/06/NOTE-wbxml-19990624/#_Toc443384895
+     *
+     * @param int $uint
      *
      * @access private
-     * @return
+     * @return void
      */
     private function outMBUInt($uint) {
-        while(1) {
+        if ($uint == 0x0) {
+            return $this->outByte($uint);
+        }
+
+        $out = '';
+
+        for ($i = 0; $uint != 0; $i++) {
             $byte = $uint & 0x7f;
             $uint = $uint >> 7;
-            if($uint == 0) {
-                $this->outByte($byte);
-                break;
-            } else {
-                $this->outByte($byte | 0x80);
+            if ($i == 0) {
+                $out = chr($byte) . $out;
+            }
+            else {
+                $out = chr($byte | 0x80) . $out;
             }
         }
+        fwrite($this->_out, $out);
     }
 
     /**

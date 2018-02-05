@@ -12,25 +12,7 @@
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -46,7 +28,7 @@
 class WebserviceDevice {
 
     /**
-     * Returns a list of all known devices of the Request::GetGETUser()
+     * Returns a list of all known devices of the Request::GetGETUser().
      *
      * @access public
      * @return array
@@ -66,7 +48,24 @@ class WebserviceDevice {
     }
 
     /**
-     * Remove all state data for a device of the Request::GetGETUser()
+     * Returns the details of a given deviceid of the Request::GetGETUser().
+     *
+     * @param boolean   $withHierarchyCache (opt) includes the HierarchyCache - default: false
+     *
+     * @access public
+     * @return ASDevice object
+     */
+    public function GetDeviceDetails($deviceId, $withHierarchyCache = false) {
+        $user = Request::GetGETUser();
+        $deviceId = preg_replace("/[^A-Za-z0-9]/", "", $deviceId);
+        ZLog::Write(LOGLEVEL_INFO, sprintf("WebserviceDevice::GetDeviceDetails('%s'): getting device details from state of user '%s'", $deviceId, $user));
+
+        ZPush::GetTopCollector()->AnnounceInformation(sprintf("Retrieved details of device '%s'", $deviceId), true);
+        return ZPushAdmin::GetDeviceDetails($deviceId, $user, $withHierarchyCache);
+    }
+
+    /**
+     * Remove all state data for a device of the Request::GetGETUser().
      *
      * @param string    $deviceId       the device id
      *
@@ -88,7 +87,7 @@ class WebserviceDevice {
     }
 
     /**
-     * Marks a device of the Request::GetGETUser() to be remotely wiped
+     * Marks a device of the Request::GetGETUser() to be remotely wiped.
      *
      * @param string    $deviceId       the device id
      *
@@ -106,6 +105,29 @@ class WebserviceDevice {
         }
 
         ZPush::GetTopCollector()->AnnounceInformation(sprintf("Wipe requested - device id '%s'", $deviceId), true);
+        return true;
+    }
+
+    /**
+     * Sets device options of the Request::GetGETUser().
+     *
+     * @param string    $deviceId       the device id
+     * @param int       $filtertype     SYNC_FILTERTYPE_1DAY to SYNC_FILTERTYPE_ALL, false to ignore
+     *
+     * @access public
+     * @return boolean
+     * @throws SoapFault
+     */
+    public function SetDeviceOptions($deviceId, $filtertype) {
+        $deviceId = preg_replace("/[^A-Za-z0-9]/", "", $deviceId);
+        ZLog::Write(LOGLEVEL_INFO, sprintf("WebserviceDevice::SetDeviceOptions('%s', '%s'): set FilterType to '%s'", $deviceId, Request::GetGETUser(), Utils::PrintAsString($filtertype)));
+
+        if (! ZPushAdmin::SetDeviceOptions(Request::GetGETUser(), $deviceId, $filtertype)) {
+            ZPush::GetTopCollector()->AnnounceInformation(ZLog::GetLastMessage(LOGLEVEL_ERROR), true);
+            throw new SoapFault("ERROR", ZLog::GetLastMessage(LOGLEVEL_ERROR));
+        }
+
+        ZPush::GetTopCollector()->AnnounceInformation(sprintf("FilterType set to '%s' - device id '%s'", Utils::PrintAsString($filtertype), $deviceId), true);
         return true;
     }
 
@@ -167,19 +189,29 @@ class WebserviceDevice {
         $user = Request::GetGETUser();
         $deviceId = preg_replace("/[^A-Za-z0-9]/", "", $deviceId);
         $folders = ZPushAdmin::AdditionalFolderList($user, $deviceId);
-        ZLog::Write(LOGLEVEL_INFO, sprintf("WebserviceDevice::AdditionalFolderList(): found %d folders for device '%s' of user '%s'", count($folders), $deviceId, $user));
-        // retrieve the permission flags from the backend
-        $backend = ZPush::GetBackend();
-        foreach($folders as &$folder) {
-            $folder['readable'] = $backend->Setup($folder['store'], true, $folder['folderid'], true);
-            $folder['writeable'] = $backend->Setup($folder['store'], true, $folder['folderid']);
+        if ($folders === false) {
+             $folders = array();
         }
-        // make sure folder is not pointing to our last folder anymore
-        unset($folder);
-
-        ZPush::GetTopCollector()->AnnounceInformation(sprintf("Retrieved details of %d folders", count($folders)), true);
-
-        return $folders;
+        ZLog::Write(LOGLEVEL_INFO, sprintf("WebserviceDevice::AdditionalFolderList(): found %d folders for device '%s' of user '%s'", count($folders), $deviceId, $user));
+        // retrieve the permission flags from the backend and convert associative array into stdClass object for PHP7 support
+        $folderObjects = array();
+        $backend = ZPush::GetBackend();
+        foreach($folders as $folder) {
+            $folderObject = new stdClass();
+            $folderObject->store = $folder['store'];
+            $folderObject->folderid = $folder['folderid'];
+            $folderObject->parentid = (isset($folder['parentid'])) ? $folder['parentid'] : "0";
+            $folderObject->syncfolderid = $folder['syncfolderid'];
+            $folderObject->name = $folder['name'];
+            $folderObject->type = $folder['type'];
+            $folderObject->origin = $folder['origin'];
+            $folderObject->flags = $folder['flags'];
+            $folderObject->readable = $backend->Setup($folder['store'], true, $folder['folderid'], true);
+            $folderObject->writeable = $backend->Setup($folder['store'], true, $folder['folderid']);
+            $folderObjects[] = $folderObject;
+        }
+        ZPush::GetTopCollector()->AnnounceInformation(sprintf("Retrieved details of %d folders", count($folderObjects)), true);
+        return $folderObjects;
     }
 
     /**
@@ -190,7 +222,7 @@ class WebserviceDevice {
      * @param string    $add_folderid   the folder id of the additional folder.
      * @param string    $add_name       the name of the additional folder (has to be unique for all folders on the device).
      * @param string    $add_type       AS foldertype of SYNC_FOLDER_TYPE_USER_*
-     * @param int       $add_flags      Additional flags, like DeviceManager::FLD_FLAGS_REPLYASUSER
+     * @param int       $add_flags      Additional flags, like DeviceManager::FLD_FLAGS_SENDASOWNER
      *
      * @access public
      * @return boolean
@@ -219,7 +251,7 @@ class WebserviceDevice {
      * @param string    $deviceId       device id of where the folder should be updated.
      * @param string    $add_folderid   the folder id of the additional folder.
      * @param string    $add_name       the name of the additional folder (has to be unique for all folders on the device).
-     * @param int       $add_flags      Additional flags, like DeviceManager::FLD_FLAGS_REPLYASUSER
+     * @param int       $add_flags      Additional flags, like DeviceManager::FLD_FLAGS_SENDASOWNER
      *
      * @access public
      * @return boolean
@@ -262,6 +294,49 @@ class WebserviceDevice {
         }
         ZLog::Write(LOGLEVEL_INFO, sprintf("WebserviceDevice::AdditionalFolderRemove(): removed folder for device '%s' of user '%s': %s", $deviceId, $user, Utils::PrintAsString($status)));
         ZPush::GetTopCollector()->AnnounceInformation("Removed additional folder", true);
+
+        return $status;
+    }
+
+    /**
+     * Sets a list of additional folders of one store to the given device and the Request::GetGETUser().
+     * If there are additional folders for this store, that are not in the list they will be removed.
+     *
+     * @param string    $deviceId       device id the folder should be added to.
+     * @param string    $set_store      the store where this folder is located, e.g. "SYSTEM" (for public folder) or an username/email address.
+     * @param array     $set_folders    a list of folders to be set for this user. Other existing additional folders (that are not in this list)
+     *                                  will be removed. The list is an array containing folders, where each folder is an array with the following keys:
+     *                                  'folderid'  (string) the folder id of the additional folder.
+     *                                  'parentid'  (string) the folderid of the parent folder. If no parent folder is set or the parent folder is not defined, '0' (main folder) is used.
+     *                                  'name'      (string) the name of the additional folder (has to be unique for all folders on the device).
+     *                                  'type'      (string) AS foldertype of SYNC_FOLDER_TYPE_USER_*
+     *                                  'flags'     (int)    Additional flags, like DeviceManager::FLD_FLAGS_SENDASOWNER
+     *
+     * @access public
+     * @return boolean
+     */
+    public function AdditionalFolderSetList($deviceId, $set_store, $set_folders) {
+        $user = Request::GetGETUser();
+        $deviceId = preg_replace("/[^A-Za-z0-9]/", "", $deviceId);
+        array_walk($set_folders, function(&$folder) {
+            if (!isset($folder['folderid']))    $folder['folderid'] = "";
+            if (!isset($folder['parentid']))    $folder['parentid'] = "0";
+            if (!isset($folder['type']))        $folder['type'] = SYNC_FOLDER_TYPE_USER_MAIL;
+            if (!isset($folder['flags']))       $folder['flags'] = 0;
+
+            $folder['folderid'] = preg_replace("/[^A-Za-z0-9]/", "", $folder['folderid']);
+            $folder['parentid'] = preg_replace("/[^A-Za-z0-9]/", "", $folder['parentid']);
+            $folder['type'] = preg_replace("/[^0-9]/", "", $folder['type']);
+            $folder['flags'] = preg_replace("/[^0-9]/", "", $folder['flags']);
+        });
+
+        $status = ZPushAdmin::AdditionalFolderSetList($user, $deviceId, $set_store, $set_folders);
+        if (!$status) {
+            ZPush::GetTopCollector()->AnnounceInformation(ZLog::GetLastMessage(LOGLEVEL_ERROR), true);
+            throw new SoapFault("ERROR", ZLog::GetLastMessage(LOGLEVEL_ERROR));
+        }
+        ZLog::Write(LOGLEVEL_INFO, sprintf("WebserviceDevice::AdditionalFolderSetList(): set '%d' folders for device '%s' of user '%s': %s", count($set_folders), $deviceId, $user, Utils::PrintAsString($status)));
+        ZPush::GetTopCollector()->AnnounceInformation("Set additional folders", true);
 
         return $status;
     }

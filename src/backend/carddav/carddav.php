@@ -10,25 +10,7 @@
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -765,13 +747,15 @@ class BackendCardDAV extends BackendDiff implements ISearchProvider {
     /**
      * Queries the CardDAV backend
      *
-     * @param string        $searchquery        string to be searched for
-     * @param string        $searchrange        specified searchrange
+     * @param string                        $searchquery        string to be searched for
+     * @param string                        $searchrange        specified searchrange
+     * @param SyncResolveRecipientsPicture  $searchpicture      limitations for picture
      *
      * @access public
      * @return array        search results
+     * @throws StatusException
      */
-    public function GetGALSearchResults($searchquery, $searchrange) {
+    public function GetGALSearchResults($searchquery, $searchrange, $searchpicture) {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCardDAV->GetGALSearchResults(%s, %s)", $searchquery, $searchrange));
         if ($this->gal_url !== false && $this->server !== false) {
             // Don't search if the length is < 5, we are typing yet
@@ -779,7 +763,7 @@ class BackendCardDAV extends BackendDiff implements ISearchProvider {
                 return false;
             }
 
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCardDAV->GetGALSearchResults searching: %s", $this->url));
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCardDAV->GetGALSearchResults searching: %s", $this->gal_url));
             try {
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCardDAV->GetGALSearchResults server is null? %d", $this->server == null));
                 $this->server->set_url($this->gal_url);
@@ -1097,6 +1081,15 @@ class BackendCardDAV extends BackendDiff implements ISearchProvider {
                 elseif (in_array('cell', $tel['type'])) {
                     $message->mobilephonenumber = $tel['val'][0];
                 }
+                elseif (in_array('main', $tel['type'])) {
+                    $message->companymainphone = $tel['val'][0];
+                }
+                elseif (in_array('assistant', $tel['type'])) {
+                    $message->assistnamephonenumber = $tel['val'][0];
+                }
+                elseif (in_array('text', $tel['type'])) {
+                    $message->mms = $tel['val'][0];
+                }
                 elseif (in_array('home', $tel['type'])) {
                     if (in_array('fax', $tel['type'])) {
                         $message->homefaxnumber = $tel['val'][0];
@@ -1195,16 +1188,17 @@ class BackendCardDAV extends BackendDiff implements ISearchProvider {
             if (Request::GetProtocolVersion() >= 12.0) {
                 $message->asbody = new SyncBaseBody();
                 $message->asbody->type = SYNC_BODYPREFERENCE_PLAIN;
-                $message->asbody->data = $vcard['note'][0]['val'][0];
-                if ($truncsize > 0 && $truncsize < strlen($message->asbody->data)) {
+                $data = $vcard['note'][0]['val'][0];
+                if ($truncsize > 0 && $truncsize < strlen($data)) {
                     $message->asbody->truncated = 1;
-                    $message->asbody->data = Utils::Utf8_truncate($message->asbody->data, $truncsize);
+                    $data = Utils::Utf8_truncate($data, $truncsize);
                 }
                 else {
                     $message->asbody->truncated = 0;
                 }
-
-                $message->asbody->estimatedDataSize = strlen($message->asbody->data);
+                $message->asbody->data = StringStreamWrapper::Open($data);
+                $message->asbody->estimatedDataSize = strlen($data);
+                unset($data);
             }
             else {
                 $message->body = $vcard['note'][0]['val'][0];
@@ -1257,8 +1251,12 @@ class BackendCardDAV extends BackendDiff implements ISearchProvider {
             'home2phonenumber' => 'TEL;TYPE=HOME,VOICE',
             'homefaxnumber' => 'TEL;TYPE=HOME,FAX',
             'mobilephonenumber' => 'TEL;TYPE=CELL',
-            'carphonenumber' => 'TEL;TYPE=VOICE',
+            'carphonenumber' => 'TEL;TYPE=CAR',
             'pagernumber' => 'TEL;TYPE=PAGER',
+            'companymainphone' => 'TEL;TYPE=WORK,MAIN',
+            'mms' => 'TEL;TYPE=TEXT',
+            'radiophonenumber' => 'TEL;TYPE=RADIO,VOICE',
+            'assistnamephonenumber' => 'TEL;TYPE=ASSISTANT,VOICE',
             ';;businessstreet;businesscity;businessstate;businesspostalcode;businesscountry' => 'ADR;TYPE=WORK',
             ';;homestreet;homecity;homestate;homepostalcode;homecountry' => 'ADR;TYPE=HOME',
             ';;otherstreet;othercity;otherstate;otherpostalcode;othercountry' => 'ADR',
@@ -1278,13 +1276,20 @@ class BackendCardDAV extends BackendDiff implements ISearchProvider {
                     $val .= $this->escape($message->$i);
                 $val.=';';
             }
-            if ($k == 'body' && isset($message->asbody)) {
-                $val = $message->asbody->data;
+            if ($k == 'body' && isset($message->asbody->data)) {
+                $val = stream_get_contents($message->asbody->data);
             }
             if (empty($val) || preg_match('/^(\;)+$/', $val) == 1)
                 continue;
+            // Support newlines in values
+            $val = str_replace("\n", "\\n", $val);
+
             // Remove trailing ;
             $val = substr($val, 0, -1);
+            // Clean full name from emailaddress
+            if (substr($k, 0, 5) == 'email') {
+                $val = preg_replace(array('/.*</', '/>.*/'), array('', ''), $val);
+            }
             if (strlen($val) > 50) {
                 $data .= $v.":\n\t".substr(chunk_split($val, 50, "\n\t"), 0, -1);
             }
@@ -1302,7 +1307,7 @@ class BackendCardDAV extends BackendDiff implements ISearchProvider {
 
         // http://en.wikipedia.org/wiki/VCard
         // TODO: add support for v4.0
-        // not supported: anniversary, assistantname, assistnamephonenumber, children, department, officelocation, radiophonenumber, spouse, rtf
+        // not supported: anniversary, assistantname, children, department, officelocation, spouse, rtf
 
         return $data;
     }

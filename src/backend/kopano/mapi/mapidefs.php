@@ -1,42 +1,10 @@
 <?php
 /*
- * Copyright 2005 - 2013  Zarafa B.V.
+ * Copyright 2005 - 2016  Zarafa B.V. and its licensors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License, version 3,
- * as published by the Free Software Foundation with the following additional
- * term according to sec. 7:
- *
- * According to sec. 7 of the GNU Affero General Public License, version
- * 3, the terms of the AGPL are supplemented with the following terms:
- *
- * "Zarafa" is a registered trademark of Zarafa B.V. The licensing of
- * the Program under the AGPL does not imply a trademark license.
- * Therefore any rights, title and interest in our trademarks remain
- * entirely with us.
- *
- * However, if you propagate an unmodified version of the Program you are
- * allowed to use the term "Zarafa" to indicate that you distribute the
- * Program. Furthermore you may use our trademarks where it is necessary
- * to indicate the intended purpose of a product or service provided you
- * use it in accordance with honest practices in industrial or commercial
- * matters.  If you want to propagate modified versions of the Program
- * under the name "Zarafa" or "Zarafa Server", you may only do so if you
- * have a written permission by Zarafa B.V. (to acquire a permission
- * please contact Zarafa at trademark@zarafa.com).
- *
- * The interactive user interface of the software displays an attribution
- * notice containing the term "Zarafa" and/or the logo of Zarafa.
- * Interactive user interfaces of unmodified and modified versions must
- * display Appropriate Legal Notices according to sec. 5 of the GNU
- * Affero General Public License, version 3, when you propagate
- * unmodified or modified versions of the Program. In accordance with
- * sec. 7 b) of the GNU Affero General Public License, version 3, these
- * Appropriate Legal Notices must retain the logo of Zarafa or display
- * the words "Initial Development by Zarafa" if the display of the logo
- * is not reasonably feasible for technical reasons. The use of the logo
- * of Zarafa in Legal Notices is allowed for unmodified and modified
- * versions of the software.
+ * as published by the Free Software Foundation.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -46,8 +14,8 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
+ * Consult LICENSE file for details
  */
-
 
 /* Resource types as defined in main.h of the mapi extension */
 define('RESOURCE_SESSION'                        ,'MAPI Session');
@@ -128,6 +96,11 @@ define('PT_MV_TSTRING'                           ,PT_MV_STRING8);
 define('TABLE_SORT_ASCEND'                       ,(0x00000000));
 define('TABLE_SORT_DESCEND'                      ,(0x00000001));
 define('TABLE_SORT_COMBINE'                      ,(0x00000002));
+
+/* Bookmarks in Table */
+define('BOOKMARK_BEGINNING'                      , 0); /* Before first row */
+define('BOOKMARK_CURRENT'                        , 1); /* Before current row */
+define('BOOKMARK_END'                            , 2); /* After last row */
 
 define('MAPI_UNICODE'                            ,0x80000000);
 
@@ -628,6 +601,7 @@ define('SYNC_PROGRESS_MODE'                      ,0x8000);        // AirMapi pro
 define('SYNC_FXRECOVERMODE'                      ,0x10000);
 define('SYNC_DEFER_CONFIG'                       ,0x20000);
 define('SYNC_FORCE_UNICODE'                      ,0x40000);       // Forces server to return Unicode properties
+define('SYNC_STATE_READONLY'                     ,0x80000);       // Server will not update the states in the DB, setting up exporter with this flag states are read only
 
 define('EMS_AB_ADDRESS_LOOKUP'                   ,0x00000001);    // Flag for resolvename to resolve only exact matches
 
@@ -665,3 +639,40 @@ define('fnevTableModified'                       ,0x00000100);
 define('fnevStatusObjectModified'                ,0x00000200);
 define('fnevReservedForMapi'                     ,0x40000000);
 define('fnevExtended'                            ,0x80000000);
+
+/* PersistBlockType values PR_IPM_OL2007_ENTRYIDS / PR_ADDITIONAL_REN_ENTRYIDS_EX PersistIDs*/
+define('PERSIST_SENTINEL'                        ,0x0000); // Indicates that the PersistData structure is the last one contained in the PidTagAdditionalRenEntryIdsEx property
+define('RSF_PID_RSS_SUBSCRIPTION'                ,0x8001); // Indicates that the structure contains data for the RSS Feeds folder
+define('RSF_PID_SEND_AND_TRACK'                  ,0x8002); // Indicates that the structure contains data for the Tracked Mail Processing folder
+define('RSF_PID_TODO_SEARCH'                     ,0x8004); // Indicates that the structure contains data for the To-Do folder
+define('RSF_PID_CONV_ACTIONS'                    ,0x8006); // Indicates that the structure contains data for the Conversation Action Settings folder
+define('RSF_PID_COMBINED_ACTIONS'                ,0x8007); // This value is reserved.
+define('RSF_PID_SUGGESTED_CONTACTS'              ,0x8008); // Indicates that the structure contains data for the Suggested Contacts folder.
+define('RSF_PID_CONTACT_SEARCH'                  ,0x8009); // Indicates that the structure contains data for the Contacts Search folder.
+define('RSF_PID_BUDDYLIST_PDLS'                  ,0x800A); // Indicates that the structure contains data for the IM Contacts List folder.
+define('RSF_PID_BUDDYLIST_CONTACTS'              ,0x800B); // Indicates that the structure contains data for the Quick Contacts folder.
+
+/* PersistElementType Values ElementIDs for persist data of PR_IPM_OL2007_ENTRYIDS / PR_ADDITIONAL_REN_ENTRYIDS_EX */
+define('ELEMENT_SENTINEL'                        ,0x0000); // 0 bytes Indicates that the PersistElement structure is the last one contained in the DataElements field of the PersistData structure.
+define('RSF_ELID_ENTRYID'                        ,0x0001); // variable Indicates that the ElementData field contains the entry ID of the special folder
+                                                           // that is of the type indicated by the value of the PersistID field of the PersistData structure.
+define('RSF_ELID_HEADER'                         ,0x0002); // 4 bytes Indicates that the ElementData field contains a 4-byte header value equal to 0x00000000.
+
+define('STGM_DIRECT'                             ,0x00000000);
+define('STGM_TRANSACTED'                         ,0x00010000);
+define('STGM_SIMPLE'                             ,0x08000000);
+define('STGM_READ'                               ,0x00000000);
+define('STGM_WRITE'                              ,0x00000001);
+define('STGM_READWRITE'                          ,0x00000002);
+define('STGM_SHARE_DENY_NONE'                    ,0x00000040);
+define('STGM_SHARE_DENY_READ'                    ,0x00000030);
+define('STGM_SHARE_DENY_WRITE'                   ,0x00000020);
+define('STGM_SHARE_EXCLUSIVE'                    ,0x00000010);
+define('STGM_PRIORITY'                           ,0x00040000);
+define('STGM_DELETEONRELEASE'                    ,0x04000000);
+define('STGM_NOSCRATCH'                          ,0x00100000);
+define('STGM_CREATE'                             ,0x00001000);
+define('STGM_CONVERT'                            ,0x00020000);
+define('STGM_FAILIFTHERE'                        ,0x00000000);
+define('STGM_NOSNAPSHOT'                         ,0x00200000);
+define('STGM_DIRECT_SWMR'                        ,0x00400000);

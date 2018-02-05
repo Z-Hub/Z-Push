@@ -6,29 +6,11 @@
 *
 * Created   :   16.02.2012
 *
-* Copyright 2007 - 2015 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -53,6 +35,7 @@ class Search extends RequestProcessor {
      */
     public function Handle($commandCode) {
         $searchrange = '0';
+        $searchpicture = false;
         $cpo = new ContentParameters();
 
         if(!self::$decoder->getElementStartTag(SYNC_SEARCH_SEARCH))
@@ -264,6 +247,65 @@ class Search extends RequestProcessor {
                         return false;
                 }
 
+                if (self::$decoder->getElementStartTag(SYNC_AIRSYNCBASE_BODYPARTPREFERENCE)) {
+                    if (self::$decoder->getElementStartTag(SYNC_AIRSYNCBASE_TYPE)) {
+                        $bpptype = self::$decoder->getElementContent();
+                        $cpo->BodyPartPreference($bpptype);
+                        if (!self::$decoder->getElementEndTag()) {
+                            return false;
+                        }
+                    }
+
+                    if (self::$decoder->getElementStartTag(SYNC_AIRSYNCBASE_TRUNCATIONSIZE)) {
+                        $cpo->BodyPartPreference($bpptype)->SetTruncationSize(self::$decoder->getElementContent());
+                        if(!self::$decoder->getElementEndTag())
+                            return false;
+                    }
+
+                    if (self::$decoder->getElementStartTag(SYNC_AIRSYNCBASE_ALLORNONE)) {
+                        $cpo->BodyPartPreference($bpptype)->SetAllOrNone(self::$decoder->getElementContent());
+                        if(!self::$decoder->getElementEndTag())
+                            return false;
+                    }
+
+                    if (self::$decoder->getElementStartTag(SYNC_AIRSYNCBASE_PREVIEW)) {
+                        $cpo->BodyPartPreference($bpptype)->SetPreview(self::$decoder->getElementContent());
+                        if(!self::$decoder->getElementEndTag())
+                            return false;
+                    }
+
+                    if (!self::$decoder->getElementEndTag())
+                        return false;
+                }
+
+                if(self::$decoder->getElementStartTag(SYNC_RIGHTSMANAGEMENT_SUPPORT)) {
+                    $cpo->SetRmSupport(self::$decoder->getElementContent());
+                    if(!self::$decoder->getElementEndTag())
+                        return false;
+                }
+
+                if(self::$decoder->getElementStartTag(SYNC_SEARCH_PICTURE)) { // TODO - do something with maxsize and maxpictures in the backend
+                    $searchpicture = new SyncResolveRecipientsPicture();
+                    if(self::$decoder->getElementStartTag(SYNC_SEARCH_MAXSIZE)) {
+                        $searchpicture->maxsize = self::$decoder->getElementContent();
+                        if(!self::$decoder->getElementEndTag())
+                            return false;
+                    }
+
+                    if(self::$decoder->getElementStartTag(SYNC_SEARCH_MAXPICTURES)) {
+                        $searchpicture->maxpictures = self::$decoder->getElementContent();
+                        if(!self::$decoder->getElementEndTag())
+                            return false;
+                    }
+
+                    // iOs devices send empty picture tag: <Search:Picture/>
+                    if (($sp = self::$decoder->getElementContent()) !== false) {
+                        if(!self::$decoder->getElementEndTag()) {
+                            return false;
+                        }
+                    }
+                }
+
                 $e = self::$decoder->peek();
                 if($e[EN_TYPE] == EN_TYPE_ENDTAG) {
                     self::$decoder->getElementEndTag();
@@ -288,7 +330,7 @@ class Search extends RequestProcessor {
             try {
                 if ($searchname == ISearchProvider::SEARCH_GAL) {
                     //get search results from the searchprovider
-                    $rows = $searchprovider->GetGALSearchResults($searchquery, $searchrange);
+                    $rows = $searchprovider->GetGALSearchResults($searchquery, $searchrange, $searchpicture);
                 }
                 elseif ($searchname == ISearchProvider::SEARCH_MAILBOX) {
                     $backendFolderId = self::$deviceManager->GetBackendIdForFolderId($cpo->GetSearchFolderid());
@@ -308,7 +350,7 @@ class Search extends RequestProcessor {
         }
         $searchprovider->Disconnect();
 
-        self::$topCollector->AnnounceInformation(sprintf("'%s' search found %d results", $searchname, $rows['searchtotal']), true);
+        self::$topCollector->AnnounceInformation(sprintf("'%s' search found %d results", $searchname, (isset($rows['searchtotal']) ? $rows['searchtotal'] : 0) ), true);
 
         self::$encoder->startWBXML();
         self::$encoder->startTag(SYNC_SEARCH_SEARCH);
@@ -397,6 +439,19 @@ class Search extends RequestProcessor {
                                         self::$encoder->startTag(SYNC_GAL_EMAILADDRESS);
                                         self::$encoder->content((isset($u[SYNC_GAL_EMAILADDRESS]))?$u[SYNC_GAL_EMAILADDRESS]:"");
                                         self::$encoder->endTag();
+
+
+                                        if (isset($u[SYNC_GAL_PICTURE])) {
+                                            self::$encoder->startTag(SYNC_GAL_PICTURE);
+                                                self::$encoder->startTag(SYNC_GAL_STATUS);
+                                                self::$encoder->content(SYNC_SEARCHSTATUS_PICTURE_SUCCESS); //FIXME: status code
+                                                self::$encoder->endTag(); // SYNC_SEARCH_STATUS
+
+                                                self::$encoder->startTag(SYNC_GAL_DATA);
+                                                self::$encoder->contentStream($u[SYNC_GAL_PICTURE], false, true);
+                                                self::$encoder->endTag(); // SYNC_GAL_DATA
+                                            self::$encoder->endTag(); // SYNC_GAL_PICTURE
+                                        }
 
                                     self::$encoder->endTag();//result
                                 self::$encoder->endTag();//properties

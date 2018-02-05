@@ -10,25 +10,7 @@
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -132,6 +114,11 @@ class Ping extends RequestProcessor {
                         // check if the HierarchyCache is available, if not, trigger a HierarchySync
                         try {
                             self::$deviceManager->GetFolderClassFromCacheByID($folderid);
+                            // ZP-907: ignore all folders with SYNC_FOLDER_TYPE_UNKNOWN
+                            if (self::$deviceManager->GetFolderTypeFromCacheById($folderid) == SYNC_FOLDER_TYPE_UNKNOWN) {
+                                ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandlePing(): ignoring folder id '%s' as it's of type UNKNOWN ", $folderid));
+                                continue;
+                            }
                         }
                         catch (NoHierarchyCacheAvailableException $nhca) {
                             ZLog::Write(LOGLEVEL_INFO, sprintf("HandlePing(): unknown collection '%s', triggering HierarchySync", $folderid));
@@ -229,15 +216,28 @@ class Ping extends RequestProcessor {
                 else
                     $changes = $fakechanges;
 
+                $announceAggregated = false;
+                if (count($changes) > 1) {
+                    $announceAggregated = 0;
+                }
                 foreach ($changes as $folderid => $changecount) {
                     if ($changecount > 0) {
                         self::$encoder->startTag(SYNC_PING_FOLDER);
                         self::$encoder->content($folderid);
                         self::$encoder->endTag();
-                        if (empty($fakechanges))
-                            self::$topCollector->AnnounceInformation(sprintf("Found change in %s", $sc->GetCollection($folderid)->GetContentClass()), true);
+                        if ($announceAggregated === false) {
+                            if (empty($fakechanges)) {
+                                self::$topCollector->AnnounceInformation(sprintf("Found change in %s", $sc->GetCollection($folderid)->GetContentClass()), true);
+                            }
+                        }
+                        else {
+                            $announceAggregated += $changecount;
+                        }
                         self::$deviceManager->AnnounceProcessStatus($folderid, SYNC_PINGSTATUS_CHANGES);
                     }
+                }
+                if ($announceAggregated !== false) {
+                    self::$topCollector->AnnounceInformation(sprintf("Found %d changes in %d folders", $announceAggregated, count($changes)), true);
                 }
                 self::$encoder->endTag();
             }
@@ -254,6 +254,9 @@ class Ping extends RequestProcessor {
         }
 
         self::$encoder->endTag();
+
+        // update the waittime waited
+        self::$waitTime = $sc->GetWaitedSeconds();
 
         return true;
     }
@@ -289,6 +292,11 @@ class Ping extends RequestProcessor {
      * @return boolean
      */
     private function isClassValid($class, $spa) {
+        // ZP-907: Outlook might request a ping for such a folder, but we shouldn't answer it in any way
+        if (Request::IsOutlook() && self::$deviceManager->GetFolderTypeFromCacheById($spa->GetFolderId()) == SYNC_FOLDER_TYPE_UNKNOWN) {
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandlePing()->isClassValid(): ignoring folder id '%s' as it's of type UNKNOWN ", $spa->GetFolderId()));
+            return false;
+        }
         if ($class == $spa->GetContentClass() ||
                 // KOE ZO-42: Notes are synched as Appointments
                 (self::$deviceManager->IsKoe() && KOE_CAPABILITY_NOTES && $class == "Calendar" && $spa->GetContentClass() == "Notes")

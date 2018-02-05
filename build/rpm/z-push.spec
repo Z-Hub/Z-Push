@@ -13,11 +13,11 @@ BuildRoot:  %_tmppath/%name-%version-build
 %if 0%{?suse_version}
     %define apache_dir %_sysconfdir/apache2
 %else
-	%if "%_repository" == "RHEL_6_PHP_56" || "%_repository" == "RHEL_7_PHP_56"
-		%define apache_dir /opt/rh/httpd24/root/etc/httpd/
-	%else
-		%define apache_dir %_sysconfdir/httpd
-	%endif
+    %if "%_repository" == "RHEL_6_PHP_56" || "%_repository" == "RHEL_7_PHP_56"
+        %define apache_dir /opt/rh/httpd24/root/etc/httpd/
+    %else
+        %define apache_dir %_sysconfdir/httpd
+    %endif
 %endif
 
 %description
@@ -27,11 +27,6 @@ Z-push is an implementation of the ActiveSync protocol which is used 'over-the-a
 Summary:    Z-Push core package
 Group:      Productivity/Networking/Email/Utilities
 
-%if 0%{?suse_version}
-Requires:   php-posix
-%else
-Requires:   php-process
-%endif
 %if "%_repository" == "RHEL_6_PHP_56" || "%_repository" == "RHEL_7_PHP_56"
 Requires:   rh-php56
 Requires:   rh-php56-php-soap
@@ -41,7 +36,14 @@ Requires:   rh-php56-php-process
 Requires:   php >= 5.4.0
 Requires:   php-soap
 Requires:   php-mbstring
+%if 0%{?suse_version}
+Requires:   php-posix
+Requires(pre): shadow
+%else
+Requires:   php-process
 %endif
+%endif
+Requires(pre):  %_sbindir/groupadd
 %description -n %name-common
 Z-push is an implementation of the ActiveSync protocol which is used 'over-the-air' for multi platform ActiveSync devices. Devices supported are including Windows Mobile, Android, iPhone, and Nokia. With Z-push any groupware can be connected and synced with these devices.
 
@@ -50,8 +52,15 @@ Z-push is an implementation of the ActiveSync protocol which is used 'over-the-a
 Summary:    Z-Push caldav backend
 Group:      Productivity/Networking/Email/Utilities
 Requires:   %name-common = %version
+Requires:   php-awl
+%if "%_repository" == "RHEL_6_PHP_56" || "%_repository" == "RHEL_7_PHP_56"
+Requires:   rh-php56-php-common
+Requires:   rh-php56-php-xml
+%else
 Requires:   php-curl
-Requires:   libawl-php
+Requires:   php-xml
+%endif
+
 Provides:   %name-backend
 
 %description -n %name-backend-caldav
@@ -84,7 +93,12 @@ Backend for Z-Push, that adds the ability to combine backends.
 Summary:    Z-Push imap backend
 Group:      Productivity/Networking/Email/Utilities
 Requires:   %name-common = %version
+Requires:   php-awl
+%if "%_repository" == "RHEL_6_PHP_56" || "%_repository" == "RHEL_7_PHP_56"
+Requires:   rh-php56-php-imap
+%else
 Requires:   php-imap
+%endif
 Provides:   %name-backend
 
 %description -n %name-backend-imap
@@ -95,7 +109,11 @@ Backend for Z-Push, that adds the ability to connect to a imap server
 Summary:    Z-Push ldap backend
 Group:      Productivity/Networking/Email/Utilities
 Requires:   %name-common = %version
+%if "%_repository" == "RHEL_6_PHP_56" || "%_repository" == "RHEL_7_PHP_56"
+Requires:   rh-php56-php-ldap
+%else
 Requires:   php-ldap
+%endif
 Provides:   %name-backend
 
 %description -n %name-backend-ldap
@@ -129,10 +147,27 @@ Z-Push for Kopano meta package
 %package -n %name-kopano-gabsync
 Summary:    GAB sync for Kopano
 Group:      Productivity/Networking/Email/Utilities
+%if 0%{?fedora_version} || 0%{?centos_version} || 0%{?rhel_version}
+Requires:   php-mapi-webapp
+%else
 Requires:   php-mapi
+%endif
 
 %description -n %name-kopano-gabsync
 Synchronizes a Kopano global address book
+
+%package -n %name-kopano-gab2contacts
+Summary:    GAB sync into a contacts folder for Kopano
+Group:      Productivity/Networking/Email/Utilities
+Requires:   %name-common = %version
+%if 0%{?fedora_version} || 0%{?centos_version} || 0%{?rhel_version}
+Requires:   php-mapi-webapp
+%else
+Requires:   php-mapi
+%endif
+
+%description -n %name-kopano-gab2contacts
+Synchronizes a Kopano global address book into a contacts folder
 
 # IPC SHARED MEMORY
 %package -n %name-ipc-sharedmemory
@@ -155,11 +190,15 @@ Provider for Z-Push, that adds the ability to use ipc shared memory
 Summary:    Z-Push ipc memcached provider
 Group:      Productivity/Networking/Email/Utilities
 Requires:   %name-common = %version
+Requires:   memcached
+%if "%_repository" == "RHEL_6_PHP_56" || "%_repository" == "RHEL_7_PHP_56"
+Requires:   php56-php-pecl-memcached
+%else
 %if 0%{?suse_version}
 Requires:   php5-memcached
 %else
-Requires:   memcached
 Requires:   php-pecl-memcached
+%endif
 %endif
 
 %description -n %name-ipc-memcached
@@ -170,7 +209,11 @@ Provider for Z-Push, that adds the ability to use ipc memcached
 Summary:    Z-Push ldap search backend
 Group:      Productivity/Networking/Email/Utilities
 Requires:   %name-common = %version
+%if "%_repository" == "RHEL_6_PHP_56" || "%_repository" == "RHEL_7_PHP_56"
+Requires:   rh-php56-php-ldap
+%else
 Requires:   php-ldap
+%endif
 Provides:   %name-backend
 
 %description -n %name-galsearch-ldap
@@ -181,8 +224,13 @@ Backend for Z-Push, that adds the ability to search a ldap server
 Summary:    Z-Push mysql state backend
 Group:      Productivity/Networking/Email/Utilities
 Requires:   %name-common = %version
+%if "%_repository" == "RHEL_6_PHP_56" || "%_repository" == "RHEL_7_PHP_56"
+Requires:   rh-php56-php-mysqlnd
+Requires:   rh-php56-php-pdo
+%else
 Requires:   php-mysql
 Requires:   php-pdo
+%endif
 
 %description -n %name-state-sql
 Backend for Z-Push, that adds the ability to save states in a mysql database
@@ -235,6 +283,15 @@ Requires:   httpd
 %description -n %name-config-apache-autodiscover
 Z-push autodiscover apache configuration files
 
+# CONFIG NGINX
+%package -n %name-config-nginx
+Summary:    Z-Push nginx configuration
+Group:      Productivity/Networking/Email/Utilities
+Requires:   nginx
+
+%description -n %name-config-nginx
+Z-push nginx configuration files
+
 %prep
 %setup -q
 
@@ -250,6 +307,7 @@ cp -a src/* "$b/%zpush_dir/"
 rm -f "$b/%zpush_dir/"{INSTALL,LICENSE}
 
 # COMMON
+# set version number
 sed -s "s/ZPUSHVERSION/%version/" build/version.php.in > "$b/%zpush_dir/version.php"
 
 mkdir -p "$b/%_sysconfdir/z-push";
@@ -294,10 +352,22 @@ ln -s "%_sysconfdir/z-push/ldap.conf.php" "$bdir/ldap/config.php";
 mv "$bdir/kopano/config.php" "$cdir/kopano.conf.php";
 ln -s "%_sysconfdir/z-push/kopano.conf.php" "$bdir/kopano/config.php";
 
+# GAB-SYNC
 mkdir -p "$b/%zpush_dir/tools"
 cp -a tools/gab-sync "$b/%zpush_dir/tools/"
 mv "$b/%zpush_dir/tools/gab-sync/config.php" "$cdir/gabsync.conf.php";
 ln -s "%_sysconfdir/z-push/gabsync.conf.php" "$b/%zpush_dir/tools/gab-sync/config.php";
+mkdir -p "$b/%_bindir"
+ln -s "%zpush_dir/tools/gab-sync/gab-sync.php" "$b/%_bindir/z-push-gabsync";
+
+# GAB2CONTACTS
+mkdir -p "$b/%zpush_dir/tools"
+cp -a tools/gab2contacts "$b/%zpush_dir/tools/"
+mv "$b/%zpush_dir/tools/gab2contacts/config.php" "$cdir/gab2contacts.conf.php";
+ln -s "%_sysconfdir/z-push/gab2contacts.conf.php" "$b/%zpush_dir/tools/gab2contacts/config.php";
+sed -i -s "s/PATH_TO_ZPUSH', '\.\.\/\.\.\/src\/')/PATH_TO_ZPUSH', '\/usr\/share\/z-push\/')/" "$b/%zpush_dir/tools/gab2contacts/gab2contacts.php"
+mkdir -p "$b/%_bindir"
+ln -s "%zpush_dir/tools/gab2contacts/gab2contacts.php" "$b/%_bindir/z-push-gab2contacts";
 
 # MEMCACHED
 mv "$bdir/ipcmemcached/config.php" "$cdir/memcached.conf.php";
@@ -324,6 +394,21 @@ install -Dpm 644 config/apache2/z-push.conf \
 install -Dpm 644 config/apache2/z-push-autodiscover.conf \
     "$b/%apache_dir/conf.d/z-push-autodiscover.conf";
 
+# NGINX
+mkdir -p "$b/%_sysconfdir/nginx/sites-available/";
+install -Dpm 644 config/nginx/z-push.conf "$b/%_sysconfdir/nginx/sites-available/z-push.conf"
+
+# MANPAGES
+mkdir -p "$b/%_mandir/man1"
+cp man/*.1 "$b/%_mandir/man1"
+
+%pre -n %name-common
+%_bindir/getent group z-push > /dev/null || %_sbindir/groupadd -r z-push
+%_bindir/getent passwd apache > /dev/null && %_sbindir/usermod -a -G z-push apache
+%_bindir/getent passwd wwwrun > /dev/null && %_sbindir/usermod -a -G z-push wwwrun
+%_bindir/getent passwd nginx > /dev/null && %_sbindir/usermod -a -G z-push nginx
+exit 0
+
 %post -n %name-config-apache
 %if 0%{?suse_version}
     service apache2 reload || true
@@ -337,6 +422,14 @@ install -Dpm 644 config/apache2/z-push-autodiscover.conf \
     service apache2 reload || true
 %else
     service httpd reload || true
+%endif
+
+%post -n %name-config-nginx
+echo -e "\033[0;33mEdit %_sysconfdir/nginx/sites-available/z-push.conf, enable it and reload nginx.\n\033[0m"
+
+%post -n %name-ipc-memcached
+%if "%_repository" == "RHEL_6_PHP_56" || "%_repository" == "RHEL_7_PHP_56"
+echo -e "\033[0;33mMake sure you have remi repositories enabled.\n\033[0m"
 %endif
 
 %postun -n %name-config-apache
@@ -353,18 +446,16 @@ install -Dpm 644 config/apache2/z-push-autodiscover.conf \
     service httpd reload || true
 %endif
 
+%postun -n %name-config-nginx
+service nginx reload || true
+
 # COMMON
 %files -n %name-common
 %defattr(-, root, root)
 %dir %_sysconfdir/z-push
 
-%if 0%{?suse_version}
-	%config(noreplace) %attr(0640,root,www) %_sysconfdir/z-push/policies.ini
-    %config(noreplace) %attr(0640,root,www) %_sysconfdir/z-push/z-push.conf.php
-%else
-	%config(noreplace) %attr(0640,root,apache) %_sysconfdir/z-push/policies.ini
-    %config(noreplace) %attr(0640,root,apache) %_sysconfdir/z-push/z-push.conf.php
-%endif
+%config(noreplace) %attr(0640,root,z-push) %_sysconfdir/z-push/policies.ini
+%config(noreplace) %attr(0640,root,z-push) %_sysconfdir/z-push/z-push.conf.php
 
 %config(noreplace) %attr(0640,root,root) %_sysconfdir/logrotate.d/z-push.lr
 
@@ -372,19 +463,23 @@ install -Dpm 644 config/apache2/z-push-autodiscover.conf \
 %exclude %zpush_dir/autodiscover
 %exclude %zpush_dir/tools/migrate-filestates-to-db.php
 %exclude %zpush_dir/tools/gab-sync
+%exclude %zpush_dir/tools/gab2contacts
 %zpush_dir/
 %doc src/LICENSE
 
 %if 0%{?suse_version}
-%attr(750,wwwrun,www) %dir %_localstatedir/lib/z-push
-%attr(750,wwwrun,www) %dir %_localstatedir/log/z-push
+%attr(770,wwwrun,z-push) %dir %_localstatedir/lib/z-push
+%attr(770,wwwrun,z-push) %dir %_localstatedir/log/z-push
 %else
-%attr(750,apache,apache) %dir %_localstatedir/lib/z-push
-%attr(750,apache,apache) %dir %_localstatedir/log/z-push
+%attr(750,apache,z-push) %dir %_localstatedir/lib/z-push
+%attr(750,apache,z-push) %dir %_localstatedir/log/z-push
 %endif
 
 %_bindir/z-push-admin
 %_bindir/z-push-top
+
+%_mandir/man1/z-push-admin.1*
+%_mandir/man1/z-push-top.1*
 
 # CALDAV
 %files -n %name-backend-caldav
@@ -393,11 +488,7 @@ install -Dpm 644 config/apache2/z-push-autodiscover.conf \
 %dir %zpush_dir/backend/caldav
 %zpush_dir/backend/caldav/
 %dir %_sysconfdir/z-push
-%if 0%{?suse_version}
-    %config(noreplace) %attr(0640,root,www) %_sysconfdir/z-push/caldav.conf.php
-%else
-    %config(noreplace) %attr(0640,root,apache) %_sysconfdir/z-push/caldav.conf.php
-%endif
+%config(noreplace) %attr(0640,root,z-push) %_sysconfdir/z-push/caldav.conf.php
 
 # CARDDAV
 %files -n %name-backend-carddav
@@ -406,11 +497,7 @@ install -Dpm 644 config/apache2/z-push-autodiscover.conf \
 %dir %zpush_dir/backend/carddav
 %zpush_dir/backend/carddav/
 %dir %_sysconfdir/z-push
-%if 0%{?suse_version}
-    %config(noreplace) %attr(0640,root,www) %_sysconfdir/z-push/carddav.conf.php
-%else
-    %config(noreplace) %attr(0640,root,apache) %_sysconfdir/z-push/carddav.conf.php
-%endif
+%config(noreplace) %attr(0640,root,z-push) %_sysconfdir/z-push/carddav.conf.php
 
 # COMBINED
 %files -n %name-backend-combined
@@ -419,11 +506,7 @@ install -Dpm 644 config/apache2/z-push-autodiscover.conf \
 %dir %zpush_dir/backend/combined
 %zpush_dir/backend/combined/
 %dir %_sysconfdir/z-push
-%if 0%{?suse_version}
-    %config(noreplace) %attr(0640,root,www) %_sysconfdir/z-push/combined.conf.php
-%else
-    %config(noreplace) %attr(0640,root,apache) %_sysconfdir/z-push/combined.conf.php
-%endif
+%config(noreplace) %attr(0640,root,z-push) %_sysconfdir/z-push/combined.conf.php
 
 # IMAP
 %files -n %name-backend-imap
@@ -432,11 +515,7 @@ install -Dpm 644 config/apache2/z-push-autodiscover.conf \
 %dir %zpush_dir/backend/imap
 %zpush_dir/backend/imap/
 %dir %_sysconfdir/z-push
-%if 0%{?suse_version}
-    %config(noreplace) %attr(0640,root,www) %_sysconfdir/z-push/imap.conf.php
-%else
-    %config(noreplace) %attr(0640,root,apache) %_sysconfdir/z-push/imap.conf.php
-%endif
+%config(noreplace) %attr(0640,root,z-push) %_sysconfdir/z-push/imap.conf.php
 
 # LDAP
 %files -n %name-backend-ldap
@@ -445,11 +524,7 @@ install -Dpm 644 config/apache2/z-push-autodiscover.conf \
 %dir %zpush_dir/backend/ldap
 %zpush_dir/backend/ldap/
 %dir %_sysconfdir/z-push
-%if 0%{?suse_version}
-    %config(noreplace) %attr(0640,root,www) %_sysconfdir/z-push/ldap.conf.php
-%else
-    %config(noreplace) %attr(0640,root,apache) %_sysconfdir/z-push/ldap.conf.php
-%endif
+%config(noreplace) %attr(0640,root,z-push) %_sysconfdir/z-push/ldap.conf.php
 
 # KOPANO
 %files -n %name-backend-kopano
@@ -458,11 +533,7 @@ install -Dpm 644 config/apache2/z-push-autodiscover.conf \
 %dir %zpush_dir/backend/kopano
 %zpush_dir/backend/kopano/
 %dir %_sysconfdir/z-push
-%if 0%{?suse_version}
-    %config(noreplace) %attr(0640,root,www) %_sysconfdir/z-push/kopano.conf.php
-%else
-    %config(noreplace) %attr(0640,root,apache) %_sysconfdir/z-push/kopano.conf.php
-%endif
+%config(noreplace) %attr(0640,root,z-push) %_sysconfdir/z-push/kopano.conf.php
 
 %files -n %name-kopano-gabsync
 %defattr(-, root, root)
@@ -470,11 +541,19 @@ install -Dpm 644 config/apache2/z-push-autodiscover.conf \
 %dir %zpush_dir/tools/gab-sync
 %zpush_dir/tools/gab-sync/
 %dir %_sysconfdir/z-push
-%if 0%{?suse_version}
-    %config(noreplace) %attr(0640,root,www) %_sysconfdir/z-push/gabsync.conf.php
-%else
-    %config(noreplace) %attr(0640,root,apache) %_sysconfdir/z-push/gabsync.conf.php
-%endif
+%config(noreplace) %attr(0640,root,z-push) %_sysconfdir/z-push/gabsync.conf.php
+%_bindir/z-push-gabsync
+%_mandir/man1/z-push-gabsync.1*
+
+%files -n %name-kopano-gab2contacts
+%defattr(-, root, root)
+%dir %zpush_dir/tools
+%dir %zpush_dir/tools/gab2contacts
+%zpush_dir/tools/gab2contacts/
+%dir %_sysconfdir/z-push
+%config(noreplace) %attr(0640,root,z-push) %_sysconfdir/z-push/gab2contacts.conf.php
+%_bindir/z-push-gab2contacts
+%_mandir/man1/z-push-gab2contacts.1*
 
 %files -n %name-kopano
 
@@ -492,11 +571,7 @@ install -Dpm 644 config/apache2/z-push-autodiscover.conf \
 %dir %zpush_dir/backend/ipcmemcached
 %zpush_dir/backend/ipcmemcached/
 %dir %_sysconfdir/z-push
-%if 0%{?suse_version}
-    %config(noreplace) %attr(0640,root,www) %_sysconfdir/z-push/memcached.conf.php
-%else
-    %config(noreplace) %attr(0640,root,apache) %_sysconfdir/z-push/memcached.conf.php
-%endif
+%config(noreplace) %attr(0640,root,z-push) %_sysconfdir/z-push/memcached.conf.php
 
 # GALSEARCH-LDAP
 %files -n %name-galsearch-ldap
@@ -505,11 +580,7 @@ install -Dpm 644 config/apache2/z-push-autodiscover.conf \
 %dir %zpush_dir/backend/searchldap
 %zpush_dir/backend/searchldap/
 %dir %_sysconfdir/z-push
-%if 0%{?suse_version}
-    %config(noreplace) %attr(0640,root,www) %_sysconfdir/z-push/galsearch-ldap.conf.php
-%else
-    %config(noreplace) %attr(0640,root,apache) %_sysconfdir/z-push/galsearch-ldap.conf.php
-%endif
+%config(noreplace) %attr(0640,root,z-push) %_sysconfdir/z-push/galsearch-ldap.conf.php
 
 # STATE-SQL
 %files -n %name-state-sql
@@ -519,11 +590,7 @@ install -Dpm 644 config/apache2/z-push-autodiscover.conf \
 %zpush_dir/backend/sqlstatemachine/
 %zpush_dir/tools/migrate-filestates-to-db.php
 %dir %_sysconfdir/z-push
-%if 0%{?suse_version}
-    %config(noreplace) %attr(0640,root,www) %_sysconfdir/z-push/state-sql.conf.php
-%else
-    %config(noreplace) %attr(0640,root,apache) %_sysconfdir/z-push/state-sql.conf.php
-%endif
+%config(noreplace) %attr(0640,root,z-push) %_sysconfdir/z-push/state-sql.conf.php
 
 # AUTODISCOVER
 %files -n %name-autodiscover
@@ -531,21 +598,23 @@ install -Dpm 644 config/apache2/z-push-autodiscover.conf \
 %dir %zpush_dir/autodiscover
 %zpush_dir/autodiscover/
 %dir %_sysconfdir/z-push
-%if 0%{?suse_version}
-    %config(noreplace) %attr(0640,root,www) %_sysconfdir/z-push/autodiscover.conf.php
-%else
-    %config(noreplace) %attr(0640,root,apache) %_sysconfdir/z-push/autodiscover.conf.php
-%endif
+    %config(noreplace) %attr(0640,root,z-push) %_sysconfdir/z-push/autodiscover.conf.php
 
 # CONFIG
 %files -n %name-config-apache
 %dir %apache_dir
 %dir %apache_dir/conf.d
-%config(noreplace) %attr(0640,root,root) %apache_dir/conf.d/z-push.conf
+%config(noreplace) %attr(0640,root,z-push) %apache_dir/conf.d/z-push.conf
 
 %files -n %name-config-apache-autodiscover
 %dir %apache_dir
 %dir %apache_dir/conf.d
-%config(noreplace) %attr(0640,root,root) %apache_dir/conf.d/z-push-autodiscover.conf
+%config(noreplace) %attr(0640,root,z-push) %apache_dir/conf.d/z-push-autodiscover.conf
+
+# NGINX CONFIG
+%files -n %name-config-nginx
+%dir %_sysconfdir/nginx
+%dir %_sysconfdir/nginx/sites-available
+%config(noreplace) %attr(0640,nginx,z-push) %_sysconfdir/nginx/sites-available/z-push.conf
 
 %changelog

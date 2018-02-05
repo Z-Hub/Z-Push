@@ -1,0 +1,19 @@
+.TH Z-PUSH-GAB2CONTACTS 1
+.SH NAME
+z-push-gab2contacts \(em synchronize Global Address Book data to a contact folder
+.SH SYNOPSIS
+.B \fBz-push-gab2contacts\fP \fB\-a\fP \fIsync\fP
+.PP
+.B \fBz-push-gab2contacts\fP \fB\-a\fP \fIdelete\fP
+.PP
+.SH DESCRIPTION
+\fBz-push-gab2contacts\fP can be used to synchronize the Global Address Book
+(GAB) to a normal contacts folder. This way the GAB can be easily synchronized
+to mobile devices.
+.SH OPTIONS
+.SS sync
+The \fIsync\fP action updates the contact folder with the contacts from the
+GAB. Contacts created manually in the contact folder are not touched.
+.SS delete
+The \fIdelete\fP action deletes the contacts from the contacts folder that
+were created by synchronization from the GAB.

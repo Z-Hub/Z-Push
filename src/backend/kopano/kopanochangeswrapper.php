@@ -17,25 +17,7 @@
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License, version 3,
- * as published by the Free Software Foundation with the following additional
- * term according to sec. 7:
- *
- * According to sec. 7 of the GNU Affero General Public License, version 3,
- * the terms of the AGPL are supplemented with the following terms:
- *
- * "Zarafa" is a registered trademark of Zarafa B.V.
- * "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
- * The licensing of the Program under the AGPL does not imply a trademark license.
- * Therefore any rights, title and interest in our trademarks remain entirely with us.
- *
- * However, if you propagate an unmodified version of the Program you are
- * allowed to use the term "Z-Push" to indicate that you distribute the Program.
- * Furthermore you may use our trademarks where it is necessary to indicate
- * the intended purpose of a product or service provided you use it in accordance
- * with honest practices in industrial or commercial matters.
- * If you want to propagate modified versions of the Program under the name "Z-Push",
- * you may only do so if you have a written permission by Zarafa Deutschland GmbH
- * (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -92,6 +74,12 @@ class KopanoChangesWrapper implements IImportChanges, IExportChanges {
      * @return KopanoChangesWrapper | boolean
      */
     static public function GetWrapper($storeName, $session, $store, $folderid, $ownFolder) {
+        // if existing exporter is used by Ping we need to discard it so it's fully reconfigured (ZP-1169)
+        if (isset(self::$wrappers[$storeName][$folderid]) && self::$wrappers[$storeName][$folderid]->hasDiscardDataFlag()) {
+            ZLog::Write(LOGLEVEL_DEBUG, "KopanoChangesWrapper::GetWrapper(): Found existing notification check exporter. Reinitializing.");
+            unset(self::$wrappers[$storeName][$folderid]);
+        }
+
         // check early due to the folderstats
         if (isset(self::$wrappers[$storeName][$folderid])) {
             return self::$wrappers[$storeName][$folderid];
@@ -167,6 +155,21 @@ class KopanoChangesWrapper implements IImportChanges, IExportChanges {
      */
     private function isReplyBackExporter() {
         return $this->current == $this->replyback;
+    }
+
+    /**
+     * Indicates if the current IChanges object is an ICS exporter and has the BACKEND_DISCARD_DATA flag configured.
+     * These are used to verify notifications e.g. in Ping.
+     *
+     * @access private
+     * @return boolean
+     */
+    private function hasDiscardDataFlag() {
+        if (isset($this->current) && $this->current instanceof ExportChangesICS && $this->current->HasDiscardDataFlag()) {
+            return true;
+        }
+
+        return false;
     }
 
     /**

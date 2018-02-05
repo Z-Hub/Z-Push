@@ -7,29 +7,11 @@
 *
 * Created   :   24.11.2011
 *
-* Copyright 2007 - 2013, 2015 Zarafa Deutschland GmbH
+* Copyright 2007 - 2013, 2015 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -48,6 +30,7 @@ class StringStreamWrapper {
     private $stringstream;
     private $position;
     private $stringlength;
+    private $truncateHtmlSafe;
 
     /**
      * Opens the stream
@@ -71,9 +54,10 @@ class StringStreamWrapper {
 
         // this is our stream!
         $this->stringstream = $contextOptions[self::PROTOCOL]['string'];
+        $this->truncateHtmlSafe = (isset($contextOptions[self::PROTOCOL]['truncatehtmlsafe'])) ? $contextOptions[self::PROTOCOL]['truncatehtmlsafe'] : false;
 
         $this->stringlength = strlen($this->stringstream);
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("StringStreamWrapper::stream_open(): initialized stream length: %d", $this->stringlength));
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("StringStreamWrapper::stream_open(): initialized stream length: %d - HTML-safe-truncate: %s", $this->stringlength,  Utils::PrintAsString($this->truncateHtmlSafe)));
 
         return true;
     }
@@ -153,12 +137,12 @@ class StringStreamWrapper {
      */
     public function stream_truncate ($new_size) {
         // cut the string!
-        $this->stringstream = Utils::Utf8_truncate($this->stringstream, $new_size);
-        $this->streamlength = strlen($this->stringstream);
+        $this->stringstream = Utils::Utf8_truncate($this->stringstream, $new_size, $this->truncateHtmlSafe);
+        $this->stringlength = strlen($this->stringstream);
 
-        if ($this->position > $this->streamlength) {
-            ZLog::Write(LOGLEVEL_WARN, sprintf("StringStreamWrapper->stream_truncate(): stream position (%d) ahead of new size of %d. Repositioning pointer to end of stream.", $this->position, $this->streamlength));
-            $this->position = $this->streamlength;
+        if ($this->position > $this->stringlength) {
+            ZLog::Write(LOGLEVEL_WARN, sprintf("StringStreamWrapper->stream_truncate(): stream position (%d) ahead of new size of %d. Repositioning pointer to end of stream.", $this->position, $this->stringlength));
+            $this->position = $this->stringlength;
         }
         return true;
     }
@@ -179,13 +163,14 @@ class StringStreamWrapper {
    /**
      * Instantiates a StringStreamWrapper
      *
-     * @param string    $string     The string to be wrapped
+     * @param string    $string             The string to be wrapped
+     * @param boolean   $truncatehtmlsafe   Indicates if a truncation should be done html-safe - default: false
      *
      * @access public
      * @return StringStreamWrapper
      */
-     static public function Open($string) {
-        $context = stream_context_create(array(self::PROTOCOL => array('string' => &$string)));
+     static public function Open($string, $truncatehtmlsafe = false) {
+        $context = stream_context_create(array(self::PROTOCOL => array('string' => &$string, 'truncatehtmlsafe' => $truncatehtmlsafe)));
         return fopen(self::PROTOCOL . "://",'r', false, $context);
     }
 }

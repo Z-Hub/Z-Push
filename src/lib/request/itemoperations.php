@@ -6,29 +6,11 @@
 *
 * Created   :   16.02.2012
 *
-* Copyright 2007 - 2015 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -169,6 +151,37 @@ class ItemOperations extends RequestProcessor {
                                     return false;//SYNC_AIRSYNCBASE_BODYPREFERENCE
                             }
 
+                            if (self::$decoder->getElementStartTag(SYNC_AIRSYNCBASE_BODYPARTPREFERENCE)) {
+                                if (self::$decoder->getElementStartTag(SYNC_AIRSYNCBASE_TYPE)) {
+                                    $bpptype = self::$decoder->getElementContent();
+                                    $operation["cpo"]->BodyPartPreference($bpptype);
+                                    if (!self::$decoder->getElementEndTag()) {
+                                        return false;
+                                    }
+                                }
+
+                                if (self::$decoder->getElementStartTag(SYNC_AIRSYNCBASE_TRUNCATIONSIZE)) {
+                                    $operation["cpo"]->BodyPartPreference($bpptype)->SetTruncationSize(self::$decoder->getElementContent());
+                                    if(!self::$decoder->getElementEndTag())
+                                        return false;
+                                }
+
+                                if (self::$decoder->getElementStartTag(SYNC_AIRSYNCBASE_ALLORNONE)) {
+                                    $operation["cpo"]->BodyPartPreference($bpptype)->SetAllOrNone(self::$decoder->getElementContent());
+                                    if(!self::$decoder->getElementEndTag())
+                                        return false;
+                                }
+
+                                if (self::$decoder->getElementStartTag(SYNC_AIRSYNCBASE_PREVIEW)) {
+                                    $operation["cpo"]->BodyPartPreference($bpptype)->SetPreview(self::$decoder->getElementContent());
+                                    if(!self::$decoder->getElementEndTag())
+                                        return false;
+                                }
+
+                                if (!self::$decoder->getElementEndTag())
+                                    return false;
+                            }
+
                             if(self::$decoder->getElementStartTag(SYNC_MIMESUPPORT)) {
                                 $operation["cpo"]->SetMimeSupport(self::$decoder->getElementContent());
                                 if(!self::$decoder->getElementEndTag())
@@ -195,11 +208,27 @@ class ItemOperations extends RequestProcessor {
                                 }
                             }
 
+                            if(self::$decoder->getElementStartTag(SYNC_RIGHTSMANAGEMENT_SUPPORT)) {
+                                $operation["cpo"]->SetRmSupport(self::$decoder->getElementContent());
+                                if(!self::$decoder->getElementEndTag())
+                                    return false;
+                            }
+
                             //break if it reached the endtag
                             $e = self::$decoder->peek();
                             if($e[EN_TYPE] == EN_TYPE_ENDTAG) {
                                 self::$decoder->getElementEndTag();
                                 break;
+                            }
+                        }
+                    }
+
+                    if (self::$decoder->getElementStartTag(SYNC_RIGHTSMANAGEMENT_REMOVERIGHTSMGNTPROTECTION)) {
+                        $operation["cpo"]->SetRemoveRmProtection(true);
+                        if (($rrmp = self::$decoder->getElementContent()) !== false) {
+                            $operation["cpo"]->SetRemoveRmProtection($rrmp);
+                            if(!self::$decoder->getElementEndTag()) {
+                                return false;
                             }
                         }
                     }

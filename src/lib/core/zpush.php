@@ -10,25 +10,7 @@
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -40,7 +22,6 @@
 *
 * Consult LICENSE file for details
 ************************************************/
-
 
 class ZPush {
     const UNAUTHENTICATED = 1;
@@ -63,6 +44,7 @@ class ZPush {
     const ASV_12 = "12.0";
     const ASV_121 = "12.1";
     const ASV_14 = "14.0";
+    const ASV_141 = "14.1";
 
     /**
      * Command codes for base64 encoded requests (AS >= 12.1)
@@ -114,7 +96,8 @@ class ZPush {
     static private $supportedASVersions = array(
                     self::ASV_12,
                     self::ASV_121,
-                    self::ASV_14
+                    self::ASV_14,
+                    self::ASV_141
                 );
 
     static private $supportedCommands = array(
@@ -164,7 +147,7 @@ class ZPush {
                                         self::CLASS_NAME => "SyncContact",
                                         self::CLASS_REQUIRESPROTOCOLVERSION => true,
                                         self::CLASS_DEFAULTTYPE => SYNC_FOLDER_TYPE_CONTACT,
-                                        self::CLASS_OTHERTYPES => array(SYNC_FOLDER_TYPE_USER_CONTACT),
+                                        self::CLASS_OTHERTYPES => array(SYNC_FOLDER_TYPE_USER_CONTACT, SYNC_FOLDER_TYPE_UNKNOWN),
                                    ),
                     "Calendar"  => array(
                                         self::CLASS_NAME => "SyncAppointment",
@@ -302,6 +285,10 @@ class ZPush {
                 throw new FatalMisconfigurationException(sprintf("Your policies' configuration file doesn't contain the required [default] section. Please check the '%s' file.", $policyfile));
             }
         }
+
+        if (defined('USE_X_FORWARDED_FOR_HEADER')) {
+            ZLog::Write(LOGLEVEL_INFO, "The configuration parameter 'USE_X_FORWARDED_FOR_HEADER' was deprecated in favor of 'USE_CUSTOM_REMOTE_IP_HEADER'. Please update your configuration.");
+        }
         return true;
     }
 
@@ -344,6 +331,13 @@ class ZPush {
             throw new FatalMisconfigurationException("The PING_HIGHER_BOUND_LIFETIME value must be greater or equal to PING_LOWER_BOUND_LIFETIME.");
         }
 
+        if (!defined('RETRY_AFTER_DELAY')) {
+            define('RETRY_AFTER_DELAY', 300);
+        }
+        elseif (RETRY_AFTER_DELAY !== false && (!is_int(RETRY_AFTER_DELAY) || RETRY_AFTER_DELAY < 1))  {
+            throw new FatalMisconfigurationException("The RETRY_AFTER_DELAY value must be 'false' or a number greater than 0.");
+        }
+
         // Check KOE flags
         if (!defined('KOE_CAPABILITY_GAB')) {
             define('KOE_CAPABILITY_GAB', false);
@@ -380,9 +374,7 @@ class ZPush {
         if (isset($additionalFolders) && !is_array($additionalFolders))
             ZLog::Write(LOGLEVEL_ERROR, "ZPush::CheckConfig() : The additional folders synchronization not available as array.");
         else {
-            self::$addSyncFolders = array();
-
-            // process configured data
+            // check configured data
             foreach ($additionalFolders as $af) {
 
                 if (!is_array($af) || !isset($af['store']) || !isset($af['folderid']) || !isset($af['name']) || !isset($af['type'])) {
@@ -399,21 +391,8 @@ class ZPush {
                     ZLog::Write(LOGLEVEL_ERROR, sprintf("ZPush::CheckConfig() : the type of the additional synchronization folder '%s is not permitted.", $af['name']));
                     continue;
                 }
-
-                $folder = new SyncFolder();
-
-                $folder->BackendId = $af['folderid'];
-                $folder->serverid = ZPush::GetDeviceManager(true)->GetFolderIdForBackendId($folder->BackendId, true, DeviceManager::FLD_ORIGIN_CONFIG, $af['name']);
-                $folder->parentid = 0;                  // only top folders are supported
-                $folder->displayname = $af['name'];
-                $folder->type = $af['type'];
-                // save store as custom property which is not streamed directly to the device
-                $folder->NoBackendFolder = true;
-                $folder->Store = $af['store'];
-
-                self::$addSyncFolders[$folder->BackendId] = $folder;
+                // the data will be inizialized when used via self::getAddFolders()
             }
-
         }
 
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("Used timezone '%s'", date_default_timezone_get()));
@@ -456,7 +435,7 @@ class ZPush {
 
             if (ZPush::$stateMachine->GetStateVersion() !== ZPush::GetLatestStateVersion()) {
                 if (class_exists("TopCollector")) self::GetTopCollector()->AnnounceInformation("Run migration script!", true);
-                throw new HTTPReturnCodeException(sprintf("The state version available to the %s is not the latest version - please run the state upgrade script. See release notes for more information.", get_class(ZPush::$stateMachine), 503));
+                throw new ServiceUnavailableException(sprintf("The state version available to the %s is not the latest version - please run the state upgrade script. See release notes for more information.", get_class(ZPush::$stateMachine)));
             }
         }
         return ZPush::$stateMachine;
@@ -485,6 +464,21 @@ class ZPush {
             ZPush::$deviceManager = new DeviceManager();
 
         return ZPush::$deviceManager;
+    }
+
+    /**
+     * Load another device in the DeviceManager and return it.
+     *
+     * @param ASDevice $asDevice
+     * @param boolean $initialize - default: true
+     * @return DeviceManager
+     */
+    static public function GetDeviceManagerWithDevice($asDevice, $initialize = true) {
+        $dm = ZPush::GetDeviceManager($initialize);
+        if ($dm) {
+            $dm->SetDevice($asDevice);
+        }
+        return $dm;
     }
 
     /**
@@ -576,7 +570,6 @@ class ZPush {
     static public function GetBackend() {
         // if the backend is not yet loaded, load backend drivers and instantiate it
         if (!isset(ZPush::$backend)) {
-            $isIbar = false;
 
             // Initialize our backend
             $ourBackend = @constant('BACKEND_PROVIDER');
@@ -594,20 +587,13 @@ class ZPush {
                     throw new FatalMisconfigurationException("No Backend provider can be found. Check your installation and/or configuration!");
             }
             elseif (!class_exists($ourBackend)) {
-                spl_autoload_register('\ZPush::IncludeBackend');
-                $isIbar = true;
-                ZLog::Write(LOGLEVEL_DEBUG, "ZPush::GetBackend(): autoload register ZPush::IncludeBackend");
+                \ZPush::IncludeBackend($ourBackend);
             }
 
             if (class_exists($ourBackend))
                 ZPush::$backend = new $ourBackend();
             else
                 throw new FatalMisconfigurationException(sprintf("Backend provider '%s' can not be loaded. Check configuration!", $ourBackend));
-
-            if ($isIbar) {
-                spl_autoload_unregister('\ZPush::IncludeBackend');
-                ZLog::Write(LOGLEVEL_DEBUG, "ZPush::GetBackend(): autoload unregister ZPush::IncludeBackend");
-            }
         }
         return ZPush::$backend;
     }
@@ -623,7 +609,7 @@ class ZPush {
     static public function GetAdditionalSyncFolders($backendIdsAsKeys = true) {
         // get user based folders which should be synchronized
         $userFolder = self::GetDeviceManager()->GetAdditionalUserSyncFolders();
-        $addfolders = self::$addSyncFolders + $userFolder;
+        $addfolders = self::getAddSyncFolders() + $userFolder;
         // if requested, we rewrite the backendids to folderids here
         if ($backendIdsAsKeys === false && !empty($addfolders)) {
             ZLog::Write(LOGLEVEL_DEBUG, "ZPush::GetAdditionalSyncFolders(): Requested AS folderids as keys for additional folders array, converting");
@@ -648,8 +634,8 @@ class ZPush {
      * @return string
      */
     static public function GetAdditionalSyncFolderStore($backendid, $noDebug = false) {
-        if(isset(self::$addSyncFolders[$backendid]->Store)) {
-            $val = self::$addSyncFolders[$backendid]->Store;
+        if(isset(self::getAddSyncFolders()[$backendid]->Store)) {
+            $val = self::getAddSyncFolders()[$backendid]->Store;
         }
         else {
             $val = self::GetDeviceManager()->GetAdditionalUserSyncFolderStore($backendid);
@@ -678,6 +664,52 @@ class ZPush {
             return new $class(Request::GetProtocolVersion());
         else
             return new $class();
+    }
+
+    /**
+     * Initializes the SyncObjects for additional folders on demand.
+     * Uses DeviceManager->BuildSyncFolderObject() to do patching required for ZP-907.
+     *
+     * @access private
+     * @return array
+     */
+    static private function getAddSyncFolders() {
+        global $additionalFolders;
+        if (!isset(self::$addSyncFolders)) {
+            self::$addSyncFolders = array();
+
+            if (isset($additionalFolders) && !is_array($additionalFolders)) {
+                ZLog::Write(LOGLEVEL_ERROR, "ZPush::getAddSyncFolders() : The additional folders synchronization not available as array.");
+            }
+            else {
+                foreach ($additionalFolders as $af) {
+                    if (!is_array($af) || !isset($af['store']) || !isset($af['folderid']) || !isset($af['name']) || !isset($af['type'])) {
+                        ZLog::Write(LOGLEVEL_ERROR, "ZPush::getAddSyncFolders() : the additional folder synchronization is not configured correctly. Missing parameters. Entry will be ignored.");
+                        continue;
+                    }
+
+                    if ($af['store'] == "" || $af['folderid'] == "" || $af['name'] == "" || $af['type'] == "") {
+                        ZLog::Write(LOGLEVEL_WARN, "ZPush::getAddSyncFolders() : the additional folder synchronization is not configured correctly. Empty parameters. Entry will be ignored.");
+                        continue;
+                    }
+
+                    if (!in_array($af['type'], array(SYNC_FOLDER_TYPE_USER_NOTE, SYNC_FOLDER_TYPE_USER_CONTACT, SYNC_FOLDER_TYPE_USER_APPOINTMENT, SYNC_FOLDER_TYPE_USER_TASK, SYNC_FOLDER_TYPE_USER_MAIL))) {
+                        ZLog::Write(LOGLEVEL_ERROR, sprintf("ZPush::getAddSyncFolders() : the type of the additional synchronization folder '%s is not permitted.", $af['name']));
+                        continue;
+                    }
+
+                    // don't fail hard if no flags are set, but we at least warn about it
+                    if (!isset($af['flags'])) {
+                        ZLog::Write(LOGLEVEL_WARN, sprintf("ZPush::getAddSyncFolders() : the additional folder '%s' is not configured completely. Missing 'flags' parameter, defaulting to DeviceManager::FLD_FLAGS_NONE.", $af['name']));
+                        $af['flags'] = DeviceManager::FLD_FLAGS_NONE;
+                    }
+
+                    $folder = self::GetDeviceManager()->BuildSyncFolderObject($af['store'], $af['folderid'], '0', $af['name'], $af['type'], $af['flags'], DeviceManager::FLD_ORIGIN_CONFIG);
+                    self::$addSyncFolders[$folder->BackendId] = $folder;
+                }
+            }
+        }
+        return self::$addSyncFolders;
     }
 
     /**

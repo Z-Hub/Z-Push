@@ -6,29 +6,11 @@
 *
 * Created   :   14.05.2014
 *
-* Copyright 2007 - 2014 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -46,7 +28,6 @@ require_once 'config.php';
 
 class ZPushAutodiscover {
     const ACCEPTABLERESPONSESCHEMAMOBILESYNC = 'http://schemas.microsoft.com/exchange/autodiscover/mobilesync/responseschema/2006';
-    const ACCEPTABLERESPONSESCHEMAOUTLOOK = 'http://schemas.microsoft.com/exchange/autodiscover/outlook/responseschema/2006a';
     const MAXINPUTSIZE = 8192; // Bytes, the autodiscover request shouldn't exceed that value
 
     private static $instance;
@@ -63,17 +44,27 @@ class ZPushAutodiscover {
         ZLog::Write(LOGLEVEL_DEBUG, '-------- Start ZPushAutodiscover');
         ZLog::Write(LOGLEVEL_INFO, sprintf("Z-Push version='%s'", @constant('ZPUSH_VERSION')));
         // TODO use filterevilinput?
+        if (!isset(self::$instance)) {
+            self::$instance = new ZPushAutodiscover();
+        }
         if (stripos($_SERVER["REQUEST_METHOD"], "GET") !== false) {
-            ZLog::Write(LOGLEVEL_WARN, "GET request for autodiscover. Exiting.");
+            ZLog::Write(LOGLEVEL_INFO, "ZPushAutodiscover::DoZPushAutodiscover(): GET request for autodiscover.");
+            try {
+                self::$instance->getLogin();
+            }
+            catch (Exception $ex) {
+                if ($ex instanceof AuthenticationRequiredException) {
+                    http_response_code(401);
+                    header('WWW-Authenticate: Basic realm="ZPush"');
+                }
+            }
             if (!headers_sent()) {
                 ZPush::PrintZPushLegal('GET not supported');
             }
             ZLog::Write(LOGLEVEL_DEBUG, '-------- End ZPushAutodiscover');
             exit(1);
         }
-        if (!isset(self::$instance)) {
-            self::$instance = new ZPushAutodiscover();
-        }
+
         self::$instance->DoAutodiscover();
         ZLog::Write(LOGLEVEL_DEBUG, '-------- End ZPushAutodiscover');
     }
@@ -97,11 +88,8 @@ class ZPushAutodiscover {
             $email = ($this->getAttribFromUserDetails($userDetails, 'emailaddress')) ? $this->getAttribFromUserDetails($userDetails, 'emailaddress') : $incomingXml->Request->EMailAddress;
             $userFullname = ($this->getAttribFromUserDetails($userDetails, 'fullname')) ? $this->getAttribFromUserDetails($userDetails, 'fullname') : $email;
             ZLog::Write(LOGLEVEL_WBXML, sprintf("Resolved user's '%s' fullname to '%s'", $username, $userFullname));
-            // At the moment Z-Push only supports mobile response schema for autodiscover. Send empty response if the client request outlook response schema.
-            if ($incomingXml->Request->AcceptableResponseSchema == ZPushAutodiscover::ACCEPTABLERESPONSESCHEMAMOBILESYNC) {
-                $response = $this->createResponse($email, $userFullname);
-                setcookie("membername", $username);
-            }
+            $response = $this->createResponse($email, $userFullname);
+            setcookie("membername", $username);
         }
 
         catch (Exception $ex) {
@@ -153,15 +141,19 @@ class ZPushAutodiscover {
      * @return SimpleXMLElement
      */
     private function getIncomingXml() {
-        if ($_SERVER['CONTENT_LENGTH'] > ZPushAutodiscover::MAXINPUTSIZE) {
-            throw new ZPushException('The request input size exceeds 8kb.');
+        if (isset($_SERVER['CONTENT_LENGTH']) && $_SERVER['CONTENT_LENGTH'] > ZPushAutodiscover::MAXINPUTSIZE) {
+            throw new ZPushException('The request will not be processed as the input exceeds our maximum expected input size.');
         }
 
         if (!isset($_SERVER['PHP_AUTH_USER']) || !isset($_SERVER['PHP_AUTH_PW'])) {
             throw new AuthenticationRequiredException();
         }
 
-        $input = @file_get_contents('php://input');
+        $input = @file_get_contents('php://input', NULL, NULL, 0, ZPushAutodiscover::MAXINPUTSIZE);
+        if (strlen($input) == ZPushAutodiscover::MAXINPUTSIZE) {
+            throw new ZPushException('The request will not be processed as the input exceeds our maximum expected input size.');
+        }
+
         $xml = simplexml_load_string($input);
 
         if (LOGLEVEL >= LOGLEVEL_WBXML) {
@@ -181,8 +173,8 @@ class ZPushAutodiscover {
             throw new FatalException('Invalid input XML: no AcceptableResponseSchema.');
         }
 
-        if ($xml->Request->AcceptableResponseSchema != ZPushAutodiscover::ACCEPTABLERESPONSESCHEMAMOBILESYNC && $xml->Request->AcceptableResponseSchema != ZPushAutodiscover::ACCEPTABLERESPONSESCHEMAOUTLOOK) {
-            throw new FatalException('Invalid input XML: not a mobilesync responseschema.');
+        if (strcasecmp($xml->Request->AcceptableResponseSchema, ZPushAutodiscover::ACCEPTABLERESPONSESCHEMAMOBILESYNC) != 0) {
+            throw new FatalException(sprintf('Request for a responseschema that is not supported (only mobilesync is supported): %s', $xml->Request->AcceptableResponseSchema));
         }
 
         return $xml;
@@ -208,11 +200,25 @@ class ZPushAutodiscover {
         // the local part only.
         if (USE_FULLEMAIL_FOR_LOGIN) {
             $username = $incomingXml->Request->EMailAddress;
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("Using the complete email address for login: '%s'", $username));
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAutodiscover->login(): Using the complete email address for login: '%s'", $username));
         }
         else {
             $username = Utils::GetLocalPartFromEmail($incomingXml->Request->EMailAddress);
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("Using the username only for login: '%s'", $username));
+            if (defined('AUTODISCOVER_LOGIN_TYPE') && AUTODISCOVER_LOGIN_TYPE != AUTODISCOVER_LOGIN_EMAIL) {
+                switch (AUTODISCOVER_LOGIN_TYPE) {
+                    case AUTODISCOVER_LOGIN_NO_DOT:
+                        $username = str_replace('.', '', $username);
+                        break;
+                    case AUTODISCOVER_LOGIN_F_NO_DOT_LAST:
+                        $username = str_replace('.', '', substr_replace($username, '', 1, strpos($username, '.') - 1));
+                        break;
+                    case AUTODISCOVER_LOGIN_F_DOT_LAST:
+                        $username = substr_replace($username, '', 1, strpos($username, '.') - 1);
+                        break;
+                }
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAutodiscover->login(): AUTODISCOVER_LOGIN_TYPE is set to %d", AUTODISCOVER_LOGIN_TYPE));
+            }
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAutodiscover->login(): Using the username only for login: '%s'", $username));
         }
 
         // Mobile devices send Authorization header using UTF-8 charset. Outlook sends it using ISO-8859-1 encoding.
@@ -239,13 +245,16 @@ class ZPushAutodiscover {
      */
     private function createResponse($email, $userFullname) {
         $xml = file_get_contents('response.xml');
+        $zpushHost = defined('ZPUSH_HOST') ? ZPUSH_HOST : ( $_SERVER['HTTP_HOST'] ? : $_SERVER['SERVER_NAME']);
+        $serverUrl = "https://" . $zpushHost . "/Microsoft-Server-ActiveSync";
+        ZLog::Write(LOGLEVEL_INFO, sprintf("ZPushAutodiscover->createResponse(): server URL: '%s'", $serverUrl));
         $response = new SimpleXMLElement($xml);
         $response->Response->User->DisplayName = $userFullname;
         $response->Response->User->EMailAddress = $email;
-        $response->Response->Action->Settings->Server->Url = SERVERURL;
-        $response->Response->Action->Settings->Server->Name = SERVERURL;
+        $response->Response->Action->Settings->Server->Url = $serverUrl;
+        $response->Response->Action->Settings->Server->Name = $serverUrl;
         $response = $response->asXML();
-        ZLog::Write(LOGLEVEL_WBXML, sprintf("ZPushAutodiscover->createResponse() XML response:%s%s", PHP_EOL, $response));
+        ZLog::Write(LOGLEVEL_WBXML, sprintf("ZPushAutodiscover->createResponse(): XML response:%s%s", PHP_EOL, $response));
         return $response;
     }
 
@@ -279,6 +288,27 @@ class ZPushAutodiscover {
         }
         ZLog::Write(LOGLEVEL_WARN, sprintf("The backend was not able to find attribute '%s' of the user. Fall back to the default value.", $attrib));
         return false;
+    }
+
+    /**
+     * Tries to login with the credentials from Auth header for GET requests.
+     *
+     * @access private
+     * @return void
+     */
+    private function getLogin() {
+        if (!isset($_SERVER['PHP_AUTH_PW'], $_SERVER['PHP_AUTH_USER'])) {
+            throw new AuthenticationRequiredException("Access denied. No username or password provided.");
+        }
+        list($username,) = Utils::SplitDomainUser($_SERVER['PHP_AUTH_USER']);
+        if(! USE_FULLEMAIL_FOR_LOGIN) {
+            $username = Utils::GetLocalPartFromEmail($username);
+        }
+        $backend = ZPush::GetBackend();
+        if ($backend->Logon($username, "", $_SERVER['PHP_AUTH_PW']) == false) {
+            ZLog::Write(LOGLEVEL_ERROR, sprintf("ZPushAutodiscover->getLogin(): Login failed for user '%s' from IP %s.", $username, $_SERVER["REMOTE_ADDR"]));
+            throw new AuthenticationRequiredException("Access denied. Username or password incorrect.");
+        }
     }
 
     public static function CheckConfig() {

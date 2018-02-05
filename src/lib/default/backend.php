@@ -24,25 +24,7 @@
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -177,7 +159,7 @@ abstract class Backend implements IBackend {
     /**
      * Applies settings to and gets informations from the device
      *
-     * @param SyncObject    $settings (SyncOOF or SyncUserInformation possible)
+     * @param SyncObject    $settings (SyncOOF, SyncUserInformation, SyncRightsManagementTemplates possible)
      *
      * @access public
      * @return SyncObject   $settings
@@ -196,8 +178,24 @@ abstract class Backend implements IBackend {
             }
         }
         if ($settings instanceof SyncUserInformation) {
-            $settings->emailaddresses = array(ZPush::GetBackend()->GetUserDetails(Request::GetAuthUser())['emailaddress']);
             $settings->Status = SYNC_SETTINGSSTATUS_SUCCESS;
+            if (Request::GetProtocolVersion() >= 14.1) {
+                $account = new SyncAccount();
+                $emailaddresses = new SyncEmailAddresses();
+                $emailaddresses->smtpaddress[] = ZPush::GetBackend()->GetUserDetails(Request::GetUser())['emailaddress'];
+                $emailaddresses->primarysmtpaddress = ZPush::GetBackend()->GetUserDetails(Request::GetUser())['emailaddress'];
+                $account->emailaddresses = $emailaddresses;
+                $userinformation->accounts[] = $account;
+            }
+            else {
+                $userinformation->emailaddresses = array(ZPush::GetBackend()->GetUserDetails(Request::GetUser())['emailaddress']);
+            }
+
+            $settings->emailaddresses = array(ZPush::GetBackend()->GetUserDetails(Request::GetUser())['emailaddress']);
+
+        }
+        if ($settings instanceof SyncRightsManagementTemplates) {
+            $settings->Status = SYNC_COMMONSTATUS_IRMFEATUREDISABLED;
         }
         return $settings;
     }
@@ -235,7 +233,7 @@ abstract class Backend implements IBackend {
      * @return Array
      */
     public function GetCurrentUsername() {
-        return $this->GetUserDetails(Request::GetAuthUser());
+        return $this->GetUserDetails(Request::GetUser());
     }
 
     /**
@@ -263,6 +261,16 @@ abstract class Backend implements IBackend {
         // As this is not implemented, the value returned will change every hour.
         // This will only be called if HasFolderStats() returns true.
         return "not implemented-".gmdate("Y-m-d-H");
+    }
+
+    /**
+     * Returns a KoeSignatures object.
+     *
+     * @access public
+     * @return KoeSignatures
+     */
+    public function GetKoeSignatures() {
+        return new KoeSignatures();
     }
 
 

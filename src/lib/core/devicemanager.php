@@ -14,25 +14,7 @@
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -55,12 +37,16 @@ class DeviceManager {
     const FLD_SYNC_INPROGRESS = 2;
     const FLD_SYNC_COMPLETED = 4;
 
+    // new types need to be added to Request::HEX_EXTENDED2 filter
     const FLD_ORIGIN_USER = "U";
     const FLD_ORIGIN_CONFIG = "C";
     const FLD_ORIGIN_SHARED = "S";
     const FLD_ORIGIN_GAB = "G";
 
-    const FLD_FLAGS_REPLYASUSER = 1;
+    const FLD_FLAGS_NONE = 0;
+    const FLD_FLAGS_SENDASOWNER = 1;
+    const FLD_FLAGS_TRACKSHARENAME = 2;
+    const FLD_FLAGS_CALENDARREMINDERS = 4;
 
     private $device;
     private $deviceHash;
@@ -112,7 +98,19 @@ class DeviceManager {
 
         if ($this->IsKoe() && $this->device->GetKoeVersion() !== false) {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("KOE: %s / %s / %s", $this->device->GetKoeVersion(), $this->device->GetKoeBuild(), strftime("%Y-%m-%d %H:%M", $this->device->GetKoeBuildDate())));
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("KOE Capabilities: %s ", count($this->device->GetKoeCapabilities()) ? implode(',', $this->device->GetKoeCapabilities()) : 'unknown'));
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("KOE Last confirmed access: %s (may be up to 7h old)", ($this->device->GetKoeLastAccess() ? strftime("%Y-%m-%d %H:%M", $this->device->GetKoeLastAccess()) : 'unknown')));
         }
+    }
+
+    /**
+     * Load another different device.
+     * @param ASDevice $asDevice
+     */
+    public function SetDevice($asDevice) {
+        $this->device = $asDevice;
+        $this->loadDeviceData();
+        $this->stateManager->SetDevice($this->device);
     }
 
     /**
@@ -167,6 +165,11 @@ class DeviceManager {
             $this->device->SetKoeVersion(Request::GetKoeVersion());
             $this->device->SetKoeBuild(Request::GetKoeBuild());
             $this->device->SetKoeBuildDate(Request::GetKoeBuildDate());
+            $this->device->SetKoeCapabilities(Request::GetKoeCapabilities());
+            // update KOE last access time if it's at least 6h old
+            if ($this->device->GetKoeLastAccess() < time() - 21600) {
+                $this->device->SetKoeLastAccess(time());
+            }
         }
 
         // data to be saved
@@ -476,10 +479,10 @@ class DeviceManager {
     public function GetKoeGabBackendFolderId() {
         $gabid = false;
         if (KOE_CAPABILITY_GAB) {
-            if (KOE_GAB_FOLDERID != false && KOE_GAB_FOLDERID != '') {
+            if (KOE_GAB_FOLDERID) {
                 $gabid = KOE_GAB_FOLDERID;
             }
-            else if (KOE_GAB_STORE != "" && KOE_GAB_NAME != "") {
+            else if (KOE_GAB_STORE && KOE_GAB_NAME) {
                 $gabid = $this->device->GetKoeGabBackendFolderId();
             }
         }
@@ -499,8 +502,12 @@ class DeviceManager {
                 $df['flags'] = 0;
                 ZLog::Write(LOGLEVEL_WARN, sprintf("DeviceManager->GetAdditionalUserSyncFolders(): Additional folder '%s' has no flags. Please run 'z-push-admin -a fixstates' to fix this issue.", $df['name']));
             }
+            if (!isset($df['parentid'])) {
+                $df['parentid'] = '0';
+                ZLog::Write(LOGLEVEL_WARN, sprintf("DeviceManager->GetAdditionalUserSyncFolders(): Additional folder '%s' has no parentid. Please run 'z-push-admin -a fixstates' to fix this issue.", $df['name']));
+            }
 
-            $folder = $this->getAdditionalSyncFolderObject($df['store'], $df['folderid'], $df['name'], $df['type'], $df['flags'], DeviceManager::FLD_ORIGIN_SHARED);
+            $folder = $this->BuildSyncFolderObject($df['store'], $df['folderid'], $df['parentid'], $df['name'], $df['type'], $df['flags'], DeviceManager::FLD_ORIGIN_SHARED);
             $folders[$folder->BackendId] = $folder;
         }
 
@@ -508,7 +515,7 @@ class DeviceManager {
         if (KOE_CAPABILITY_GAB && $this->IsKoe() && KOE_GAB_STORE != "" && KOE_GAB_NAME != "") {
             // if KOE_GAB_FOLDERID is set, use it
             if (KOE_GAB_FOLDERID != "") {
-                $folder = $this->getAdditionalSyncFolderObject(KOE_GAB_STORE, KOE_GAB_FOLDERID, KOE_GAB_NAME, SYNC_FOLDER_TYPE_USER_APPOINTMENT, 0, DeviceManager::FLD_ORIGIN_GAB);
+                $folder = $this->BuildSyncFolderObject(KOE_GAB_STORE, KOE_GAB_FOLDERID, '0', KOE_GAB_NAME, SYNC_FOLDER_TYPE_USER_APPOINTMENT, 0, DeviceManager::FLD_ORIGIN_GAB);
                 $folders[$folder->BackendId] = $folder;
             }
             else {
@@ -525,7 +532,7 @@ class DeviceManager {
                     }
 
                     if ($backendGabId) {
-                        $folders[$backendGabId] = $this->getAdditionalSyncFolderObject(KOE_GAB_STORE, $backendGabId, KOE_GAB_NAME, SYNC_FOLDER_TYPE_USER_APPOINTMENT, 0, DeviceManager::FLD_ORIGIN_GAB);
+                        $folders[$backendGabId] = $this->BuildSyncFolderObject(KOE_GAB_STORE, $backendGabId, '0', KOE_GAB_NAME, SYNC_FOLDER_TYPE_USER_APPOINTMENT, 0, DeviceManager::FLD_ORIGIN_GAB);
                     }
                 }
             }
@@ -543,7 +550,7 @@ class DeviceManager {
      */
     public function GetAdditionalUserSyncFolderStore($folderid) {
         // is this the KOE GAB folder?
-        if ($folderid == $this->GetKoeGabBackendFolderId()) {
+        if ($folderid && $folderid === $this->GetKoeGabBackendFolderId()) {
             return KOE_GAB_STORE;
         }
 
@@ -682,6 +689,30 @@ class DeviceManager {
     }
 
     /**
+     * Returns the maximum filter type for a folder.
+     * This might be limited globally, per device or per folder.
+     *
+     * @param string    $folderid
+     *
+     * @access public
+     * @return int
+     */
+    public function GetFilterType($folderid) {
+        // either globally configured SYNC_FILTERTIME_MAX or ALL (no limit)
+        $maxAllowed = (defined('SYNC_FILTERTIME_MAX') && SYNC_FILTERTIME_MAX > SYNC_FILTERTYPE_ALL) ? SYNC_FILTERTIME_MAX : SYNC_FILTERTYPE_ALL;
+
+        // TODO we could/should check for a specific value for the folder, if it's available
+        $maxDevice = $this->device->GetSyncFilterType();
+
+        // ALL has a value of 0, all limitations have higher integer values, see SYNC_FILTERTYPE_ALL definition
+        if ($maxDevice !== false && $maxDevice > SYNC_FILTERTYPE_ALL && ($maxAllowed == SYNC_FILTERTYPE_ALL || $maxDevice < $maxAllowed)) {
+            $maxAllowed = $maxDevice;
+        }
+
+        return $maxAllowed;
+    }
+
+    /**
      * Removes all linked states of a specific folder.
      * During next request the folder is resynchronized.
      *
@@ -776,6 +807,34 @@ class DeviceManager {
             return true;
         }
         return false;
+    }
+
+    /**
+     * Indicates if the KOE client supports a feature.
+     *
+     * @param string $feature
+     *
+     * @access public
+     * @return boolean
+     */
+    public function HasKoeFeature($feature) {
+        $capabilities = $this->device->GetKoeCapabilities();
+        // in a settings request the capabilities might not yet be stored in the device
+        if (empty($capabilities)) {
+            $capabilities = Request::GetKoeCapabilities();
+        }
+        return in_array($feature, $capabilities);
+    }
+
+    /**
+     * Indicates if the connected device is Outlook + KOE and supports the
+     * secondary contact folder synchronization.
+     *
+     *  @access public
+     *  @return boolean
+     */
+    public function IsKoeSupportingSecondaryContacts() {
+        return defined('KOE_CAPABILITY_SECONDARYCONTACTS') && KOE_CAPABILITY_SECONDARYCONTACTS && $this->IsKoe() && $this->HasKoeFeature('secondarycontacts');
     }
 
     /**
@@ -1188,14 +1247,14 @@ class DeviceManager {
      * @param int       $flags
      * @param string    $folderOrigin
      *
-     * @access private
+     * @access public
      * @returns SyncFolder
      */
-    private function getAdditionalSyncFolderObject($store, $folderid, $name, $type, $flags, $folderOrigin) {
+    public function BuildSyncFolderObject($store, $folderid, $parentid, $name, $type, $flags, $folderOrigin) {
         $folder = new SyncFolder();
         $folder->BackendId = $folderid;
         $folder->serverid = $this->GetFolderIdForBackendId($folder->BackendId, true, $folderOrigin, $name);
-        $folder->parentid = 0;                  // only top folders are supported
+        $folder->parentid = $this->GetFolderIdForBackendId($parentid);
         $folder->displayname = $name;
         $folder->type = $type;
         // save store as custom property which is not streamed directly to the device
@@ -1203,6 +1262,12 @@ class DeviceManager {
         $folder->Store = $store;
         $folder->Flags = $flags;
 
+        // adjust additional folders so it matches not yet processed KOE type UNKNOWN folders
+        $synctype = $this->device->GetFolderType($folder->serverid);
+        if ($this->IsKoeSupportingSecondaryContacts() && $synctype !== $folder->type && $synctype == SYNC_FOLDER_TYPE_UNKNOWN) {
+            ZLog::Write(LOGLEVEL_DEBUG, "DeviceManager->BuildSyncFolderObject(): Modifying additional folder so it matches an unprocessed KOE folder");
+            $folder = Utils::ChangeFolderToTypeUnknownForKoe($folder);
+        }
         return $folder;
     }
 }

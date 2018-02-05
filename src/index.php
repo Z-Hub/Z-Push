@@ -8,29 +8,11 @@
 *
 * Created   :   01.10.2007
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -69,14 +51,20 @@ include_once(ZPUSH_CONFIG);
                 sprintf("cmd='%s' devType='%s' devId='%s' getUser='%s' from='%s' version='%s' method='%s'",
                         Request::GetCommand(), Request::GetDeviceType(), Request::GetDeviceID(), Request::GetGETUser(), Request::GetRemoteAddr(), @constant('ZPUSH_VERSION'), Request::GetMethod() ));
 
-        // Stop here if this is an OPTIONS request
-        if (Request::IsMethodOPTIONS())
-            throw new NoPostRequestException("Options request", NoPostRequestException::OPTIONS_REQUEST);
+        // always request the authorization header
+        if (! Request::HasAuthenticationInfo() || !Request::GetGETUser())
+            throw new AuthenticationRequiredException("Access denied. Please send authorisation information");
 
         ZPush::CheckAdvancedConfig();
 
         // Process request headers and look for AS headers
         Request::ProcessHeaders();
+
+        // Stop here if this is an OPTIONS request
+        if (Request::IsMethodOPTIONS()) {
+            RequestProcessor::Authenticate();
+            throw new NoPostRequestException("Options request", NoPostRequestException::OPTIONS_REQUEST);
+        }
 
         // Check required GET parameters
         if(Request::IsMethodPOST() && (Request::GetCommandCode() === false || !Request::GetDeviceID() || !Request::GetDeviceType()))
@@ -84,10 +72,6 @@ include_once(ZPUSH_CONFIG);
 
         // Load the backend
         $backend = ZPush::GetBackend();
-
-        // always request the authorization header
-        if (! Request::HasAuthenticationInfo() || !Request::GetGETUser())
-            throw new AuthenticationRequiredException("Access denied. Please send authorisation information");
 
         // check the provisioning information
         if (PROVISIONING === true && Request::IsMethodPOST() && ZPush::CommandNeedsProvisioning(Request::GetCommandCode()) &&
@@ -123,8 +107,10 @@ include_once(ZPUSH_CONFIG);
         RequestProcessor::HandleRequest();
 
         // eventually the RequestProcessor wants to send other headers to the mobile
-        foreach (RequestProcessor::GetSpecialHeaders() as $header)
+        foreach (RequestProcessor::GetSpecialHeaders() as $header) {
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("Special header: %s", $header));
             header($header);
+        }
 
         // stream the data
         $len = ob_get_length();
@@ -198,7 +184,12 @@ include_once(ZPUSH_CONFIG);
         }
 
         if ($ex instanceof AuthenticationRequiredException) {
-            ZPush::PrintZPushLegal($exclass, sprintf('<pre>%s</pre>',$ex->getMessage()));
+            // Only print ZPush legal message for GET requests because
+            // some devices send unauthorized OPTIONS requests
+            // and don't expect anything in the response body
+            if (Request::IsMethodGET()) {
+                ZPush::PrintZPushLegal($exclass, sprintf('<pre>%s</pre>',$ex->getMessage()));
+            }
 
             // log the failed login attemt e.g. for fail2ban
             if (defined('LOGAUTHFAIL') && LOGAUTHFAIL != false)
@@ -234,10 +225,11 @@ include_once(ZPUSH_CONFIG);
 
     // end gracefully
     ZLog::Write(LOGLEVEL_INFO,
-            sprintf("cmd='%s' memory='%s/%s' time='%ss' devType='%s' devId='%s' getUser='%s' from='%s' version='%s' method='%s' httpcode='%s'",
+            sprintf("cmd='%s' memory='%s/%s' time='%ss' devType='%s' devId='%s' getUser='%s' from='%s' idle='%ss' version='%s' method='%s' httpcode='%s'",
                     Request::GetCommand(), Utils::FormatBytes(memory_get_peak_usage(false)), Utils::FormatBytes(memory_get_peak_usage(true)),
                     number_format(microtime(true) - $_SERVER["REQUEST_TIME_FLOAT"], 2),
-                    Request::GetDeviceType(), Request::GetDeviceID(), Request::GetGETUser(), Request::GetRemoteAddr(), @constant('ZPUSH_VERSION'), Request::GetMethod(), http_response_code() ));
+                    Request::GetDeviceType(), Request::GetDeviceID(), Request::GetGETUser(), Request::GetRemoteAddr(),
+                    RequestProcessor::GetWaitTime(), @constant('ZPUSH_VERSION'), Request::GetMethod(), http_response_code() ));
 
     ZLog::Write(LOGLEVEL_DEBUG, "-------- End");
 

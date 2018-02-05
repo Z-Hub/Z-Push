@@ -10,25 +10,7 @@
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -48,6 +30,8 @@ class MAPIProvider {
     private $addressbook;
     private $storeProps;
     private $inboxProps;
+    private $rootProps;
+    private $specialFoldersData;
 
     /**
      * Constructor of the MAPI Provider
@@ -91,7 +75,7 @@ class MAPIProvider {
             return $this->getContact($mapimessage, $contentparameters);
         else if(strpos($messageclass,"IPM.Appointment") === 0)
             return $this->getAppointment($mapimessage, $contentparameters);
-        else if(strpos($messageclass,"IPM.Task") === 0)
+        else if(strpos($messageclass,"IPM.Task") === 0 && strpos($messageclass, "IPM.TaskRequest") === false)
             return $this->getTask($mapimessage, $contentparameters);
         else if(strpos($messageclass,"IPM.StickyNote") === 0)
             return $this->getNote($mapimessage, $contentparameters);
@@ -224,27 +208,44 @@ class MAPIProvider {
             isset($messageprops[$appointmentprops["representingname"]])) {
 
             $message->organizeremail = w2u($this->getSMTPAddressFromEntryID($messageprops[$appointmentprops["representingentryid"]]));
+            // if the email address can't be resolved, fall back to PR_SENT_REPRESENTING_SEARCH_KEY
+            if ($message->organizeremail == "" && isset($messageprops[$appointmentprops["sentrepresentinsrchk"]])) {
+                $message->organizeremail = $this->getEmailAddressFromSearchKey($messageprops[$appointmentprops["sentrepresentinsrchk"]]);
+            }
             $message->organizername = w2u($messageprops[$appointmentprops["representingname"]]);
         }
 
-        if(isset($messageprops[$appointmentprops["timezonetag"]]))
+        $appTz = false; // if the appointment has some timezone information saved on the server
+        if (!empty($messageprops[$appointmentprops["timezonetag"]])) {
             $tz = $this->getTZFromMAPIBlob($messageprops[$appointmentprops["timezonetag"]]);
+            $appTz = true;
+        }
+        elseif (!empty($messageprops[$appointmentprops["timezonedesc"]])) {
+            // Windows uses UTC in timezone description in opposite to mstzones in TimezoneUtil which uses GMT
+            $wintz = str_replace("UTC", "GMT", $messageprops[$appointmentprops["timezonedesc"]]);
+            $tz = TimezoneUtil::GetFullTZFromTZName(TimezoneUtil::GetTZNameFromWinTZ($wintz));
+            $appTz = true;
+        }
         else {
             // set server default timezone (correct timezone should be configured!)
             $tz = TimezoneUtil::GetFullTZ();
         }
-        $message->timezone = base64_encode(TimezoneUtil::GetSyncBlobFromTZ($tz));
 
         if(isset($messageprops[$appointmentprops["isrecurring"]]) && $messageprops[$appointmentprops["isrecurring"]]) {
             // Process recurrence
             $message->recurrence = new SyncRecurrence();
             $this->getRecurrence($mapimessage, $messageprops, $message, $message->recurrence, $tz);
+
+            // outlook seems to honour the timezone information contrary to other clients
+            if (empty($message->alldayevent) || Request::IsOutlook()) {
+                $message->timezone = base64_encode(TimezoneUtil::GetSyncBlobFromTZ($tz));
+            }
         }
 
         // Do attendees
         $reciptable = mapi_message_getrecipienttable($mapimessage);
         // Only get first 256 recipients, to prevent possible load issues.
-        $rows = mapi_table_queryrows($reciptable, array(PR_DISPLAY_NAME, PR_EMAIL_ADDRESS, PR_SMTP_ADDRESS, PR_ADDRTYPE, PR_RECIPIENT_TRACKSTATUS, PR_RECIPIENT_TYPE), 0, 256);
+        $rows = mapi_table_queryrows($reciptable, array(PR_DISPLAY_NAME, PR_EMAIL_ADDRESS, PR_SMTP_ADDRESS, PR_ADDRTYPE, PR_RECIPIENT_TRACKSTATUS, PR_RECIPIENT_TYPE, PR_SEARCH_KEY), 0, 256);
 
         // Exception: we do not synchronize appointments with more than 250 attendees
         if (count($rows) > 250) {
@@ -274,14 +275,20 @@ class MAPIProvider {
                     if (is_array($userinfo) && isset($userinfo["emailaddress"])) {
                         $attendee->email = w2u($userinfo["emailaddress"]);
                     }
-                    else
+                    // if the user was not found, do a fallback to PR_SEARCH_KEY
+                    // @see https://jira.z-hub.io/browse/ZP-1178
+                    elseif (isset($row[PR_SEARCH_KEY])) {
+                        $attendee->email = w2u($this->getEmailAddressFromSearchKey($row[PR_SEARCH_KEY]));
+                    }
+                    else {
                         ZLog::Write(LOGLEVEL_WARN, sprintf("MAPIProvider->getAppointment: The attendee '%s' of type ZARAFA can not be resolved. Code: 0x%X", $row[PR_EMAIL_ADDRESS], mapi_last_hresult()));
+                    }
                 }
             }
 
             //set attendee's status and type if they're available and if we are the organizer
             $storeprops = $this->GetStoreProps();
-            if (isset($row[PR_RECIPIENT_TRACKSTATUS]) && $messageprops[$appointmentprops["representingentryid"]] == $storeprops[PR_MAILBOX_OWNER_ENTRYID])
+            if (isset($row[PR_RECIPIENT_TRACKSTATUS]) && isset($messageprops[$appointmentprops["representingentryid"]]) && $messageprops[$appointmentprops["representingentryid"]] == $storeprops[PR_MAILBOX_OWNER_ENTRYID])
                 $attendee->attendeestatus = $row[PR_RECIPIENT_TRACKSTATUS];
             if (isset($row[PR_RECIPIENT_TYPE]))
                 $attendee->attendeetype = $row[PR_RECIPIENT_TYPE];
@@ -303,7 +310,7 @@ class MAPIProvider {
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("MAPIProvider->getAppointment: adding ourself as an attendee for iOS6 workaround"));
                 $attendee = new SyncAttendee();
 
-                $meinfo = mapi_zarafa_getuser_by_name($this->store, Request::GetAuthUser());
+                $meinfo = mapi_zarafa_getuser_by_name($this->store, Request::GetUser());
 
                 if (is_array($meinfo)) {
                     $attendee->email = w2u($meinfo["emailaddress"]);
@@ -320,7 +327,7 @@ class MAPIProvider {
         // the user is the owner or it will not work properly with android devices
         // @see https://jira.z-hub.io/browse/ZP-1020
         if(isset($messageprops[$appointmentprops["meetingstatus"]]) && $messageprops[$appointmentprops["meetingstatus"]] == olNonMeeting && empty($message->attendees)) {
-            $meinfo = mapi_zarafa_getuser_by_name($this->store, Request::GetAuthUser());
+            $meinfo = mapi_zarafa_getuser_by_name($this->store, Request::GetUser());
 
             if (is_array($meinfo)) {
                 $message->organizeremail = w2u($meinfo["emailaddress"]);
@@ -330,7 +337,14 @@ class MAPIProvider {
 
         }
 
-        if (!isset($message->nativebodytype)) $message->nativebodytype = $this->getNativeBodyType($messageprops);
+        if (!isset($message->nativebodytype)) {
+            $message->nativebodytype = MAPIUtils::GetNativeBodyType($messageprops);
+        }
+        elseif ($message->nativebodytype == SYNC_BODYPREFERENCE_UNDEFINED) {
+            $nbt = MAPIUtils::GetNativeBodyType($messageprops);
+            ZLog::Write(LOGLEVEL_INFO, sprintf("MAPIProvider->getAppointment(): native body type is undefined. Set it to %d.", $nbt));
+            $message->nativebodytype = $nbt;
+        }
 
         // If the user is working from a location other than the office the busystatus should be interpreted as free.
         if (isset($message->busystatus) && $message->busystatus == fbWorkingElsewhere) {
@@ -340,6 +354,22 @@ class MAPIProvider {
         // If the busystatus has the value of -1, we should be interpreted as tentative (1) / ZP-581
         if (isset($message->busystatus) && $message->busystatus == -1) {
             $message->busystatus = fbTentative;
+        }
+
+        // All-day events might appear as 24h (or multiple of it) long when they start not exactly at midnight (+/- bias of the timezone)
+        if (isset($message->alldayevent) && $message->alldayevent) {
+            $localStartTime = localtime($message->starttime, 1);
+
+            // The appointment is all-day but doesn't start at midnight.
+            // If it was created in another timezone and we have that information,
+            // set the startime to the midnight of the current timezone.
+            if ($appTz && ($localStartTime['tm_hour'] || $localStartTime['tm_min'])) {
+                ZLog::Write(LOGLEVEL_DEBUG, "MAPIProvider->getAppointment(): all-day event starting not midnight.");
+                $duration = $message->endtime - $message->starttime;
+                $serverTz = TimezoneUtil::GetFullTZ();
+                $message->starttime = $this->getGMTTimeByTZ($this->getLocaltimeByTZ($message->starttime, $tz), $serverTz);
+                $message->endtime = $message->starttime + $duration;
+            }
         }
 
         return $message;
@@ -567,6 +597,11 @@ class MAPIProvider {
         if(isset($messageprops[$emailproperties["representingentryid"]]))
             $fromaddr = $this->getSMTPAddressFromEntryID($messageprops[$emailproperties["representingentryid"]]);
 
+        // if the email address can't be resolved, fall back to PR_SENT_REPRESENTING_SEARCH_KEY
+        if ($fromaddr == "" && isset($messageprops[$emailproperties["representingsearchkey"]])) {
+            $fromaddr = $this->getEmailAddressFromSearchKey($messageprops[$emailproperties["representingsearchkey"]]);
+        }
+
         if($fromname == $fromaddr)
             $fromname = "";
 
@@ -588,21 +623,16 @@ class MAPIProvider {
             $props = $this->getProps($mapimessage, $meetingrequestproperties);
 
             // Get the GOID
-            if(isset($props[$meetingrequestproperties["goidtag"]])) {
-                // GlobalObjId support was removed in AS 16.0
-                if (Request::IsGlobalObjIdHexClient()) {
-                    $message->meetingrequest->globalobjid = strtoupper(bin2hex($props[$meetingrequestproperties["goidtag"]]));
-                }
-                else {
-                    $message->meetingrequest->globalobjid = base64_encode($props[$meetingrequestproperties["goidtag"]]);
-                }
-            }
+            if(isset($props[$meetingrequestproperties["goidtag"]]))
+                $message->meetingrequest->globalobjid = base64_encode($props[$meetingrequestproperties["goidtag"]]);
 
             // Set Timezone
-            if(isset($props[$meetingrequestproperties["timezonetag"]]))
+            if (isset($props[$meetingrequestproperties["timezonetag"]])) {
                 $tz = $this->getTZFromMAPIBlob($props[$meetingrequestproperties["timezonetag"]]);
-            else
-                $tz = $this->getGMTTZ();
+            }
+            else {
+                $tz = TimezoneUtil::GetFullTZ();
+            }
 
             $message->meetingrequest->timezone = base64_encode(TimezoneUtil::GetSyncBlobFromTZ($tz));
 
@@ -689,7 +719,9 @@ class MAPIProvider {
                 // check if we are not sending the MR so we can process it - ZP-581
                 $cuser = ZPush::GetBackend()->GetUserDetails(ZPush::GetBackend()->GetCurrentUsername());
                 if(isset($cuser["emailaddress"]) && $cuser["emailaddress"] != $fromaddr) {
-                    $req = new Meetingrequest($this->store, $mapimessage, $this->session);
+                    if (!isset($req)) {
+                        $req = new Meetingrequest($this->store, $mapimessage, $this->session);
+                    }
                     if ($req->isMeetingRequestResponse()) {
                         $req->processMeetingRequestResponse();
                     }
@@ -699,6 +731,36 @@ class MAPIProvider {
                 }
             }
             $message->contentclass = DEFAULT_CALENDAR_CONTENTCLASS;
+
+            // MeetingMessageType values
+            // 0 = A silent update was performed, or the message type is unspecified.
+            // 1 = Initial meeting request.
+            // 2 = Full update.
+            // 3 = Informational update.
+            // 4 = Outdated. A newer meeting request or meeting update was received after this message.
+            // 5 = Identifies the delegator's copy of the meeting request.
+            // 6 = Identifies that the meeting request has been delegated and the meeting request cannot be responded to.
+            $message->meetingrequest->meetingmessagetype = mtgEmpty;
+
+            if (isset($props[$meetingrequestproperties["meetingType"]])) {
+                switch ($props[$meetingrequestproperties["meetingType"]]) {
+                    case mtgRequest:
+                        $message->meetingrequest->meetingmessagetype = 1;
+                        break;
+                    case mtgFull:
+                        $message->meetingrequest->meetingmessagetype = 2;
+                        break;
+                    case mtgInfo:
+                        $message->meetingrequest->meetingmessagetype = 3;
+                        break;
+                    case mtgOutOfDate:
+                        $message->meetingrequest->meetingmessagetype = 4;
+                        break;
+                    case mtgDelegatorCopy:
+                        $message->meetingrequest->meetingmessagetype = 5;
+                        break;
+                }
+            }
         }
 
         // Add attachments
@@ -747,7 +809,7 @@ class MAPIProvider {
                     }
                     // android devices require attachment size in order to display an attachment properly
                     if (!isset($attachprops[PR_ATTACH_SIZE])) {
-                        $stream = mapi_openpropertytostream($mapiattach, PR_ATTACH_DATA_BIN);
+                        $stream = mapi_openproperty($mapiattach, PR_ATTACH_DATA_BIN, IID_IStream, 0, 0);
                         // It's not possible to open some (embedded only?) messages, so we need to open the attachment object itself to get the data
                         if (mapi_last_hresult()) {
                             $embMessage = mapi_attach_openobj($mapiattach);
@@ -791,7 +853,7 @@ class MAPIProvider {
         $message->cc = array();
 
         $reciptable = mapi_message_getrecipienttable($mapimessage);
-        $rows = mapi_table_queryallrows($reciptable, array(PR_RECIPIENT_TYPE, PR_DISPLAY_NAME, PR_ADDRTYPE, PR_EMAIL_ADDRESS, PR_SMTP_ADDRESS, PR_ENTRYID));
+        $rows = mapi_table_queryallrows($reciptable, array(PR_RECIPIENT_TYPE, PR_DISPLAY_NAME, PR_ADDRTYPE, PR_EMAIL_ADDRESS, PR_SMTP_ADDRESS, PR_ENTRYID, PR_SEARCH_KEY));
 
         foreach ($rows as $row) {
             $address = "";
@@ -805,6 +867,12 @@ class MAPIProvider {
                 $address = $row[PR_EMAIL_ADDRESS];
             elseif ($addrtype == "ZARAFA" && isset($row[PR_ENTRYID]))
                 $address = $this->getSMTPAddressFromEntryID($row[PR_ENTRYID]);
+
+            // if the user was not found, do a fallback to PR_SEARCH_KEY
+            // @see https://jira.z-hub.io/browse/ZP-1178
+            if (empty($address) && isset($row[PR_SEARCH_KEY])) {
+                $address = $this->getEmailAddressFromSearchKey($row[PR_SEARCH_KEY]);
+            }
 
             $name = isset($row[PR_DISPLAY_NAME]) ? $row[PR_DISPLAY_NAME] : "";
 
@@ -833,11 +901,19 @@ class MAPIProvider {
         if (!isset($message->importance))
             $message->importance = IMPORTANCE_NORMAL;
 
-        //TODO contentclass and nativebodytype and internetcpid
         if (!isset($message->internetcpid)) $message->internetcpid = (defined('STORE_INTERNET_CPID')) ? constant('STORE_INTERNET_CPID') : INTERNET_CPID_WINDOWS1252;
         $this->setFlag($mapimessage, $message);
+        //TODO checkcontentclass
         if (!isset($message->contentclass)) $message->contentclass = DEFAULT_EMAIL_CONTENTCLASS;
-        if (!isset($message->nativebodytype)) $message->nativebodytype = $this->getNativeBodyType($messageprops);
+
+        if (!isset($message->nativebodytype)) {
+            $message->nativebodytype = MAPIUtils::GetNativeBodyType($messageprops);
+        }
+        elseif ($message->nativebodytype == SYNC_BODYPREFERENCE_UNDEFINED) {
+            $nbt = MAPIUtils::GetNativeBodyType($messageprops);
+            ZLog::Write(LOGLEVEL_INFO, sprintf("MAPIProvider->getEmail(): native body type is undefined. Set it to %d.", $nbt));
+            $message->nativebodytype = $nbt;
+        }
 
         // reply, reply to all, forward flags
         if (isset($message->lastverbexecuted) && $message->lastverbexecuted) {
@@ -905,20 +981,11 @@ class MAPIProvider {
             return false;
         }
 
-        // ignore certain undesired folders, like "RSS Feeds"
-        if (isset($folderprops[PR_CONTAINER_CLASS]) && $folderprops[PR_CONTAINER_CLASS] == "IPF.Note.OutlookHomepage") {
+        // ignore certain undesired folders, like "RSS Feeds" and "Suggested contacts"
+        if ((isset($folderprops[PR_CONTAINER_CLASS]) && $folderprops[PR_CONTAINER_CLASS] == "IPF.Note.OutlookHomepage")
+                || in_array($folderprops[PR_ENTRYID], $this->getSpecialFoldersData())) {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("MAPIProvider->GetFolder(): folder '%s' should not be synchronized", $folderprops[PR_DISPLAY_NAME]));
             return false;
-        }
-
-        // ignore suggested contacts folder
-        if (isset($folderprops[PR_CONTAINER_CLASS]) && $folderprops[PR_CONTAINER_CLASS] == "IPF.Contact" && isset($folderprops[PR_EXTENDED_FOLDER_FLAGS])) {
-            // the PR_EXTENDED_FOLDER_FLAGS is a binary value which consists of subproperties. 070403000000 indicates a suggested contacts folder
-            $extendedFlags = bin2hex($folderprops[PR_EXTENDED_FOLDER_FLAGS]);
-            if (substr_count($extendedFlags, "070403000000") > 0) {
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("MAPIProvider->GetFolder(): folder '%s' should not be synchronized", $folderprops[PR_DISPLAY_NAME]));
-                return false;
-            }
         }
 
         $folder->BackendId = bin2hex($folderprops[PR_SOURCE_KEY]);
@@ -1008,7 +1075,7 @@ class MAPIProvider {
         if(!mapi_last_hresult())
             $inboxProps = mapi_getprops($inbox, array(PR_ENTRYID));
 
-        $root = mapi_msgstore_openentry($this->store, null);
+        $root = mapi_msgstore_openentry($this->store, null); // TODO use getRootProps()
         $rootProps = mapi_getprops($root, array(PR_IPM_APPOINTMENT_ENTRYID, PR_IPM_CONTACT_ENTRYID, PR_IPM_DRAFTS_ENTRYID, PR_IPM_JOURNAL_ENTRYID, PR_IPM_NOTE_ENTRYID, PR_IPM_TASK_ENTRYID, PR_ADDITIONAL_REN_ENTRYIDS));
 
         $additional_ren_entryids = array();
@@ -1278,6 +1345,10 @@ class MAPIProvider {
             $this->setASbody($appointment->asbody, $props, $appointmentprops);
         }
 
+        if ($tz !== false) {
+            $props[$appointmentprops["timezonetag"]] = $this->getMAPIBlobFromTZ($tz);
+        }
+
         if(isset($appointment->recurrence)) {
             // Set PR_ICON_INDEX to 1025 to show correct icon in category view
             $props[$appointmentprops["icon"]] = 1025;
@@ -1396,8 +1467,8 @@ class MAPIProvider {
             $props[$appointmentprops["representingentryid"]] = $storeProps[PR_MAILBOX_OWNER_ENTRYID];
             $displayname = $this->getFullnameFromEntryID($storeProps[PR_MAILBOX_OWNER_ENTRYID]);
 
-            $props[$appointmentprops["representingname"]] = ($displayname !== false) ? $displayname : Request::GetAuthUser();
-            $props[$appointmentprops["sentrepresentingemail"]] = Request::GetAuthUser();
+            $props[$appointmentprops["representingname"]] = ($displayname !== false) ? $displayname : Request::GetUser();
+            $props[$appointmentprops["sentrepresentingemail"]] = Request::GetUser();
             $props[$appointmentprops["sentrepresentingaddt"]] = "ZARAFA";
             $props[$appointmentprops["sentrepresentinsrchk"]] = $props[$appointmentprops["sentrepresentingaddt"]].":".$props[$appointmentprops["sentrepresentingemail"]];
 
@@ -1424,7 +1495,7 @@ class MAPIProvider {
             $org[PR_EMAIL_ADDRESS] = isset($representingprops[$appointmentprops["sentrepresentingemail"]]) ? $representingprops[$appointmentprops["sentrepresentingemail"]] : $props[$appointmentprops["sentrepresentingemail"]];
             $org[PR_SEARCH_KEY] = isset($representingprops[$appointmentprops["sentrepresentinsrchk"]]) ? $representingprops[$appointmentprops["sentrepresentinsrchk"]] : $props[$appointmentprops["sentrepresentinsrchk"]];
             $org[PR_RECIPIENT_FLAGS] = recipOrganizer | recipSendable;
-            $org[PR_RECIPIENT_TYPE] = MAPI_TO;
+            $org[PR_RECIPIENT_TYPE] = MAPI_TO; // TODO: shouldn't that be MAPI_ORIG ?
 
             array_push($recips, $org);
 
@@ -1443,14 +1514,14 @@ class MAPIProvider {
                     $recip[PR_SEARCH_KEY] = $userinfo[0][PR_SEARCH_KEY];
                     $recip[PR_ADDRTYPE] = $userinfo[0][PR_ADDRTYPE];
                     $recip[PR_ENTRYID] = $userinfo[0][PR_ENTRYID];
-                    $recip[PR_RECIPIENT_TYPE] = MAPI_TO;
+                    $recip[PR_RECIPIENT_TYPE] = isset($attendee->attendeetype) ? $attendee->attendeetype : MAPI_TO;
                     $recip[PR_RECIPIENT_FLAGS] = recipSendable;
                 }
                 else {
                     $recip[PR_DISPLAY_NAME] = u2w($attendee->name);
                     $recip[PR_SEARCH_KEY] = "SMTP:".$recip[PR_EMAIL_ADDRESS]."\0";
                     $recip[PR_ADDRTYPE] = "SMTP";
-                    $recip[PR_RECIPIENT_TYPE] = MAPI_TO;
+                    $recip[PR_RECIPIENT_TYPE] = isset($attendee->attendeetype) ? $attendee->attendeetype : MAPI_TO;
                     $recip[PR_ENTRYID] = mapi_createoneoff($recip[PR_DISPLAY_NAME], $recip[PR_ADDRTYPE], $recip[PR_EMAIL_ADDRESS]);
                 }
 
@@ -1674,7 +1745,7 @@ class MAPIProvider {
         $p = array( $taskprops["owner"]);
         $owner = $this->getProps($mapimessage, $p);
         if (!isset($owner[$taskprops["owner"]])) {
-            $userinfo = mapi_zarafa_getuser($this->store, Request::GetAuthUser());
+            $userinfo = mapi_zarafa_getuser_by_name($this->store, Request::GetUser());
             if(mapi_last_hresult() == NOERROR && isset($userinfo["fullname"])) {
                 $props[$taskprops["owner"]] = $userinfo["fullname"];
             }
@@ -2434,11 +2505,13 @@ class MAPIProvider {
      * @return boolean
      */
     private function setMessageBodyForType($mapimessage, $bpReturnType, &$message) {
+        $truncateHtmlSafe = false;
         //default value is PR_BODY
         $property = PR_BODY;
         switch ($bpReturnType) {
             case SYNC_BODYPREFERENCE_HTML:
                 $property = PR_HTML;
+                $truncateHtmlSafe = true;
                 break;
             case SYNC_BODYPREFERENCE_RTF:
                 $property = PR_RTF_COMPRESSED;
@@ -2469,12 +2542,13 @@ class MAPIProvider {
             }
             elseif (isset($message->internetcpid) && $bpReturnType == SYNC_BODYPREFERENCE_HTML) {
                 // if PR_HTML is UTF-8 we can stream it directly, else we have to convert to UTF-8 & wrap it
-                if (Utils::GetCodepageCharset($message->internetcpid) == "utf-8") {
-                    $message->asbody->data = MAPIStreamWrapper::Open($stream);
+                if ($message->internetcpid == INTERNET_CPID_UTF8) {
+                    $message->asbody->data = MAPIStreamWrapper::Open($stream, $truncateHtmlSafe);
                 }
                 else {
                     $body = $this->mapiReadStream($stream, $streamsize);
-                    $message->asbody->data = StringStreamWrapper::Open(Utils::ConvertCodepageStringToUtf8($message->internetcpid, $body));
+                    $message->asbody->data = StringStreamWrapper::Open(Utils::ConvertCodepageStringToUtf8($message->internetcpid, $body), $truncateHtmlSafe);
+                    $message->internetcpid = INTERNET_CPID_UTF8;
                 }
             }
             else {
@@ -2518,32 +2592,37 @@ class MAPIProvider {
      * @return boolean
      */
     private function imtoinet($mapimessage, &$message) {
-        if (function_exists("mapi_inetmapi_imtoinet")) {
+        $mapiEmail = mapi_getprops($mapimessage, array(PR_EC_IMAP_EMAIL));
+        $stream = false;
+        if (isset($mapiEmail[PR_EC_IMAP_EMAIL]) || MAPIUtils::GetError(PR_EC_IMAP_EMAIL, $mapiEmail) == MAPI_E_NOT_ENOUGH_MEMORY) {
+            $stream = mapi_openproperty($mapimessage, PR_EC_IMAP_EMAIL, IID_IStream, 0, 0);
+            ZLog::Write(LOGLEVEL_DEBUG, "MAPIProvider->imtoinet(): using PR_EC_IMAP_EMAIL as full RFC822 message");
+        }
+        else {
             $addrbook = $this->getAddressbook();
             $stream = mapi_inetmapi_imtoinet($this->session, $addrbook, $mapimessage, array('use_tnef' => -1));
-
-            if (is_resource($stream)) {
-                $mstreamstat = mapi_stream_stat($stream);
-                $streamsize = $mstreamstat["cb"];
-                if (isset($streamsize)) {
-                    if (Request::GetProtocolVersion() >= 12.0) {
-                        if (!isset($message->asbody))
-                            $message->asbody = new SyncBaseBody();
-                        $message->asbody->data = MAPIStreamWrapper::Open($stream);
-                        $message->asbody->estimatedDataSize = $streamsize;
-                        $message->asbody->truncated = 0;
-                    }
-                    else {
-                        $message->mimedata = MAPIStreamWrapper::Open($stream);
-                        $message->mimesize = $streamsize;
-                        $message->mimetruncated = 0;
-                    }
-                    unset($message->body, $message->bodytruncated);
-                    return true;
-                }
-            }
-            ZLog::Write(LOGLEVEL_ERROR, sprintf("MAPIProvider->imtoinet(): got no stream or content from mapi_inetmapi_imtoinet()"));
         }
+        if (is_resource($stream)) {
+            $mstreamstat = mapi_stream_stat($stream);
+            $streamsize = $mstreamstat["cb"];
+            if (isset($streamsize)) {
+                if (Request::GetProtocolVersion() >= 12.0) {
+                    if (!isset($message->asbody))
+                        $message->asbody = new SyncBaseBody();
+                    $message->asbody->data = MAPIStreamWrapper::Open($stream);
+                    $message->asbody->estimatedDataSize = $streamsize;
+                    $message->asbody->truncated = 0;
+                }
+                else {
+                    $message->mimedata = MAPIStreamWrapper::Open($stream);
+                    $message->mimesize = $streamsize;
+                    $message->mimetruncated = 0;
+                }
+                unset($message->body, $message->bodytruncated);
+                return true;
+            }
+        }
+        ZLog::Write(LOGLEVEL_ERROR, "MAPIProvider->imtoinet(): got no stream or content from mapi_inetmapi_imtoinet()");
 
         return false;
     }
@@ -2571,6 +2650,17 @@ class MAPIProvider {
             $bpo = $contentparameters->BodyPreference($bpReturnType);
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("bpo: truncation size:'%d', allornone:'%d', preview:'%d'", $bpo->GetTruncationSize(), $bpo->GetAllOrNone(), $bpo->GetPreview()));
 
+            // Android Blackberry expects a full mime message for signed emails
+            // @see https://jira.z-hub.io/projects/ZP/issues/ZP-1154
+            // @TODO change this when refactoring
+            $props = mapi_getprops($mapimessage, array(PR_MESSAGE_CLASS));
+            if (isset($props[PR_MESSAGE_CLASS]) &&
+                    stripos($props[PR_MESSAGE_CLASS], 'IPM.Note.SMIME.MultipartSigned') !== false &&
+                    ($key = array_search(SYNC_BODYPREFERENCE_MIME, $bpTypes) !== false)) {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("MAPIProvider->setMessageBody(): enforcing SYNC_BODYPREFERENCE_MIME type for a signed message"));
+                $bpReturnType = SYNC_BODYPREFERENCE_MIME;
+            }
+
             $this->setMessageBodyForType($mapimessage, $bpReturnType, $message);
             //only set the truncation size data if device set it in request
             if (    $bpo->GetTruncationSize() != false &&
@@ -2582,7 +2672,7 @@ class MAPIProvider {
                 if ($bpReturnType == SYNC_BODYPREFERENCE_PLAIN) {
                     ZLog::Write(LOGLEVEL_DEBUG, "MAPIProvider->setMessageBody(): truncated plain-text body requested, stripping all links and images");
                     // Get more data because of the filtering it's most probably going down in size. It's going to be truncated to the correct size below.
-                    $plainbody = stream_get_contents($message->asbody->data, $bpo->GetTruncationSize() * 3);
+                    $plainbody = stream_get_contents($message->asbody->data, $bpo->GetTruncationSize() * 5);
                     $message->asbody->data = StringStreamWrapper::Open(preg_replace('/<http(s){0,1}:\/\/.*?>/i', '', $plainbody));
                 }
 
@@ -2613,107 +2703,6 @@ class MAPIProvider {
                 $this->imtoinet($mapimessage, $message);
             }
         }
-    }
-
-    /**
-     * Calculates the native body type of a message using available properties. Refer to oxbbody.
-     *
-     * @param array             $messageprops
-     *
-     * @access private
-     * @return int
-     */
-    private function getNativeBodyType($messageprops) {
-        //check if the properties are set and get the error code if needed
-        if (!isset($messageprops[PR_BODY]))             $messageprops[PR_BODY]              = $this->getError(PR_BODY, $messageprops);
-        if (!isset($messageprops[PR_RTF_COMPRESSED]))   $messageprops[PR_RTF_COMPRESSED]    = $this->getError(PR_RTF_COMPRESSED, $messageprops);
-        if (!isset($messageprops[PR_HTML]))             $messageprops[PR_HTML]              = $this->getError(PR_HTML, $messageprops);
-        if (!isset($messageprops[PR_RTF_IN_SYNC]))      $messageprops[PR_RTF_IN_SYNC]       = $this->getError(PR_RTF_IN_SYNC, $messageprops);
-
-        if ( // 1
-            ($messageprops[PR_BODY]             == MAPI_E_NOT_FOUND) &&
-            ($messageprops[PR_RTF_COMPRESSED]   == MAPI_E_NOT_FOUND) &&
-            ($messageprops[PR_HTML]             == MAPI_E_NOT_FOUND))
-            return SYNC_BODYPREFERENCE_PLAIN;
-        elseif ( // 2
-            ($messageprops[PR_BODY]             == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_RTF_COMPRESSED]   == MAPI_E_NOT_FOUND) &&
-            ($messageprops[PR_HTML]             == MAPI_E_NOT_FOUND))
-            return SYNC_BODYPREFERENCE_PLAIN;
-        elseif ( // 3
-            ($messageprops[PR_BODY]             == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_RTF_COMPRESSED]   == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_HTML]             == MAPI_E_NOT_FOUND))
-            return SYNC_BODYPREFERENCE_RTF;
-        elseif ( // 4
-            ($messageprops[PR_BODY]             == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_RTF_COMPRESSED]   == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_HTML]             == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_RTF_IN_SYNC]))
-            return SYNC_BODYPREFERENCE_RTF;
-        elseif ( // 5
-            ($messageprops[PR_BODY]             == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_RTF_COMPRESSED]   == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_HTML]             == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            (!$messageprops[PR_RTF_IN_SYNC]))
-            return SYNC_BODYPREFERENCE_HTML;
-        elseif ( // 6
-            ($messageprops[PR_RTF_COMPRESSED]   != MAPI_E_NOT_FOUND   || $messageprops[PR_RTF_COMPRESSED]  == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_HTML]             != MAPI_E_NOT_FOUND   || $messageprops[PR_HTML]            == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_RTF_IN_SYNC]))
-            return SYNC_BODYPREFERENCE_RTF;
-        elseif ( // 7
-            ($messageprops[PR_RTF_COMPRESSED]   != MAPI_E_NOT_FOUND   || $messageprops[PR_RTF_COMPRESSED]  == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_HTML]             != MAPI_E_NOT_FOUND   || $messageprops[PR_HTML]            == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            (!$messageprops[PR_RTF_IN_SYNC]))
-            return SYNC_BODYPREFERENCE_HTML;
-        elseif ( // 8
-            ($messageprops[PR_BODY]             != MAPI_E_NOT_FOUND   || $messageprops[PR_BODY]            == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_RTF_COMPRESSED]   != MAPI_E_NOT_FOUND   || $messageprops[PR_RTF_COMPRESSED]  == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_RTF_IN_SYNC]))
-            return SYNC_BODYPREFERENCE_RTF;
-        elseif ( // 9.1
-            ($messageprops[PR_BODY]             != MAPI_E_NOT_FOUND   || $messageprops[PR_BODY]            == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_RTF_COMPRESSED]   != MAPI_E_NOT_FOUND   || $messageprops[PR_RTF_COMPRESSED]  == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            (!$messageprops[PR_RTF_IN_SYNC]))
-            return SYNC_BODYPREFERENCE_PLAIN;
-        elseif ( // 9.2
-            ($messageprops[PR_RTF_COMPRESSED]   != MAPI_E_NOT_FOUND   || $messageprops[PR_RTF_COMPRESSED]  == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_BODY]             == MAPI_E_NOT_FOUND) &&
-            ($messageprops[PR_HTML]             == MAPI_E_NOT_FOUND))
-            return SYNC_BODYPREFERENCE_RTF;
-        elseif ( // 9.3
-            ($messageprops[PR_BODY]             != MAPI_E_NOT_FOUND   || $messageprops[PR_BODY]            == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_RTF_COMPRESSED]   == MAPI_E_NOT_FOUND) &&
-            ($messageprops[PR_HTML]             == MAPI_E_NOT_FOUND))
-            return SYNC_BODYPREFERENCE_PLAIN;
-        elseif ( // 9.4
-            ($messageprops[PR_HTML]             != MAPI_E_NOT_FOUND   || $messageprops[PR_HTML]            == MAPI_E_NOT_ENOUGH_MEMORY) &&
-            ($messageprops[PR_BODY]             == MAPI_E_NOT_FOUND) &&
-            ($messageprops[PR_RTF_COMPRESSED]   == MAPI_E_NOT_FOUND))
-            return SYNC_BODYPREFERENCE_HTML;
-        else // 10
-            return SYNC_BODYPREFERENCE_PLAIN;
-    }
-
-    /**
-     * Returns the error code for a given property. Helper for getNativeBodyType function.
-     *
-     * @param int               $tag
-     * @param array             $messageprops
-     *
-     * @access private
-     * @return int (MAPI_ERROR_CODE)
-     */
-    private function getError($tag, $messageprops) {
-        $prBodyError = mapi_prop_tag(PT_ERROR, mapi_prop_id($tag));
-        if(isset($messageprops[$prBodyError]) && mapi_is_error($messageprops[$prBodyError])) {
-            if($messageprops[$prBodyError] == MAPI_E_NOT_ENOUGH_MEMORY_32BIT ||
-                 $messageprops[$prBodyError] == MAPI_E_NOT_ENOUGH_MEMORY_64BIT) {
-                    return MAPI_E_NOT_ENOUGH_MEMORY;
-            }
-        }
-            return MAPI_E_NOT_FOUND;
     }
 
     /**
@@ -2849,6 +2838,78 @@ class MAPIProvider {
             }
         }
         return $this->inboxProps;
+    }
+
+    /**
+     * Gets the required store root properties.
+     *
+     * @access private
+     * @return array
+     */
+    private function getRootProps() {
+        if (!isset($this->rootProps)) {
+            $root = mapi_msgstore_openentry($this->store, null);
+            $this->rootProps = mapi_getprops($root, array(PR_IPM_OL2007_ENTRYIDS));
+        }
+        return $this->rootProps;
+    }
+
+    /**
+     * Returns an array with entryids of some special folders.
+     *
+     * @access private
+     * @return array
+     */
+    private function getSpecialFoldersData() {
+        // The persist data of an entry in PR_IPM_OL2007_ENTRYIDS consists of:
+        //      PersistId - e.g. RSF_PID_SUGGESTED_CONTACTS (2 bytes)
+        //      DataElementsSize - size of DataElements field (2 bytes)
+        //      DataElements - array of PersistElement structures (variable size)
+        //          PersistElement Structure consists of
+        //              ElementID - e.g. RSF_ELID_ENTRYID (2 bytes)
+        //              ElementDataSize - size of ElementData (2 bytes)
+        //              ElementData - The data for the special folder identified by the PersistID (variable size)
+        if (empty($this->specialFoldersData)) {
+            $this->specialFoldersData = array();
+            $rootProps = $this->getRootProps();
+            if (isset($rootProps[PR_IPM_OL2007_ENTRYIDS])) {
+                $persistData = $rootProps[PR_IPM_OL2007_ENTRYIDS];
+                while (strlen($persistData) > 0) {
+                    // PERSIST_SENTINEL marks the end of the persist data
+                    if (strlen($persistData) == 4 && $persistData == PERSIST_SENTINEL) {
+                        break;
+                    }
+                    $unpackedData = unpack("vdataSize/velementID/velDataSize", substr($persistData, 2, 6));
+                    if (isset($unpackedData['dataSize']) && isset($unpackedData['elementID']) && $unpackedData['elementID'] == RSF_ELID_ENTRYID && isset($unpackedData['elDataSize'])) {
+                        $this->specialFoldersData[] = substr($persistData, 8, $unpackedData['elDataSize']);
+                        // Add PersistId and DataElementsSize lenghts to the data size as they're not part of it
+                        $persistData = substr($persistData, $unpackedData['dataSize'] + 4);
+                    }
+                    else {
+                        ZLog::Write(LOGLEVEL_INFO, "MAPIProvider->getSpecialFoldersData(): persistent data is not valid");
+                        break;
+                    }
+                }
+            }
+        }
+        return $this->specialFoldersData;
+    }
+
+    /**
+     * Extracts email address from PR_SEARCH_KEY property if possible.
+     *
+     * @param string $searchKey
+     * @access private
+     * @see https://jira.z-hub.io/browse/ZP-1178
+     *
+     * @return string
+     */
+    private function getEmailAddressFromSearchKey($searchKey) {
+        if (strpos($searchKey, ':') !== false && strpos($searchKey, '@') !== false) {
+            ZLog::Write(LOGLEVEL_INFO, "MAPIProvider->getEmailAddressFromSearchKey(): fall back to PR_SEARCH_KEY or PR_SENT_REPRESENTING_SEARCH_KEY to resolve user and get email address");
+            return trim(strtolower(explode(':', $searchKey)[1]));
+        }
+        return "";
     }
 
     /**

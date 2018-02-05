@@ -6,29 +6,11 @@
  *
  * Created   :   13.11.2015
  *
- * Copyright 2007 - 2015 Zarafa Deutschland GmbH
+ * Copyright 2007 - 2016 Zarafa Deutschland GmbH
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License, version 3,
- * as published by the Free Software Foundation with the following additional
- * term according to sec. 7:
- *
- * According to sec. 7 of the GNU Affero General Public License, version 3,
- * the terms of the AGPL are supplemented with the following terms:
- *
- * "Zarafa" is a registered trademark of Zarafa B.V.
- * "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
- * The licensing of the Program under the AGPL does not imply a trademark license.
- * Therefore any rights, title and interest in our trademarks remain entirely with us.
- *
- * However, if you propagate an unmodified version of the Program you are
- * allowed to use the term "Z-Push" to indicate that you distribute the Program.
- * Furthermore you may use our trademarks where it is necessary to indicate
- * the intended purpose of a product or service provided you use it in accordance
- * with honest practices in industrial or commercial matters.
- * If you want to propagate modified versions of the Program under the name "Z-Push",
- * you may only do so if you have a written permission by Zarafa Deutschland GmbH
- * (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+ * as published by the Free Software Foundation.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -40,6 +22,7 @@
  *
  * Consult LICENSE file for details
  ************************************************/
+
 class Syslog extends Log {
 
     protected $program_name = '';
@@ -101,6 +84,14 @@ class Syslog extends Log {
         }
     }
 
+    /**
+     * Constructor.
+     * Sets configured values if no parameters are given.
+     *
+     * @param string $program_name
+     * @param string $host
+     * @param string $port
+     */
     public function __construct($program_name = null, $host = null, $port = null) {
         parent::__construct();
 
@@ -121,7 +112,6 @@ class Syslog extends Log {
      * @return string
      */
     protected function GenerateProgramName() {
-
         // @TODO Use another mechanism than debug_backtrace to determine to origin of the log
         $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
         // Shift the "syslog.php" entry.
@@ -167,33 +157,48 @@ class Syslog extends Log {
     /**
      * Build the log string for syslog.
      *
-     * @param int $loglevel
-     * @param string $message
+     * @param int       $loglevel
+     * @param string    $message
+     * @param boolean   $includeUserDevice  puts username and device in the string, default: true
      *
      * @access public
      * @return string
      */
-    public function BuildLogString($loglevel, $message) {
+    public function BuildLogString($loglevel, $message, $includeUserDevice = true) {
         $log = $this->GetLogLevelString($loglevel); // Never pad syslog log because syslog log are usually read with a software.
-        $log .= $this->GetUser();
+        // when the users differ, we need to log both
+        if (strcasecmp($this->GetAuthUser(), $this->GetUser()) == 0) {
+            $log .= ' ['. $this->GetUser() .']';
+        }
+        else {
+            $log .= ' ['. $this->GetAuthUser() . Request::IMPERSONATE_DELIM . $this->GetUser() .']';
+        }
         if ($loglevel >= LOGLEVEL_DEVICEID) {
-            $log .= $this->GetDevid();
+            $log .= '['. $this->GetDevid() .']';
         }
         $log .= ' ' . $message;
         return $log;
     }
 
-
     //
     // Implementation of Log
     //
 
+    /**
+     * Writes a log message to the general log.
+     *
+     * @param int $loglevel
+     * @param string $message
+     *
+     * @access protected
+     * @return void
+     */
     protected function Write($loglevel, $message) {
         if ($this->GetHost() && $this->GetPort()) {
             $sock = socket_create(AF_INET, SOCK_DGRAM, SOL_UDP);
             $facility = 1; // user level
             $pri = ($facility * 8) + $loglevel; // multiplying the Facility number by 8 + adding the level
-            $data = $this->buildLogString($loglevel, $message);
+            $data = $this->BuildLogString($loglevel, $message);
             if (strlen(trim($data)) > 0) {
                 $syslog_message = "<{$pri}>" . date('M d H:i:s ') . '[' . $this->GetProgramName() . ']: ' . $data;
                 socket_sendto($sock, $syslog_message, strlen($syslog_message), 0, $this->GetHost(), $this->GetPort());
@@ -203,11 +208,18 @@ class Syslog extends Log {
             openlog($this->GenerateProgramName(), LOG_PID, LOG_SYSLOG_FACILITY);
             syslog(
                 $this->GetZpushLogLevelToSyslogLogLevel($loglevel),
-                $this->buildLogString($loglevel, $message)
+                $this->BuildLogString($loglevel, $message)
             );
         }
     }
 
+    /**
+     * This function is used as an event for log implementer.
+     * It happens when the a call to the Log function is finished.
+     *
+     * @access public
+     * @return void
+     */
     public function WriteForUser($loglevel, $message) {
         $this->Write(LOGLEVEL_DEBUG, $message); // Always pass the logleveldebug so it uses syslog level LOG_DEBUG
     }

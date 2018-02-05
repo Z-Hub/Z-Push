@@ -170,7 +170,21 @@ USE_FULLEMAIL_FOR_LOGIN If this is set to "true", AutoDiscover will attempt to
                         login on the collaboration server with the full email 
                         address sent by the client. If disabled (default), the 
                         local part of the email address is used.
-                        
+
+AUTODISCOVER_LOGIN_TYPE If the local part of the email address doesn't match the
+                        user name, this parameter helps to convert it for some common cases.
+Possible values:
+    AUTODISCOVER_LOGIN_EMAIL            uses the local part of the email address
+                                        as provided when setting up the account.
+    AUTODISCOVER_LOGIN_NO_DOT           removes the '.' from email address:
+                                        email: first.last@domain.com -> resulting username: firstlast
+    AUTODISCOVER_LOGIN_F_NO_DOT_LAST    cuts the first part before '.' after the first letter
+                                        and removes the '.' from email address:
+                                        email: first.last@domain.com -> resulting username: flast
+    AUTODISCOVER_LOGIN_F_DOT_LAST       cuts the part before '.' after the first letter and
+                                        leaves the part after '.' as is:
+                                        email: first.last@domain.com -> resulting username: f.last
+
 LOGFILEDIR              The directory where logfiles are created.
 
 LOGFILE                 The default AutoDiscover log file.

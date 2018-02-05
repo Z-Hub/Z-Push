@@ -10,25 +10,7 @@
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -219,19 +201,17 @@ class Utils {
      * @return boolean installed version is superior to the checked string
      */
     static public function CheckMapiExtVersion($version = "") {
+        if (!extension_loaded("mapi")) {
+            return false;
+        }
         // compare build number if requested
         if (preg_match('/^\d+$/', $version) && strlen($version) > 3) {
             $vs = preg_split('/-/', phpversion("mapi"));
             return ($version <= $vs[1]);
         }
-
-        if (extension_loaded("mapi")){
-            if (version_compare(phpversion("mapi"), $version) == -1){
-                return false;
-            }
-        }
-        else
+        if (version_compare(phpversion("mapi"), $version) == -1){
             return false;
+        }
 
         return true;
     }
@@ -400,21 +380,35 @@ class Utils {
      *
      * If it's not possible to truncate properly, an empty string is returned
      *
-     * @param string $string - the string
-     * @param string $length - position where string should be cut
+     * @param string    $string     the string
+     * @param string    $length     position where string should be cut
+     * @param boolean   $htmlsafe   doesn't cut html tags in half, doesn't ensure correct html - default: false
+     *
      * @return string truncated string
      */
-    static public function Utf8_truncate($string, $length) {
+    static public function Utf8_truncate($string, $length, $htmlsafe = false) {
         // make sure length is always an interger
         $length = (int)$length;
 
-        if (strlen($string) <= $length)
-            return $string;
+        // if the input string is shorter then the trunction, make sure it's valid UTF-8!
+        if (strlen($string) <= $length) {
+            $length = strlen($string) - 1;
+        }
+
+        // The intent is not to cut HTML tags in half which causes displaying issues (see ZP-1240).
+        // The used method just tries to cut outside of tags, without checking tag validity and closing tags.
+        if ($htmlsafe) {
+            $offset = 0 - strlen($string) + $length;
+            $validPos = strrpos($string, "<", $offset);
+            if ($validPos > strrpos($string, ">", $offset)) {
+                $length = $validPos;
+            }
+        }
 
         while($length >= 0) {
-            if ((ord($string[$length]) < 0x80) || (ord($string[$length]) >= 0xC0))
+            if ((ord($string[$length]) < 0x80) || (ord($string[$length]) >= 0xC0)) {
                 return substr($string, 0, $length);
-
+            }
             $length--;
         }
         return "";
@@ -531,6 +525,21 @@ class Utils {
     }
 
     /**
+     * Converts an UTF7-IMAP encoded string into an UTF-8 string.
+     *
+     * @param string $string to convert
+     *
+     * @access public
+     * @return string
+     */
+    static public function Utf7imap_to_utf8($string) {
+        if (function_exists("mb_convert_encoding")){
+            return @mb_convert_encoding($string, "UTF-8", "UTF7-IMAP");
+        }
+        return $string;
+    }
+
+    /**
      * Converts an UTF-8 encoded string into an UTF-7 string.
      *
      * @param string $string to convert
@@ -545,6 +554,21 @@ class Utils {
         else
             ZLog::Write(LOGLEVEL_WARN, "Utils::Utf8_to_utf7() 'iconv' is not available. Charset conversion skipped.");
 
+        return $string;
+    }
+
+    /**
+     * Converts an UTF-8 encoded string into an UTF7-IMAP string.
+     *
+     * @param string $string to convert
+     *
+     * @access public
+     * @return string
+     */
+    static public function Utf8_to_utf7imap($string) {
+        if (function_exists("mb_convert_encoding")){
+            return @mb_convert_encoding($string, "UTF7-IMAP", "UTF-8");
+        }
         return $string;
     }
 
@@ -572,52 +596,6 @@ class Utils {
      */
     static public function IsBase64String($string) {
         return (bool) preg_match("#^([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{2}==|[A-Za-z0-9+\/]{3}=|[A-Za-z0-9+/]{4})?$#", $string);
-    }
-
-    /**
-     * Decodes base64 encoded query parameters. Based on dw2412 contribution.
-     *
-     * @param string $query     the query to decode
-     *
-     * @access public
-     * @return array
-     */
-    static public function DecodeBase64URI($query) {
-        /*
-         * The query string has a following structure. Number in () is position:
-         * 1 byte       - protocoll version (0)
-         * 1 byte       - command code (1)
-         * 2 bytes      - locale (2)
-         * 1 byte       - device ID length (4)
-         * variable     - device ID (4+device ID length)
-         * 1 byte       - policy key length (5+device ID length)
-         * 0 or 4 bytes - policy key (5+device ID length + policy key length)
-         * 1 byte       - device type length (6+device ID length + policy key length)
-         * variable     - device type (6+device ID length + policy key length + device type length)
-         * variable     - command parameters, array which consists of:
-         *                      1 byte      - tag
-         *                      1 byte      - length
-         *                      variable    - value of the parameter
-         *
-         */
-        $decoded = base64_decode($query);
-        $devIdLength = ord($decoded[4]); //device ID length
-        $polKeyLength = ord($decoded[5+$devIdLength]); //policy key length
-        $devTypeLength = ord($decoded[6+$devIdLength+$polKeyLength]); //device type length
-        //unpack the decoded query string values
-        $unpackedQuery = unpack("CProtVer/CCommand/vLocale/CDevIDLen/H".($devIdLength*2)."DevID/CPolKeyLen".($polKeyLength == 4 ? "/VPolKey" : "")."/CDevTypeLen/A".($devTypeLength)."DevType", $decoded);
-
-        //get the command parameters
-        $pos = 7 + $devIdLength + $polKeyLength + $devTypeLength;
-        $decoded = substr($decoded, $pos);
-        while (strlen($decoded) > 0) {
-            $paramLength = ord($decoded[1]);
-            $unpackedParam = unpack("CParamTag/CParamLength/A".$paramLength."ParamValue", $decoded);
-            $unpackedQuery[ord($decoded[0])] = $unpackedParam['ParamValue'];
-            //remove parameter from decoded query string
-            $decoded = substr($decoded, 2 + $paramLength);
-        }
-        return $unpackedQuery;
     }
 
     /**
@@ -898,6 +876,7 @@ class Utils {
     /**
      * Checks if a file has the same owner and group as the parent directory.
      * If not, owner and group are fixed (being updated to the owner/group of the directory).
+     * If the given file is a special file (i.g., /dev/null, fifo), nothing is changed.
      * Function code contributed by Robert Scheck aka rsc.
      *
      * @param string $file
@@ -906,7 +885,11 @@ class Utils {
      * @return boolean
      */
     public static function FixFileOwner($file) {
-        if(posix_getuid() == 0 && file_exists($file)) {
+        if (!function_exists('posix_getuid')) {
+           ZLog::Write(LOGLEVEL_DEBUG, "Utils::FixeFileOwner(): Posix subsystem not available, skipping.");
+           return false;
+        }
+        if (posix_getuid() == 0 && is_file($file)) {
             $dir = dirname($file);
             $perm_dir = stat($dir);
             $perm_file = stat($file);
@@ -1182,6 +1165,201 @@ class Utils {
         }
 
         return $data;
+    }
+
+    /**
+     * Modifies a SyncFolder object, changing the type to SYNC_FOLDER_TYPE_UNKNOWN but saving the original type.
+     * It also appends a zero-width UTF-8 (U+200B) character to the name, which serves as marker.
+     *
+     * @access public
+     * @param SyncFolder $folder
+     * @return SyncFolder
+     */
+    public static function ChangeFolderToTypeUnknownForKoe($folder) {
+        // append a zero width UTF-8 space to the name
+        $folder->displayname .= hex2bin("e2808b");
+        $folder->TypeReal = $folder->type;
+        $folder->type = SYNC_FOLDER_TYPE_UNKNOWN;
+
+        return $folder;
+    }
+
+    /**
+     * Checks if the displayname of the folder contains the zero-width UTF-8 (U+200B) character marker.
+     *
+     * @access public
+     * @param SyncFolder $folder
+     * @return boolean
+     */
+    public static function IsFolderToBeProcessedByKoe($folder) {
+        return isset($folder->displayname) && substr($folder->displayname, -3) == hex2bin("e2808b");
+    }
+
+    /**
+     * If string is ISO-2022-JP, convert this into utf-8.
+     *
+     * @param string $nonencstr
+     * @param string $utf8str
+     *
+     * @access private
+     * @return string
+     */
+    private static function convertRawHeader2Utf8($nonencstr, $utf8str) {
+        if (!isset($nonencstr)) {
+            return $utf8str;
+        }
+        // if php-imap option is not installed, there is no noconversion
+        if (!function_exists("imap_mime_header_decode")) {
+            return $utf8str;
+        }
+        $isiso2022jp = false;
+        $issamecharset = true;
+        $charset = NULL;
+        $str = "";
+        $striso2022jp = "";
+        foreach (@imap_mime_header_decode($nonencstr) as $val) {
+            if (is_null($charset)) {
+                $charset = strtolower($val->charset);
+            }
+            if ($charset != strtolower($val->charset)) {
+                $issamecharset = false;
+            }
+            if (strtolower($val->charset) == "iso-2022-jp") {
+                $isiso2022jp = true;
+                $striso2022jp .= $val->text;
+                $str .= @mb_convert_encoding($val->text, "utf-8", "ISO-2022-JP-MS");
+            }
+            elseif (strtolower($val->charset) == "default") {
+                $str .= $val->text;
+            }
+            else {
+                $str .= @mb_convert_encoding($val->text, "utf-8", $val->charset);
+            }
+        }
+        if (!$isiso2022jp) {
+            return $utf8str;
+        }
+        if ($charset == 'iso-2022-jp' && $issamecharset) {
+            $str = @mb_convert_encoding($striso2022jp, "utf-8", "ISO-2022-JP-MS");
+        }
+        return $str;
+    }
+
+    /**
+     * Get raw mail headers as key-value pair array.
+     *
+     * @param &$mail: this is reference of the caller's $mail,
+     *                not copy. So the call to
+     *                Utils::getRawMailHeaders() will not require
+     *                memory for $mail.
+     *
+     * @access private
+     * @return string array
+     */
+    private static function getRawMailHeaders(&$mail) {
+        // if no headers, return FALSE
+        if (!preg_match("/^(.*?)\r?\n\r?\n/s", $mail, $match)) {
+            ZLog::Write(LOGLEVEL_DEBUG, "Utils::getRawMailHeaders(): no header");
+            return false;
+        }
+        $input = $match[1];
+        // if no headers, return FALSE
+        if ($input == "") {
+            ZLog::Write(LOGLEVEL_DEBUG, "Utils::getRawMailHeaders(): no header");
+            return false;
+        }
+        // parse headers
+        $input = preg_replace("/\r?\n/", "\r\n", $input);
+        $input = preg_replace("/=\r\n(\t| )+/", '=', $input);
+        $input = preg_replace("/\r\n(\t| )+/", ' ', $input);
+        $headersonly = explode("\r\n", trim($input));
+        unset($input);
+        $headers = array("subject" => NULL, "from" => NULL);
+        foreach ($headersonly as $value) {
+            if (!preg_match("/^(.+):[ \t]*(.+)$/", $value, $match)) {
+                continue;
+            }
+            $headers[strtolower($match[1])] = $match[2];
+        }
+        unset($headersonly);
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("Utils::getRawMailHeaders(): subject = %s", $headers["subject"]));
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("Utils::getRawMailHeaders(): from = %s", $headers["from"]));
+        return $headers;
+    }
+
+    /**
+     * Check if the UTF-8 string has ISO-2022-JP esc seq
+     * if so, it is ISO-2022-JP, not UTF-8 and convert it into UTF-8
+     * string
+     *
+     * @access public
+     * @param $string
+     * @return $string
+     */
+    public static function CheckAndFixEncoding(&$string) {
+        if ( isset($string) && strpos($string, chr(0x1b).'$B') !== false ) {
+            $string = mb_convert_encoding($string, "utf-8", "ISO-2022-JP-MS");
+        }
+    }
+
+    /**
+     * Get to or cc header in mime-header-encoded UTF-8 text.
+     *
+     * @access public
+     * @param $addrstruncs
+     *        $addrstruncts is a return value of
+     *        Mail_RFC822->parseAddressList(). Convert this into
+     *        plain text. If the phrase part is in plain UTF-8,
+     *        convert this into mime-header encoded UTF-8
+     */
+    public static function CheckAndFixEncodingInHeadersOfSentMail($addrstructs) {
+        mb_internal_encoding("UTF-8");
+        $addrarray = array();
+        // process each address
+        foreach ( $addrstructs as $struc ) {
+            $addrphrase = $struc->personal;
+            if (isset($addrphrase) && strlen($addrphrase) > 0 && mb_detect_encoding($addrphrase, "UTF-8") != false && preg_match('/[^\x00-\x7F]/', $addrphrase) == 1) {
+                // phrase part is plain utf-8 text including non ascii characters
+                // convert ths into mime-header-encoded text
+                $addrphrase = mb_encode_mimeheader($addrphrase);
+            }
+            if ( strlen($addrphrase) > 0 ) {
+                // there is a phrase part in the address
+                $addrarray[] = $addrphrase . " " . " <" . $struc->mailbox . "@" . $struc->host . ">";
+            } else {
+                // there is no phrase part in the address
+                $addrarray[] = $struc->mailbox . "@" . $struc->host;
+            }
+        }
+        // combine each address into a string
+        $addresses = implode(",", $addrarray);
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("Utils::CheckAndFixEncodingInHeadersOfSentMail(): addresses %s", $addresses));
+        return $addresses;
+    }
+
+    /**
+     * Set expected subject and from in utf-8 even if in wrong
+     * decoded.
+     *
+     * @param &$mail
+     *        &$mail is reference of the caller's, not copy. So the
+     *        call to Utils::CheckAndFixEncodingInHeaders() will not
+     *        require memory for $mail.
+     * @param $message
+     *        $message is an instance of a class. So the call to
+     *        Utils::CheckAndFixEncodingInHeaders() will not
+     *        require memory for $message
+     *
+     * @access public
+     * @return void
+     */
+    public static function CheckAndFixEncodingInHeaders(&$mail, $message) {
+        $rawheaders = Utils::getRawMailHeaders($mail);
+        if (!$rawheaders) {
+            return;
+        }
+        $message->headers["subject"] = Utils::convertRawHeader2Utf8($rawheaders["subject"], $message->headers["subject"]);
+        $message->headers["from"] = Utils::convertRawHeader2Utf8($rawheaders["from"], $message->headers["from"]);
     }
 }
 

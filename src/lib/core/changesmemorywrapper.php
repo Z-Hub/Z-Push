@@ -6,29 +6,11 @@
 *
 * Created   :   18.08.2011
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -41,11 +23,11 @@
 * Consult LICENSE file for details
 ************************************************/
 
-
 class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IExportChanges {
     const CHANGE = 1;
     const DELETION = 2;
     const SOFTDELETION = 3;
+    const SYNCHRONIZING = 4;
 
     private $changes;
     private $step;
@@ -89,6 +71,13 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
                         continue;
                     }
                 }
+                // make sure, if the folder is already in cache, to set the TypeReal flag (if available)
+                $cacheFolder = $this->GetFolder($addFolder->serverid);
+                if (isset($cacheFolder->TypeReal)) {
+                    $addFolder->TypeReal = $cacheFolder->TypeReal;
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("ChangesMemoryWrapper->Config(): Set REAL foldertype for folder '%s' from cache: '%s'", $addFolder->displayname, $addFolder->TypeReal));
+                }
+
                 // add folder to the device - if folder is already on the device, nothing will happen
                 $this->ImportFolderChange($addFolder);
             }
@@ -96,6 +85,15 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
             // look for folders which are currently on the device if there are now not to be synched anymore
             $alreadyDeleted = $this->GetDeletedFolders();
             foreach ($this->ExportFolders(true) as $sid => $folder) {
+                // check if previously synchronized secondary contact folders were patched for KOE - if no RealType is set they weren't
+                if ($flags == self::SYNCHRONIZING && ZPush::GetDeviceManager()->IsKoeSupportingSecondaryContacts() && $folder->type == SYNC_FOLDER_TYPE_USER_CONTACT && !isset($folder->TypeReal)) {
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("ChangesMemoryWrapper->Config(): Identifided secondary contact folder '%s' that was not patched for KOE before. Re-adding it now.", $folder->displayname));
+                    // we need to delete it from the hierarchy cache so it's exported as NEW (way to convince OL to add it)
+                    $this->DelFolder($folder->serverid);
+                    $folder->flags = SYNC_NEWMESSAGE;
+                    $this->ImportFolderChange($folder);
+                }
+
                 // we are only looking at additional folders
                 if (isset($folder->NoBackendFolder)) {
                     // look if this folder is still in the list of additional folders and was not already deleted (e.g. missing permissions)
@@ -212,12 +210,29 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
                 $cacheFolder = $this->GetFolder($folder->serverid);
                 $folder->type = $cacheFolder->type;
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("ChangesMemoryWrapper->ImportFolderChange(): Set foldertype for folder '%s' from cache as it was not sent: '%s'", $folder->displayname, $folder->type));
+                if (isset($cacheFolder->TypeReal)) {
+                    $folder->TypeReal = $cacheFolder->TypeReal;
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("ChangesMemoryWrapper->ImportFolderChange(): Set REAL foldertype for folder '%s' from cache: '%s'", $folder->displayname, $folder->TypeReal));
+                }
             }
 
             // KOE ZO-42: When Notes folders are updated in Outlook, it tries to update the name (that fails by default, as it's a system folder)
             // catch this case here and ignore the change
             if (($folder->type == SYNC_FOLDER_TYPE_NOTE || $folder->type == SYNC_FOLDER_TYPE_USER_NOTE) && ZPush::GetDeviceManager()->IsKoe()) {
                 $retFolder = false;
+            }
+            // KOE ZP-907: When a secondary contact folder is patched (update type & change name) don't import it through the backend
+            // This is a bit more permissive than ZPush::GetDeviceManager()->IsKoeSupportingSecondaryContacts() so that updates are always catched
+            // even if the feature was disabled in the meantime.
+            elseif ($folder->type == SYNC_FOLDER_TYPE_UNKNOWN && ZPush::GetDeviceManager()->IsKoe() && !Utils::IsFolderToBeProcessedByKoe($folder)) {
+                ZLog::Write(LOGLEVEL_DEBUG, "ChangesMemoryWrapper->ImportFolderChange(): Rewrote folder type to real type, as KOE patched the folder");
+                // cacheFolder contains other properties that must be maintained
+                // so we continue using the cacheFolder, but rewrite the type and use the incoming displayname
+                $cacheFolder = $this->GetFolder($folder->serverid);
+                $cacheFolder->type = $cacheFolder->TypeReal;
+                $cacheFolder->displayname = $folder->displayname;
+                $folder = $cacheFolder;
+                $retFolder = $folder;
             }
             // do regular folder update
             else {
@@ -252,8 +267,7 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
                 // The Zarafa/Kopano HierarchyExporter exports all kinds of changes for folders (e.g. update no. of unread messages in a folder).
                 // These changes are not relevant for the mobiles, as something changes but the relevant displayname and parentid
                 // stay the same. These changes will be dropped and are not sent!
-                $cacheFolder = $this->GetFolder($folder->serverid);
-                if ($folder->equals($this->GetFolder($folder->serverid))) {
+                if ($folder->equals($this->GetFolder($folder->serverid), false, true)) {
                     ZLog::Write(LOGLEVEL_DEBUG, sprintf("ChangesMemoryWrapper->ImportFolderChange(): Change for folder '%s' will not be sent as modification is not relevant.", $folder->displayname));
                     return false;
                 }
@@ -262,6 +276,14 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
                 if (!isset($folder->parentid) || ($folder->parentid != "0" && !$this->GetFolder($folder->parentid))) {
                     ZLog::Write(LOGLEVEL_DEBUG, sprintf("ChangesMemoryWrapper->ImportFolderChange(): Change for folder '%s' will not be sent as parent folder is not set or not known on mobile.", $folder->displayname));
                     return false;
+                }
+
+                // ZP-907: if we are ADDING a secondary contact folder and a compatible Outlook is connected, rewrite the type to SYNC_FOLDER_TYPE_UNKNOWN and mark the foldername
+                if (ZPush::GetDeviceManager()->IsKoeSupportingSecondaryContacts() && $folder->type == SYNC_FOLDER_TYPE_USER_CONTACT &&
+                         (!$this->GetFolder($folder->serverid, true) || !$this->GetFolder($folder->serverid) || $this->GetFolder($folder->serverid)->type === SYNC_FOLDER_TYPE_UNKNOWN)
+                        ) {
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("ChangesMemoryWrapper->ImportFolderChange(): Sending new folder '%s' as type SYNC_FOLDER_TYPE_UNKNOWN as Outlook is not able to handle secondary contact folders", $folder->displayname));
+                    $folder = Utils::ChangeFolderToTypeUnknownForKoe($folder);
                 }
 
                 // load this change into memory
@@ -380,5 +402,20 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
     public function __wakeup() {
         $this->changes = array();
         $this->step = 0;
+    }
+
+    /**
+     * Removes internal data from the object, so this data can not be exposed.
+     *
+     * @access public
+     * @return boolean
+     */
+    public function StripData() {
+        unset($this->changes);
+        unset($this->step);
+        unset($this->destinationImporter);
+        unset($this->exportImporter);
+
+        return parent::StripData();
     }
 }

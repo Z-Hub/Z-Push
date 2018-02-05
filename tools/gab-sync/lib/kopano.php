@@ -10,25 +10,7 @@
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -49,7 +31,12 @@ include_once('mapi/mapitags.php');
 include_once('mapi/mapicode.php');
 include_once('mapi/mapiguid.php');
 
-define('PR_EMS_AB_THUMBNAIL_PHOTO', mapi_prop_tag(PT_BINARY, 0x8C9E));
+if (!defined('PR_EMS_AB_THUMBNAIL_PHOTO')) {
+    define('PR_EMS_AB_THUMBNAIL_PHOTO', mapi_prop_tag(PT_BINARY, 0x8C9E));
+}
+if (!defined('PR_EC_AB_HIDDEN')) {
+    define('PR_EC_AB_HIDDEN', mapi_prop_tag(PT_BOOLEAN, 0x67A7));
+}
 
 class Kopano extends SyncWorker {
     const NAME = "Z-Push Kopano GAB Sync";
@@ -355,13 +342,24 @@ class Kopano extends SyncWorker {
                                                             PR_INITIALS,
                                                             PR_LANGUAGE,
                                                             PR_EMS_AB_THUMBNAIL_PHOTO,
+                                                            PR_EC_AB_HIDDEN,
                                                             PR_DISPLAY_TYPE_EX
                                                     ));
+        if(!is_array($gabentries)) {
+            $this->Log("Kopano->GetGAB(): GAB data can not be retrieved.");
+            return $data;
+        }
         foreach ($gabentries as $entry) {
             // do not add SYSTEM user to the GAB
             if (strtoupper($entry[PR_DISPLAY_NAME]) == "SYSTEM") {
                 continue;
             }
+            // ignore hidden entries
+            if (isset($entry[PR_EC_AB_HIDDEN]) && $entry[PR_EC_AB_HIDDEN]) {
+                $this->Log(sprintf("Kopano->GetGAB(): Ignoring user '%s' as account is hidden", $entry[PR_ACCOUNT]));
+                continue;
+            }
+
             $a = new GABEntry();
             $a->type = GABEntry::CONTACT;
             $a->memberOf = array();
@@ -378,7 +376,12 @@ class Kopano extends SyncWorker {
             if (array_key_exists($entry[PR_ACCOUNT], $groups)) {
                 $a->type = GABEntry::GROUP;
                 $groupentry = mapi_ab_openentry($addrbook, $entry[PR_ENTRYID]);
-                $grouptable = mapi_folder_getcontentstable($groupentry, MAPI_DEFERRED_ERRORS);
+                $grouptable = @mapi_folder_getcontentstable($groupentry, MAPI_DEFERRED_ERRORS);
+                // some groups can not be listed - ZP-1196
+                if (mapi_last_hresult()) {
+                    $this->Log(sprintf("Kopano->GetGAB(): Ignoring group '%s' as members can not be listed - possibly hidden, code: 0x%08X \n", $entry[PR_ACCOUNT], mapi_last_hresult() ));
+                    continue;
+                }
                 $users = mapi_table_queryallrows($grouptable, array(PR_ENTRYID, PR_ACCOUNT, PR_SMTP_ADDRESS));
 
                 $a->members = array();

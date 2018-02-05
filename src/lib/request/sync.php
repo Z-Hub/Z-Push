@@ -10,25 +10,7 @@
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -200,6 +182,11 @@ class Sync extends RequestProcessor {
                         }
                     }
 
+                    // determine if this is the KOE GAB folder so it can be prioritized by SyncCollections
+                    if (KOE_CAPABILITY_GAB && self::$deviceManager->IsKoe() && $spa->GetBackendFolderId() == self::$deviceManager->GetKoeGabBackendFolderId()) {
+                        $spa->SetKoeGabFolder(true);
+                    }
+
                     // done basic SPA initialization/loading -> add to SyncCollection
                     $sc->AddCollection($spa);
                     $sc->AddParameter($spa, "requested", true);
@@ -242,11 +229,14 @@ class Sync extends RequestProcessor {
 
                     // Get changes can be an empty tag as well as have value
                     // code block partly contributed by dw2412
-                    if(self::$decoder->getElementStartTag(SYNC_GETCHANGES)) {
+                    if($starttag = self::$decoder->getElementStartTag(SYNC_GETCHANGES)) {
                         $sc->AddParameter($spa, "getchanges", true);
                         if (($gc = self::$decoder->getElementContent()) !== false) {
                             $sc->AddParameter($spa, "getchanges", $gc);
-                            if(!self::$decoder->getElementEndTag()) {
+                        }
+                        // read the endtag if SYNC_GETCHANGES wasn't an empty tag
+                        if ($starttag[EN_FLAGS] & EN_FLAGS_CONTENT) {
+                            if (!self::$decoder->getElementEndTag()) {
                                 return false;
                             }
                         }
@@ -382,6 +372,43 @@ class Sync extends RequestProcessor {
                                     return false;
                             }
 
+                            if (self::$decoder->getElementStartTag(SYNC_AIRSYNCBASE_BODYPARTPREFERENCE)) {
+                                if (self::$decoder->getElementStartTag(SYNC_AIRSYNCBASE_TYPE)) {
+                                    $bpptype = self::$decoder->getElementContent();
+                                    $spa->BodyPartPreference($bpptype);
+                                    if (!self::$decoder->getElementEndTag()) {
+                                        return false;
+                                    }
+                                }
+
+                                if (self::$decoder->getElementStartTag(SYNC_AIRSYNCBASE_TRUNCATIONSIZE)) {
+                                    $spa->BodyPartPreference($bpptype)->SetTruncationSize(self::$decoder->getElementContent());
+                                    if(!self::$decoder->getElementEndTag())
+                                        return false;
+                                }
+
+                                if (self::$decoder->getElementStartTag(SYNC_AIRSYNCBASE_ALLORNONE)) {
+                                    $spa->BodyPartPreference($bpptype)->SetAllOrNone(self::$decoder->getElementContent());
+                                    if(!self::$decoder->getElementEndTag())
+                                        return false;
+                                }
+
+                                if (self::$decoder->getElementStartTag(SYNC_AIRSYNCBASE_PREVIEW)) {
+                                    $spa->BodyPartPreference($bpptype)->SetPreview(self::$decoder->getElementContent());
+                                    if(!self::$decoder->getElementEndTag())
+                                        return false;
+                                }
+
+                                if (!self::$decoder->getElementEndTag())
+                                    return false;
+                            }
+
+                            if (self::$decoder->getElementStartTag(SYNC_RIGHTSMANAGEMENT_SUPPORT)) {
+                                $spa->SetRmSupport(self::$decoder->getElementContent());
+                                if (!self::$decoder->getElementEndTag())
+                                    return false;
+                            }
+
                             $e = self::$decoder->peek();
                             if($e[EN_TYPE] == EN_TYPE_ENDTAG) {
                                 self::$decoder->getElementEndTag();
@@ -391,20 +418,21 @@ class Sync extends RequestProcessor {
                     }
 
                     // limit items to be synchronized to the mobiles if configured
-                    if (defined('SYNC_FILTERTIME_MAX') && SYNC_FILTERTIME_MAX > SYNC_FILTERTYPE_ALL &&
-                        (!$spa->HasFilterType() || $spa->GetFilterType() == SYNC_FILTERTYPE_ALL || $spa->GetFilterType() > SYNC_FILTERTIME_MAX)) {
-                            ZLog::Write(LOGLEVEL_DEBUG, sprintf("SYNC_FILTERTIME_MAX defined. Filter set to value: %s", SYNC_FILTERTIME_MAX));
-                            $spa->SetFilterType(SYNC_FILTERTIME_MAX);
+                    $maxAllowed = self::$deviceManager->GetFilterType($spa->GetFolderId());
+                    if ($maxAllowed > SYNC_FILTERTYPE_ALL &&
+                        (!$spa->HasFilterType() || $spa->GetFilterType() == SYNC_FILTERTYPE_ALL || $spa->GetFilterType() > $maxAllowed)) {
+                            ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleSync(): FilterType applied globally or specifically, using value: %s", $maxAllowed));
+                            $spa->SetFilterType($maxAllowed);
                     }
 
                     // unset filtertype for KOE GAB folder
-                    if (KOE_CAPABILITY_GAB && self::$deviceManager->IsKoe() && $spa->GetBackendFolderId() == self::$deviceManager->GetKoeGabBackendFolderId()) {
+                    if ($spa->GetKoeGabFolder() === true) {
                         $spa->SetFilterType(SYNC_FILTERTYPE_ALL);
                         ZLog::Write(LOGLEVEL_DEBUG, "HandleSync(): KOE GAB folder - setting filter type to unlimited");
                     }
 
                     if ($currentFilterType != $spa->GetFilterType()) {
-                        ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleSync(): filter type has changed (old: '%s', new: '%s'), removing folderstat to force Exporter setup", $currentFilterType, $spa->GetFilterType()));
+                        ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleSync(): FilterType has changed (old: '%s', new: '%s'), removing folderstat to force Exporter setup", $currentFilterType, $spa->GetFilterType()));
                         $spa->DelFolderStat();
                     }
 
@@ -644,7 +672,11 @@ class Sync extends RequestProcessor {
             foreach($sc as $folderid => $spa) {
                 // manually set getchanges parameter for this collection if it is synchronized
                 if ($spa->HasSyncKey()) {
-                    $sc->AddParameter($spa, "getchanges", true);
+                    $actiondata = $sc->GetParameter($spa, "actiondata");
+                    // request changes if no other actions are executed
+                    if (empty($actiondata["modifyids"]) && empty($actiondata["clientids"]) && empty($actiondata["removeids"])) {
+                        $sc->AddParameter($spa, "getchanges", true);
+                    }
 
                     // announce WindowSize to DeviceManager
                     self::$deviceManager->SetWindowSize($folderid, $spa->GetWindowSize());
@@ -662,8 +694,8 @@ class Sync extends RequestProcessor {
             }
         }
 
-        // HEARTBEAT & Empty sync
-        if ($status == SYNC_STATUS_SUCCESS && (isset($hbinterval) || $emptysync == true)) {
+        // HEARTBEAT
+        if ($status == SYNC_STATUS_SUCCESS && isset($hbinterval)) {
             $interval = (defined('PING_INTERVAL') && PING_INTERVAL > 0) ? PING_INTERVAL : 30;
 
             if (isset($hbinterval))
@@ -704,6 +736,9 @@ class Sync extends RequestProcessor {
                         $this->saveMultiFolderInfo("exeption", "StatusException");
                     }
                 }
+
+                // update the waittime waited
+                self::$waitTime = $sc->GetWaitedSeconds();
 
                 // in case there are no changes and no other request has synchronized while we waited, we can reply with an empty response
                 if (!$foundchanges && $status == SYNC_STATUS_SUCCESS) {
@@ -766,8 +801,12 @@ class Sync extends RequestProcessor {
                 continue;
             }
 
-            if (! $sc->GetParameter($spa, "requested"))
+            if (! $sc->GetParameter($spa, "requested")) {
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleSync(): partial sync for folder class '%s' with id '%s'", $spa->GetContentClass(), $spa->GetFolderId()));
+                // reload state and initialize StateMachine correctly
+                $sc->AddParameter($spa, "state", null);
+                $status = $this->loadStates($sc, $spa, $actiondata);
+            }
 
             // initialize exporter to get changecount
             $changecount = false;
@@ -779,14 +818,26 @@ class Sync extends RequestProcessor {
             // TODO we could check against $sc->GetChangedFolderIds() on heartbeat so we do not need to configure all exporter again
             if($status == SYNC_STATUS_SUCCESS && ($sc->GetParameter($spa, "getchanges") || ! $spa->HasSyncKey())) {
 
-                // no need to run the exporter if the globalwindowsize is already full
-                if ($sc->GetGlobalWindowSize() == $this->globallyExportedItems) {
+                // no need to run the exporter if the globalwindowsize is already full - if collection already has a synckey (ZP-1215)
+                if ($sc->GetGlobalWindowSize() == $this->globallyExportedItems && $spa->HasSyncKey()) {
                     ZLog::Write(LOGLEVEL_DEBUG, sprintf("Sync(): no exporter setup for '%s' as GlobalWindowSize is full.", $spa->GetFolderId()));
                     $setupExporter = false;
                 }
                 // if the maximum request timeout is reached, stop processing other collections
                 if (Request::IsRequestTimeoutReached()) {
                     ZLog::Write(LOGLEVEL_DEBUG, sprintf("Sync(): no exporter setup for '%s' as request timeout reached, omitting output for collection.", $spa->GetFolderId()));
+                    $setupExporter = false;
+                }
+
+                // if max memory allocation is reached, stop processing other collections
+                if (Request::IsRequestMemoryLimitReached()) {
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("Sync(): no exporter setup for '%s' as max memory allocatation reached, omitting output for collection.", $spa->GetFolderId()));
+                    $setupExporter = false;
+                }
+
+                // ZP-907: never send changes of UNKNOWN folders to an Outlook client
+                if (Request::IsOutlook() && self::$deviceManager->GetFolderTypeFromCacheById($spa->GetFolderId()) == SYNC_FOLDER_TYPE_UNKNOWN && $spa->HasSyncKey()) {
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("Sync(): no exporter setup for '%s' as type is UNKNOWN.", $spa->GetFolderId()));
                     $setupExporter = false;
                 }
 
@@ -883,7 +934,7 @@ class Sync extends RequestProcessor {
 
             // Fir AS 14.0+ omit output for folder, if there were no incoming or outgoing changes and no Fetch
             if (Request::GetProtocolVersion() >= 14.0 && ! $spa->HasNewSyncKey() && $changecount == 0 && empty($actiondata["fetchids"]) && $status == SYNC_STATUS_SUCCESS &&
-                    ($newFolderStat === false || ! $spa->IsExporterRunRequired($newFolderStat))) {
+                    ! $spa->HasConfirmationChanged() && ($newFolderStat === false || ! $spa->IsExporterRunRequired($newFolderStat))) {
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleSync: No changes found for %s folder id '%s'. Omitting output.", $spa->GetContentClass(), $spa->GetFolderId()));
                 continue;
             }
@@ -909,6 +960,14 @@ class Sync extends RequestProcessor {
         if ($this->startFolderTagSent)
             self::$encoder->endTag();
 
+        // Check if there was any response - in case of an empty sync request, we shouldn't send an empty answer (ZP-1241)
+        if (!$this->startTagsSent && $emptysync === true) {
+            $this->sendStartTags();
+            self::$encoder->startTag(SYNC_STATUS);
+            self::$encoder->content(SYNC_STATUS_SYNCREQUESTINCOMPLETE);
+            self::$encoder->endTag();
+        }
+
         //SYNC_SYNCHRONIZE - only if the starttag was sent
         if ($this->startTagsSent)
             self::$encoder->endTag();
@@ -916,7 +975,11 @@ class Sync extends RequestProcessor {
         // final top announcement for a multi-folder sync
         if ($sc->GetCollectionCount() > 1) {
             self::$topCollector->AnnounceInformation($this->getMultiFolderInfoLine($sc->GetCollectionCount()), true);
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleSync: Processed %d folders", $sc->GetCollectionCount()));
         }
+
+        // update the waittime waited
+        self::$waitTime = $sc->GetWaitedSeconds();
 
         return true;
     }
@@ -1160,7 +1223,7 @@ class Sync extends RequestProcessor {
                     }
                 }
 
-                if($n >= $windowSize || Request::IsRequestTimeoutReached()) {
+                if($n >= $windowSize || Request::IsRequestTimeoutReached() || Request::IsRequestMemoryLimitReached()) {
                     ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleSync(): Exported maxItems of messages: %d / %d", $n, $changecount));
                     break;
                 }
@@ -1175,9 +1238,9 @@ class Sync extends RequestProcessor {
             self::$encoder->endTag();
 
             // log the request timeout
-            if (Request::IsRequestTimeoutReached()) {
-                ZLog::Write(LOGLEVEL_DEBUG, "HandleSync(): Stopping export as maximum request timeout is almost reached!");
-                // Send a <MoreAvailable/> tag if we reached the request timeout, there are more changes and a moreavailable was not already send
+            if (Request::IsRequestTimeoutReached() || Request::IsRequestMemoryLimitReached()) {
+                ZLog::Write(LOGLEVEL_DEBUG, "HandleSync(): Stopping export as limits of request timeout or available memory are almost reached!");
+                // Send a <MoreAvailable/> tag if we reached the request timeout or max memory, there are more changes and a moreavailable was not already send
                 if (!$moreAvailableSent && ($n > $windowSize)) {
                     self::$encoder->startTag(SYNC_MOREAVAILABLE, false, true);
                     $spa->DelFolderStat();
@@ -1200,12 +1263,14 @@ class Sync extends RequestProcessor {
                 self::$deviceManager->SetFolderSyncStatus($spa->GetFolderId(), DeviceManager::FLD_SYNC_COMPLETED);
 
                 // we should update the folderstat, but we recheck to see if it changed. If so, it's not updated to force another sync
-                $newFolderStatAfterExport = self::$backend->GetFolderStat(ZPush::GetAdditionalSyncFolderStore($spa->GetBackendFolderId()), $spa->GetBackendFolderId());
-                if ($newFolderStat === $newFolderStatAfterExport) {
-                    $this->setFolderStat($spa, $newFolderStat);
-                }
-                else {
-                    ZLog::Write(LOGLEVEL_DEBUG, "Sync() Folderstat differs after export, force another exporter run.");
+                if (self::$backend->HasFolderStats()) {
+                    $newFolderStatAfterExport = self::$backend->GetFolderStat(ZPush::GetAdditionalSyncFolderStore($spa->GetBackendFolderId()), $spa->GetBackendFolderId());
+                    if ($newFolderStat === $newFolderStatAfterExport) {
+                        $this->setFolderStat($spa, $newFolderStat);
+                    }
+                    else {
+                        ZLog::Write(LOGLEVEL_DEBUG, "Sync() Folderstat differs after export, force another exporter run.");
+                    }
                 }
             }
             else
@@ -1584,6 +1649,8 @@ class Sync extends RequestProcessor {
 
         $interval = Utils::GetFiltertypeInterval($spa->GetFilterType());
         $timeout = time() + (($interval && $interval < $maxTimeout) ? $interval : $maxTimeout);
+        // randomize timout in 12h
+        $timeout -= rand(0, 43200);
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("Sync()->setFolderStat() on %s: %s expiring %s", $spa->getFolderId(), $newFolderStat, date('Y-m-d H:i:s', $timeout)));
         $spa->SetFolderStatTimeout($timeout);
     }

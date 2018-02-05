@@ -1,0 +1,48 @@
+#!/bin/sh
+# postinst script for z-push-config-nginx
+#
+# see: dh_installdeb(1)
+
+set -e
+
+# Use debconf
+. /usr/share/debconf/confmodule
+
+set_perms() {
+        USER=$1
+        GROUP=$2
+        MODE=$3
+        FILE=$4
+        if ! dpkg-statoverride --list $FILE > /dev/null 2>&1; then
+            chown -R $USER:$GROUP $FILE
+            chmod -R $MODE $FILE
+        fi
+}
+
+case "$1" in
+    configure|reconfigure)
+        # Get nginx user and its default group
+        USER=`grep user /etc/nginx/nginx.conf | awk '{gsub(";", ""); print $2}'`
+        GROUP=`id -gn $USER`
+        # Set permissions
+        set_perms $USER $GROUP 700 /var/lib/z-push
+        set_perms $USER $GROUP 700 /var/log/z-push
+
+        if [ -f /etc/nginx/sites-available/z-push.conf ]; then
+            ln -s /etc/nginx/sites-available/z-push.conf /etc/nginx/sites-enabled/
+            service nginx reload
+        fi
+        ;;
+
+    abort-upgrade|abort-remove|abort-deconfigure)
+        ;;
+
+    *)
+        echo "postinst called with unknown argument \`$1'" >&2
+        exit 1
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0

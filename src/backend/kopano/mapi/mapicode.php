@@ -1,42 +1,10 @@
 <?php
 /*
- * Copyright 2005 - 2013  Zarafa B.V.
+ * Copyright 2005 - 2016  Zarafa B.V. and its licensors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License, version 3,
- * as published by the Free Software Foundation with the following additional
- * term according to sec. 7:
- *
- * According to sec. 7 of the GNU Affero General Public License, version
- * 3, the terms of the AGPL are supplemented with the following terms:
- *
- * "Zarafa" is a registered trademark of Zarafa B.V. The licensing of
- * the Program under the AGPL does not imply a trademark license.
- * Therefore any rights, title and interest in our trademarks remain
- * entirely with us.
- *
- * However, if you propagate an unmodified version of the Program you are
- * allowed to use the term "Zarafa" to indicate that you distribute the
- * Program. Furthermore you may use our trademarks where it is necessary
- * to indicate the intended purpose of a product or service provided you
- * use it in accordance with honest practices in industrial or commercial
- * matters.  If you want to propagate modified versions of the Program
- * under the name "Zarafa" or "Zarafa Server", you may only do so if you
- * have a written permission by Zarafa B.V. (to acquire a permission
- * please contact Zarafa at trademark@zarafa.com).
- *
- * The interactive user interface of the software displays an attribution
- * notice containing the term "Zarafa" and/or the logo of Zarafa.
- * Interactive user interfaces of unmodified and modified versions must
- * display Appropriate Legal Notices according to sec. 5 of the GNU
- * Affero General Public License, version 3, when you propagate
- * unmodified or modified versions of the Program. In accordance with
- * sec. 7 b) of the GNU Affero General Public License, version 3, these
- * Appropriate Legal Notices must retain the logo of Zarafa or display
- * the words "Initial Development by Zarafa" if the display of the logo
- * is not reasonably feasible for technical reasons. The use of the logo
- * of Zarafa in Legal Notices is allowed for unmodified and modified
- * versions of the software.
+ * as published by the Free Software Foundation.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -46,8 +14,8 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
+ * Consult LICENSE file for details
  */
-
 
 /**
 * Status codes returned by MAPI functions
@@ -66,7 +34,7 @@ define('SEVERITY_ERROR',     1);
 /* from winerror.h */
 
 /**
-* Function to make a error
+* Function to make an error
 */
 function make_mapi_e($code)
 {
@@ -75,7 +43,7 @@ function make_mapi_e($code)
 
 
 /**
-* Function to make an warning
+* Function to make a warning
 */
 function make_mapi_s($code)
 {
@@ -127,11 +95,16 @@ function make_mapi_s($code)
  */
 define('NOERROR'                                         ,0);
 
-define('MAPI_E_CALL_FAILED'                              ,(int) 0x80004005);
-define('MAPI_E_NOT_ENOUGH_MEMORY'                        ,(int) 0x8007000E);
-define('MAPI_E_INVALID_PARAMETER'                        ,(int) 0x80070057);
-define('MAPI_E_INTERFACE_NOT_SUPPORTED'                  ,(int) 0x80004002);
-define('MAPI_E_NO_ACCESS'                                ,(int) 0x80070005);
+// The following codes don't use make_mapi_e because they are in the 0x000FF000 range,
+// but we cannot use the HEX value as would make most sense as that would break in 64bit PHP
+// (Kopano Core server will return a negative value, but PHP would convert this define into a positive
+// value). Hence we declare the value exactly as we need it as integer and bypass the
+// 32bit/64bit hell.
+define('MAPI_E_CALL_FAILED'                              ,(int)-2147467259); // 0x80004005
+define('MAPI_E_NOT_ENOUGH_MEMORY'                        ,(int)-2147024882); // 0x8007000E
+define('MAPI_E_INVALID_PARAMETER'                        ,(int)-2147024809); // 0x80070057
+define('MAPI_E_INTERFACE_NOT_SUPPORTED'                  ,(int)-2147467262); // 0x80004002
+define('MAPI_E_NO_ACCESS'                                ,(int)-2147024891); // 0x80070005
 
 define('MAPI_E_NO_SUPPORT'                               ,make_mapi_e(0x102));
 define('MAPI_E_BAD_CHARWIDTH'                            ,make_mapi_e(0x103));

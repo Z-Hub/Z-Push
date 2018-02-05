@@ -4,6 +4,12 @@ export DH_VERBOSE=1
 
 #include /usr/share/quilt/quilt.make
 
+# Since only Ubuntu 16.04 requires php-mbstring we detect that here
+ifeq ($(shell dpkg-vendor --derives-from Ubuntu && echo yes),yes)
+		ifeq ($(shell grep -q Xenial /etc/os-release && echo yes),yes)
+				SUBSTVARS = -Vdist:Depends="php-mbstring"
+		endif
+endif
 
 
 DEB_VERSION := $(shell dpkg-parsechangelog | egrep '^Version:' | cut -f 2 -d ' ')
@@ -11,9 +17,16 @@ DEB_VERSION := $(shell dpkg-parsechangelog | egrep '^Version:' | cut -f 2 -d ' '
 %:
 	dh  $@
 
+override_dh_gencontrol:
+	dh_gencontrol -- $(SUBSTVARS)
+
 override_dh_install:
 	mv src/* .
+	# set version number
 	sed -s "s/ZPUSHVERSION/${DEB_VERSION}/" build/version.php.in > version.php
+
+	# fix z-push directory in gab2contacts script
+	sed -i -s "s/PATH_TO_ZPUSH', '\.\.\/\.\.\/src\/')/PATH_TO_ZPUSH', '\/usr\/share\/z-push\/')/" tools/gab2contacts/gab2contacts.php
 
 	mv "config.php" "z-push.conf.php";
 
@@ -28,6 +41,7 @@ override_dh_install:
 	mv "backend/searchldap/config.php" "conftmp/galsearch-ldap.conf.php";
 	mv "backend/sqlstatemachine/config.php" "conftmp/state-sql.conf.php";
 	mv "tools/gab-sync/config.php" "conftmp/gabsync.conf.php";
+	mv "tools/gab2contacts/config.php" "conftmp/gab2contacts.conf.php";
 	mv "autodiscover/config.php" "conftmp/autodiscover.conf.php";
 
 	dh_install

@@ -10,25 +10,7 @@
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -53,8 +35,12 @@
     // Try to set unlimited timeout
     define('SCRIPT_TIMEOUT', 0);
 
-    // When accessing through a proxy, the "X-Forwarded-For" header contains the original remote IP
-    define('USE_X_FORWARDED_FOR_HEADER', false);
+    // Use a custom header to determinate the remote IP of a client.
+    // By default, the server provided REMOTE_ADDR is used. If the header here set
+    // is available, the provided value will be used, else REMOTE_ADDR is maintained.
+    // set to false to disable this behaviour.
+    // common values: 'HTTP_X_FORWARDED_FOR', 'HTTP_X_REAL_IP' (casing is ignored)
+    define('USE_CUSTOM_REMOTE_IP_HEADER', 'HTTP_X_REAL_IP');
 
     // When using client certificates, we can check if the login sent matches the owner of the certificate.
     // This setting specifies the owner parameter in the certificate to look at.
@@ -270,7 +256,15 @@
     // point. You can add DeviceType strings to the categories.
     // In general longer timeouts are better, because more data can be streamed at once.
     define('SYNC_TIMEOUT_MEDIUM_DEVICETYPES', "SAMSUNGGTI");
-    define('SYNC_TIMEOUT_LONG_DEVICETYPES',   "iPod, iPad, iPhone, WP, WindowsOutlook");
+    define('SYNC_TIMEOUT_LONG_DEVICETYPES',   "iPod, iPad, iPhone, WP, WindowsOutlook, WindowsMail");
+
+    // Time in seconds the device should wait whenever the service is unavailable,
+    // e.g. when a backend service is unavailable.
+    // Z-Push sends a "Retry-After" header in the response with the here defined value.
+    // It is up to the device to respect or not this directive so even if this option is set,
+    // the device might not wait requested time frame.
+    // Number of seconds before retry, to disable set to: false
+    define('RETRY_AFTER_DELAY', 300);
 
 /**********************************************************************************
  *  Backend settings
@@ -317,6 +311,14 @@
     define('KOE_CAPABILITY_SHAREDFOLDER', true);
     // Send-As support for Outlook/KOE and mobiles
     define('KOE_CAPABILITY_SENDAS', true);
+    // Secondary Contact folders (own and shared)
+    define('KOE_CAPABILITY_SECONDARYCONTACTS', true);
+    // Copy WebApp signature into KOE
+    define('KOE_CAPABILITY_SIGNATURES', true);
+    // Delivery receipt requests
+    define('KOE_CAPABILITY_RECEIPTS', true);
+    // Impersonate other users
+    define('KOE_CAPABILITY_IMPERSONATE', true);
 
     // To synchronize the GAB KOE, the GAB store and folderid need to be specified.
     // Use the gab-sync script to generate this data. The name needs to
@@ -334,7 +336,7 @@
  *
  *  This feature is supported only by certain devices, like iPhones.
  *  Check the compatibility list for supported devices:
- *      http://z-push.sf.net/compatibility
+ *      http://z-push.org/compatibility
  *
  *  To synchronize a folder, add a section setting all parameters as below:
  *      store:      the ressource where the folder is located.
@@ -347,6 +349,13 @@
  *                      SYNC_FOLDER_TYPE_USER_TASK
  *                      SYNC_FOLDER_TYPE_USER_MAIL
  *                      SYNC_FOLDER_TYPE_USER_NOTE
+ *      flags:      sets additional options on the shared folder. Supported are:
+ *                      DeviceManager::FLD_FLAGS_NONE
+ *                          No flags configured, default flag to be set
+ *                      DeviceManager::FLD_FLAGS_SENDASOWNER
+ *                          When replying in this folder, automatically do Send-As
+ *                      DeviceManager::FLD_FLAGS_CALENDARREMINDERS
+ *                          If set, Outlook shows reminders for these shares with KOE
  *
  *  Additional notes:
  *  - on Kopano systems use backend/kopano/listfolders.php script to get a list
@@ -374,6 +383,7 @@
             'folderid'  => "",
             'name'      => "Public Contacts",
             'type'      => SYNC_FOLDER_TYPE_USER_CONTACT,
+            'flags'     => DeviceManager::FLD_FLAGS_NONE,
         ),
 */
     );

@@ -6,29 +6,11 @@
 *
 * Created   :   30.07.2014
 *
-* Copyright 2007 - 2014 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -44,14 +26,15 @@
 /**********************************************************************************
  *  Default settings
  */
+
+    // Replace zpush.example.com with your z-push's host name and uncomment the line below.
+    // define('ZPUSH_HOST', 'zpush.example.com');
+
     // Defines the default time zone, change e.g. to "Europe/London" if necessary
     define('TIMEZONE', '');
 
     // Defines the base path on the server
     define('BASE_PATH', dirname($_SERVER['SCRIPT_FILENAME']). '/');
-
-    // The Z-Push server location for the autodiscover response
-    define('SERVERURL', 'https://localhost/Microsoft-Server-ActiveSync');
 
     /*
      * Whether to use the complete email address as a login name
@@ -61,6 +44,28 @@
      * true - use the complete email address.
      */
     define('USE_FULLEMAIL_FOR_LOGIN', false);
+
+    /*
+     * AutoDiscover requires the username to match either the email address
+     * or the local part of the email address.
+     * This is not always possible as the username might have a different
+     * schema than email address. Configure this parameter to match your
+     * username settings.
+     * @see https://wiki.z-hub.io/display/ZP/Configuring+Z-Push+Autodiscover#ConfiguringZ-PushAutodiscover-Configuration
+     * @see https://jira.z-hub.io/browse/ZP-1209
+     *
+     * Possible values:
+     * AUTODISCOVER_LOGIN_EMAIL             - uses the email address as provided when setting up the account
+     * AUTODISCOVER_LOGIN_NO_DOT            - removes the '.' from email address:
+     *                                          email: first.last@domain.com -> resulting username: firstlast
+     * AUTODISCOVER_LOGIN_F_NO_DOT_LAST     - cuts the first part before '.' after the first letter and
+     *                                          removes the '.' from email address:
+     *                                          email: first.last@domain.com -> resulting username: flast
+     * AUTODISCOVER_LOGIN_F_DOT_LAST        - cuts the part before '.' after the first letter and
+     *                                          leaves the part after '.' as is:
+     *                                          email: first.last@domain.com -> resulting username: f.last
+     */
+    define('AUTODISCOVER_LOGIN_TYPE', AUTODISCOVER_LOGIN_EMAIL);
 
 /**********************************************************************************
  *  Logging settings

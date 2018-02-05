@@ -10,25 +10,7 @@
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -55,22 +37,30 @@ class Settings extends RequestProcessor {
         if (!self::$decoder->getElementStartTag(SYNC_SETTINGS_SETTINGS))
             return false;
 
-        // add capability header for KOE
-        if(self::$deviceManager->IsKoe()) {
-            // define the supported capabilites
-            $cap = array();
-            if (defined('KOE_CAPABILITY_GAB') && KOE_CAPABILITY_GAB)                    $cap[] = "gab";
-            if (defined('KOE_CAPABILITY_RECEIVEFLAGS') && KOE_CAPABILITY_RECEIVEFLAGS)  $cap[] = "receiveflags";
-            if (defined('KOE_CAPABILITY_SENDFLAGS') && KOE_CAPABILITY_SENDFLAGS)        $cap[] = "sendflags";
-            if (defined('KOE_CAPABILITY_OOFTIMES') && KOE_CAPABILITY_OOFTIMES)          $cap[] = "ooftime";
-            elseif(defined('KOE_CAPABILITY_OOF') && KOE_CAPABILITY_OOF)                 $cap[] = "oof";        // 'ooftime' superseeds 'oof'. If 'ooftime' is set, 'oof' should not be defined.
-            if (defined('KOE_CAPABILITY_NOTES') && KOE_CAPABILITY_NOTES)                $cap[] = "notes";
-            if (defined('KOE_CAPABILITY_SHAREDFOLDER') && KOE_CAPABILITY_SHAREDFOLDER)  $cap[] = "sharedfolder";
-            if (defined('KOE_CAPABILITY_SENDAS') && KOE_CAPABILITY_SENDAS)              $cap[] = "sendas";
+        // always add capability header - define the supported capabilites
+        $cap = array();
+        if (defined('KOE_CAPABILITY_GAB') && KOE_CAPABILITY_GAB)                                $cap[] = "gab";
+        if (defined('KOE_CAPABILITY_RECEIVEFLAGS') && KOE_CAPABILITY_RECEIVEFLAGS)              $cap[] = "receiveflags";
+        if (defined('KOE_CAPABILITY_SENDFLAGS') && KOE_CAPABILITY_SENDFLAGS)                    $cap[] = "sendflags";
+        if (defined('KOE_CAPABILITY_OOFTIMES') && KOE_CAPABILITY_OOFTIMES)                      $cap[] = "ooftime";
+        elseif(defined('KOE_CAPABILITY_OOF') && KOE_CAPABILITY_OOF)                             $cap[] = "oof";        // 'ooftime' superseeds 'oof'. If 'ooftime' is set, 'oof' should not be defined.
+        if (defined('KOE_CAPABILITY_NOTES') && KOE_CAPABILITY_NOTES)                            $cap[] = "notes";
+        if (defined('KOE_CAPABILITY_SHAREDFOLDER') && KOE_CAPABILITY_SHAREDFOLDER)              $cap[] = "sharedfolder";
+        if (defined('KOE_CAPABILITY_SENDAS') && KOE_CAPABILITY_SENDAS)                          $cap[] = "sendas";
+        if (defined('KOE_CAPABILITY_SECONDARYCONTACTS') && KOE_CAPABILITY_SECONDARYCONTACTS)    $cap[] = "secondarycontacts";
+        if (defined('KOE_CAPABILITY_SIGNATURES') && KOE_CAPABILITY_SIGNATURES)                  $cap[] = "signatures";
+        if (defined('KOE_CAPABILITY_RECEIPTS') && KOE_CAPABILITY_RECEIPTS)                      $cap[] = "receipts";
+        if (defined('KOE_CAPABILITY_IMPERSONATE') && KOE_CAPABILITY_IMPERSONATE)                $cap[] = "impersonate";
 
-            self::$specialHeaders = array();
-            self::$specialHeaders[] = "X-Push-Capabilities: ". implode(",",$cap);
+        self::$specialHeaders = array();
+        self::$specialHeaders[] = "X-Push-Capabilities: ". implode(",", $cap);
+
+        if(self::$deviceManager->IsKoe()) {
             self::$specialHeaders[] = "X-Push-GAB-Name: ". bin2hex(KOE_GAB_NAME);
+
+            if (defined('KOE_CAPABILITY_SIGNATURES') && KOE_CAPABILITY_SIGNATURES) {
+                self::$specialHeaders[] = "X-Push-Signatures-Hash: ". self::$backend->GetKoeSignatures()->GetHash();
+            }
         }
 
         //save the request parameters
@@ -97,6 +87,9 @@ class Settings extends RequestProcessor {
             if (self::$decoder->getElementStartTag(SYNC_SETTINGS_USERINFORMATION)) {
                 $propertyName = SYNC_SETTINGS_USERINFORMATION;
             }
+            if (self::$decoder->getElementStartTag(SYNC_SETTINGS_RIGHTSMANAGEMENTINFORMATION)) {
+                $propertyName = SYNC_SETTINGS_RIGHTSMANAGEMENTINFORMATION;
+            }
             //TODO - check if it is necessary
             //no property name available - break
             if (!$propertyName)
@@ -104,7 +97,7 @@ class Settings extends RequestProcessor {
 
             //the property name is followed by either get or set
             if (self::$decoder->getElementStartTag(SYNC_SETTINGS_GET)) {
-                //get is only available for OOF and user information
+                //get is available for OOF (AS 12), user information (AS 12) and rights management (AS 14.1)
                 switch ($propertyName) {
                     case SYNC_SETTINGS_OOF:
                         $oofGet = new SyncOOF();
@@ -115,6 +108,10 @@ class Settings extends RequestProcessor {
 
                     case SYNC_SETTINGS_USERINFORMATION:
                         $userInformation = new SyncUserInformation();
+                        break;
+
+                    case SYNC_SETTINGS_RIGHTSMANAGEMENTINFORMATION:
+                        $rmTemplates = new SyncRightsManagementTemplates();
                         break;
 
                     default:
@@ -210,6 +207,20 @@ class Settings extends RequestProcessor {
                         $userInformation->Encode(self::$encoder);
                     self::$encoder->endTag(); //SYNC_SETTINGS_GET
                 self::$encoder->endTag(); //SYNC_SETTINGS_USERINFORMATION
+            }
+
+            // get rights management templates
+            if (isset($rmTemplates)) {
+                self::$backend->Settings($rmTemplates);
+                self::$encoder->startTag(SYNC_SETTINGS_RIGHTSMANAGEMENTINFORMATION);
+                    self::$encoder->startTag(SYNC_SETTINGS_STATUS);
+                    self::$encoder->content($rmTemplates->Status);
+                    self::$encoder->endTag(); //SYNC_SETTINGS_STATUS
+
+                    self::$encoder->startTag(SYNC_SETTINGS_GET);
+                        $rmTemplates->Encode(self::$encoder);
+                    self::$encoder->endTag(); //SYNC_SETTINGS_GET
+                self::$encoder->endTag(); //SYNC_SETTINGS_RIGHTSMANAGEMENTINFORMATION
             }
 
             //set out of office

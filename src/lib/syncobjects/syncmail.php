@@ -14,25 +14,7 @@
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -44,7 +26,6 @@
 *
 * Consult LICENSE file for details
 ************************************************/
-
 
 class SyncMail extends SyncObject {
     public $to;
@@ -87,6 +68,10 @@ class SyncMail extends SyncObject {
     public $receivedasbcc;
     public $sender;
     public $categories;
+
+    // AS 14.1 props
+    public $rightsManagementLicense;
+    public $asbodypart;
 
     function __construct() {
         $mapping = array (
@@ -201,7 +186,14 @@ class SyncMail extends SyncObject {
             $mapping[SYNC_POOMMAIL_CATEGORIES]                          = array (   self::STREAMER_VAR      => "categories",
                                                                                     self::STREAMER_ARRAY    => SYNC_POOMMAIL_CATEGORY,
                                                                                     self::STREAMER_RONOTIFY => true);
-            //TODO bodypart, accountid, rightsmanagementlicense
+            //TODO bodypart, accountid
+        }
+
+        if (Request::GetProtocolVersion() >= 14.1) {
+            $mapping[SYNC_RIGHTSMANAGEMENT_LICENSE]                     = array (   self::STREAMER_VAR      => "rightsManagementLicense",
+                                                                                    self::STREAMER_TYPE     => "SyncRightsManagementLicense");
+            $mapping[SYNC_AIRSYNCBASE_BODYPART]                         = array (   self::STREAMER_VAR      => "asbodypart",
+                                                                                    self::STREAMER_TYPE     => "SyncBaseBodyPart");
         }
 
         parent::__construct($mapping);

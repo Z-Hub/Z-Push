@@ -10,25 +10,7 @@
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License, version 3,
- * as published by the Free Software Foundation with the following additional
- * term according to sec. 7:
- *
- * According to sec. 7 of the GNU Affero General Public License, version 3,
- * the terms of the AGPL are supplemented with the following terms:
- *
- * "Zarafa" is a registered trademark of Zarafa B.V.
- * "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
- * The licensing of the Program under the AGPL does not imply a trademark license.
- * Therefore any rights, title and interest in our trademarks remain entirely with us.
- *
- * However, if you propagate an unmodified version of the Program you are
- * allowed to use the term "Z-Push" to indicate that you distribute the Program.
- * Furthermore you may use our trademarks where it is necessary to indicate
- * the intended purpose of a product or service provided you use it in accordance
- * with honest practices in industrial or commercial matters.
- * If you want to propagate modified versions of the Program under the name "Z-Push",
- * you may only do so if you have a written permission by Zarafa Deutschland GmbH
- * (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+ * as published by the Free Software Foundation.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -48,10 +30,14 @@ $wbxml64 = is_file($argv[1]) ? realpath($argv[1]) : $argv[1];
 chdir(__DIR__);
 
 // include the stuff we need
+include_once('../../src/lib/utils/utils.php');
 include_once('../../src/lib/utils/stringstreamwrapper.php');
 include_once('../../src/lib/wbxml/wbxmldefs.php');
 include_once('../../src/lib/wbxml/wbxmldecoder.php');
 include_once('../../src/lib/wbxml/wbxmlencoder.php');
+
+// don't truncate WBXML logs and use slow stream reader
+define('WBXML_DEBUGGING', true);
 
 // minimal definitions & log to stdout overwrite
 define('WBXML_DEBUG', true);
@@ -68,6 +54,10 @@ class ZLog {
                 echo $msg . "\n";
             }
         }
+    }
+
+    static public function IsWbxmlDebugEnabled() {
+        return true;
     }
 }
 

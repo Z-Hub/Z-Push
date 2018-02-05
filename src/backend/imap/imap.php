@@ -8,29 +8,11 @@
 *
 * Created   :   10.10.2007
 *
-* Copyright 2007 - 2013 Zarafa Deutschland GmbH
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -49,6 +31,11 @@ require_once("backend/imap/config.php");
 require_once("backend/imap/mime_calendar.php");
 require_once("backend/imap/mime_encode.php");
 require_once("backend/imap/user_identity.php");
+
+// Add the path for Andrew's Web Libraries to include_path
+// because it is required for the emails with ics attachments
+// @see https://jira.z-hub.io/browse/ZP-1149
+set_include_path(get_include_path() . PATH_SEPARATOR . '/usr/share/awl/inc');
 
 class BackendIMAP extends BackendDiff implements ISearchProvider {
     private $wasteID;
@@ -203,7 +190,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
 
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->SendMail(): We get the new message"));
         $mobj = new Mail_mimeDecode($sm->mime);
-        $message = $mobj->decode(array('decode_headers' => true, 'decode_bodies' => true, 'include_bodies' => true, 'rfc_822bodies' => true, 'charset' => 'utf-8'));
+        $message = $mobj->decode(array('decode_headers' => 'utf-8', 'decode_bodies' => true, 'include_bodies' => true, 'rfc_822bodies' => true, 'charset' => 'utf-8'));
         unset($mobj);
 
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->SendMail(): We get the From and To"));
@@ -217,7 +204,17 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             $toaddr = $this->parseAddr($Mail_RFC822->parseAddressList($message->headers["to"]));
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->SendMail(): To defined: %s", $toaddr));
         }
+
+        $message->headers["to"] = Utils::CheckAndFixEncodingInHeadersOfSentMail($Mail_RFC822->parseAddressList($message->headers["to"]));
+        $message->headers["cc"] = Utils::CheckAndFixEncodingInHeadersOfSentMail($Mail_RFC822->parseAddressList($message->headers["cc"]));
+
         unset($Mail_RFC822);
+
+        if (isset($message->headers["subject"]) && mb_detect_encoding($message->headers["subject"], "UTF-8") != false && preg_match('/[^\x00-\x7F]/', $message->headers["subject"]) == 1) {
+            mb_internal_encoding("UTF-8");
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->SendMail(): Subject in raw UTF-8: %s", $message->headers["subject"]));
+            $message->headers["subject"] = mb_encode_mimeheader($message->headers["subject"]);
+        }
 
         $this->setReturnPathValue($message->headers, $fromaddr);
 
@@ -488,7 +485,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
         }
 
         $mobj = new Mail_mimeDecode($mail);
-        $message = $mobj->decode(array('decode_headers' => true, 'decode_bodies' => true, 'include_bodies' => true, 'rfc_822bodies' => true, 'charset' => 'utf-8'));
+        $message = $mobj->decode(array('decode_headers' => 'utf-8', 'decode_bodies' => true, 'include_bodies' => true, 'rfc_822bodies' => true, 'charset' => 'utf-8'));
 
         if (!isset($message->parts)) {
             throw new StatusException(sprintf("BackendIMAP->GetAttachmentData('%s'): Error, message without parts. Requesting part key: '%d'", $attname, $part), SYNC_ITEMOPERATIONSSTATUS_INVALIDATT);
@@ -721,7 +718,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             $notExcluded = true;
             for ($i = 0, $cnt = count($this->excludedFolders); $notExcluded && $i < $cnt; $i++) { // expr1, expr2 modified by mku ZP-329
                 // fix exclude folders with special chars by mku ZP-329
-                if (strpos(strtolower($val), strtolower(Utils::Utf7_iconv_encode(Utils::Utf8_to_utf7($this->excludedFolders[$i])))) !== false) {
+                if (strpos(strtolower($val), strtolower(Utils::Utf8_to_utf7imap($this->excludedFolders[$i]))) !== false) {
                     $notExcluded = false;
                     ZLog::Write(LOGLEVEL_DEBUG, sprintf("Pattern: <%s> found, excluding folder: '%s'", $this->excludedFolders[$i], $val)); // sprintf added by mku ZP-329
                 }
@@ -803,12 +800,12 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             }
 
             if (count($fhir) == 1) {
-                $folder->displayname = Utils::Utf7_to_utf8(Utils::Utf7_iconv_decode($fhir[0]));
+                $folder->displayname = Utils::Utf7imap_to_utf8($fhir[0]);
                 $folder->parentid = "0";
             }
             else {
                 $this->getModAndParentNames($fhir, $folder->displayname, $imapparent);
-                $folder->displayname = Utils::Utf7_to_utf8(Utils::Utf7_iconv_decode($folder->displayname));
+                $folder->displayname = Utils::Utf7imap_to_utf8($folder->displayname);
                 if ($imapparent === null) {
                     ZLog::Write(LOGLEVEL_WARN, sprintf("BackendIMAP->GetFolder('%s'): '%s'; we didn't found a valid parent name for the folder, but we should... contact the developers for further info", $id, $imapid));
                     $folder->parentid = "0"; // We put the folder as root folder, so we see it
@@ -874,7 +871,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
         else {
 
             // build name for new mailboxBackendMaildir
-            $displayname = Utils::Utf7_iconv_encode(Utils::Utf8_to_utf7($displayname));
+            $displayname = Utils::Utf8_to_utf7imap($displayname);
 
             if ($folderid == "0") {
                 $newimapid = $displayname;
@@ -885,9 +882,11 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             }
 
             $csts = imap_createmailbox($this->mbox, $this->server . $newimapid);
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->ChangeFolder() createmailbox: '%s'", $newimapid));
             if ($csts) {
                 imap_subscribe($this->mbox, $this->server . $newimapid);
-                return $this->StatFolder($folderid . $this->getServerDelimiter() . $displayname);
+                $newid = $this->convertImapId($newimapid);
+                return $this->StatFolder($newid);
             }
             else {
                 ZLog::Write(LOGLEVEL_WARN, "BackendIMAP->ChangeFolder() : mailbox creation failed");
@@ -1035,7 +1034,9 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             }
 
             $mobj = new Mail_mimeDecode($mail);
-            $message = $mobj->decode(array('decode_headers' => true, 'decode_bodies' => true, 'include_bodies' => true, 'rfc_822bodies' => true, 'charset' => 'utf-8'));
+            $message = $mobj->decode(array('decode_headers' => 'utf-8', 'decode_bodies' => true, 'include_bodies' => true, 'rfc_822bodies' => true, 'charset' => 'utf-8'));
+
+            Utils::CheckAndFixEncodingInHeaders($mail, $message);
 
             $is_multipart = is_multipart($message);
             $is_smime = is_smime($message);
@@ -1076,6 +1077,8 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
 
             if (Request::GetProtocolVersion() >= 12.0) {
                 $output->asbody = new SyncBaseBody();
+
+                Utils::CheckAndFixEncoding($textBody);
 
                 $data = "";
                 switch($bpReturnType) {
@@ -1126,7 +1129,8 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
                     }
                 }
 
-                $output->asbody->data = StringStreamWrapper::Open($data);
+                // indicate in open that the data is HTML so it can be truncated correctly if required
+                $output->asbody->data = StringStreamWrapper::Open($data, ($bpReturnType == SYNC_BODYPREFERENCE_HTML));
                 $output->asbody->estimatedDataSize = strlen($data);
                 unset($data);
                 $output->asbody->type = $bpReturnType;
@@ -1544,6 +1548,10 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->DeleteMessage('%s','%s')", $folderid, $id));
 
         $folderImapid = $this->getImapIdFromFolderId($folderid);
+        if (strcasecmp($folderImapid, $this->create_name_folder(IMAP_FOLDER_TRASH)) != 0) {
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->DeleteMessage('%s','%s') move message to trash folder", $folderid, $id));
+            return $this->MoveMessage($folderid, $id, $this->create_name_folder(IMAP_FOLDER_TRASH), $contentparameters);
+        }
         $this->imap_reopen_folder($folderImapid);
 
         if ($this->imap_inside_cutoffdate(Utils::GetCutOffDate($contentparameters->GetFilterType()), $id)) {
@@ -1666,7 +1674,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
         // Get the original calendar request, so we don't need to create it from scratch
         $mobj = new Mail_mimeDecode($mail);
         unset($mail);
-        $message = $mobj->decode(array('decode_headers' => true, 'decode_bodies' => true, 'include_bodies' => true, 'rfc_822bodies' => true, 'charset' => 'utf-8'));
+        $message = $mobj->decode(array('decode_headers' => 'utf-8', 'decode_bodies' => true, 'include_bodies' => true, 'rfc_822bodies' => true, 'charset' => 'utf-8'));
         unset($mobj);
 
         $body_part = null;
@@ -1755,7 +1763,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
     /**
      * Applies settings to and gets informations from the device
      *
-     * @param SyncObject        $settings (SyncOOF or SyncUserInformation possible)
+     * @param SyncObject    $settings (SyncOOF, SyncUserInformation, SyncRightsManagementTemplates possible)
      *
      * @access public
      * @return SyncObject       $settings
@@ -1764,8 +1772,11 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
         if ($settings instanceof SyncOOF) {
             $this->settingsOOF($settings);
         }
-        else if ($settings instanceof SyncUserInformation) {
+        elseif ($settings instanceof SyncUserInformation) {
             $this->settingsUserInformation($settings);
+        }
+        elseif ($settings instanceof SyncRightsManagementTemplates) {
+            $settings->Status = SYNC_COMMONSTATUS_IRMFEATUREDISABLED;
         }
 
         return $settings;
@@ -1815,13 +1826,15 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
     /**
      * Queries the IMAP backend
      *
-     * @param string        $searchquery        string to be searched for
-     * @param string        $searchrange        specified searchrange
+     * @param string                        $searchquery        string to be searched for
+     * @param string                        $searchrange        specified searchrange
+     * @param SyncResolveRecipientsPicture  $searchpicture      limitations for picture
      *
      * @access public
      * @return array        search results
+     * @throws StatusException
      */
-    public function GetGALSearchResults($searchquery, $searchrange) {
+    public function GetGALSearchResults($searchquery, $searchrange, $searchpicture) {
         return false;
     }
 
@@ -2221,7 +2234,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
      * @return boolean      success
      */
     private function imap_create_folder($foldername) {
-        $name = Utils::Utf7_iconv_encode(Utils::Utf8_to_utf7($foldername));
+        $name = Utils::Utf8_to_utf7imap($foldername);
 
         $res = @imap_createmailbox($this->mbox, $name);
         if ($res) {
@@ -2256,6 +2269,18 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             if (is_array($overview)) {
                 if (isset($overview[0]->date)) {
                     $epoch_sent = strtotime($overview[0]->date);
+                    if ( $epoch_sent === false ) {
+                        $pattern1 = '/^(Sun|Mon|Tue|Wed|Thu|Fri|Sat), [0-9]+ (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) [0-9]+ [0-9]+:[0-9]+(:[0-9]+)* [+-]+[0-9]+/';
+                        $pattern2 = '/^(Sun|Mon|Tue|Wed|Thu|Fri|Sat), [0-9]+ (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) [0-9]+ [0-9]+:[0-9]+(:[0-9]+)* /';
+                        if (preg_match($pattern1, $overview[0]->date, $matches) == 1) {
+                            ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->imap_inside_cutoffdate(): date: %s, match: %s", $overview[0]->date, $matches[0]));
+                            $epoch_sent = strtotime($matches[0]);
+                        } else if (preg_match($pattern2, $overview[0]->date, $matches) == 1) {
+                            ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->imap_inside_cutoffdate(): date: %s, match: %s", $overview[0]->date, $matches[0]));
+                            $epoch_sent = strtotime($matches[0].' UTC');
+                        }
+                    }
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->imap_inside_cutoffdate(): cutoffdate: %s, epoch_sent: %s", $cutoffdate, $epoch_sent));
                     $is_inside = ($cutoffdate <= $epoch_sent);
                     ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->imap_inside_cutoffdate(): Message is %s cutoffdate range", ($is_inside ? "INSIDE" : "OUTSIDE")));
                 }
@@ -2473,7 +2498,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
         }
 
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->sendMessage(): SendingMail with %s", $sendingMethod));
-        $mail =& Mail::factory($sendingMethod, $sendingMethod == "mail" ? "-f " . $fromaddr : $imap_smtp_params);
+        $mail = Mail::factory($sendingMethod, $sendingMethod == "mail" ? "-f " . $fromaddr : $imap_smtp_params);
         $send = $mail->send($recipients, $headers, $body);
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->sendMessage(): send return value %s", $send));
 
@@ -2605,7 +2630,17 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
      */
     private function settingsUserInformation(&$userinformation) {
         $userinformation->Status = SYNC_SETTINGSSTATUS_USERINFO_SUCCESS;
-        $userinformation->emailaddresses[] = $this->username;
+        if (Request::GetProtocolVersion() >= 14.1) {
+            $account = new SyncAccount();
+            $emailaddresses = new SyncEmailAddresses();
+            $emailaddresses->smtpaddress[] = $this->username;
+            $emailaddresses->primarysmtpaddress = $this->username;
+            $account->emailaddresses = $emailaddresses;
+            $userinformation->accounts[] = $account;
+        }
+        else {
+            $userinformation->emailaddresses[] = $this->username;
+        }
         return true;
     }
 

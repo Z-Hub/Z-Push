@@ -8,7 +8,7 @@ Homepage: http://z-push.org
 
 Package: z-push-common
 Architecture: all
-Depends: ${misc:Depends}, php5 (>= 5.4) | php (>= 5.4) , php5-cli | php-cli, php-soap
+Depends: ${misc:Depends}, php5 (>= 5.4) | php (>= 5.4) , php5-cli | php-cli, php-soap, ${dist:Depends}
 Conflicts: d-push, z-push
 Replaces: d-push, z-push
 Description: open source implementation of the ActiveSync protocol
@@ -38,7 +38,7 @@ Description: Z-Push combined backend
 
 Package: z-push-backend-imap
 Architecture: all
-Depends: ${misc:Depends}, z-push-common (= ${binary:Version}), php-imap | php5-imap
+Depends: ${misc:Depends}, z-push-common (= ${binary:Version}), php-imap | php5-imap, libawl-php
 Description: Z-Push imap backend
  Backend for Z-Push, that adds the ability to connect to a imap server
 
@@ -64,7 +64,13 @@ Package: z-push-kopano-gabsync
 Architecture: all
 Depends: ${misc:Depends}, php5-mapi | php7-mapi
 Description: GAB sync for Kopano
- Synchronizes a the global address book for the Kopano Outlook Extension
+ Synchronizes the global address book for the Kopano Outlook Extension
+
+Package: z-push-kopano-gab2contacts
+Architecture: all
+Depends: ${misc:Depends}, z-push-common (= ${binary:Version}), php5-mapi | php7-mapi
+Description: GAB sync into a contacts folder for Kopano
+ Synchronizes the global address book into a contacts folder
 
 Package: z-push-ipc-sharedmemory
 Architecture: all
@@ -107,3 +113,9 @@ Architecture: all
 Depends: ${misc:Depends}, z-push-autodiscover (= ${binary:Version}), apache2, libapache2-mod-php | libapache2-mod-php5
 Description: Z-Push autodiscover apache configuration
  Z-push autodiscover apache configuration files
+
+Package: z-push-config-nginx
+Architecture: all
+Depends: ${misc:Depends}, z-push-common (= ${binary:Version}), nginx, nginx-common
+Description: Z-Push nginx configuration
+ Z-push nginx configuration files

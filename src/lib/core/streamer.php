@@ -16,25 +16,7 @@
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -66,6 +48,9 @@ class Streamer implements Serializable {
     const STREAMER_TYPE_MULTIPART = 10;
     const STREAMER_TYPE_STREAM_ASBASE64 = 11;
     const STREAMER_TYPE_STREAM_ASPLAIN = 12;
+    const STREAMER_PRIVATE = 13;
+    const STRIP_PRIVATE_DATA = 1;
+    const STRIP_PRIVATE_SUBSTITUTE = 'Private';
 
     protected $mapping;
     public $flags;
@@ -371,22 +356,40 @@ class Streamer implements Serializable {
      * @access public
      * @return boolean
      */
-    public function StripData() {
+    public function StripData($flags = 0) {
         foreach ($this->mapping as $k=>$v) {
             if (isset($this->{$v[self::STREAMER_VAR]})) {
                 if (is_object($this->{$v[self::STREAMER_VAR]}) && method_exists($this->{$v[self::STREAMER_VAR]}, "StripData") ) {
-                    $this->{$v[self::STREAMER_VAR]}->StripData();
+                    $this->{$v[self::STREAMER_VAR]}->StripData($flags);
                 }
                 else if (isset($v[self::STREAMER_ARRAY]) && !empty($this->{$v[self::STREAMER_VAR]})) {
                     foreach ($this->{$v[self::STREAMER_VAR]} as $element) {
                         if (is_object($element) && method_exists($element, "StripData") ) {
-                            $element->StripData();
+                            $element->StripData($flags);
                         }
+                        elseif ($flags === Streamer::STRIP_PRIVATE_DATA && isset($v[self::STREAMER_PRIVATE])) {
+                            if ($v[self::STREAMER_PRIVATE] !== true) {
+                                $this->{$v[self::STREAMER_VAR]} = $v[self::STREAMER_PRIVATE];
+                            }
+                            else {
+                                unset($this->{$v[self::STREAMER_VAR]});
+                            }
+                        }
+                    }
+                }
+                elseif ($flags === Streamer::STRIP_PRIVATE_DATA && isset($v[self::STREAMER_PRIVATE])) {
+                    if ($v[self::STREAMER_PRIVATE] !== true) {
+                        $this->{$v[self::STREAMER_VAR]} = $v[self::STREAMER_PRIVATE];
+                    }
+                    else {
+                        unset($this->{$v[self::STREAMER_VAR]});
                     }
                 }
             }
         }
-        unset($this->mapping);
+        if ($flags === 0) {
+            unset($this->mapping);
+        }
 
         return true;
     }

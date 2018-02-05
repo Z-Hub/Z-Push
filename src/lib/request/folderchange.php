@@ -10,25 +10,7 @@
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation with the following additional
-* term according to sec. 7:
-*
-* According to sec. 7 of the GNU Affero General Public License, version 3,
-* the terms of the AGPL are supplemented with the following terms:
-*
-* "Zarafa" is a registered trademark of Zarafa B.V.
-* "Z-Push" is a registered trademark of Zarafa Deutschland GmbH
-* The licensing of the Program under the AGPL does not imply a trademark license.
-* Therefore any rights, title and interest in our trademarks remain entirely with us.
-*
-* However, if you propagate an unmodified version of the Program you are
-* allowed to use the term "Z-Push" to indicate that you distribute the Program.
-* Furthermore you may use our trademarks where it is necessary to indicate
-* the intended purpose of a product or service provided you use it in accordance
-* with honest practices in industrial or commercial matters.
-* If you want to propagate modified versions of the Program under the name "Z-Push",
-* you may only do so if you have a written permission by Zarafa Deutschland GmbH
-* (to acquire a permission please contact Zarafa at trademark@zarafa.com).
+* as published by the Free Software Foundation.
 *
 * This program is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -141,14 +123,15 @@ class FolderChange extends RequestProcessor {
             if ($changesMem->GetChangeCount() > 0)
                 throw new StatusException("HandleFolderChange() can not proceed as there are unprocessed hierarchy changes", SYNC_FSSTATUS_SERVERERROR);
 
-            // any additional folders can not be modified!
-            if ($serverid !== false && ZPush::GetAdditionalSyncFolderStore($backendid))
+            // any additional folders can not be modified - with exception if they are of type SYNC_FOLDER_TYPE_UNKNOWN (ZP-907)
+            if (self::$deviceManager->GetFolderTypeFromCacheById($serverid) != SYNC_FOLDER_TYPE_UNKNOWN && $serverid !== false && ZPush::GetAdditionalSyncFolderStore($backendid))
                 throw new StatusException("HandleFolderChange() can not change additional folders which are configured", SYNC_FSSTATUS_SYSTEMFOLDER);
 
             // switch user store if this this happens inside an additional folder
             // if this is an additional folder the backend has to be setup correctly
-            if (!self::$backend->Setup(ZPush::GetAdditionalSyncFolderStore((($parentBackendId != false)?$parentBackendId:$backendid))))
-                throw new StatusException(sprintf("HandleFolderChange() could not Setup() the backend for folder id '%s'", (($parentBackendId != false)?$parentBackendId:$backendid)), SYNC_FSSTATUS_SERVERERROR);
+            // backend should also not be switched when type is SYNC_FOLDER_TYPE_UNKNOWN (ZP-1220)
+            if (self::$deviceManager->GetFolderTypeFromCacheById($serverid) != SYNC_FOLDER_TYPE_UNKNOWN && !self::$backend->Setup(ZPush::GetAdditionalSyncFolderStore((($parentBackendId != false) ? $parentBackendId : $backendid))))
+                throw new StatusException(sprintf("HandleFolderChange() could not Setup() the backend for folder id '%s'", (($parentBackendId != false) ? $parentBackendId : $backendid)), SYNC_FSSTATUS_SERVERERROR);
         }
         catch (StateNotFoundException $snfex) {
             $status = SYNC_FSSTATUS_SYNCKEYERROR;
