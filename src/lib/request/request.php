@@ -190,7 +190,7 @@ class Request {
         self::$authUser = self::$authUserString; // auth will fail when impersonating & KOE_CAPABILITY_IMPERSONATE is disabled
 
         if (defined('KOE_CAPABILITY_IMPERSONATE') && KOE_CAPABILITY_IMPERSONATE && stripos(self::$authUserString, self::IMPERSONATE_DELIM) !== false) {
-            list(self::$authUser, self::$impersonatedUser) = explode(self::IMPERSONATE_DELIM, strtolower(self::$authUserString));
+            list(self::$authUser, self::$impersonatedUser) = explode(self::IMPERSONATE_DELIM, self::$authUserString);
         }
 
         if(defined('USE_FULLEMAIL_FOR_LOGIN') && ! USE_FULLEMAIL_FOR_LOGIN) {
