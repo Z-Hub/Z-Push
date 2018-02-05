@@ -86,11 +86,11 @@ class FileLog extends Log {
 
         if ($includeUserDevice) {
             // when the users differ, we need to log both
-            if ($this->GetUser() != $this->GetAuthUser()) {
-                $log .= ' ['. $this->GetAuthUser() . Request::IMPERSONATE_DELIM . $this->GetUser() .']';
+            if (strcasecmp($this->GetAuthUser(), $this->GetUser()) == 0) {
+                $log .= ' ['. $this->GetUser() .']';
             }
             else {
-                $log .= ' ['. $this->GetUser() .']';
+                $log .= ' ['. $this->GetAuthUser() . Request::IMPERSONATE_DELIM . $this->GetUser() .']';
             }
         }
         if ($includeUserDevice && (LOGLEVEL >= LOGLEVEL_DEVICEID || (LOGUSERLEVEL >= LOGLEVEL_DEVICEID && $this->IsAuthUserInSpecialLogUsers()))) {
