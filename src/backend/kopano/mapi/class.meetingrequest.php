@@ -2288,9 +2288,9 @@ If it is the first time this attendee has proposed a new date/time, increment th
     function setBasedateInGlobalID($goid, $basedate = false)
     {
         $hexguid = bin2hex($goid);
-        $year = $basedate ? sprintf('%04s', dechex(date('Y', $basedate))) : '0000';
-        $month = $basedate ? sprintf('%02s', dechex(date('m', $basedate))) : '00';
-        $day = $basedate ? sprintf('%02s', dechex(date('d', $basedate))) : '00';
+        $year = $basedate ? sprintf('%04s', dechex(gmdate('Y', $basedate))) : '0000';
+        $month = $basedate ? sprintf('%02s', dechex(gmdate('m', $basedate))) : '00';
+        $day = $basedate ? sprintf('%02s', dechex(gmdate('d', $basedate))) : '00';
 
         return hex2bin(strtoupper(substr($hexguid, 0, 32) . $year . $month . $day . substr($hexguid, 40)));
     }
