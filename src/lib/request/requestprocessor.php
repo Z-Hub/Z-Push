@@ -60,7 +60,7 @@ abstract class RequestProcessor {
         if(defined("CERTIFICATE_OWNER_PARAMETER") && isset($_SERVER[CERTIFICATE_OWNER_PARAMETER]) && strtolower($_SERVER[CERTIFICATE_OWNER_PARAMETER]) != strtolower(Request::GetAuthUser()))
             throw new AuthenticationRequiredException(sprintf("Access denied. Access is allowed only for the certificate owner '%s'", $_SERVER[CERTIFICATE_OWNER_PARAMETER]));
 
-        if (Request::GetImpersonatedUser() && Request::GetAuthUser() != Request::GetImpersonatedUser()) {
+        if (Request::GetImpersonatedUser() && strcasecmp(Request::GetAuthUser(), Request::GetImpersonatedUser()) !== 0) {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("RequestProcessor->Authenticate(): Impersonation active - authenticating: '%s' - impersonating '%s'", Request::GetAuthUser(), Request::GetImpersonatedUser()));
         }
 
