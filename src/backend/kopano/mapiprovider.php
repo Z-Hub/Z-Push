@@ -1727,9 +1727,17 @@ class MAPIProvider {
             // set recurrence start here because it's calculated differently for tasks and appointments
             $recur["start"] = $task->recurrence->start;
             $recur["regen"] = (isset($task->recurrence->regenerate) && $task->recurrence->regenerate) ? 1 : 0;
+            // OL regenerates recurring task itself, but setting deleteOccurrence is required so that PHP-MAPI doesn't regenerate
+            // completed occurrence of a task.
+            if ($recur["regen"] == 0) {
+                $recur["deleteOccurrence"] = 0;
+            }
             //Also add dates to $recur
             $recur["duedate"] = $task->duedate;
             $recur["complete"] = (isset($task->complete) && $task->complete) ? 1 : 0;
+            if (isset($task->datecompleted)) {
+                $recur["datecompleted"] = $task->datecompleted;
+            }
             $recurrence->setRecurrence($recur);
         }
 
