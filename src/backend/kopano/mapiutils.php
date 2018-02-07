@@ -368,7 +368,7 @@ class MAPIUtils {
             $hexFolderid = bin2hex($folderid);
             $sharedUser = ZPush::GetAdditionalSyncFolderStore($hexFolderid);
             $shortId = ZPush::GetDeviceManager()->GetFolderIdForBackendId($hexFolderid);
-            if (substr($shortId, 0, 1) != DeviceManager::FLD_ORIGIN_USER && $sharedUser != false && $sharedUser != 'SYSTEM') {
+            if (Utils::GetFolderOriginFromId($shortId) != DeviceManager::FLD_ORIGIN_USER && $sharedUser != false && $sharedUser != 'SYSTEM') {
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("MAPIUtils->IsMessageSharedAndPrivate(): Message is in shared store '%s' and marked as private", $sharedUser));
                 return true;
             }
