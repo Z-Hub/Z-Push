@@ -1089,6 +1089,7 @@ class Utils {
             case DeviceManager::FLD_ORIGIN_GAB:
             case DeviceManager::FLD_ORIGIN_SHARED:
             case DeviceManager::FLD_ORIGIN_USER:
+            case DeviceManager::FLD_ORIGIN_IMPERSONATED:
                 return $origin;
         }
         ZLog::Write(LOGLEVEL_WARN, sprintf("Utils->GetFolderOriginFromId(): Unknown folder origin for folder with id '%s'", $folderid));
@@ -1114,6 +1115,8 @@ class Utils {
                 return 'shared';
             case DeviceManager::FLD_ORIGIN_USER:
                 return 'user';
+            case DeviceManager::FLD_ORIGIN_IMPERSONATED:
+                return 'impersonated';
         }
         ZLog::Write(LOGLEVEL_WARN, sprintf("Utils->GetFolderOriginStringFromId(): Unknown folder origin for folder with id '%s'", $folderid));
         return 'unknown';

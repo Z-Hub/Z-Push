@@ -254,7 +254,7 @@ class ImportChangesICS implements IImportChanges {
 
         $sharedUser = ZPush::GetAdditionalSyncFolderStore(bin2hex($this->folderid));
         // if this is either a user folder or SYSTEM and no restriction is set, we don't need to check
-        if (($sharedUser == false || $sharedUser == 'SYSTEM') && $this->cutoffdate === false) {
+        if (($sharedUser == false || $sharedUser == 'SYSTEM') && $this->cutoffdate === false && !Request::GetImpersonatedUser()) {
             return true;
         }
 
