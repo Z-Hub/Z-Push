@@ -58,7 +58,6 @@ return array(
     'HTTPReturnCodeException' => $baseDir . '/lib/exceptions/httpreturncodeexception.php',
     'HierarchyCache' => $baseDir . '/lib/core/hierarchycache.php',
     'IBackend' => $baseDir . '/lib/interface/ibackend.php',
-    'ICalParser' => $baseDir . '/backend/kopano/icalparser.php',
     'IChanges' => $baseDir . '/lib/interface/ichanges.php',
     'IExportChanges' => $baseDir . '/lib/interface/iexportchanges.php',
     'IImportChanges' => $baseDir . '/lib/interface/iimportchanges.php',

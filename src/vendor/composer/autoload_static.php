@@ -65,7 +65,6 @@ class ComposerStaticInit153a56a781a72686b71399955d98204f
         'HTTPReturnCodeException' => __DIR__ . '/../..' . '/lib/exceptions/httpreturncodeexception.php',
         'HierarchyCache' => __DIR__ . '/../..' . '/lib/core/hierarchycache.php',
         'IBackend' => __DIR__ . '/../..' . '/lib/interface/ibackend.php',
-        'ICalParser' => __DIR__ . '/../..' . '/backend/kopano/icalparser.php',
         'IChanges' => __DIR__ . '/../..' . '/lib/interface/ichanges.php',
         'IExportChanges' => __DIR__ . '/../..' . '/lib/interface/iexportchanges.php',
         'IImportChanges' => __DIR__ . '/../..' . '/lib/interface/iimportchanges.php',
