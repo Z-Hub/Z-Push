@@ -368,7 +368,7 @@ class MAPIUtils {
             $hexFolderid = bin2hex($folderid);
             $shortId = ZPush::GetDeviceManager()->GetFolderIdForBackendId($hexFolderid);
             if (Utils::GetFolderOriginFromId($shortId) == DeviceManager::FLD_ORIGIN_IMPERSONATED) {
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("MAPIUtils->IsMessageSharedAndPrivate(): Message is in impersonated store '%s' and marked as private", Request::GetImpersonatedUser()));
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("MAPIUtils->IsMessageSharedAndPrivate(): Message is in impersonated store '%s' and marked as private", ZPush::GetBackend()->GetImpersonatedUser()));
                 return true;
             }
             $sharedUser = ZPush::GetAdditionalSyncFolderStore($hexFolderid);

@@ -1499,6 +1499,26 @@ class BackendKopano implements IBackend, ISearchProvider {
     }
 
     /**
+     * Returns the impersonated user name.
+     *
+     * @access public
+     * @return string or false if no user is impersonated
+     */
+    public function GetImpersonatedUser() {
+        return $this->impersonateUser;
+    }
+
+    /**
+     * Returns the authenticated user name.
+     *
+     * @access public
+     * @return string or false if no user is impersonated
+     */
+    public function GetMainUser() {
+        return $this->mainUser;
+    }
+
+    /**
      * Indicates if the Backend supports folder statistics.
      *
      * @access public
