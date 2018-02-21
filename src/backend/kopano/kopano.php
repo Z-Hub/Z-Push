@@ -1512,7 +1512,7 @@ class BackendKopano implements IBackend, ISearchProvider {
      * Returns the authenticated user name.
      *
      * @access public
-     * @return string or false if no user is impersonated
+     * @return string
      */
     public function GetMainUser() {
         return $this->mainUser;
