@@ -144,7 +144,9 @@ class BackendKopano implements IBackend, ISearchProvider {
 
         $this->mainUser = strtolower($user);
         // TODO the impersonated user should be passed directly to IBackend->Logon() - ZP-1351
-        $this->impersonateUser = strtolower(Request::GetImpersonatedUser());
+        if (Request::GetImpersonatedUser()) {
+            $this->impersonateUser = strtolower(Request::GetImpersonatedUser());
+        }
 
         // check if we are impersonating someone
         // $defaultUser will be used for $this->defaultStore
