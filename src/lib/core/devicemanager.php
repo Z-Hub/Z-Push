@@ -42,6 +42,7 @@ class DeviceManager {
     const FLD_ORIGIN_CONFIG = "C";
     const FLD_ORIGIN_SHARED = "S";
     const FLD_ORIGIN_GAB = "G";
+    const FLD_ORIGIN_IMPERSONATED = "I";
 
     const FLD_FLAGS_NONE = 0;
     const FLD_FLAGS_SENDASOWNER = 1;
@@ -1052,13 +1053,14 @@ class DeviceManager {
      *                                                                  'C' (configured)
      *                                                                  'S' (shared)
      *                                                                  'G' (global address book)
+     *                                                                  'I' (impersonated)
      * @param string    $folderName             Folder name of the backend folder
      *
      * @access public
      * @return string/boolean  returns false if there is folderid known for this backendid and $generateNewIdIfNew is not set or false.
      */
     public function GetFolderIdForBackendId($backendid, $generateNewIdIfNew = false, $folderOrigin = self::FLD_ORIGIN_USER, $folderName = null) {
-        if (!in_array($folderOrigin, array(DeviceManager::FLD_ORIGIN_CONFIG, DeviceManager::FLD_ORIGIN_GAB, DeviceManager::FLD_ORIGIN_SHARED, DeviceManager::FLD_ORIGIN_USER))) {
+        if (!in_array($folderOrigin, array(DeviceManager::FLD_ORIGIN_CONFIG, DeviceManager::FLD_ORIGIN_GAB, DeviceManager::FLD_ORIGIN_SHARED, DeviceManager::FLD_ORIGIN_USER, DeviceManager::FLD_ORIGIN_IMPERSONATED))) {
             ZLog::Write(LOGLEVEL_WARN, sprintf("ASDevice->GetFolderIdForBackendId(): folder type '%' is unknown in DeviceManager", $folderOrigin));
         }
         return $this->device->GetFolderIdForBackendId($backendid, $generateNewIdIfNew, $folderOrigin, $folderName);
