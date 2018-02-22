@@ -688,7 +688,11 @@ class ImportChangesICS implements IImportChanges {
             $props =  mapi_getprops($newfolder, array(PR_SOURCE_KEY));
             if (isset($props[PR_SOURCE_KEY])) {
                 $folder->BackendId = bin2hex($props[PR_SOURCE_KEY]);
-                $folder->serverid = ZPush::GetDeviceManager()->GetFolderIdForBackendId($folder->BackendId, true, DeviceManager::FLD_ORIGIN_USER, $folder->displayname);
+                $folderOrigin = DeviceManager::FLD_ORIGIN_USER;
+                if (ZPush::GetBackend()->GetImpersonatedUser()) {
+                    $folderOrigin = DeviceManager::FLD_ORIGIN_IMPERSONATED;
+                }
+                $folder->serverid = ZPush::GetDeviceManager()->GetFolderIdForBackendId($folder->BackendId, true, $folderOrigin, $folder->displayname);
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("ImportChangesICS->ImportFolderChange(): Created folder '%s' with id: '%s' backendid: '%s'", $displayname, $folder->serverid, $folder->BackendId));
                 return $folder;
             }
