@@ -990,7 +990,7 @@ class MAPIProvider {
 
         $folder->BackendId = bin2hex($folderprops[PR_SOURCE_KEY]);
         $folderOrigin = DeviceManager::FLD_ORIGIN_USER;
-        if (ZPush::GetBackend()->GetImpersonatedUser() && ZPush::GetBackend()->GetImpersonatedUser() != ZPush::GetBackend()->GetMainUser()) {
+        if (ZPush::GetBackend()->GetImpersonatedUser()) {
             $folderOrigin = DeviceManager::FLD_ORIGIN_IMPERSONATED;
         }
         $folder->serverid = ZPush::GetDeviceManager()->GetFolderIdForBackendId($folder->BackendId, true, $folderOrigin, $folderprops[PR_DISPLAY_NAME]);
