@@ -276,7 +276,7 @@ class WBXMLEncoder extends WBXMLDefs {
     private function _content($content) {
         if ($this->log)
             $this->logContent($content);
-        $this->outByte(self::WBXML_STR_I);
+        $this->outByte(WBXML_STR_I);
         $this->outTermStr($content);
     }
 
@@ -292,11 +292,11 @@ class WBXMLEncoder extends WBXMLDefs {
         $stat = fstat($stream);
         // write full stream, including the finalizing terminator to the output stream (stuff outTermStr() would do)
         if ($opaque) {
-            $this->outByte(self::WBXML_OPAQUE);
+            $this->outByte(WBXML_OPAQUE);
             $this->outMBUInt($stat['size']);
         }
         else {
-            $this->outByte(self::WBXML_STR_I);
+            $this->outByte(WBXML_STR_I);
         }
 
         if ($asBase64) {
@@ -325,7 +325,7 @@ class WBXMLEncoder extends WBXMLDefs {
     private function _endTag() {
         if ($this->log)
             $this->logEndTag();
-        $this->outByte(self::WBXML_END);
+        $this->outByte(WBXML_END);
     }
 
     /**
@@ -398,7 +398,7 @@ class WBXMLEncoder extends WBXMLDefs {
      * @return
      */
     private function outSwitchPage($page) {
-        $this->outByte(self::WBXML_SWITCH_PAGE);
+        $this->outByte(WBXML_SWITCH_PAGE);
         $this->outByte($page);
     }
 

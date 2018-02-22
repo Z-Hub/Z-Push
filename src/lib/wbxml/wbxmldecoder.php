@@ -350,49 +350,49 @@ class WBXMLDecoder extends WBXMLDefs {
             $byte = ord($byte);
 
             switch($byte) {
-                case self::WBXML_SWITCH_PAGE:
+                case WBXML_SWITCH_PAGE:
                     $this->tagcp = $this->getByte();
                     break;
 
-                case self::WBXML_END:
+                case WBXML_END:
                     $element[EN_TYPE] = EN_TYPE_ENDTAG;
                     return $element;
 
-                case self::WBXML_STR_I:
+                case WBXML_STR_I:
                     $element[EN_TYPE] = EN_TYPE_CONTENT;
                     $element[EN_CONTENT] = $this->getTermStr();
                     return $element;
 
-                case self::WBXML_OPAQUE:
+                case WBXML_OPAQUE:
                     $length = $this->getMBUInt();
                     $element[EN_TYPE] = EN_TYPE_CONTENT;
                     $element[EN_CONTENT] = $this->getOpaque($length);
                     return $element;
 
-                case self::WBXML_ENTITY:
-                case self::WBXML_LITERAL:
-                case self::WBXML_EXT_I_0:
-                case self::WBXML_EXT_I_1:
-                case self::WBXML_EXT_I_2:
-                case self::WBXML_PI:
-                case self::WBXML_LITERAL_C:
-                case self::WBXML_EXT_T_0:
-                case self::WBXML_EXT_T_1:
-                case self::WBXML_EXT_T_2:
-                case self::WBXML_STR_T:
-                case self::WBXML_LITERAL_A:
-                case self::WBXML_EXT_0:
-                case self::WBXML_EXT_1:
-                case self::WBXML_EXT_2:
-                case self::WBXML_LITERAL_AC:
+                case WBXML_ENTITY:
+                case WBXML_LITERAL:
+                case WBXML_EXT_I_0:
+                case WBXML_EXT_I_1:
+                case WBXML_EXT_I_2:
+                case WBXML_PI:
+                case WBXML_LITERAL_C:
+                case WBXML_EXT_T_0:
+                case WBXML_EXT_T_1:
+                case WBXML_EXT_T_2:
+                case WBXML_STR_T:
+                case WBXML_LITERAL_A:
+                case WBXML_EXT_0:
+                case WBXML_EXT_1:
+                case WBXML_EXT_2:
+                case WBXML_LITERAL_AC:
                     throw new WBXMLException("Invalid token :".$byte);
 
                 default:
-                    if($byte & self::WBXML_WITH_ATTRIBUTES)
+                    if($byte & WBXML_WITH_ATTRIBUTES)
                         throw new WBXMLException("Attributes are not allowed :".$byte);
                     $element[EN_TYPE] = EN_TYPE_STARTTAG;
                     $element[EN_TAG] = $this->getMapping($this->tagcp, $byte & 0x3f);
-                    $element[EN_FLAGS] = ($byte & self::WBXML_WITH_CONTENT ? EN_FLAGS_CONTENT : 0);
+                    $element[EN_FLAGS] = ($byte & WBXML_WITH_CONTENT ? EN_FLAGS_CONTENT : 0);
                     return $element;
             }
         }
