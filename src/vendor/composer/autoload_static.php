@@ -36,6 +36,7 @@ class ComposerStaticInit153a56a781a72686b71399955d98204f
         'BackendLDAP' => __DIR__ . '/../..' . '/backend/ldap/ldap.php',
         'BackendMaildir' => __DIR__ . '/../..' . '/backend/maildir/maildir.php',
         'BackendSearchLDAP' => __DIR__ . '/../..' . '/backend/searchldap/searchldap.php',
+        'BackendStickyNote' => __DIR__ . '/../..' . '/backend/stickynote/stickynote.php',
         'BackendVCardDir' => __DIR__ . '/../..' . '/backend/vcarddir/vcarddir.php',
         'BackendZarafa' => __DIR__ . '/../..' . '/backend/kopano/kopano.php',
         'BaseException' => __DIR__ . '/../..' . '/backend/kopano/mapi/class.baseexception.php',

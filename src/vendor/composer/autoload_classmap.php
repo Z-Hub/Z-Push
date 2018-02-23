@@ -29,6 +29,7 @@ return array(
     'BackendLDAP' => $baseDir . '/backend/ldap/ldap.php',
     'BackendMaildir' => $baseDir . '/backend/maildir/maildir.php',
     'BackendSearchLDAP' => $baseDir . '/backend/searchldap/searchldap.php',
+    'BackendStickyNote' => $baseDir . '/backend/stickynote/stickynote.php',
     'BackendVCardDir' => $baseDir . '/backend/vcarddir/vcarddir.php',
     'BackendZarafa' => $baseDir . '/backend/kopano/kopano.php',
     'BaseException' => $baseDir . '/backend/kopano/mapi/class.baseexception.php',
