@@ -71,7 +71,6 @@ class BackendKopano implements IBackend, ISearchProvider {
     const FREEBUSYENUMBLOCKS = 50;
     const MAXFREEBUSYSLOTS = 32767; // max length of 32k for the MergedFreeBusy element is allowed
     const HALFHOURSECONDS = 1800;
-    const IMPERSONATE_DELIM = '+share+';
 
     /**
      * Constructor of the Kopano Backend
@@ -143,16 +142,19 @@ class BackendKopano implements IBackend, ISearchProvider {
     public function Logon($user, $domain, $pass) {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->Logon(): Trying to authenticate user '%s'..", $user));
 
+        $this->mainUser = strtolower($user);
+        // TODO the impersonated user should be passed directly to IBackend->Logon() - ZP-1351
+        if (Request::GetImpersonatedUser()) {
+            $this->impersonateUser = strtolower(Request::GetImpersonatedUser());
+        }
+
         // check if we are impersonating someone
         // $defaultUser will be used for $this->defaultStore
-        if (defined('KOE_CAPABILITY_IMPERSONATE') && KOE_CAPABILITY_IMPERSONATE && stripos($user, self::IMPERSONATE_DELIM) !== false) {
-            list($this->mainUser, $this->impersonateUser) = explode(self::IMPERSONATE_DELIM, strtolower($user));
+        if ($this->impersonateUser !== false) {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->Logon(): Impersonation active - authenticating: '%s' - impersonating '%s'", $this->mainUser, $this->impersonateUser));
             $defaultUser = $this->impersonateUser;
         }
         else {
-            $this->mainUser = strtolower($user);
-            $this->impersonateUser = false;
             $defaultUser = $this->mainUser;
         }
 
@@ -257,7 +259,7 @@ class BackendKopano implements IBackend, ISearchProvider {
         // This is a special case. A user will get his entire folder structure by the foldersync by default.
         // The ACL check is executed when an additional folder is going to be sent to the mobile.
         // Configured that way the user could receive the same folderid twice, with two different names.
-        if ($mainUser == $user && $checkACLonly && $folderid) {
+        if ($mainUser == $user && $checkACLonly && $folderid && !$this->impersonateUser) {
             ZLog::Write(LOGLEVEL_DEBUG, "KopanoBackend->Setup(): Checking ACLs for folder of the users defaultstore. Fail is forced to avoid folder duplications on mobile.");
             return false;
         }
@@ -335,7 +337,7 @@ class BackendKopano implements IBackend, ISearchProvider {
                 $calendar = mapi_msgstore_openentry($store, $entryid);
 
                 $pub = new FreeBusyPublish($this->session, $store, $calendar, $storeprops[PR_USER_ENTRYID]);
-                $pub->publishFB(time() - (7 * 24 * 60 * 60), 6 * 30 * 24 * 60 * 60); // publish from one week ago, 6 months ahead
+                $pub->publishFB(time() - (7 * 24 * 60 * 60), time() + (6 * 30 * 24 * 60 * 60)); // publish from one week ago, 6 months ahead
             }
         }
 
@@ -703,7 +705,7 @@ class BackendKopano implements IBackend, ISearchProvider {
         }
 
         mapi_setprops($mapimessage, $mapiprops);
-        mapi_message_savechanges($mapimessage);
+        mapi_savechanges($mapimessage);
         mapi_message_submitmessage($mapimessage);
         $hr = mapi_last_hresult();
 
@@ -1499,6 +1501,26 @@ class BackendKopano implements IBackend, ISearchProvider {
     }
 
     /**
+     * Returns the impersonated user name.
+     *
+     * @access public
+     * @return string or false if no user is impersonated
+     */
+    public function GetImpersonatedUser() {
+        return $this->impersonateUser;
+    }
+
+    /**
+     * Returns the authenticated user name.
+     *
+     * @access public
+     * @return string
+     */
+    public function GetMainUser() {
+        return $this->mainUser;
+    }
+
+    /**
      * Indicates if the Backend supports folder statistics.
      *
      * @access public
@@ -1920,7 +1942,7 @@ class BackendKopano implements IBackend, ISearchProvider {
             ZLog::Write(LOGLEVEL_ERROR, "The store or user are not available for getting user information");
             return false;
         }
-        $user = mapi_zarafa_getuser($this->defaultstore, $this->mainUser);
+        $user = mapi_zarafa_getuser_by_name($this->defaultstore, $this->mainUser);
         if ($user != false) {
             $userinformation->Status = SYNC_SETTINGSSTATUS_USERINFO_SUCCESS;
             if (Request::GetProtocolVersion() >= 14.1) {
@@ -1936,7 +1958,7 @@ class BackendKopano implements IBackend, ISearchProvider {
             }
             return true;
         }
-        ZLog::Write(LOGLEVEL_ERROR, sprintf("Getting user information failed: mapi_zarafa_getuser(%X)", mapi_last_hresult()));
+        ZLog::Write(LOGLEVEL_ERROR, sprintf("Getting user information failed: mapi_zarafa_getuser_by_name(%X)", mapi_last_hresult()));
         return false;
     }
 

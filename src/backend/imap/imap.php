@@ -882,9 +882,11 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             }
 
             $csts = imap_createmailbox($this->mbox, $this->server . $newimapid);
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->ChangeFolder() createmailbox: '%s'", $newimapid));
             if ($csts) {
                 imap_subscribe($this->mbox, $this->server . $newimapid);
-                return $this->StatFolder($folderid . $this->getServerDelimiter() . $displayname);
+                $newid = $this->convertImapId($newimapid);
+                return $this->StatFolder($newid);
             }
             else {
                 ZLog::Write(LOGLEVEL_WARN, "BackendIMAP->ChangeFolder() : mailbox creation failed");

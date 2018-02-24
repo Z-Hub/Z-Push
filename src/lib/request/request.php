@@ -27,6 +27,7 @@
 class Request {
     const MAXMEMORYUSAGE = 0.9;     // use max. 90% of allowed memory when synching
     const UNKNOWN = "unknown";
+    const IMPERSONATE_DELIM = '#';
 
     /**
      * self::filterEvilInput() options
@@ -65,9 +66,11 @@ class Request {
     static private $getUser;
     static private $devid;
     static private $devtype;
+    static private $authUserString;
     static private $authUser;
     static private $authDomain;
     static private $authPassword;
+    static private $impersonatedUser;
     static private $asProtocolVersion;
     static private $policykey;
     static private $useragent;
@@ -179,9 +182,17 @@ class Request {
         // authUser & authPassword are unfiltered!
         // split username & domain if received as one
         if (isset($_SERVER['PHP_AUTH_USER'])) {
-            list(self::$authUser, self::$authDomain) = Utils::SplitDomainUser($_SERVER['PHP_AUTH_USER']);
+            list(self::$authUserString, self::$authDomain) = Utils::SplitDomainUser($_SERVER['PHP_AUTH_USER']);
             self::$authPassword = (isset($_SERVER['PHP_AUTH_PW']))?$_SERVER['PHP_AUTH_PW'] : "";
         }
+
+        // process impersonation
+        self::$authUser = self::$authUserString; // auth will fail when impersonating & KOE_CAPABILITY_IMPERSONATE is disabled
+
+        if (defined('KOE_CAPABILITY_IMPERSONATE') && KOE_CAPABILITY_IMPERSONATE && stripos(self::$authUserString, self::IMPERSONATE_DELIM) !== false) {
+            list(self::$authUser, self::$impersonatedUser) = explode(self::IMPERSONATE_DELIM, self::$authUserString);
+        }
+
         if(defined('USE_FULLEMAIL_FOR_LOGIN') && ! USE_FULLEMAIL_FOR_LOGIN) {
             self::$authUser = Utils::GetLocalPartFromEmail(self::$authUser);
         }
@@ -391,16 +402,57 @@ class Request {
     }
 
     /**
-     * Returns the authenticated user
+     * Returns user that is synchronizing data.
+     * If impersonation is active it returns the impersonated user,
+     * else the auth user.
+     *
+     * @access public
+     * @return string/boolean       false if not available
+     */
+    static public function GetUser() {
+        if (self::GetImpersonatedUser()) {
+            return self::GetImpersonatedUser();
+        }
+        return self::GetAuthUser();
+    }
+
+    /**
+     * Returns the AuthUser string send by the client.
+     *
+     * @access public
+     * @return string/boolean       false if not available
+     */
+    static public function GetAuthUserString() {
+        if (isset(self::$authUserString)) {
+            return self::$authUserString;
+        }
+        return false;
+    }
+
+    /**
+     * Returns the impersonated user. If not available, returns false.
+     *
+     * @access public
+     * @return string/boolean       false if not available
+     */
+    static public function GetImpersonatedUser() {
+        if (isset(self::$impersonatedUser)) {
+            return self::$impersonatedUser;
+        }
+        return false;
+    }
+
+    /**
+     * Returns the authenticated user.
      *
      * @access public
      * @return string/boolean       false if not available
      */
     static public function GetAuthUser() {
-        if (isset(self::$authUser))
+        if (isset(self::$authUser)) {
             return self::$authUser;
-        else
-            return false;
+        }
+        return false;
     }
 
     /**
@@ -667,14 +719,14 @@ class Request {
      */
     static private function filterEvilInput($input, $filter, $replacevalue = '') {
         $re = false;
-        if ($filter == self::LETTERS_ONLY)            $re = "/[^A-Za-z]/";
-        else if ($filter == self::HEX_ONLY)           $re = "/[^A-Fa-f0-9]/";
-        else if ($filter == self::WORDCHAR_ONLY)      $re = "/[^A-Za-z0-9]/";
-        else if ($filter == self::NUMBERS_ONLY)       $re = "/[^0-9]/";
-        else if ($filter == self::NUMBERSDOT_ONLY)    $re = "/[^0-9\.]/";
-        else if ($filter == self::HEX_EXTENDED)       $re = "/[^A-Fa-f0-9\:\.]/";
-        else if ($filter == self::HEX_EXTENDED2)      $re = "/[^A-Fa-f0-9\:USG]/"; // Folder origin constants from DeviceManager::FLD_ORIGIN_* (C already hex)
-        else if ($filter == self::ISO8601)            $re = "/[^\d{8}T\d{6}Z]/";
+        if ($filter == self::LETTERS_ONLY)          $re = "/[^A-Za-z]/";
+        elseif ($filter == self::HEX_ONLY)          $re = "/[^A-Fa-f0-9]/";
+        elseif ($filter == self::WORDCHAR_ONLY)     $re = "/[^A-Za-z0-9]/";
+        elseif ($filter == self::NUMBERS_ONLY)      $re = "/[^0-9]/";
+        elseif ($filter == self::NUMBERSDOT_ONLY)   $re = "/[^0-9\.]/";
+        elseif ($filter == self::HEX_EXTENDED)      $re = "/[^A-Fa-f0-9\:\.]/";
+        elseif ($filter == self::HEX_EXTENDED2)     $re = "/[^A-Fa-f0-9\:USGI]/"; // Folder origin constants from DeviceManager::FLD_ORIGIN_* (C already hex)
+        elseif ($filter == self::ISO8601)           $re = "/[^\d{8}T\d{6}Z]/";
 
         return ($re) ? preg_replace($re, $replacevalue, $input) : '';
     }

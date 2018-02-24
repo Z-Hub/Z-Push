@@ -78,6 +78,8 @@ class ZPushAdminCLI {
     const COMMAND_RESYNCFOLDER = 9;
     const COMMAND_FIXSTATES = 10;
     const COMMAND_RESYNCHIERARCHY = 11;
+    const COMMAND_ADDSHARED = 12;
+    const COMMAND_REMOVESHARED = 13;
 
     const TYPE_OPTION_EMAIL = "email";
     const TYPE_OPTION_CALENDAR = "calendar";
@@ -93,6 +95,11 @@ class ZPushAdminCLI {
     static private $type = false;
     static private $errormessage;
     static private $daysold = false;
+    static private $shared = false;
+    static private $foldername = false;
+    static private $store = false;
+    static private $folderid = false;
+    static private $flags = 0;
 
     /**
      * Returns usage instructions
@@ -102,29 +109,42 @@ class ZPushAdminCLI {
      */
     static public function UsageInstructions() {
         return  "Usage:\n\tz-push-admin.php -a ACTION [options]\n\n" .
-                "Parameters:\n\t-a list/lastsync/wipe/remove/resync/clearloop/fixstates\n\t[-u] username\n\t[-d] deviceid\n" .
+                "Parameters:\n\t-a list/lastsync/wipe/remove/resync/clearloop/fixstates/addshared\n\t[-u] username\n\t[-d] deviceid\n" .
                 "\t[-t] type\tthe following types are available: '".self::TYPE_OPTION_EMAIL."', '".self::TYPE_OPTION_CALENDAR."', '".self::TYPE_OPTION_CONTACT."', '".self::TYPE_OPTION_TASK."', '".self::TYPE_OPTION_NOTE."', '".self::TYPE_OPTION_HIERARCHY."' of '".self::TYPE_OPTION_GAB."' (for KOE) or a folder id.\n" .
+                "\t[--shared|-s]\tshow detailed information about shared folders of a user in list.\n".
                 "\t[--days-old] n\tshow or remove profiles older than n days with lastsync or remove. n must be a positive integer.\n\n".
                 "Actions:\n" .
-                "\tlist\t\t\t\t\t Lists all devices and synchronized users\n" .
-                "\tlist -u USER\t\t\t\t Lists all devices of user USER\n" .
-                "\tlist -d DEVICE\t\t\t\t Lists all users of device DEVICE\n" .
-                "\tlastsync\t\t\t\t Lists all devices and synchronized users and the last synchronization time\n" .
-                "\twipe -u USER\t\t\t\t Remote wipes all devices of user USER\n" .
-                "\twipe -d DEVICE\t\t\t\t Remote wipes device DEVICE\n" .
-                "\twipe -u USER -d DEVICE\t\t\t Remote wipes device DEVICE of user USER\n" .
-                "\tremove -u USER\t\t\t\t Removes all state data of all devices of user USER\n" .
-                "\tremove -d DEVICE\t\t\t Removes all state data of all users synchronized on device DEVICE\n" .
-                "\tremove -u USER -d DEVICE\t\t Removes all related state data of device DEVICE of user USER\n" .
-                "\tresync -u USER -d DEVICE\t\t Resynchronizes all data of device DEVICE of user USER\n" .
+                "\tlist\t\t\t\t\t Lists all devices and synchronized users.\n" .
+                "\tlist -u USER\t\t\t\t Lists all devices of user USER.\n" .
+                "\tlist -d DEVICE\t\t\t\t Lists all users of device DEVICE.\n" .
+                "\tlastsync\t\t\t\t Lists all devices and synchronized users and the last synchronization time.\n" .
+                "\twipe -u USER\t\t\t\t Remote wipes all devices of user USER.\n" .
+                "\twipe -d DEVICE\t\t\t\t Remote wipes device DEVICE.\n" .
+                "\twipe -u USER -d DEVICE\t\t\t Remote wipes device DEVICE of user USER.\n" .
+                "\tremove -u USER\t\t\t\t Removes all state data of all devices of user USER.\n" .
+                "\tremove -d DEVICE\t\t\t Removes all state data of all users synchronized on device DEVICE.\n" .
+                "\tremove -u USER -d DEVICE\t\t Removes all related state data of device DEVICE of user USER.\n" .
+                "\tresync -u USER -d DEVICE\t\t Resynchronizes all data of device DEVICE of user USER.\n" .
                 "\tresync -t TYPE \t\t\t\t Resynchronizes all folders of type (possible values above) for all devices and users.\n" .
                 "\tresync -t TYPE -u USER \t\t\t Resynchronizes all folders of type (possible values above) for the user USER.\n" .
                 "\tresync -t TYPE -u USER -d DEVICE\t Resynchronizes all folders of type (possible values above) for a specified device and user.\n" .
                 "\tresync -t FOLDERID -u USER\t\t Resynchronize the specified folder id only. The USER should be specified for better performance.\n" .
                 "\tresync -t hierarchy -u USER -d DEVICE\t Resynchronize the folder hierarchy data for an optional USER and optional DEVICE.\n" .
-                "\tclearloop\t\t\t\t Clears system wide loop detection data\n" .
-                "\tclearloop -d DEVICE -u USER\t\t Clears all loop detection data of a device DEVICE and an optional user USER\n" .
-                "\tfixstates\t\t\t\t Checks the states for integrity and fixes potential issues\n" .
+                "\tclearloop\t\t\t\t Clears system wide loop detection data.\n" .
+                "\tclearloop -d DEVICE -u USER\t\t Clears all loop detection data of a device DEVICE and an optional user USER.\n" .
+                "\tfixstates\t\t\t\t Checks the states for integrity and fixes potential issues.\n\n" .
+                "\taddshared -u USER -d DEVICE -n FOLDERNAME -o STORE -t TYPE -f FOLDERID -g FLAGS\n" .
+                        "\t\t\t\t\t\t Adds a shared folder for a user.\n" .
+                        "\t\t\t\t\t\t USER is required. If no DEVICE is given, the shared folder will be added to all of the devices of the user.\n" .
+                        "\t\t\t\t\t\t FOLDERNAME the name of the shared folder. STORE - where this folder is located, e.g. \"SYSTEM\" (for public folder) or a username.\n" .
+                        "\t\t\t\t\t\t TYPE is the folder type of the shared folder (possible values above, except 'hierarchy' and 'gab').\n" .
+                        "\t\t\t\t\t\t FOLDERID is the id of shared folder.\n" .
+                        "\t\t\t\t\t\t FLAGS is optional (default: '0'). Make sure you separate -g and value with \"=\", e.g. -g=4.\n" .
+                        "\t\t\t\t\t\t Possible values for FLAGS: 0(none), 1 (Send-As from this folder), 4 (show calendar reminders for this folder), 5 (combination of Send-as and calendar reminders).\n" .
+                "\tremoveshared -u USER -d DEVICE -f FOLDERID\n" .
+                        "\t\t\t\t\t\t Removes a shared folder for a user.\n" .
+                        "\t\t\t\t\t\t USER is required. If no DEVICE is given, the shared folder will be removed from all of the devices of the user.\n" .
+                        "\t\t\t\t\t\t FOLDERID is the id of shared folder.\n" .
                 "\n";
     }
 
@@ -152,7 +172,7 @@ class ZPushAdminCLI {
         if (self::$errormessage)
             return;
 
-        $options = getopt("u:d:a:t:", array('user:', 'device:', 'action:', 'type:', 'days-old:', 'days-ago:'));
+        $options = getopt("u:d:a:t:sn:o:f:g::", array('user:', 'device:', 'action:', 'type:', 'days-old:', 'days-ago:', 'shared', 'foldername:', 'store', 'folderid:', 'flags::'));
 
         // get 'user'
         if (isset($options['u']) && !empty($options['u']))
@@ -190,6 +210,44 @@ class ZPushAdminCLI {
                 return;
             }
             self::$daysold = trim($options['days-old']);
+        }
+
+        if (isset($options['s']) || isset($options['shared'])) {
+            self::$shared = true;
+        }
+
+        // get 'foldername'
+        if (isset($options['n']) && !empty($options['n']))
+            self::$foldername = trim($options['n']);
+        elseif (isset($options['foldername']) && !empty($options['foldername']))
+            self::$foldername = trim($options['foldername']);
+
+        // get 'store'
+        if (isset($options['o']) && !empty($options['o']))
+            self::$store = trim($options['o']);
+        elseif (isset($options['store']) && !empty($options['store']))
+            self::$store = trim($options['store']);
+
+        // get 'folderid'
+        if (isset($options['f']) && !empty($options['f']))
+            self::$folderid = trim($options['f']);
+        elseif (isset($options['folderid']) && !empty($options['folderid']))
+            self::$folderid = trim($options['folderid']);
+
+        // get 'flags'
+        if (isset($options['flags'])) {
+            $options['g'] = $options['flags'];
+        }
+
+        if (isset($options['g'])) {
+            $flags = intval($options['g']);
+            if ($flags == DeviceManager::FLD_FLAGS_NONE || ($flags & (DeviceManager::FLD_FLAGS_SENDASOWNER | DeviceManager::FLD_FLAGS_CALENDARREMINDERS))) {
+                self::$flags = $flags;
+            }
+            else {
+                self::$flags = false;
+                self::$errormessage = "Possible values for FLAGS: 0(none), 1 (Send-As from this folder), 4 (show calendar reminders for this folder), 5 (combination of Send-as and calendar reminders).\n";
+            }
         }
 
         // if type is set, it must be one of known types or a 44 or 48 byte long folder id
@@ -293,6 +351,35 @@ class ZPushAdminCLI {
                 }
                 break;
 
+            case "addshared":
+                if (self::$user === false || self::$foldername === false || self::$store === false || self::$type === false || self::$folderid === false || self::$flags === false) {
+                    if (!self::$errormessage) {
+                        self::$errormessage = 'USER, FOLDERNAME, STORE, TYPE and FOLDERID are required for addshared command.';
+                    }
+                    return;
+                }
+                else {
+                    if (in_array(self::$type, array(self::TYPE_OPTION_CALENDAR, self::TYPE_OPTION_CONTACT, self::TYPE_OPTION_EMAIL, self::TYPE_OPTION_NOTE, self::TYPE_OPTION_TASK))) {
+                        self::$command = self::COMMAND_ADDSHARED;
+                    }
+                    elseif (self::$type == self::TYPE_OPTION_HIERARCHY || self::$type == self::TYPE_OPTION_GAB) {
+                        self::$errormessage = "'hierarchy' and 'gab' are not valid types for addshared action.";
+                        return;
+                    }
+                    else {
+                        self::$errormessage = sprintf("Adding folder of type '%s' is not supported.", self::$type);
+                        return;
+                    }
+                }
+                break;
+
+            case "removeshared":
+                if (self::$user === false || self::$folderid === false) {
+                    self::$errormessage = 'USER and FOLDERID are required for removeshared command.';
+                    return;
+                }
+                self::$command = self::COMMAND_REMOVESHARED;
+                break;
 
             default:
                 self::UsageInstructions();
@@ -374,29 +461,29 @@ class ZPushAdminCLI {
                 self::CommandResyncDevices();
                 break;
 
-                case self::COMMAND_RESYNCFOLDER:
-                    if (self::$device == false && self::$user == false) {
-                        echo "Are you sure you want to re-synchronize this folder type of all devices and users [y/N]: ";
-                        $confirm  =  strtolower(trim(fgets(STDIN)));
-                        if ( !($confirm === 'y' || $confirm === 'yes')) {
-                            echo "Aborted!\n";
-                            exit(1);
-                        }
+            case self::COMMAND_RESYNCFOLDER:
+                if (self::$device == false && self::$user == false) {
+                    echo "Are you sure you want to re-synchronize this folder type of all devices and users [y/N]: ";
+                    $confirm  =  strtolower(trim(fgets(STDIN)));
+                    if ( !($confirm === 'y' || $confirm === 'yes')) {
+                        echo "Aborted!\n";
+                        exit(1);
                     }
-                    self::CommandResyncFolder();
-                    break;
+                }
+                self::CommandResyncFolder();
+                break;
 
-                case self::COMMAND_RESYNCHIERARCHY:
-                    if (self::$device == false && self::$user == false) {
-                        echo "Are you sure you want to re-synchronize the hierarchy of all devices and users [y/N]: ";
-                        $confirm  =  strtolower(trim(fgets(STDIN)));
-                        if ( !($confirm === 'y' || $confirm === 'yes')) {
-                            echo "Aborted!\n";
-                            exit(1);
-                        }
+            case self::COMMAND_RESYNCHIERARCHY:
+                if (self::$device == false && self::$user == false) {
+                    echo "Are you sure you want to re-synchronize the hierarchy of all devices and users [y/N]: ";
+                    $confirm  =  strtolower(trim(fgets(STDIN)));
+                    if ( !($confirm === 'y' || $confirm === 'yes')) {
+                        echo "Aborted!\n";
+                        exit(1);
                     }
-                    self::CommandResyncHierarchy();
-                    break;
+                }
+                self::CommandResyncHierarchy();
+                break;
 
             case self::COMMAND_CLEARLOOP:
                 self::CommandClearLoopDetectionData();
@@ -406,6 +493,13 @@ class ZPushAdminCLI {
                 self::CommandFixStates();
                 break;
 
+            case self::COMMAND_ADDSHARED:
+                self::CommandAddShared();
+                break;
+
+            case self::COMMAND_REMOVESHARED:
+                self::CommandRemoveShared();
+                break;
         }
         echo "\n";
     }
@@ -638,6 +732,85 @@ class ZPushAdminCLI {
     }
 
     /**
+     * Command to add a shared folder for a user.
+     *
+     * @return
+     * @access public
+     */
+    static public function CommandAddShared() {
+        // If no device is specified, search for all devices of a user.
+        if (self::$device === false) {
+            $devicelist = ZPushAdmin::ListDevices(self::$user);
+            if (empty($devicelist)) {
+                echo "\tno devices/users found\n";
+                return true;
+            }
+        }
+        else {
+            $devicelist = array(self::$device);
+        }
+        switch (self::$type) {
+            case self::TYPE_OPTION_EMAIL:
+                $type = SYNC_FOLDER_TYPE_USER_MAIL;
+                break;
+            case self::TYPE_OPTION_CALENDAR:
+                $type = SYNC_FOLDER_TYPE_USER_APPOINTMENT;
+                break;
+            case self::TYPE_OPTION_CONTACT:
+                $type = SYNC_FOLDER_TYPE_USER_CONTACT;
+                break;
+            case self::TYPE_OPTION_TASK:
+                $type = SYNC_FOLDER_TYPE_USER_TASK;
+                break;
+            case self::TYPE_OPTION_NOTE:
+                $type = SYNC_FOLDER_TYPE_USER_NOTE;
+                break;
+        }
+
+        foreach ($devicelist as $devid) {
+            $status = ZPushAdmin::AdditionalFolderAdd(self::$user, $devid, self::$store, self::$folderid, self::$foldername, $type, self::$flags);
+            if ($status) {
+                printf("Successfully added folder '%s' for user '%s' on device '%s'.\n", self::$foldername, self::$user, $devid);
+            }
+            else {
+                printf("Failed adding folder '%s' for user '%s' on device '%s'. %s.\n", self::$foldername, self::$user, $devid, ZLog::GetLastMessage(LOGLEVEL_ERROR));
+            }
+        }
+
+    }
+
+    /**
+     * Command to remove a shared folder for a user.
+     *
+     * @return
+     * @access public
+     */
+    static public function CommandRemoveShared() {
+        // if no device is specified, search for all devices of a user. If user is not set, all devices are returned.
+        if (self::$device === false) {
+            $devicelist = ZPushAdmin::ListDevices(self::$user);
+            if (empty($devicelist)) {
+                echo "\tno devices/users found\n";
+                return true;
+            }
+        }
+        else {
+            $devicelist = array(self::$device);
+        }
+
+        foreach ($devicelist as $devid) {
+            $status = ZPushAdmin::AdditionalFolderRemove(self::$user, $devid, self::$folderid);
+            if ($status) {
+                printf("Successfully removed folder with id '%s' for user '%s' on device '%s'.\n", self::$folderid, self::$user, $devid);
+            }
+            else {
+                printf("Failed removing folder with id '%s' for user '%s' on device '%s'. %s.\n", self::$folderid, self::$user, $devid, ZLog::GetLastMessage(LOGLEVEL_ERROR));
+            }
+        }
+
+    }
+
+    /**
      * Resynchronizes a folder type of a device & user
      *
      * @param string    $deviceId       the id of the device
@@ -790,64 +963,150 @@ class ZPushAdminCLI {
             return false;
         }
 
-        // Gather some statistics about synchronized folders
-        $folders = $device->GetAllFolderIds();
-        $synchedFolders = 0;
-        $synchedFolderTypes = array();
-        $syncedFoldersInProgress = 0;
-        foreach ($folders as $folderid) {
-            if ($device->GetFolderUUID($folderid)) {
-                $synchedFolders++;
-                $type = $device->GetFolderType($folderid);
-                $folder = $device->GetHierarchyCache()->GetFolder($folderid);
-                $name = $folder ? $folder->displayname : "unknown";
-                switch($type) {
-                    case SYNC_FOLDER_TYPE_APPOINTMENT:
-                    case SYNC_FOLDER_TYPE_USER_APPOINTMENT:
-                        if ($name == KOE_GAB_NAME) {
-                            $gentype = "GAB";
-                        }
-                        else {
-                            $gentype = "Calendars";
-                        }
-                        break;
-                    case SYNC_FOLDER_TYPE_CONTACT:
-                    case SYNC_FOLDER_TYPE_USER_CONTACT:
-                        $gentype = "Contacts";
-                        break;
-                    case SYNC_FOLDER_TYPE_TASK:
-                    case SYNC_FOLDER_TYPE_USER_TASK:
-                        $gentype = "Tasks";
-                        break;
-                    case SYNC_FOLDER_TYPE_NOTE:
-                    case SYNC_FOLDER_TYPE_USER_NOTE:
-                        $gentype = "Notes";
-                        break;
-                    default:
-                        $gentype = "Emails";
-                        break;
-                }
-                if (!isset($synchedFolderTypes[$gentype]))
-                    $synchedFolderTypes[$gentype] = 0;
-                $synchedFolderTypes[$gentype]++;
+        echo "-----------------------------------------------------\n";
+        echo "DeviceId:\t\t$deviceId\n";
+        echo "Device type:\t\t". ($device->GetDeviceType() !== ASDevice::UNDEFINED ? $device->GetDeviceType() : "unknown") ."\n";
+        echo "UserAgent:\t\t".($device->GetDeviceUserAgent()!== ASDevice::UNDEFINED ? $device->GetDeviceUserAgent() : "unknown") ."\n";
+        // TODO implement $device->GetDeviceUserAgentHistory()
 
-                // set the folder name for all folders which are not fully synchronized yet
-                $fstatus = $device->GetFolderSyncStatus($folderid);
-                if ($fstatus !== false && is_array($fstatus)) {
-                    $fstatus['name'] = $name ? $name : $gentype;
-                    $device->SetFolderSyncStatus($folderid, $fstatus);
-                    $syncedFoldersInProgress++;
+        if (!self::$shared) {
+            // Gather some statistics about synchronized folders
+            $folders = $device->GetAllFolderIds();
+            $synchedFolders = 0;
+            $synchedFolderTypes = array();
+            $syncedFoldersInProgress = 0;
+            foreach ($folders as $folderid) {
+                if ($device->GetFolderUUID($folderid)) {
+                    $synchedFolders++;
+                    $type = $device->GetFolderType($folderid);
+                    $folder = $device->GetHierarchyCache()->GetFolder($folderid);
+                    $name = $folder ? $folder->displayname : "unknown";
+                    switch($type) {
+                        case SYNC_FOLDER_TYPE_APPOINTMENT:
+                        case SYNC_FOLDER_TYPE_USER_APPOINTMENT:
+                            if ($name == KOE_GAB_NAME) {
+                                $gentype = "GAB";
+                            }
+                            else {
+                                $gentype = "Calendars";
+                            }
+                            break;
+                        case SYNC_FOLDER_TYPE_CONTACT:
+                        case SYNC_FOLDER_TYPE_USER_CONTACT:
+                            $gentype = "Contacts";
+                            break;
+                        case SYNC_FOLDER_TYPE_TASK:
+                        case SYNC_FOLDER_TYPE_USER_TASK:
+                            $gentype = "Tasks";
+                            break;
+                        case SYNC_FOLDER_TYPE_NOTE:
+                        case SYNC_FOLDER_TYPE_USER_NOTE:
+                            $gentype = "Notes";
+                            break;
+                        default:
+                            $gentype = "Emails";
+                            break;
+                    }
+                    if (!isset($synchedFolderTypes[$gentype]))
+                        $synchedFolderTypes[$gentype] = 0;
+                    $synchedFolderTypes[$gentype]++;
+
+                    // set the folder name for all folders which are not fully synchronized yet
+                    $fstatus = $device->GetFolderSyncStatus($folderid);
+                    if ($fstatus !== false && is_array($fstatus)) {
+                        $fstatus['name'] = $name ? $name : $gentype;
+                        $device->SetFolderSyncStatus($folderid, $fstatus);
+                        $syncedFoldersInProgress++;
+                    }
+                }
+            }
+            $folderinfo = "";
+            foreach ($synchedFolderTypes as $gentype=>$count) {
+                $folderinfo .= $gentype;
+                if ($count>1) $folderinfo .= "($count)";
+                $folderinfo .= " ";
+            }
+            if (!$folderinfo) $folderinfo = "None available";
+
+            // device information transmitted during Settings command
+            if ($device->GetDeviceModel())
+                echo "Device Model:\t\t". $device->GetDeviceModel(). "\n";
+            if ($device->GetDeviceIMEI())
+                echo "Device IMEI:\t\t". $device->GetDeviceIMEI(). "\n";
+            if ($device->GetDeviceFriendlyName())
+                echo "Device friendly name:\t". $device->GetDeviceFriendlyName(). "\n";
+            if ($device->GetDeviceOS())
+                echo "Device OS:\t\t". $device->GetDeviceOS(). "\n";
+            if ($device->GetDeviceOSLanguage())
+                echo "Device OS Language:\t". $device->GetDeviceOSLanguage(). "\n";
+            if ($device->GetDevicePhoneNumber())
+                echo "Device Phone nr:\t". $device->GetDevicePhoneNumber(). "\n";
+            if ($device->GetDeviceMobileOperator())
+                echo "Device Operator:\t". $device->GetDeviceMobileOperator(). "\n";
+            if ($device->GetDeviceEnableOutboundSMS())
+                echo "Device Outbound SMS:\t". $device->GetDeviceEnableOutboundSMS(). "\n";
+
+            echo "ActiveSync version:\t".($device->GetASVersion() ? $device->GetASVersion() : "unknown") ."\n";
+            echo "First sync:\t\t". strftime("%Y-%m-%d %H:%M", $device->GetFirstSyncTime()) ."\n";
+            echo "Last sync:\t\t". ($device->GetLastSyncTime() ? strftime("%Y-%m-%d %H:%M", $device->GetLastSyncTime()) : "never")."\n";
+
+
+            $filterType = (defined('SYNC_FILTERTIME_MAX') && SYNC_FILTERTIME_MAX > SYNC_FILTERTYPE_ALL) ? SYNC_FILTERTIME_MAX : SYNC_FILTERTYPE_ALL;
+            $maxDevice = $device->GetSyncFilterType();
+            if ($maxDevice !== false && $maxDevice > SYNC_FILTERTYPE_ALL && ($filterType == SYNC_FILTERTYPE_ALL || $maxDevice < $filterType)) {
+                $filterType = $maxDevice;
+            }
+            switch($filterType) {
+                case SYNC_FILTERTYPE_1DAY:
+                    $filterTypeString = "1 day back";
+                    break;
+                case SYNC_FILTERTYPE_3DAYS:
+                    $filterTypeString = "3 days back";
+                    break;
+                case SYNC_FILTERTYPE_1WEEK:
+                    $filterTypeString = "1 week back";
+                    break;
+                case SYNC_FILTERTYPE_2WEEKS:
+                    $filterTypeString = "2 weeks back";
+                    break;
+                case SYNC_FILTERTYPE_1MONTH:
+                    $filterTypeString = "1 month back";
+                    break;
+                case SYNC_FILTERTYPE_3MONTHS:
+                    $filterTypeString = "3 months back";
+                    break;
+                case SYNC_FILTERTYPE_6MONTHS:
+                    $filterTypeString = "6 months back";
+                    break;
+                default:
+                    $filterTypeString = "unlimited";
+            }
+            echo "Sync Period:\t\t". $filterTypeString . " (".$filterType.")\n";
+            echo "Total folders:\t\t". count($folders). "\n";
+            echo "Short folder Ids:\t". ($device->HasFolderIdMapping() ? "Yes":"No") ."\n";
+            echo "Synchronized folders:\t". $synchedFolders;
+            if ($syncedFoldersInProgress > 0)
+                echo " (". $syncedFoldersInProgress. " in progress)";
+            echo "\n";
+            echo "Synchronized data:\t$folderinfo\n";
+            if ($syncedFoldersInProgress > 0) {
+                echo "Synchronization progress:\n";
+                foreach ($folders as $folderid) {
+                    $d = $device->GetFolderSyncStatus($folderid);
+                    if ($d) {
+                        $status = "";
+                        if ($d['total'] > 0) {
+                            $percent = round($d['done']*100/$d['total']);
+                            $status = sprintf("Status: %s%d%% (%d/%d)", ($percent < 10)?" ":"", $percent, $d['done'], $d['total']);
+                        }
+                        if (strlen($d['name']) > 20) {
+                            $d['name'] = substr($d['name'], 0, 18) . "..";
+                        }
+                        printf("\tFolder: %s Sync: %s %s\n", str_pad($d['name'], 20), str_pad($d['status'], 13), $status);
+                    }
                 }
             }
         }
-        $folderinfo = "";
-        foreach ($synchedFolderTypes as $gentype=>$count) {
-            $folderinfo .= $gentype;
-            if ($count>1) $folderinfo .= "($count)";
-            $folderinfo .= " ";
-        }
-        if (!$folderinfo) $folderinfo = "None available";
-
         // additional folders
         $addFolders = array();
         $sharedFolders = $device->GetAdditionalFolders();
@@ -887,123 +1146,62 @@ class ZPushAdminCLI {
             $addFolders[] = $df;
         }
         $addFoldersTotal = !empty($addFolders) ? count($addFolders) : 'none';
-
-        echo "-----------------------------------------------------\n";
-        echo "DeviceId:\t\t$deviceId\n";
-        echo "Device type:\t\t". ($device->GetDeviceType() !== ASDevice::UNDEFINED ? $device->GetDeviceType() : "unknown") ."\n";
-        echo "UserAgent:\t\t".($device->GetDeviceUserAgent()!== ASDevice::UNDEFINED ? $device->GetDeviceUserAgent() : "unknown") ."\n";
-        // TODO implement $device->GetDeviceUserAgentHistory()
-
-        // device information transmitted during Settings command
-        if ($device->GetDeviceModel())
-            echo "Device Model:\t\t". $device->GetDeviceModel(). "\n";
-        if ($device->GetDeviceIMEI())
-            echo "Device IMEI:\t\t". $device->GetDeviceIMEI(). "\n";
-        if ($device->GetDeviceFriendlyName())
-            echo "Device friendly name:\t". $device->GetDeviceFriendlyName(). "\n";
-        if ($device->GetDeviceOS())
-            echo "Device OS:\t\t". $device->GetDeviceOS(). "\n";
-        if ($device->GetDeviceOSLanguage())
-            echo "Device OS Language:\t". $device->GetDeviceOSLanguage(). "\n";
-        if ($device->GetDevicePhoneNumber())
-            echo "Device Phone nr:\t". $device->GetDevicePhoneNumber(). "\n";
-        if ($device->GetDeviceMobileOperator())
-            echo "Device Operator:\t". $device->GetDeviceMobileOperator(). "\n";
-        if ($device->GetDeviceEnableOutboundSMS())
-            echo "Device Outbound SMS:\t". $device->GetDeviceEnableOutboundSMS(). "\n";
-
-        echo "ActiveSync version:\t".($device->GetASVersion() ? $device->GetASVersion() : "unknown") ."\n";
-        echo "First sync:\t\t". strftime("%Y-%m-%d %H:%M", $device->GetFirstSyncTime()) ."\n";
-        echo "Last sync:\t\t". ($device->GetLastSyncTime() ? strftime("%Y-%m-%d %H:%M", $device->GetLastSyncTime()) : "never")."\n";
-
-        $filterType = (defined('SYNC_FILTERTIME_MAX') && SYNC_FILTERTIME_MAX > SYNC_FILTERTYPE_ALL) ? SYNC_FILTERTIME_MAX : SYNC_FILTERTYPE_ALL;
-        $maxDevice = $device->GetSyncFilterType();
-        if ($maxDevice !== false && $maxDevice > SYNC_FILTERTYPE_ALL && ($filterType == SYNC_FILTERTYPE_ALL || $maxDevice < $filterType)) {
-            $filterType = $maxDevice;
-        }
-        switch($filterType) {
-            case SYNC_FILTERTYPE_1DAY:
-                $filterTypeString = "1 day back";
-                break;
-            case SYNC_FILTERTYPE_3DAYS:
-                $filterTypeString = "3 days back";
-                break;
-            case SYNC_FILTERTYPE_1WEEK:
-                $filterTypeString = "1 week back";
-                break;
-            case SYNC_FILTERTYPE_2WEEKS:
-                $filterTypeString = "2 weeks back";
-                break;
-            case SYNC_FILTERTYPE_1MONTH:
-                $filterTypeString = "1 month back";
-                break;
-            case SYNC_FILTERTYPE_3MONTHS:
-                $filterTypeString = "3 months back";
-                break;
-            case SYNC_FILTERTYPE_6MONTHS:
-                $filterTypeString = "6 months back";
-                break;
-            default:
-                $filterTypeString = "unlimited";
-        }
-        echo "Sync Period:\t\t". $filterTypeString . " (".$filterType.")\n";
-        echo "Total folders:\t\t". count($folders). "\n";
-        echo "Short folder Ids:\t". ($device->HasFolderIdMapping() ? "Yes":"No") ."\n";
-        echo "Synchronized folders:\t". $synchedFolders;
-        if ($syncedFoldersInProgress > 0)
-            echo " (". $syncedFoldersInProgress. " in progress)";
-        echo "\n";
-        echo "Synchronized data:\t$folderinfo\n";
-        if ($syncedFoldersInProgress > 0) {
-            echo "Synchronization progress:\n";
-            foreach ($folders as $folderid) {
-                $d = $device->GetFolderSyncStatus($folderid);
-                if ($d) {
-                    $status = "";
-                    if ($d['total'] > 0) {
-                        $percent = round($d['done']*100/$d['total']);
-                        $status = sprintf("Status: %s%d%% (%d/%d)", ($percent < 10)?" ":"", $percent, $d['done'], $d['total']);
-                    }
-                    if (strlen($d['name']) > 20) {
-                        $d['name'] = substr($d['name'], 0, 18) . "..";
-                    }
-                    printf("\tFolder: %s Sync: %s %s\n", str_pad($d['name'], 20), str_pad($d['status'], 13), $status);
-                }
-            }
-        }
         echo "Additional Folders:\t$addFoldersTotal\n";
-        foreach ($addFolders as $folder) {
-            if (strlen($folder['store']) > 14) {
-                $folder['store'] = substr($folder['store'], 0, 12) . "..";
+        if ($addFoldersTotal != 'none') {
+            if (!self::$shared) {
+                print("\tFolder name                    Store          Type     Origin     Synched\n");
             }
-            if (strlen($folder['name']) > 20) {
-                $folder['name'] = substr($folder['name'], 0, 18) . "..";
-            }
-            printf("\t%s %s %s %s %s %s\n", str_pad($folder['origin'], 10), str_pad($folder['type'], 8), str_pad($folder['store'], 14), str_pad($folder['name'], 20), $folder['synched'], $folder['additional']);
         }
-        echo "Status:\t\t\t";
-        switch ($device->GetWipeStatus()) {
-            case SYNC_PROVISION_RWSTATUS_OK:
-                echo "OK\n";
-                break;
-            case SYNC_PROVISION_RWSTATUS_PENDING:
-                echo "Pending wipe\n";
-                break;
-            case SYNC_PROVISION_RWSTATUS_REQUESTED:
-                echo "Wipe requested on device\n";
-                break;
-            case SYNC_PROVISION_RWSTATUS_WIPED:
-                echo "Wiped\n";
-                break;
-            default:
-                echo "Not available\n";
-                break;
+        foreach ($addFolders as $folder) {
+            // Configured folders are always under root
+            if (!isset($folder['parentid'])) $folder['parentid'] = '0';
+
+            if (!self::$shared) {
+                if (strlen($folder['store']) > 14) {
+                    $folder['store'] = substr($folder['store'], 0, 12) . "..";
+                }
+                if (strlen($folder['name']) > 30) {
+                    $folder['name'] = substr($folder['name'], 0, 28) . "..";
+                }
+                printf("\t%s %s %s %s %s %s\n", str_pad($folder['name'], 30), str_pad($folder['store'], 14), str_pad($folder['type'], 8), str_pad($folder['origin'], 10), $folder['synched'], $folder['additional']);
+            }
+            else {
+                printf("\tFolder name:\t%s\n", $folder['name']);
+                printf("\tStore:\t\t%s\n", $folder['store']);
+                printf("\tType:\t\t%s\n", $folder['type']);
+                printf("\tOrigin:\t\t%s\n", $folder['origin']);
+                printf("\tFolder id:\t%s\n", $folder['folderid']);
+                printf("\tParent id:\t%s\n", $folder['parentid']);
+                printf("\tSynched:\t%s\n", $folder['synched']);
+                if (!empty($folder['additional'])) printf("\tAdditional:\t%s\n", $folder['additional']);
+                echo "\t------------------------\n";
+            }
         }
 
-        echo "WipeRequest on:\t\t". ($device->GetWipeRequestedOn() ? strftime("%Y-%m-%d %H:%M", $device->GetWipeRequestedOn()) : "not set")."\n";
-        echo "WipeRequest by:\t\t". ($device->GetWipeRequestedBy() ? $device->GetWipeRequestedBy() : "not set")."\n";
-        echo "Wiped on:\t\t". ($device->GetWipeActionOn() ? strftime("%Y-%m-%d %H:%M", $device->GetWipeActionOn()) : "not set")."\n";
-        echo "Policy name:\t\t". ($device->GetPolicyName() ? $device->GetPolicyName() : ASDevice::DEFAULTPOLICYNAME)."\n";
+        if (!self::$shared) {
+            echo "Status:\t\t\t";
+            switch ($device->GetWipeStatus()) {
+                case SYNC_PROVISION_RWSTATUS_OK:
+                    echo "OK\n";
+                    break;
+                case SYNC_PROVISION_RWSTATUS_PENDING:
+                    echo "Pending wipe\n";
+                    break;
+                case SYNC_PROVISION_RWSTATUS_REQUESTED:
+                    echo "Wipe requested on device\n";
+                    break;
+                case SYNC_PROVISION_RWSTATUS_WIPED:
+                    echo "Wiped\n";
+                    break;
+                default:
+                    echo "Not available\n";
+                    break;
+            }
+            echo "WipeRequest on:\t\t". ($device->GetWipeRequestedOn() ? strftime("%Y-%m-%d %H:%M", $device->GetWipeRequestedOn()) : "not set")."\n";
+            echo "WipeRequest by:\t\t". ($device->GetWipeRequestedBy() ? $device->GetWipeRequestedBy() : "not set")."\n";
+            echo "Wiped on:\t\t". ($device->GetWipeActionOn() ? strftime("%Y-%m-%d %H:%M", $device->GetWipeActionOn()) : "not set")."\n";
+            echo "Policy name:\t\t". ($device->GetPolicyName() ? $device->GetPolicyName() : ASDevice::DEFAULTPOLICYNAME)."\n";
+        }
 
         if ($device->GetKoeVersion()) {
             echo "Kopano Outlook Extension:\n";
@@ -1026,7 +1224,7 @@ class ZPushAdminCLI {
         if (!isset($device->ignoredmessages) || empty($device->ignoredmessages)) {
             echo "No errors known\n";
         }
-        else {
+        elseif (!self::$shared) {
             printf("%d messages need attention because they could not be synchronized\n", count($device->ignoredmessages));
             foreach ($device->ignoredmessages as $im) {
                 $info = "";
@@ -1047,6 +1245,9 @@ class ZPushAdminCLI {
                 printf("\tItem/Parent id: %s/%s\n", $im->id, $im->folderid);
                 echo "\n";
             }
+        }
+        else {
+            print("There are some messages which need attention because they could not be synchronized. Run z-push-admin without -s or --shared.\n");
         }
 
     }

@@ -668,6 +668,7 @@ class ASDevice extends StateObject {
      *                                                                  'C' (configured)
      *                                                                  'S' (shared)
      *                                                                  'G' (global address book)
+     *                                                                  'I' (impersonated)
      * @param string    $folderName             Folder name of the backend folder
      *
      * @access public
@@ -1124,6 +1125,7 @@ class ASDevice extends StateObject {
      *                                                                  'C' (configured)
      *                                                                  'S' (shared)
      *                                                                  'G' (global address book)
+     *                                                                  'I' (impersonated)
      * @param string    $folderName             Folder name of the backend folder
      *
      * @access private

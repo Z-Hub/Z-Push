@@ -468,6 +468,18 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
         try {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("ReplyBackImExporter->getMessage(): Getting message from MAPIProvider, sourcekey: '%s', parentsourcekey: '%s', entryid: '%s'", bin2hex($sourcekey), bin2hex($parentsourcekey), bin2hex($entryid)));
             $message = $this->mapiprovider->GetMessage($mapimessage, $this->contentparameters);
+
+            // strip or do not send private messages from shared folders to the device
+            if (MAPIUtils::IsMessageSharedAndPrivate($this->folderid, $mapimessage)) {
+                if ($message->SupportsPrivateStripping()) {
+                    ZLog::Write(LOGLEVEL_DEBUG, "ReplyBackImExporter->getMessage(): stripping data of private message from a shared folder");
+                    $message->StripData(Streamer::STRIP_PRIVATE_DATA);
+                }
+                else {
+                    ZLog::Write(LOGLEVEL_DEBUG, "ReplyBackImExporter->getMessage(): ignoring private message from a shared folder");
+                    return SYNC_E_IGNORE;
+                }
+            }
         }
         catch (SyncObjectBrokenException $mbe) {
             if ($announceErrors) {
@@ -497,7 +509,7 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
      * @return void
      */
     private function sendNotificationEmail($message, $oldmessage) {
-        // get email address and full name of the user
+        // get email address and full name of the user that performed the operation (auth user in all cases)
         $userinfo = ZPush::GetBackend()->GetUserDetails(Request::GetAuthUser());
 
         // get the name of the folder

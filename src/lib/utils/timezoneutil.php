@@ -1375,4 +1375,28 @@ class TimezoneUtil {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("TimezoneUtil::GetPhpSupportedTimezone(): '%s' is not a PHP supported timezone. Returning default timezone: '%s'", $timezone, $dtz));
         return $dtz;
     }
+
+    /**
+     * Returns official timezone name from windows timezone name.
+     * E.g. "W Europe Standard Time" for "(GMT+01:00) Amsterdam, Berlin, Bern, Rome, Stockholm, Vienna".
+     *
+     * @param string $winTz Timezone name in windows
+     *
+     * @access public
+     * @return string timezone name
+     */
+    public static function GetTZNameFromWinTZ($winTz = false) {
+
+        // Return "GMT Standard Time" per default
+        if ($winTz === false) {
+            return self::$mstzones['085'][0];
+        }
+
+        foreach (self::$mstzones as $mskey => $msdefs) {
+            if ($winTz == $msdefs[1]) {
+                return $msdefs[0];
+            }
+        }
+        return self::$mstzones['085'][0];
+    }
 }

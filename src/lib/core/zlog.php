@@ -145,8 +145,13 @@ class ZLog {
                 throw new \Exception($errmsg);
             }
 
-            list($user) = Utils::SplitDomainUser(strtolower(Request::GetGETUser()));
-            $user = '['.$user.']';
+            // if there is an impersonated user it's used instead of the GET user
+            if (Request::GetImpersonatedUser()) {
+                $user = Request::GetImpersonatedUser();
+            }
+            else {
+                list($user) = Utils::SplitDomainUser(strtolower(Request::GetGETUser()));
+            }
 
             self::$logger = new $logger();
             self::$logger->SetUser($user);

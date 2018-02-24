@@ -4,7 +4,7 @@
 
 namespace Composer\Autoload;
 
-class ComposerStaticInitd6749fc2fb9944bbe86b2b7d79a7852f
+class ComposerStaticInit153a56a781a72686b71399955d98204f
 {
     public static $files = array (
         '158e247719544c05f5e89c414f630c24' => __DIR__ . '/../..' . '/version.php',
@@ -36,6 +36,7 @@ class ComposerStaticInitd6749fc2fb9944bbe86b2b7d79a7852f
         'BackendLDAP' => __DIR__ . '/../..' . '/backend/ldap/ldap.php',
         'BackendMaildir' => __DIR__ . '/../..' . '/backend/maildir/maildir.php',
         'BackendSearchLDAP' => __DIR__ . '/../..' . '/backend/searchldap/searchldap.php',
+        'BackendStickyNote' => __DIR__ . '/../..' . '/backend/stickynote/stickynote.php',
         'BackendVCardDir' => __DIR__ . '/../..' . '/backend/vcarddir/vcarddir.php',
         'BackendZarafa' => __DIR__ . '/../..' . '/backend/kopano/kopano.php',
         'BaseException' => __DIR__ . '/../..' . '/backend/kopano/mapi/class.baseexception.php',
@@ -65,7 +66,6 @@ class ComposerStaticInitd6749fc2fb9944bbe86b2b7d79a7852f
         'HTTPReturnCodeException' => __DIR__ . '/../..' . '/lib/exceptions/httpreturncodeexception.php',
         'HierarchyCache' => __DIR__ . '/../..' . '/lib/core/hierarchycache.php',
         'IBackend' => __DIR__ . '/../..' . '/lib/interface/ibackend.php',
-        'ICalParser' => __DIR__ . '/../..' . '/backend/kopano/icalparser.php',
         'IChanges' => __DIR__ . '/../..' . '/lib/interface/ichanges.php',
         'IExportChanges' => __DIR__ . '/../..' . '/lib/interface/iexportchanges.php',
         'IImportChanges' => __DIR__ . '/../..' . '/lib/interface/iimportchanges.php',
@@ -80,6 +80,7 @@ class ComposerStaticInitd6749fc2fb9944bbe86b2b7d79a7852f
         'InterProcessData' => __DIR__ . '/../..' . '/lib/core/interprocessdata.php',
         'IpcMemcachedProvider' => __DIR__ . '/../..' . '/backend/ipcmemcached/ipcmemcachedprovider.php',
         'IpcSharedMemoryProvider' => __DIR__ . '/../..' . '/backend/ipcsharedmemory/ipcsharedmemoryprovider.php',
+        'IpcWincacheProvider' => __DIR__ . '/../..' . '/backend/ipcwincache/ipcwincache.php',
         'ItemOperations' => __DIR__ . '/../..' . '/lib/request/itemoperations.php',
         'KoeSignature' => __DIR__ . '/../..' . '/lib/core/koesignatures.php',
         'KoeSignatures' => __DIR__ . '/../..' . '/lib/core/koesignatures.php',
@@ -209,7 +210,7 @@ class ComposerStaticInitd6749fc2fb9944bbe86b2b7d79a7852f
     public static function getInitializer(ClassLoader $loader)
     {
         return \Closure::bind(function () use ($loader) {
-            $loader->classMap = ComposerStaticInitd6749fc2fb9944bbe86b2b7d79a7852f::$classMap;
+            $loader->classMap = ComposerStaticInit153a56a781a72686b71399955d98204f::$classMap;
 
         }, null, ClassLoader::class);
     }

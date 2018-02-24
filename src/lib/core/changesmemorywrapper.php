@@ -33,6 +33,8 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
     private $step;
     private $destinationImporter;
     private $exportImporter;
+    private $impersonating;
+    private $foldersWithoutPermissions;
 
     /**
      * Constructor
@@ -43,6 +45,8 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
     public function __construct() {
         $this->changes = array();
         $this->step = 0;
+        $this->impersonating = null;
+        $this->foldersWithoutPermissions = array();
         parent::__construct();
     }
 
@@ -55,6 +59,10 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
      * @return boolean
      */
     public function Config($state, $flags = 0) {
+        if ($this->impersonating == null) {
+            $this->impersonating = (Request::GetImpersonatedUser()) ? strtolower(Request::GetImpersonatedUser()) : false;
+        }
+
         // we should never forward this changes to a backend
         if (!isset($this->destinationImporter)) {
             foreach($state as $addKey => $addFolder) {
@@ -84,6 +92,7 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
 
             // look for folders which are currently on the device if there are now not to be synched anymore
             $alreadyDeleted = $this->GetDeletedFolders();
+            $folderIdsOnClient = array();
             foreach ($this->ExportFolders(true) as $sid => $folder) {
                 // check if previously synchronized secondary contact folders were patched for KOE - if no RealType is set they weren't
                 if ($flags == self::SYNCHRONIZING && ZPush::GetDeviceManager()->IsKoeSupportingSecondaryContacts() && $folder->type == SYNC_FOLDER_TYPE_USER_CONTACT && !isset($folder->TypeReal)) {
@@ -100,6 +109,35 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
                     if (!array_key_exists($sid, $state) && !array_key_exists($sid, $alreadyDeleted)) {
                         ZLog::Write(LOGLEVEL_INFO, sprintf("ChangesMemoryWrapper->Config(AdditionalFolders) : previously synchronized folder '%s' is not to be synched anymore. Sending delete to mobile.", $folder->displayname));
                         $this->ImportFolderDeletion($folder);
+                    }
+                }
+                else {
+                    $folderIdsOnClient[] = $sid;
+                }
+            }
+
+            // check permissions on impersonated folders
+            if ($this->impersonating) {
+                ZLog::Write(LOGLEVEL_DEBUG, "ChangesMemoryWrapper->Config(): check permissions of folders of impersonated account");
+                $hierarchy = ZPush::GetBackend()->GetHierarchy();
+                foreach ($hierarchy as $folder) {
+                    // Check for at least read permissions of the impersonater on folders
+                    $hasRights = ZPush::GetBackend()->Setup($this->impersonating, true, $folder->BackendId, true);
+
+                    // the folder has no permissions
+                    if (!$hasRights) {
+                        $this->foldersWithoutPermissions[$folder->serverid] = $folder;
+                        // if it's on the device, remove it
+                        if (in_array($folder->serverid, $folderIdsOnClient)) {
+                            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ChangesMemoryWrapper->Config(AdditionalFolders) : previously synchronized folder '%s' has no permissions anymore. Sending delete to mobile.", $folder->displayname));
+                            // delete folder into memory so it's then sent to the client
+                            $this->ImportFolderDeletion($folder);
+                        }
+                    }
+                    // has permissions but is not on the device, add it
+                    elseif (!in_array($folder->serverid, $folderIdsOnClient)) {
+                        $folder->flags = SYNC_NEWMESSAGE;
+                        $this->ImportFolderChange($folder);
                     }
                 }
             }
@@ -286,6 +324,12 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
                     $folder = Utils::ChangeFolderToTypeUnknownForKoe($folder);
                 }
 
+                // folder changes are only sent if the user has permissions on that folder, if not, change is ignored
+                if ($this->impersonating && array_key_exists($folder->serverid, $this->foldersWithoutPermissions)) {
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("ChangesMemoryWrapper->ImportFolderChange(): Change for folder '%s' will not be sent as impersonating user has no permissions on folder.", $folder->displayname));
+                    return false;
+                }
+
                 // load this change into memory
                 $this->changes[] = array(self::CHANGE, $folder);
 
@@ -402,6 +446,7 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
     public function __wakeup() {
         $this->changes = array();
         $this->step = 0;
+        $this->foldersWithoutPermissions = array();
     }
 
     /**

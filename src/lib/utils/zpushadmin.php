@@ -715,12 +715,6 @@ class ZPushAdmin {
                 return false;
             }
 
-            $static_folders = ZPush::GetAdditionalSyncFolders();
-            if (isset($static_folders[$add_folderid])) {
-                ZLog::Write(LOGLEVEL_ERROR, sprintf("ZPushAdmin::AdditionalFolderRemove(): the folder id '%s' can not be removed as it is a statically configured folder. Aborting.", $add_folderid));
-                return false;
-            }
-
             $status = $device->RemoveAdditionalFolder($add_folderid);
             if ($status && $device->GetData() !== false) {
                 ZPush::GetStateMachine()->SetState($device->GetData(), $devid, IStateMachine::DEVICEDATA);

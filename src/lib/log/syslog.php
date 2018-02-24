@@ -166,7 +166,13 @@ class Syslog extends Log {
      */
     public function BuildLogString($loglevel, $message, $includeUserDevice = true) {
         $log = $this->GetLogLevelString($loglevel); // Never pad syslog log because syslog log are usually read with a software.
-        $log .= $this->GetUser();
+        // when the users differ, we need to log both
+        if (strcasecmp($this->GetAuthUser(), $this->GetUser()) == 0) {
+            $log .= ' ['. $this->GetUser() .']';
+        }
+        else {
+            $log .= ' ['. $this->GetAuthUser() . Request::IMPERSONATE_DELIM . $this->GetUser() .']';
+        }
         if ($loglevel >= LOGLEVEL_DEVICEID) {
             $log .= '['. $this->GetDevid() .']';
         }

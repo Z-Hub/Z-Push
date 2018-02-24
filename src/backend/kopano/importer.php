@@ -254,7 +254,7 @@ class ImportChangesICS implements IImportChanges {
 
         $sharedUser = ZPush::GetAdditionalSyncFolderStore(bin2hex($this->folderid));
         // if this is either a user folder or SYSTEM and no restriction is set, we don't need to check
-        if (($sharedUser == false || $sharedUser == 'SYSTEM') && $this->cutoffdate === false) {
+        if (($sharedUser == false || $sharedUser == 'SYSTEM') && $this->cutoffdate === false && !ZPush::GetBackend()->GetImpersonatedUser()) {
             return true;
         }
 
@@ -431,10 +431,10 @@ class ImportChangesICS implements IImportChanges {
 
         if(mapi_importcontentschanges_importmessagechange($this->importer, $props, $flags, $mapimessage)) {
             $this->mapiprovider->SetMessage($mapimessage, $message);
-            mapi_message_savechanges($mapimessage);
+            mapi_savechanges($mapimessage);
 
             if (mapi_last_hresult())
-                throw new StatusException(sprintf("ImportChangesICS->ImportMessageChange('%s','%s'): Error, mapi_message_savechanges() failed: 0x%X", $id, get_class($message), mapi_last_hresult()), SYNC_STATUS_SYNCCANNOTBECOMPLETED);
+                throw new StatusException(sprintf("ImportChangesICS->ImportMessageChange('%s','%s'): Error, mapi_savechanges() failed: 0x%X", $id, get_class($message), mapi_last_hresult()), SYNC_STATUS_SYNCCANNOTBECOMPLETED);
 
             $sourcekeyprops = mapi_getprops($mapimessage, array (PR_SOURCE_KEY));
 
@@ -570,12 +570,13 @@ class ImportChangesICS implements IImportChanges {
 
         if(!$entryid || !$srcmessage) {
             $code = SYNC_MOVEITEMSSTATUS_INVALIDSOURCEID;
+            $mapiLastHresult = mapi_last_hresult();
             // if we move to the trash and the source message is not found, we can also just tell the mobile that we successfully moved to avoid errors (ZP-624)
             if ($newfolder == ZPush::GetBackend()->GetWasteBasket()) {
                 $code = SYNC_MOVEITEMSSTATUS_SUCCESS;
             }
             $errorCase = !$entryid ? "resolve source message id" : "open source message";
-            throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Error, unable to %s: 0x%X", $sk, $newfolder, $errorCase, mapi_last_hresult()), $code);
+            throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Error, unable to %s: 0x%X", $sk, $newfolder, $errorCase, $mapiLastHresult), $code);
         }
 
         // check if it is in the synchronization interval and/or shared+private
@@ -687,7 +688,11 @@ class ImportChangesICS implements IImportChanges {
             $props =  mapi_getprops($newfolder, array(PR_SOURCE_KEY));
             if (isset($props[PR_SOURCE_KEY])) {
                 $folder->BackendId = bin2hex($props[PR_SOURCE_KEY]);
-                $folder->serverid = ZPush::GetDeviceManager()->GetFolderIdForBackendId($folder->BackendId, true, DeviceManager::FLD_ORIGIN_USER, $folder->displayname);
+                $folderOrigin = DeviceManager::FLD_ORIGIN_USER;
+                if (ZPush::GetBackend()->GetImpersonatedUser()) {
+                    $folderOrigin = DeviceManager::FLD_ORIGIN_IMPERSONATED;
+                }
+                $folder->serverid = ZPush::GetDeviceManager()->GetFolderIdForBackendId($folder->BackendId, true, $folderOrigin, $folder->displayname);
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("ImportChangesICS->ImportFolderChange(): Created folder '%s' with id: '%s' backendid: '%s'", $displayname, $folder->serverid, $folder->BackendId));
                 return $folder;
             }
