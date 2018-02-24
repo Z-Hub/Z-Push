@@ -498,6 +498,12 @@ class DeviceManager {
      */
     public function GetAdditionalUserSyncFolders() {
         $folders = array();
+
+        // In impersonated stores, no additional folders will be synchronized
+        if (Request::GetImpersonatedUser()) {
+            return $folders;
+        }
+
         foreach($this->device->GetAdditionalFolders() as $df) {
             if (!isset($df['flags'])) {
                 $df['flags'] = 0;
