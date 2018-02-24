@@ -33,7 +33,7 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
     private $step;
     private $destinationImporter;
     private $exportImporter;
-    private $impersonating = null;
+    private $impersonating;
     private $foldersWithoutPermissions;
 
     /**
@@ -45,6 +45,7 @@ class ChangesMemoryWrapper extends HierarchyCache implements IImportChanges, IEx
     public function __construct() {
         $this->changes = array();
         $this->step = 0;
+        $this->impersonating = null;
         $this->foldersWithoutPermissions = array();
         parent::__construct();
     }
