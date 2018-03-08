@@ -2566,7 +2566,9 @@ class BackendKopano implements IBackend, ISearchProvider {
      */
     private function isZPushEnabled() {
         $addressbook = $this->getAddressbook();
-        $userEntryid = mapi_getprops($this->store, array(PR_MAILBOX_OWNER_ENTRYID));
+        // this check needs to be performed on the store of the main (authenticated) user
+        $store = $this->storeCache[$this->mainUser];
+        $userEntryid = mapi_getprops($store, array(PR_MAILBOX_OWNER_ENTRYID));
         $mailuser = mapi_ab_openentry($addressbook, $userEntryid[PR_MAILBOX_OWNER_ENTRYID]);
         $enabledFeatures = mapi_getprops($mailuser, array(PR_EC_DISABLED_FEATURES));
         if (isset($enabledFeatures[PR_EC_DISABLED_FEATURES]) && is_array($enabledFeatures[PR_EC_DISABLED_FEATURES])) {
