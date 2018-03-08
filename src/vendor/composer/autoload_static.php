@@ -4,7 +4,7 @@
 
 namespace Composer\Autoload;
 
-class ComposerStaticInitd6749fc2fb9944bbe86b2b7d79a7852f
+class ComposerStaticInit153a56a781a72686b71399955d98204f
 {
     public static $files = array (
         '158e247719544c05f5e89c414f630c24' => __DIR__ . '/../..' . '/version.php',
@@ -36,10 +36,12 @@ class ComposerStaticInitd6749fc2fb9944bbe86b2b7d79a7852f
         'BackendLDAP' => __DIR__ . '/../..' . '/backend/ldap/ldap.php',
         'BackendMaildir' => __DIR__ . '/../..' . '/backend/maildir/maildir.php',
         'BackendSearchLDAP' => __DIR__ . '/../..' . '/backend/searchldap/searchldap.php',
+        'BackendStickyNote' => __DIR__ . '/../..' . '/backend/stickynote/stickynote.php',
         'BackendVCardDir' => __DIR__ . '/../..' . '/backend/vcarddir/vcarddir.php',
         'BackendZarafa' => __DIR__ . '/../..' . '/backend/kopano/kopano.php',
         'BaseException' => __DIR__ . '/../..' . '/backend/kopano/mapi/class.baseexception.php',
         'BaseRecurrence' => __DIR__ . '/../..' . '/backend/kopano/mapi/class.baserecurrence.php',
+        'BodyPartPreference' => __DIR__ . '/../..' . '/lib/core/bodypartpreference.php',
         'BodyPreference' => __DIR__ . '/../..' . '/lib/core/bodypreference.php',
         'CalDAVClient' => __DIR__ . '/../..' . '/include/z_caldav.php',
         'CalendarInfo' => __DIR__ . '/../..' . '/include/z_caldav.php',
@@ -64,7 +66,6 @@ class ComposerStaticInitd6749fc2fb9944bbe86b2b7d79a7852f
         'HTTPReturnCodeException' => __DIR__ . '/../..' . '/lib/exceptions/httpreturncodeexception.php',
         'HierarchyCache' => __DIR__ . '/../..' . '/lib/core/hierarchycache.php',
         'IBackend' => __DIR__ . '/../..' . '/lib/interface/ibackend.php',
-        'ICalParser' => __DIR__ . '/../..' . '/backend/kopano/icalparser.php',
         'IChanges' => __DIR__ . '/../..' . '/lib/interface/ichanges.php',
         'IExportChanges' => __DIR__ . '/../..' . '/lib/interface/iexportchanges.php',
         'IImportChanges' => __DIR__ . '/../..' . '/lib/interface/iimportchanges.php',
@@ -79,6 +80,7 @@ class ComposerStaticInitd6749fc2fb9944bbe86b2b7d79a7852f
         'InterProcessData' => __DIR__ . '/../..' . '/lib/core/interprocessdata.php',
         'IpcMemcachedProvider' => __DIR__ . '/../..' . '/backend/ipcmemcached/ipcmemcachedprovider.php',
         'IpcSharedMemoryProvider' => __DIR__ . '/../..' . '/backend/ipcsharedmemory/ipcsharedmemoryprovider.php',
+        'IpcWincacheProvider' => __DIR__ . '/../..' . '/backend/ipcwincache/ipcwincache.php',
         'ItemOperations' => __DIR__ . '/../..' . '/lib/request/itemoperations.php',
         'KoeSignature' => __DIR__ . '/../..' . '/lib/core/koesignatures.php',
         'KoeSignatures' => __DIR__ . '/../..' . '/lib/core/koesignatures.php',
@@ -134,16 +136,19 @@ class ComposerStaticInitd6749fc2fb9944bbe86b2b7d79a7852f
         'Streamer' => __DIR__ . '/../..' . '/lib/core/streamer.php',
         'StringStreamWrapper' => __DIR__ . '/../..' . '/lib/utils/stringstreamwrapper.php',
         'Sync' => __DIR__ . '/../..' . '/lib/request/sync.php',
+        'SyncAccount' => __DIR__ . '/../..' . '/lib/syncobjects/syncaccount.php',
         'SyncAppointment' => __DIR__ . '/../..' . '/lib/syncobjects/syncappointment.php',
         'SyncAppointmentException' => __DIR__ . '/../..' . '/lib/syncobjects/syncappointmentexception.php',
         'SyncAttachment' => __DIR__ . '/../..' . '/lib/syncobjects/syncattachment.php',
         'SyncAttendee' => __DIR__ . '/../..' . '/lib/syncobjects/syncattendee.php',
         'SyncBaseAttachment' => __DIR__ . '/../..' . '/lib/syncobjects/syncbaseattachment.php',
         'SyncBaseBody' => __DIR__ . '/../..' . '/lib/syncobjects/syncbasebody.php',
+        'SyncBaseBodyPart' => __DIR__ . '/../..' . '/lib/syncobjects/syncbasebodypart.php',
         'SyncCollections' => __DIR__ . '/../..' . '/lib/core/synccollections.php',
         'SyncContact' => __DIR__ . '/../..' . '/lib/syncobjects/synccontact.php',
         'SyncDeviceInformation' => __DIR__ . '/../..' . '/lib/syncobjects/syncdeviceinformation.php',
         'SyncDevicePassword' => __DIR__ . '/../..' . '/lib/syncobjects/syncdevicepassword.php',
+        'SyncEmailAddresses' => __DIR__ . '/../..' . '/lib/syncobjects/syncemailaddresses.php',
         'SyncFolder' => __DIR__ . '/../..' . '/lib/syncobjects/syncfolder.php',
         'SyncItemOperationsAttachment' => __DIR__ . '/../..' . '/lib/syncobjects/syncitemoperationsattachment.php',
         'SyncMail' => __DIR__ . '/../..' . '/lib/syncobjects/syncmail.php',
@@ -165,6 +170,9 @@ class ComposerStaticInitd6749fc2fb9944bbe86b2b7d79a7852f
         'SyncResolveRecipientsOptions' => __DIR__ . '/../..' . '/lib/syncobjects/syncresolverecipientsoptions.php',
         'SyncResolveRecipientsPicture' => __DIR__ . '/../..' . '/lib/syncobjects/syncresolverecipientspicture.php',
         'SyncResolveRecipientsResponse' => __DIR__ . '/../..' . '/lib/syncobjects/syncresolverecipientsresponse.php',
+        'SyncRightsManagementLicense' => __DIR__ . '/../..' . '/lib/syncobjects/syncrightsmanagementlicense.php',
+        'SyncRightsManagementTemplate' => __DIR__ . '/../..' . '/lib/syncobjects/syncrightsmanagementtemplate.php',
+        'SyncRightsManagementTemplates' => __DIR__ . '/../..' . '/lib/syncobjects/syncrightsmanagementtemplates.php',
         'SyncSendMail' => __DIR__ . '/../..' . '/lib/syncobjects/syncsendmail.php',
         'SyncSendMailSource' => __DIR__ . '/../..' . '/lib/syncobjects/syncsendmailsource.php',
         'SyncTask' => __DIR__ . '/../..' . '/lib/syncobjects/synctask.php',
@@ -172,7 +180,6 @@ class ComposerStaticInitd6749fc2fb9944bbe86b2b7d79a7852f
         'SyncUserInformation' => __DIR__ . '/../..' . '/lib/syncobjects/syncuserinformation.php',
         'SyncValidateCert' => __DIR__ . '/../..' . '/lib/syncobjects/syncvalidatecert.php',
         'Syslog' => __DIR__ . '/../..' . '/lib/log/syslog.php',
-        'TNEFParser' => __DIR__ . '/../..' . '/backend/kopano/tnefparser.php',
         'TaskRecurrence' => __DIR__ . '/../..' . '/backend/kopano/mapi/class.taskrecurrence.php',
         'TaskRequest' => __DIR__ . '/../..' . '/backend/kopano/mapi/class.taskrequest.php',
         'TimezoneUtil' => __DIR__ . '/../..' . '/lib/utils/timezoneutil.php',
@@ -203,7 +210,7 @@ class ComposerStaticInitd6749fc2fb9944bbe86b2b7d79a7852f
     public static function getInitializer(ClassLoader $loader)
     {
         return \Closure::bind(function () use ($loader) {
-            $loader->classMap = ComposerStaticInitd6749fc2fb9944bbe86b2b7d79a7852f::$classMap;
+            $loader->classMap = ComposerStaticInit153a56a781a72686b71399955d98204f::$classMap;
 
         }, null, ClassLoader::class);
     }

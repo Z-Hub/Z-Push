@@ -885,7 +885,11 @@ class Utils {
      * @return boolean
      */
     public static function FixFileOwner($file) {
-        if(posix_getuid() == 0 && is_file($file)) {
+        if (!function_exists('posix_getuid')) {
+           ZLog::Write(LOGLEVEL_DEBUG, "Utils::FixeFileOwner(): Posix subsystem not available, skipping.");
+           return false;
+        }
+        if (posix_getuid() == 0 && is_file($file)) {
             $dir = dirname($file);
             $perm_dir = stat($dir);
             $perm_file = stat($file);
@@ -1085,6 +1089,7 @@ class Utils {
             case DeviceManager::FLD_ORIGIN_GAB:
             case DeviceManager::FLD_ORIGIN_SHARED:
             case DeviceManager::FLD_ORIGIN_USER:
+            case DeviceManager::FLD_ORIGIN_IMPERSONATED:
                 return $origin;
         }
         ZLog::Write(LOGLEVEL_WARN, sprintf("Utils->GetFolderOriginFromId(): Unknown folder origin for folder with id '%s'", $folderid));
@@ -1110,6 +1115,8 @@ class Utils {
                 return 'shared';
             case DeviceManager::FLD_ORIGIN_USER:
                 return 'user';
+            case DeviceManager::FLD_ORIGIN_IMPERSONATED:
+                return 'impersonated';
         }
         ZLog::Write(LOGLEVEL_WARN, sprintf("Utils->GetFolderOriginStringFromId(): Unknown folder origin for folder with id '%s'", $folderid));
         return 'unknown';

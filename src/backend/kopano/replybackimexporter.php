@@ -509,7 +509,7 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
      * @return void
      */
     private function sendNotificationEmail($message, $oldmessage) {
-        // get email address and full name of the user
+        // get email address and full name of the user that performed the operation (auth user in all cases)
         $userinfo = ZPush::GetBackend()->GetUserDetails(Request::GetAuthUser());
 
         // get the name of the folder

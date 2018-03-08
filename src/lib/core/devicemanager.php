@@ -42,7 +42,9 @@ class DeviceManager {
     const FLD_ORIGIN_CONFIG = "C";
     const FLD_ORIGIN_SHARED = "S";
     const FLD_ORIGIN_GAB = "G";
+    const FLD_ORIGIN_IMPERSONATED = "I";
 
+    const FLD_FLAGS_NONE = 0;
     const FLD_FLAGS_SENDASOWNER = 1;
     const FLD_FLAGS_TRACKSHARENAME = 2;
     const FLD_FLAGS_CALENDARREMINDERS = 4;
@@ -98,7 +100,18 @@ class DeviceManager {
         if ($this->IsKoe() && $this->device->GetKoeVersion() !== false) {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("KOE: %s / %s / %s", $this->device->GetKoeVersion(), $this->device->GetKoeBuild(), strftime("%Y-%m-%d %H:%M", $this->device->GetKoeBuildDate())));
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("KOE Capabilities: %s ", count($this->device->GetKoeCapabilities()) ? implode(',', $this->device->GetKoeCapabilities()) : 'unknown'));
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("KOE Last confirmed access: %s (may be up to 7h old)", ($this->device->GetKoeLastAccess() ? strftime("%Y-%m-%d %H:%M", $this->device->GetKoeLastAccess()) : 'unknown')));
         }
+    }
+
+    /**
+     * Load another different device.
+     * @param ASDevice $asDevice
+     */
+    public function SetDevice($asDevice) {
+        $this->device = $asDevice;
+        $this->loadDeviceData();
+        $this->stateManager->SetDevice($this->device);
     }
 
     /**
@@ -154,6 +167,10 @@ class DeviceManager {
             $this->device->SetKoeBuild(Request::GetKoeBuild());
             $this->device->SetKoeBuildDate(Request::GetKoeBuildDate());
             $this->device->SetKoeCapabilities(Request::GetKoeCapabilities());
+            // update KOE last access time if it's at least 6h old
+            if ($this->device->GetKoeLastAccess() < time() - 21600) {
+                $this->device->SetKoeLastAccess(time());
+            }
         }
 
         // data to be saved
@@ -481,6 +498,12 @@ class DeviceManager {
      */
     public function GetAdditionalUserSyncFolders() {
         $folders = array();
+
+        // In impersonated stores, no additional folders will be synchronized
+        if (Request::GetImpersonatedUser()) {
+            return $folders;
+        }
+
         foreach($this->device->GetAdditionalFolders() as $df) {
             if (!isset($df['flags'])) {
                 $df['flags'] = 0;
@@ -670,6 +693,30 @@ class DeviceManager {
      */
     public function GetSupportedFields($folderid) {
         return $this->device->GetSupportedFields($folderid);
+    }
+
+    /**
+     * Returns the maximum filter type for a folder.
+     * This might be limited globally, per device or per folder.
+     *
+     * @param string    $folderid
+     *
+     * @access public
+     * @return int
+     */
+    public function GetFilterType($folderid) {
+        // either globally configured SYNC_FILTERTIME_MAX or ALL (no limit)
+        $maxAllowed = (defined('SYNC_FILTERTIME_MAX') && SYNC_FILTERTIME_MAX > SYNC_FILTERTYPE_ALL) ? SYNC_FILTERTIME_MAX : SYNC_FILTERTYPE_ALL;
+
+        // TODO we could/should check for a specific value for the folder, if it's available
+        $maxDevice = $this->device->GetSyncFilterType();
+
+        // ALL has a value of 0, all limitations have higher integer values, see SYNC_FILTERTYPE_ALL definition
+        if ($maxDevice !== false && $maxDevice > SYNC_FILTERTYPE_ALL && ($maxAllowed == SYNC_FILTERTYPE_ALL || $maxDevice < $maxAllowed)) {
+            $maxAllowed = $maxDevice;
+        }
+
+        return $maxAllowed;
     }
 
     /**
@@ -1012,13 +1059,14 @@ class DeviceManager {
      *                                                                  'C' (configured)
      *                                                                  'S' (shared)
      *                                                                  'G' (global address book)
+     *                                                                  'I' (impersonated)
      * @param string    $folderName             Folder name of the backend folder
      *
      * @access public
      * @return string/boolean  returns false if there is folderid known for this backendid and $generateNewIdIfNew is not set or false.
      */
     public function GetFolderIdForBackendId($backendid, $generateNewIdIfNew = false, $folderOrigin = self::FLD_ORIGIN_USER, $folderName = null) {
-        if (!in_array($folderOrigin, array(DeviceManager::FLD_ORIGIN_CONFIG, DeviceManager::FLD_ORIGIN_GAB, DeviceManager::FLD_ORIGIN_SHARED, DeviceManager::FLD_ORIGIN_USER))) {
+        if (!in_array($folderOrigin, array(DeviceManager::FLD_ORIGIN_CONFIG, DeviceManager::FLD_ORIGIN_GAB, DeviceManager::FLD_ORIGIN_SHARED, DeviceManager::FLD_ORIGIN_USER, DeviceManager::FLD_ORIGIN_IMPERSONATED))) {
             ZLog::Write(LOGLEVEL_WARN, sprintf("ASDevice->GetFolderIdForBackendId(): folder type '%' is unknown in DeviceManager", $folderOrigin));
         }
         return $this->device->GetFolderIdForBackendId($backendid, $generateNewIdIfNew, $folderOrigin, $folderName);

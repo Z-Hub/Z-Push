@@ -44,6 +44,7 @@ class ZPush {
     const ASV_12 = "12.0";
     const ASV_121 = "12.1";
     const ASV_14 = "14.0";
+    const ASV_141 = "14.1";
 
     /**
      * Command codes for base64 encoded requests (AS >= 12.1)
@@ -95,7 +96,8 @@ class ZPush {
     static private $supportedASVersions = array(
                     self::ASV_12,
                     self::ASV_121,
-                    self::ASV_14
+                    self::ASV_14,
+                    self::ASV_141
                 );
 
     static private $supportedCommands = array(
@@ -283,6 +285,10 @@ class ZPush {
                 throw new FatalMisconfigurationException(sprintf("Your policies' configuration file doesn't contain the required [default] section. Please check the '%s' file.", $policyfile));
             }
         }
+
+        if (defined('USE_X_FORWARDED_FOR_HEADER')) {
+            ZLog::Write(LOGLEVEL_INFO, "The configuration parameter 'USE_X_FORWARDED_FOR_HEADER' was deprecated in favor of 'USE_CUSTOM_REMOTE_IP_HEADER'. Please update your configuration.");
+        }
         return true;
     }
 
@@ -458,6 +464,21 @@ class ZPush {
             ZPush::$deviceManager = new DeviceManager();
 
         return ZPush::$deviceManager;
+    }
+
+    /**
+     * Load another device in the DeviceManager and return it.
+     *
+     * @param ASDevice $asDevice
+     * @param boolean $initialize - default: true
+     * @return DeviceManager
+     */
+    static public function GetDeviceManagerWithDevice($asDevice, $initialize = true) {
+        $dm = ZPush::GetDeviceManager($initialize);
+        if ($dm) {
+            $dm->SetDevice($asDevice);
+        }
+        return $dm;
     }
 
     /**
@@ -677,7 +698,13 @@ class ZPush {
                         continue;
                     }
 
-                    $folder = self::GetDeviceManager()->BuildSyncFolderObject($af['store'], $af['folderid'], '0', $af['name'], $af['type'], 0, DeviceManager::FLD_ORIGIN_CONFIG);
+                    // don't fail hard if no flags are set, but we at least warn about it
+                    if (!isset($af['flags'])) {
+                        ZLog::Write(LOGLEVEL_WARN, sprintf("ZPush::getAddSyncFolders() : the additional folder '%s' is not configured completely. Missing 'flags' parameter, defaulting to DeviceManager::FLD_FLAGS_NONE.", $af['name']));
+                        $af['flags'] = DeviceManager::FLD_FLAGS_NONE;
+                    }
+
+                    $folder = self::GetDeviceManager()->BuildSyncFolderObject($af['store'], $af['folderid'], '0', $af['name'], $af['type'], $af['flags'], DeviceManager::FLD_ORIGIN_CONFIG);
                     self::$addSyncFolders[$folder->BackendId] = $folder;
                 }
             }

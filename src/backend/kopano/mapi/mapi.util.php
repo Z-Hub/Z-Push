@@ -35,24 +35,7 @@
  */
 function makeGuid($guid)
 {
-    // remove the { and } from the string and explode it into an array
-    $guidArray = explode('-', substr($guid, 1,strlen($guid)-2));
-
-    // convert to hex!
-    $data1[0] = intval(substr($guidArray[0], 0, 4),16); // we need to split the unsigned long
-    $data1[1] = intval(substr($guidArray[0], 4, 4),16);
-    $data2 = intval($guidArray[1], 16);
-    $data3 = intval($guidArray[2], 16);
-
-    $data4[0] = intval(substr($guidArray[3], 0, 2),16);
-    $data4[1] = intval(substr($guidArray[3], 2, 2),16);
-
-    for($i=0; $i < 6; $i++)
-    {
-        $data4[] = intval(substr($guidArray[4], $i*2, 2),16);
-    }
-
-    return pack("vvvvCCCCCCCC", $data1[1], $data1[0], $data2, $data3, $data4[0],$data4[1],$data4[2],$data4[3],$data4[4],$data4[5],$data4[6],$data4[7]);
+    return pack("vvvv", hexdec(substr($guid, 5, 4)), hexdec(substr($guid, 1, 4)), hexdec(substr($guid, 10, 4)), hexdec(substr($guid, 15, 4))) . hex2bin(substr($guid, 20, 4)) . hex2bin(substr($guid, 25, 12));
 }
 
 /**
@@ -68,11 +51,9 @@ function get_mapi_error_name($errcode=null)
     }
 
     if ($errcode !== 0) {
-        // get_defined_constants(true) is preferred, but crashes PHP
-        // https://bugs.php.net/bug.php?id=61156
-        $allConstants = get_defined_constants();
-
-        foreach ($allConstants as $key => $value) {
+        // Retrieve constants categories, MAPI error names are defined
+        // in the 'user' category, since the WebApp code defines it in mapicode.php.
+        foreach (get_defined_constants(true)['user'] as $key => $value) {
             /**
              * If PHP encounters a number beyond the bounds of the integer type,
              * it will be interpreted as a float instead, so when comparing these error codes
@@ -178,9 +159,8 @@ function propIsError($property, $propArray)
 {
     if (array_key_exists(mapi_prop_tag(PT_ERROR, mapi_prop_id($property)), $propArray)) {
         return $propArray[mapi_prop_tag(PT_ERROR, mapi_prop_id($property))];
-    } else {
-        return false;
     }
+    return false;
 }
 
 /******** Macro Functions for PR_DISPLAY_TYPE_EX values *********/
@@ -271,7 +251,6 @@ function getCalendarItems($store, $calendar, $viewstart, $viewend, $propsrequest
     // Get requested properties, plus whatever we need
     $proplist = array(PR_ENTRYID, $properties["recurring"], $properties["recurring_data"], $properties["timezone_data"]);
     $proplist = array_merge($proplist, $propsrequested);
-    $propslist = array_unique($proplist);
 
     $rows = mapi_table_queryallrows($table, $proplist, $restriction);
 

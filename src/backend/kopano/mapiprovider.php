@@ -215,18 +215,31 @@ class MAPIProvider {
             $message->organizername = w2u($messageprops[$appointmentprops["representingname"]]);
         }
 
-        if(isset($messageprops[$appointmentprops["timezonetag"]]))
+        $appTz = false; // if the appointment has some timezone information saved on the server
+        if (!empty($messageprops[$appointmentprops["timezonetag"]])) {
             $tz = $this->getTZFromMAPIBlob($messageprops[$appointmentprops["timezonetag"]]);
+            $appTz = true;
+        }
+        elseif (!empty($messageprops[$appointmentprops["timezonedesc"]])) {
+            // Windows uses UTC in timezone description in opposite to mstzones in TimezoneUtil which uses GMT
+            $wintz = str_replace("UTC", "GMT", $messageprops[$appointmentprops["timezonedesc"]]);
+            $tz = TimezoneUtil::GetFullTZFromTZName(TimezoneUtil::GetTZNameFromWinTZ($wintz));
+            $appTz = true;
+        }
         else {
             // set server default timezone (correct timezone should be configured!)
             $tz = TimezoneUtil::GetFullTZ();
         }
-        $message->timezone = base64_encode(TimezoneUtil::GetSyncBlobFromTZ($tz));
 
         if(isset($messageprops[$appointmentprops["isrecurring"]]) && $messageprops[$appointmentprops["isrecurring"]]) {
             // Process recurrence
             $message->recurrence = new SyncRecurrence();
             $this->getRecurrence($mapimessage, $messageprops, $message, $message->recurrence, $tz);
+
+            // outlook seems to honour the timezone information contrary to other clients
+            if (empty($message->alldayevent) || Request::IsOutlook()) {
+                $message->timezone = base64_encode(TimezoneUtil::GetSyncBlobFromTZ($tz));
+            }
         }
 
         // Do attendees
@@ -297,7 +310,7 @@ class MAPIProvider {
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("MAPIProvider->getAppointment: adding ourself as an attendee for iOS6 workaround"));
                 $attendee = new SyncAttendee();
 
-                $meinfo = mapi_zarafa_getuser_by_name($this->store, Request::GetAuthUser());
+                $meinfo = mapi_zarafa_getuser_by_name($this->store, Request::GetUser());
 
                 if (is_array($meinfo)) {
                     $attendee->email = w2u($meinfo["emailaddress"]);
@@ -314,7 +327,7 @@ class MAPIProvider {
         // the user is the owner or it will not work properly with android devices
         // @see https://jira.z-hub.io/browse/ZP-1020
         if(isset($messageprops[$appointmentprops["meetingstatus"]]) && $messageprops[$appointmentprops["meetingstatus"]] == olNonMeeting && empty($message->attendees)) {
-            $meinfo = mapi_zarafa_getuser_by_name($this->store, Request::GetAuthUser());
+            $meinfo = mapi_zarafa_getuser_by_name($this->store, Request::GetUser());
 
             if (is_array($meinfo)) {
                 $message->organizeremail = w2u($meinfo["emailaddress"]);
@@ -341,6 +354,22 @@ class MAPIProvider {
         // If the busystatus has the value of -1, we should be interpreted as tentative (1) / ZP-581
         if (isset($message->busystatus) && $message->busystatus == -1) {
             $message->busystatus = fbTentative;
+        }
+
+        // All-day events might appear as 24h (or multiple of it) long when they start not exactly at midnight (+/- bias of the timezone)
+        if (isset($message->alldayevent) && $message->alldayevent) {
+            $localStartTime = localtime($message->starttime, 1);
+
+            // The appointment is all-day but doesn't start at midnight.
+            // If it was created in another timezone and we have that information,
+            // set the startime to the midnight of the current timezone.
+            if ($appTz && ($localStartTime['tm_hour'] || $localStartTime['tm_min'])) {
+                ZLog::Write(LOGLEVEL_DEBUG, "MAPIProvider->getAppointment(): all-day event starting not midnight.");
+                $duration = $message->endtime - $message->starttime;
+                $serverTz = TimezoneUtil::GetFullTZ();
+                $message->starttime = $this->getGMTTimeByTZ($this->getLocaltimeByTZ($message->starttime, $tz), $serverTz);
+                $message->endtime = $message->starttime + $duration;
+            }
         }
 
         return $message;
@@ -594,23 +623,16 @@ class MAPIProvider {
             $props = $this->getProps($mapimessage, $meetingrequestproperties);
 
             // Get the GOID
-            if(isset($props[$meetingrequestproperties["goidtag"]])) {
-                $req = new Meetingrequest($this->store, $mapimessage, $this->session);
-                $items = $req->findCalendarItems($props[$meetingrequestproperties["goidtag"]]);
-                // GlobalObjId support was removed in AS 16.0
-                if (Request::IsGlobalObjIdHexClient() && !empty($items)) {
-                    $message->meetingrequest->globalobjid = strtoupper(bin2hex($props[$meetingrequestproperties["goidtag"]]));
-                }
-                else {
-                    $message->meetingrequest->globalobjid = base64_encode($props[$meetingrequestproperties["goidtag"]]);
-                }
-            }
+            if(isset($props[$meetingrequestproperties["goidtag"]]))
+                $message->meetingrequest->globalobjid = base64_encode($props[$meetingrequestproperties["goidtag"]]);
 
             // Set Timezone
-            if(isset($props[$meetingrequestproperties["timezonetag"]]))
+            if (isset($props[$meetingrequestproperties["timezonetag"]])) {
                 $tz = $this->getTZFromMAPIBlob($props[$meetingrequestproperties["timezonetag"]]);
-            else
-                $tz = $this->getGMTTZ();
+            }
+            else {
+                $tz = TimezoneUtil::GetFullTZ();
+            }
 
             $message->meetingrequest->timezone = base64_encode(TimezoneUtil::GetSyncBlobFromTZ($tz));
 
@@ -709,6 +731,36 @@ class MAPIProvider {
                 }
             }
             $message->contentclass = DEFAULT_CALENDAR_CONTENTCLASS;
+
+            // MeetingMessageType values
+            // 0 = A silent update was performed, or the message type is unspecified.
+            // 1 = Initial meeting request.
+            // 2 = Full update.
+            // 3 = Informational update.
+            // 4 = Outdated. A newer meeting request or meeting update was received after this message.
+            // 5 = Identifies the delegator's copy of the meeting request.
+            // 6 = Identifies that the meeting request has been delegated and the meeting request cannot be responded to.
+            $message->meetingrequest->meetingmessagetype = mtgEmpty;
+
+            if (isset($props[$meetingrequestproperties["meetingType"]])) {
+                switch ($props[$meetingrequestproperties["meetingType"]]) {
+                    case mtgRequest:
+                        $message->meetingrequest->meetingmessagetype = 1;
+                        break;
+                    case mtgFull:
+                        $message->meetingrequest->meetingmessagetype = 2;
+                        break;
+                    case mtgInfo:
+                        $message->meetingrequest->meetingmessagetype = 3;
+                        break;
+                    case mtgOutOfDate:
+                        $message->meetingrequest->meetingmessagetype = 4;
+                        break;
+                    case mtgDelegatorCopy:
+                        $message->meetingrequest->meetingmessagetype = 5;
+                        break;
+                }
+            }
         }
 
         // Add attachments
@@ -937,8 +989,12 @@ class MAPIProvider {
         }
 
         $folder->BackendId = bin2hex($folderprops[PR_SOURCE_KEY]);
-        $folder->serverid = ZPush::GetDeviceManager()->GetFolderIdForBackendId($folder->BackendId, true, DeviceManager::FLD_ORIGIN_USER, $folderprops[PR_DISPLAY_NAME]);
-        if($folderprops[PR_PARENT_ENTRYID] == $storeprops[PR_IPM_SUBTREE_ENTRYID]) {
+        $folderOrigin = DeviceManager::FLD_ORIGIN_USER;
+        if (ZPush::GetBackend()->GetImpersonatedUser()) {
+            $folderOrigin = DeviceManager::FLD_ORIGIN_IMPERSONATED;
+        }
+        $folder->serverid = ZPush::GetDeviceManager()->GetFolderIdForBackendId($folder->BackendId, true, $folderOrigin, $folderprops[PR_DISPLAY_NAME]);
+        if($folderprops[PR_PARENT_ENTRYID] == $storeprops[PR_IPM_SUBTREE_ENTRYID] || $folderprops[PR_PARENT_ENTRYID] == $storeprops[PR_IPM_PUBLIC_FOLDERS_ENTRYID]) {
             $folder->parentid = "0";
         }
         else {
@@ -1293,6 +1349,10 @@ class MAPIProvider {
             $this->setASbody($appointment->asbody, $props, $appointmentprops);
         }
 
+        if ($tz !== false) {
+            $props[$appointmentprops["timezonetag"]] = $this->getMAPIBlobFromTZ($tz);
+        }
+
         if(isset($appointment->recurrence)) {
             // Set PR_ICON_INDEX to 1025 to show correct icon in category view
             $props[$appointmentprops["icon"]] = 1025;
@@ -1411,8 +1471,8 @@ class MAPIProvider {
             $props[$appointmentprops["representingentryid"]] = $storeProps[PR_MAILBOX_OWNER_ENTRYID];
             $displayname = $this->getFullnameFromEntryID($storeProps[PR_MAILBOX_OWNER_ENTRYID]);
 
-            $props[$appointmentprops["representingname"]] = ($displayname !== false) ? $displayname : Request::GetAuthUser();
-            $props[$appointmentprops["sentrepresentingemail"]] = Request::GetAuthUser();
+            $props[$appointmentprops["representingname"]] = ($displayname !== false) ? $displayname : Request::GetUser();
+            $props[$appointmentprops["sentrepresentingemail"]] = Request::GetUser();
             $props[$appointmentprops["sentrepresentingaddt"]] = "ZARAFA";
             $props[$appointmentprops["sentrepresentinsrchk"]] = $props[$appointmentprops["sentrepresentingaddt"]].":".$props[$appointmentprops["sentrepresentingemail"]];
 
@@ -1671,9 +1731,17 @@ class MAPIProvider {
             // set recurrence start here because it's calculated differently for tasks and appointments
             $recur["start"] = $task->recurrence->start;
             $recur["regen"] = (isset($task->recurrence->regenerate) && $task->recurrence->regenerate) ? 1 : 0;
+            // OL regenerates recurring task itself, but setting deleteOccurrence is required so that PHP-MAPI doesn't regenerate
+            // completed occurrence of a task.
+            if ($recur["regen"] == 0) {
+                $recur["deleteOccurrence"] = 0;
+            }
             //Also add dates to $recur
             $recur["duedate"] = $task->duedate;
             $recur["complete"] = (isset($task->complete) && $task->complete) ? 1 : 0;
+            if (isset($task->datecompleted)) {
+                $recur["datecompleted"] = $task->datecompleted;
+            }
             $recurrence->setRecurrence($recur);
         }
 
@@ -1686,7 +1754,7 @@ class MAPIProvider {
         $p = array( $taskprops["owner"]);
         $owner = $this->getProps($mapimessage, $p);
         if (!isset($owner[$taskprops["owner"]])) {
-            $userinfo = mapi_zarafa_getuser_by_name($this->store, Request::GetAuthUser());
+            $userinfo = mapi_zarafa_getuser_by_name($this->store, Request::GetUser());
             if(mapi_last_hresult() == NOERROR && isset($userinfo["fullname"])) {
                 $props[$taskprops["owner"]] = $userinfo["fullname"];
             }
@@ -2483,7 +2551,7 @@ class MAPIProvider {
             }
             elseif (isset($message->internetcpid) && $bpReturnType == SYNC_BODYPREFERENCE_HTML) {
                 // if PR_HTML is UTF-8 we can stream it directly, else we have to convert to UTF-8 & wrap it
-                if (Utils::GetCodepageCharset($message->internetcpid) == "utf-8") {
+                if ($message->internetcpid == INTERNET_CPID_UTF8) {
                     $message->asbody->data = MAPIStreamWrapper::Open($stream, $truncateHtmlSafe);
                 }
                 else {
@@ -2533,32 +2601,37 @@ class MAPIProvider {
      * @return boolean
      */
     private function imtoinet($mapimessage, &$message) {
-        if (function_exists("mapi_inetmapi_imtoinet")) {
+        $mapiEmail = mapi_getprops($mapimessage, array(PR_EC_IMAP_EMAIL));
+        $stream = false;
+        if (isset($mapiEmail[PR_EC_IMAP_EMAIL]) || MAPIUtils::GetError(PR_EC_IMAP_EMAIL, $mapiEmail) == MAPI_E_NOT_ENOUGH_MEMORY) {
+            $stream = mapi_openproperty($mapimessage, PR_EC_IMAP_EMAIL, IID_IStream, 0, 0);
+            ZLog::Write(LOGLEVEL_DEBUG, "MAPIProvider->imtoinet(): using PR_EC_IMAP_EMAIL as full RFC822 message");
+        }
+        else {
             $addrbook = $this->getAddressbook();
             $stream = mapi_inetmapi_imtoinet($this->session, $addrbook, $mapimessage, array('use_tnef' => -1));
-
-            if (is_resource($stream)) {
-                $mstreamstat = mapi_stream_stat($stream);
-                $streamsize = $mstreamstat["cb"];
-                if (isset($streamsize)) {
-                    if (Request::GetProtocolVersion() >= 12.0) {
-                        if (!isset($message->asbody))
-                            $message->asbody = new SyncBaseBody();
-                        $message->asbody->data = MAPIStreamWrapper::Open($stream);
-                        $message->asbody->estimatedDataSize = $streamsize;
-                        $message->asbody->truncated = 0;
-                    }
-                    else {
-                        $message->mimedata = MAPIStreamWrapper::Open($stream);
-                        $message->mimesize = $streamsize;
-                        $message->mimetruncated = 0;
-                    }
-                    unset($message->body, $message->bodytruncated);
-                    return true;
-                }
-            }
-            ZLog::Write(LOGLEVEL_ERROR, sprintf("MAPIProvider->imtoinet(): got no stream or content from mapi_inetmapi_imtoinet()"));
         }
+        if (is_resource($stream)) {
+            $mstreamstat = mapi_stream_stat($stream);
+            $streamsize = $mstreamstat["cb"];
+            if (isset($streamsize)) {
+                if (Request::GetProtocolVersion() >= 12.0) {
+                    if (!isset($message->asbody))
+                        $message->asbody = new SyncBaseBody();
+                    $message->asbody->data = MAPIStreamWrapper::Open($stream);
+                    $message->asbody->estimatedDataSize = $streamsize;
+                    $message->asbody->truncated = 0;
+                }
+                else {
+                    $message->mimedata = MAPIStreamWrapper::Open($stream);
+                    $message->mimesize = $streamsize;
+                    $message->mimetruncated = 0;
+                }
+                unset($message->body, $message->bodytruncated);
+                return true;
+            }
+        }
+        ZLog::Write(LOGLEVEL_ERROR, "MAPIProvider->imtoinet(): got no stream or content from mapi_inetmapi_imtoinet()");
 
         return false;
     }

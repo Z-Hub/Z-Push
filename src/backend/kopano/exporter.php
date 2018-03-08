@@ -69,8 +69,13 @@ class ExportChangesICS implements IExportChanges{
                 $entryid = mapi_msgstore_entryidfromsourcekey($store, $folderid);
             }
             else {
-                $storeprops = mapi_getprops($this->store, array(PR_IPM_SUBTREE_ENTRYID));
-                $entryid = $storeprops[PR_IPM_SUBTREE_ENTRYID];
+                $storeprops = mapi_getprops($this->store, array(PR_IPM_SUBTREE_ENTRYID, PR_IPM_PUBLIC_FOLDERS_ENTRYID));
+                if (ZPush::GetBackend()->GetImpersonatedUser() == 'system') {
+                    $entryid = $storeprops[PR_IPM_PUBLIC_FOLDERS_ENTRYID];
+                }
+                else {
+                    $entryid = $storeprops[PR_IPM_SUBTREE_ENTRYID];
+                }
             }
 
             $folder = false;
@@ -82,16 +87,16 @@ class ExportChangesICS implements IExportChanges{
             }
 
             // Get the actual ICS exporter
-            if($folderid) {
-                if ($folder) {
+            if ($folder) {
+                if ($folderid) {
                     $this->exporter = mapi_openproperty($folder, PR_CONTENTS_SYNCHRONIZER, IID_IExchangeExportChanges, 0 , 0);
                 }
                 else {
-                    $this->exporter = false;
+                    $this->exporter = mapi_openproperty($folder, PR_HIERARCHY_SYNCHRONIZER, IID_IExchangeExportChanges, 0 , 0);
                 }
             }
             else {
-                $this->exporter = mapi_openproperty($folder, PR_HIERARCHY_SYNCHRONIZER, IID_IExchangeExportChanges, 0 , 0);
+                $this->exporter = false;
             }
         }
         catch (MAPIException $me) {

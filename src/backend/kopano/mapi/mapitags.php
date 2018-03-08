@@ -24,14 +24,10 @@ define('PR_ACKNOWLEDGEMENT_MODE'                      ,mapi_prop_tag(PT_LONG,   
 define('PR_ALTERNATE_RECIPIENT_ALLOWED'               ,mapi_prop_tag(PT_BOOLEAN,     0x0002));
 define('PR_AUTHORIZING_USERS'                         ,mapi_prop_tag(PT_BINARY,      0x0003));
 define('PR_AUTO_FORWARD_COMMENT'                      ,mapi_prop_tag(PT_TSTRING,     0x0004));
-define('PR_AUTO_FORWARD_COMMENT_W'                    ,mapi_prop_tag(PT_UNICODE,     0x0004));
-define('PR_AUTO_FORWARD_COMMENT_A'                    ,mapi_prop_tag(PT_STRING8,     0x0004));
 define('PR_AUTO_FORWARDED'                            ,mapi_prop_tag(PT_BOOLEAN,     0x0005));
 define('PR_CONTENT_CONFIDENTIALITY_ALGORITHM_ID'      ,mapi_prop_tag(PT_BINARY,      0x0006));
 define('PR_CONTENT_CORRELATOR'                        ,mapi_prop_tag(PT_BINARY,      0x0007));
 define('PR_CONTENT_IDENTIFIER'                        ,mapi_prop_tag(PT_TSTRING,     0x0008));
-define('PR_CONTENT_IDENTIFIER_W'                      ,mapi_prop_tag(PT_UNICODE,     0x0008));
-define('PR_CONTENT_IDENTIFIER_A'                      ,mapi_prop_tag(PT_STRING8,     0x0008));
 define('PR_CONTENT_LENGTH'                            ,mapi_prop_tag(PT_LONG,        0x0009));
 define('PR_CONTENT_RETURN_REQUESTED'                  ,mapi_prop_tag(PT_BOOLEAN,     0x000A));
 
@@ -43,6 +39,7 @@ define('PR_CONVERSION_EITS'                           ,mapi_prop_tag(PT_BINARY, 
 define('PR_CONVERSION_WITH_LOSS_PROHIBITED'           ,mapi_prop_tag(PT_BOOLEAN,     0x000D));
 define('PR_CONVERTED_EITS'                            ,mapi_prop_tag(PT_BINARY,      0x000E));
 define('PR_DEFERRED_DELIVERY_TIME'                    ,mapi_prop_tag(PT_SYSTIME,     0x000F));
+define('PR_DEFERRED_SEND_TIME'                        ,mapi_prop_tag(PT_SYSTIME,     0x3FEF));
 define('PR_DELIVER_TIME'                              ,mapi_prop_tag(PT_SYSTIME,     0x0010));
 define('PR_DISCARD_REASON'                            ,mapi_prop_tag(PT_LONG,        0x0011));
 define('PR_DISCLOSURE_OF_RECIPIENTS'                  ,mapi_prop_tag(PT_BOOLEAN,     0x0012));
@@ -54,8 +51,6 @@ define('PR_IMPORTANCE'                                ,mapi_prop_tag(PT_LONG,   
 define('PR_IPM_ID'                                    ,mapi_prop_tag(PT_BINARY,      0x0018));
 define('PR_LATEST_DELIVERY_TIME'                      ,mapi_prop_tag(PT_SYSTIME,     0x0019));
 define('PR_MESSAGE_CLASS'                             ,mapi_prop_tag(PT_TSTRING,     0x001A));
-define('PR_MESSAGE_CLASS_W'                           ,mapi_prop_tag(PT_UNICODE,     0x001A));
-define('PR_MESSAGE_CLASS_A'                           ,mapi_prop_tag(PT_STRING8,     0x001A));
 define('PR_MESSAGE_DELIVERY_ID'                       ,mapi_prop_tag(PT_BINARY,      0x001B));
 
 
@@ -82,8 +77,6 @@ define('PR_REDIRECTION_HISTORY'                       ,mapi_prop_tag(PT_BINARY, 
 define('PR_RELATED_IPMS'                              ,mapi_prop_tag(PT_BINARY,      0x002D));
 define('PR_ORIGINAL_SENSITIVITY'                      ,mapi_prop_tag(PT_LONG,        0x002E));
 define('PR_LANGUAGES'                                 ,mapi_prop_tag(PT_TSTRING,     0x002F));
-define('PR_LANGUAGES_W'                               ,mapi_prop_tag(PT_UNICODE,     0x002F));
-define('PR_LANGUAGES_A'                               ,mapi_prop_tag(PT_STRING8,     0x002F));
 define('PR_REPLY_TIME'                                ,mapi_prop_tag(PT_SYSTIME,     0x0030));
 define('PR_REPORT_TAG'                                ,mapi_prop_tag(PT_BINARY,      0x0031));
 define('PR_REPORT_TIME'                               ,mapi_prop_tag(PT_SYSTIME,     0x0032));
@@ -92,51 +85,31 @@ define('PR_SECURITY'                                  ,mapi_prop_tag(PT_LONG,   
 define('PR_INCOMPLETE_COPY'                           ,mapi_prop_tag(PT_BOOLEAN,     0x0035));
 define('PR_SENSITIVITY'                               ,mapi_prop_tag(PT_LONG,        0x0036));
 define('PR_SUBJECT'                                   ,mapi_prop_tag(PT_TSTRING,     0x0037));
-define('PR_SUBJECT_W'                                 ,mapi_prop_tag(PT_UNICODE,     0x0037));
-define('PR_SUBJECT_A'                                 ,mapi_prop_tag(PT_STRING8,     0x0037));
 define('PR_SUBJECT_IPM'                               ,mapi_prop_tag(PT_BINARY,      0x0038));
 define('PR_CLIENT_SUBMIT_TIME'                        ,mapi_prop_tag(PT_SYSTIME,     0x0039));
 define('PR_REPORT_NAME'                               ,mapi_prop_tag(PT_TSTRING,     0x003A));
-define('PR_REPORT_NAME_W'                             ,mapi_prop_tag(PT_UNICODE,     0x003A));
-define('PR_REPORT_NAME_A'                             ,mapi_prop_tag(PT_STRING8,     0x003A));
 define('PR_SENT_REPRESENTING_SEARCH_KEY'              ,mapi_prop_tag(PT_BINARY,      0x003B));
 define('PR_X400_CONTENT_TYPE'                         ,mapi_prop_tag(PT_BINARY,      0x003C));
 define('PR_SUBJECT_PREFIX'                            ,mapi_prop_tag(PT_TSTRING,     0x003D));
-define('PR_SUBJECT_PREFIX_W'                          ,mapi_prop_tag(PT_UNICODE,     0x003D));
-define('PR_SUBJECT_PREFIX_A'                          ,mapi_prop_tag(PT_STRING8,     0x003D));
 define('PR_NON_RECEIPT_REASON'                        ,mapi_prop_tag(PT_LONG,        0x003E));
 define('PR_RECEIVED_BY_ENTRYID'                       ,mapi_prop_tag(PT_BINARY,      0x003F));
 define('PR_RECEIVED_BY_NAME'                          ,mapi_prop_tag(PT_TSTRING,     0x0040));
-define('PR_RECEIVED_BY_NAME_W'                        ,mapi_prop_tag(PT_UNICODE,     0x0040));
-define('PR_RECEIVED_BY_NAME_A'                        ,mapi_prop_tag(PT_STRING8,     0x0040));
 define('PR_SENT_REPRESENTING_ENTRYID'                 ,mapi_prop_tag(PT_BINARY,      0x0041));
 define('PR_SENT_REPRESENTING_NAME'                    ,mapi_prop_tag(PT_TSTRING,     0x0042));
-define('PR_SENT_REPRESENTING_NAME_W'                  ,mapi_prop_tag(PT_UNICODE,     0x0042));
-define('PR_SENT_REPRESENTING_NAME_A'                  ,mapi_prop_tag(PT_STRING8,     0x0042));
 define('PR_RCVD_REPRESENTING_ENTRYID'                 ,mapi_prop_tag(PT_BINARY,      0x0043));
 define('PR_RCVD_REPRESENTING_NAME'                    ,mapi_prop_tag(PT_TSTRING,     0x0044));
-define('PR_RCVD_REPRESENTING_NAME_W'                  ,mapi_prop_tag(PT_UNICODE,     0x0044));
-define('PR_RCVD_REPRESENTING_NAME_A'                  ,mapi_prop_tag(PT_STRING8,     0x0044));
 define('PR_REPORT_ENTRYID'                            ,mapi_prop_tag(PT_BINARY,      0x0045));
 define('PR_READ_RECEIPT_ENTRYID'                      ,mapi_prop_tag(PT_BINARY,      0x0046));
 define('PR_MESSAGE_SUBMISSION_ID'                     ,mapi_prop_tag(PT_BINARY,      0x0047));
 define('PR_PROVIDER_SUBMIT_TIME'                      ,mapi_prop_tag(PT_SYSTIME,     0x0048));
 define('PR_ORIGINAL_SUBJECT'                          ,mapi_prop_tag(PT_TSTRING,     0x0049));
-define('PR_ORIGINAL_SUBJECT_W'                        ,mapi_prop_tag(PT_UNICODE,     0x0049));
-define('PR_ORIGINAL_SUBJECT_A'                        ,mapi_prop_tag(PT_STRING8,     0x0049));
 define('PR_DISC_VAL'                                  ,mapi_prop_tag(PT_BOOLEAN,     0x004A));
 define('PR_ORIG_MESSAGE_CLASS'                        ,mapi_prop_tag(PT_TSTRING,     0x004B));
-define('PR_ORIG_MESSAGE_CLASS_W'                      ,mapi_prop_tag(PT_UNICODE,     0x004B));
-define('PR_ORIG_MESSAGE_CLASS_A'                      ,mapi_prop_tag(PT_STRING8,     0x004B));
 define('PR_ORIGINAL_AUTHOR_ENTRYID'                   ,mapi_prop_tag(PT_BINARY,      0x004C));
 define('PR_ORIGINAL_AUTHOR_NAME'                      ,mapi_prop_tag(PT_TSTRING,     0x004D));
-define('PR_ORIGINAL_AUTHOR_NAME_W'                    ,mapi_prop_tag(PT_UNICODE,     0x004D));
-define('PR_ORIGINAL_AUTHOR_NAME_A'                    ,mapi_prop_tag(PT_STRING8,     0x004D));
 define('PR_ORIGINAL_SUBMIT_TIME'                      ,mapi_prop_tag(PT_SYSTIME,     0x004E));
 define('PR_REPLY_RECIPIENT_ENTRIES'                   ,mapi_prop_tag(PT_BINARY,      0x004F));
 define('PR_REPLY_RECIPIENT_NAMES'                     ,mapi_prop_tag(PT_TSTRING,     0x0050));
-define('PR_REPLY_RECIPIENT_NAMES_W'                   ,mapi_prop_tag(PT_UNICODE,     0x0050));
-define('PR_REPLY_RECIPIENT_NAMES_A'                   ,mapi_prop_tag(PT_STRING8,     0x0050));
 
 define('PR_RECEIVED_BY_SEARCH_KEY'                    ,mapi_prop_tag(PT_BINARY,      0x0051));
 define('PR_RCVD_REPRESENTING_SEARCH_KEY'              ,mapi_prop_tag(PT_BINARY,      0x0052));
@@ -150,13 +123,9 @@ define('PR_MESSAGE_CC_ME'                             ,mapi_prop_tag(PT_BOOLEAN,
 define('PR_MESSAGE_RECIP_ME'                          ,mapi_prop_tag(PT_BOOLEAN,     0x0059));
 
 define('PR_ORIGINAL_SENDER_NAME'                      ,mapi_prop_tag(PT_TSTRING,     0x005A));
-define('PR_ORIGINAL_SENDER_NAME_W'                    ,mapi_prop_tag(PT_UNICODE,     0x005A));
-define('PR_ORIGINAL_SENDER_NAME_A'                    ,mapi_prop_tag(PT_STRING8,     0x005A));
 define('PR_ORIGINAL_SENDER_ENTRYID'                   ,mapi_prop_tag(PT_BINARY,      0x005B));
 define('PR_ORIGINAL_SENDER_SEARCH_KEY'                ,mapi_prop_tag(PT_BINARY,      0x005C));
 define('PR_ORIGINAL_SENT_REPRESENTING_NAME'           ,mapi_prop_tag(PT_TSTRING,     0x005D));
-define('PR_ORIGINAL_SENT_REPRESENTING_NAME_W'         ,mapi_prop_tag(PT_UNICODE,     0x005D));
-define('PR_ORIGINAL_SENT_REPRESENTING_NAME_A'         ,mapi_prop_tag(PT_STRING8,     0x005D));
 define('PR_ORIGINAL_SENT_REPRESENTING_ENTRYID'        ,mapi_prop_tag(PT_BINARY,      0x005E));
 define('PR_ORIGINAL_SENT_REPRESENTING_SEARCH_KEY'     ,mapi_prop_tag(PT_BINARY,      0x005F));
 
@@ -166,72 +135,34 @@ define('PR_OWNER_APPT_ID'                             ,mapi_prop_tag(PT_LONG,   
 define('PR_RESPONSE_REQUESTED'                        ,mapi_prop_tag(PT_BOOLEAN,     0x0063));
 
 define('PR_SENT_REPRESENTING_ADDRTYPE'                ,mapi_prop_tag(PT_TSTRING,     0x0064));
-define('PR_SENT_REPRESENTING_ADDRTYPE_W'              ,mapi_prop_tag(PT_UNICODE,     0x0064));
-define('PR_SENT_REPRESENTING_ADDRTYPE_A'              ,mapi_prop_tag(PT_STRING8,     0x0064));
 define('PR_SENT_REPRESENTING_EMAIL_ADDRESS'           ,mapi_prop_tag(PT_TSTRING,     0x0065));
-define('PR_SENT_REPRESENTING_EMAIL_ADDRESS_W'         ,mapi_prop_tag(PT_UNICODE,     0x0065));
-define('PR_SENT_REPRESENTING_EMAIL_ADDRESS_A'         ,mapi_prop_tag(PT_STRING8,     0x0065));
 
 define('PR_ORIGINAL_SENDER_ADDRTYPE'                  ,mapi_prop_tag(PT_TSTRING,     0x0066));
-define('PR_ORIGINAL_SENDER_ADDRTYPE_W'                ,mapi_prop_tag(PT_UNICODE,     0x0066));
-define('PR_ORIGINAL_SENDER_ADDRTYPE_A'                ,mapi_prop_tag(PT_STRING8,     0x0066));
 define('PR_ORIGINAL_SENDER_EMAIL_ADDRESS'             ,mapi_prop_tag(PT_TSTRING,     0x0067));
-define('PR_ORIGINAL_SENDER_EMAIL_ADDRESS_W'           ,mapi_prop_tag(PT_UNICODE,     0x0067));
-define('PR_ORIGINAL_SENDER_EMAIL_ADDRESS_A'           ,mapi_prop_tag(PT_STRING8,     0x0067));
 
 define('PR_ORIGINAL_SENT_REPRESENTING_ADDRTYPE'       ,mapi_prop_tag(PT_TSTRING,     0x0068));
-define('PR_ORIGINAL_SENT_REPRESENTING_ADDRTYPE_W'     ,mapi_prop_tag(PT_UNICODE,     0x0068));
-define('PR_ORIGINAL_SENT_REPRESENTING_ADDRTYPE_A'     ,mapi_prop_tag(PT_STRING8,     0x0068));
 define('PR_ORIGINAL_SENT_REPRESENTING_EMAIL_ADDRESS'  ,mapi_prop_tag(PT_TSTRING,     0x0069));
-define('PR_ORIGINAL_SENT_REPRESENTING_EMAIL_ADDRESS_W',mapi_prop_tag(PT_UNICODE,     0x0069));
-define('PR_ORIGINAL_SENT_REPRESENTING_EMAIL_ADDRESS_A',mapi_prop_tag(PT_STRING8,     0x0069));
 
 define('PR_CONVERSATION_TOPIC'                        ,mapi_prop_tag(PT_TSTRING,     0x0070));
-define('PR_CONVERSATION_TOPIC_W'                      ,mapi_prop_tag(PT_UNICODE,     0x0070));
-define('PR_CONVERSATION_TOPIC_A'                      ,mapi_prop_tag(PT_STRING8,     0x0070));
 define('PR_CONVERSATION_INDEX'                        ,mapi_prop_tag(PT_BINARY,      0x0071));
 
 define('PR_ORIGINAL_DISPLAY_BCC'                      ,mapi_prop_tag(PT_TSTRING,     0x0072));
-define('PR_ORIGINAL_DISPLAY_BCC_W'                    ,mapi_prop_tag(PT_UNICODE,     0x0072));
-define('PR_ORIGINAL_DISPLAY_BCC_A'                    ,mapi_prop_tag(PT_STRING8,     0x0072));
 define('PR_ORIGINAL_DISPLAY_CC'                       ,mapi_prop_tag(PT_TSTRING,     0x0073));
-define('PR_ORIGINAL_DISPLAY_CC_W'                     ,mapi_prop_tag(PT_UNICODE,     0x0073));
-define('PR_ORIGINAL_DISPLAY_CC_A'                     ,mapi_prop_tag(PT_STRING8,     0x0073));
 define('PR_ORIGINAL_DISPLAY_TO'                       ,mapi_prop_tag(PT_TSTRING,     0x0074));
-define('PR_ORIGINAL_DISPLAY_TO_W'                     ,mapi_prop_tag(PT_UNICODE,     0x0074));
-define('PR_ORIGINAL_DISPLAY_TO_A'                     ,mapi_prop_tag(PT_STRING8,     0x0074));
 
 define('PR_RECEIVED_BY_ADDRTYPE'                      ,mapi_prop_tag(PT_TSTRING,     0x0075));
-define('PR_RECEIVED_BY_ADDRTYPE_W'                    ,mapi_prop_tag(PT_UNICODE,     0x0075));
-define('PR_RECEIVED_BY_ADDRTYPE_A'                    ,mapi_prop_tag(PT_STRING8,     0x0075));
 define('PR_RECEIVED_BY_EMAIL_ADDRESS'                 ,mapi_prop_tag(PT_TSTRING,     0x0076));
-define('PR_RECEIVED_BY_EMAIL_ADDRESS_W'               ,mapi_prop_tag(PT_UNICODE,     0x0076));
-define('PR_RECEIVED_BY_EMAIL_ADDRESS_A'               ,mapi_prop_tag(PT_STRING8,     0x0076));
 
 define('PR_RCVD_REPRESENTING_ADDRTYPE'                ,mapi_prop_tag(PT_TSTRING,     0x0077));
-define('PR_RCVD_REPRESENTING_ADDRTYPE_W'              ,mapi_prop_tag(PT_UNICODE,     0x0077));
-define('PR_RCVD_REPRESENTING_ADDRTYPE_A'              ,mapi_prop_tag(PT_STRING8,     0x0077));
 define('PR_RCVD_REPRESENTING_EMAIL_ADDRESS'           ,mapi_prop_tag(PT_TSTRING,     0x0078));
-define('PR_RCVD_REPRESENTING_EMAIL_ADDRESS_W'         ,mapi_prop_tag(PT_UNICODE,     0x0078));
-define('PR_RCVD_REPRESENTING_EMAIL_ADDRESS_A'         ,mapi_prop_tag(PT_STRING8,     0x0078));
 
 define('PR_ORIGINAL_AUTHOR_ADDRTYPE'                  ,mapi_prop_tag(PT_TSTRING,     0x0079));
-define('PR_ORIGINAL_AUTHOR_ADDRTYPE_W'                ,mapi_prop_tag(PT_UNICODE,     0x0079));
-define('PR_ORIGINAL_AUTHOR_ADDRTYPE_A'                ,mapi_prop_tag(PT_STRING8,     0x0079));
 define('PR_ORIGINAL_AUTHOR_EMAIL_ADDRESS'             ,mapi_prop_tag(PT_TSTRING,     0x007A));
-define('PR_ORIGINAL_AUTHOR_EMAIL_ADDRESS_W'           ,mapi_prop_tag(PT_UNICODE,     0x007A));
-define('PR_ORIGINAL_AUTHOR_EMAIL_ADDRESS_A'           ,mapi_prop_tag(PT_STRING8,     0x007A));
 
 define('PR_ORIGINALLY_INTENDED_RECIP_ADDRTYPE'        ,mapi_prop_tag(PT_TSTRING,     0x007B));
-define('PR_ORIGINALLY_INTENDED_RECIP_ADDRTYPE_W'      ,mapi_prop_tag(PT_UNICODE,     0x007B));
-define('PR_ORIGINALLY_INTENDED_RECIP_ADDRTYPE_A'      ,mapi_prop_tag(PT_STRING8,     0x007B));
 define('PR_ORIGINALLY_INTENDED_RECIP_EMAIL_ADDRESS'   ,mapi_prop_tag(PT_TSTRING,     0x007C));
-define('PR_ORIGINALLY_INTENDED_RECIP_EMAIL_ADDRESS_W' ,mapi_prop_tag(PT_UNICODE,     0x007C));
-define('PR_ORIGINALLY_INTENDED_RECIP_EMAIL_ADDRESS_A' ,mapi_prop_tag(PT_STRING8,     0x007C));
 
 define('PR_TRANSPORT_MESSAGE_HEADERS'                 ,mapi_prop_tag(PT_TSTRING,     0x007D));
-define('PR_TRANSPORT_MESSAGE_HEADERS_W'               ,mapi_prop_tag(PT_UNICODE,     0x007D));
-define('PR_TRANSPORT_MESSAGE_HEADERS_A'               ,mapi_prop_tag(PT_STRING8,     0x007D));
 
 define('PR_DELEGATION'                                ,mapi_prop_tag(PT_BINARY,      0x007E));
 
@@ -240,17 +171,16 @@ define('PR_TNEF_CORRELATION_KEY'                      ,mapi_prop_tag(PT_BINARY, 
 define('PR_MDN_DISPOSITION_TYPE'                      ,mapi_prop_tag(PT_STRING8,     0x0080));
 define('PR_MDN_DISPOSITION_SENDINGMODE'               ,mapi_prop_tag(PT_STRING8,     0x0081));
 
-define('PR_USER_ENTRYID'                              ,mapi_prop_tag(PT_BINARY,      0x6618+0x01));
-define('PR_USER_NAME'                                 ,mapi_prop_tag(PT_STRING8,     0x6618+0x02));
-define('PR_MAILBOX_OWNER_ENTRYID'                     ,mapi_prop_tag(PT_BINARY,      0x6618+0x03));
-define('PR_MAILBOX_OWNER_NAME'                        ,mapi_prop_tag(PT_STRING8,     0x6618+0x04));
+define('PR_USER_ENTRYID'                              ,mapi_prop_tag(PT_BINARY,      0x6619));
+define('PR_USER_NAME'                                 ,mapi_prop_tag(PT_STRING8,     0x661A));
+define('PR_MAILBOX_OWNER_ENTRYID'                     ,mapi_prop_tag(PT_BINARY,      0x661B));
+define('PR_MAILBOX_OWNER_NAME'                        ,mapi_prop_tag(PT_STRING8,     0x661C));
 
-define('PR_HIERARCHY_SYNCHRONIZER'                    ,mapi_prop_tag(PT_OBJECT,      0x6618+0x14));
-define('PR_CONTENTS_SYNCHRONIZER'                     ,mapi_prop_tag(PT_OBJECT,      0x6618+0x15));
-define('PR_COLLECTOR'                                 ,mapi_prop_tag(PT_OBJECT,      0x6618+0x16));
+define('PR_HIERARCHY_SYNCHRONIZER'                    ,mapi_prop_tag(PT_OBJECT,      0x662C));
+define('PR_CONTENTS_SYNCHRONIZER'                     ,mapi_prop_tag(PT_OBJECT,      0x662D));
+define('PR_COLLECTOR'                                 ,mapi_prop_tag(PT_OBJECT,      0x662E));
 
 define('PR_SMTP_ADDRESS'                              ,mapi_prop_tag(PT_TSTRING,     0x39FE));
-
 
 /*
  *  Message content properties
@@ -258,11 +188,7 @@ define('PR_SMTP_ADDRESS'                              ,mapi_prop_tag(PT_TSTRING,
 
 define('PR_BODY'                                      ,mapi_prop_tag(PT_TSTRING,     0x1000));
 define('PR_HTML'                                      ,mapi_prop_tag(PT_BINARY,      0x1013));
-define('PR_BODY_W'                                    ,mapi_prop_tag(PT_UNICODE,     0x1000));
-define('PR_BODY_A'                                    ,mapi_prop_tag(PT_STRING8,     0x1000));
 define('PR_REPORT_TEXT'                               ,mapi_prop_tag(PT_TSTRING,     0x1001));
-define('PR_REPORT_TEXT_W'                             ,mapi_prop_tag(PT_UNICODE,     0x1001));
-define('PR_REPORT_TEXT_A'                             ,mapi_prop_tag(PT_STRING8,     0x1001));
 define('PR_ORIGINATOR_AND_DL_EXPANSION_HISTORY'       ,mapi_prop_tag(PT_BINARY,      0x1002));
 define('PR_REPORTING_DL_NAME'                         ,mapi_prop_tag(PT_BINARY,      0x1003));
 define('PR_REPORTING_MTA_CERTIFICATE'                 ,mapi_prop_tag(PT_BINARY,      0x1004));
@@ -272,8 +198,6 @@ define('PR_REPORTING_MTA_CERTIFICATE'                 ,mapi_prop_tag(PT_BINARY, 
 define('PR_RTF_SYNC_BODY_CRC'                         ,mapi_prop_tag(PT_LONG,        0x1006));
 define('PR_RTF_SYNC_BODY_COUNT'                       ,mapi_prop_tag(PT_LONG,        0x1007));
 define('PR_RTF_SYNC_BODY_TAG'                         ,mapi_prop_tag(PT_TSTRING,     0x1008));
-define('PR_RTF_SYNC_BODY_TAG_W'                       ,mapi_prop_tag(PT_UNICODE,     0x1008));
-define('PR_RTF_SYNC_BODY_TAG_A'                       ,mapi_prop_tag(PT_STRING8,     0x1008));
 define('PR_RTF_COMPRESSED'                            ,mapi_prop_tag(PT_BINARY,      0x1009));
 define('PR_RTF_SYNC_PREFIX_COUNT'                     ,mapi_prop_tag(PT_LONG,        0x1010));
 define('PR_RTF_SYNC_TRAILING_COUNT'                   ,mapi_prop_tag(PT_LONG,        0x1011));
@@ -313,27 +237,17 @@ define('PR_PROOF_OF_DELIVERY'                         ,mapi_prop_tag(PT_BINARY, 
 define('PR_PROOF_OF_DELIVERY_REQUESTED'               ,mapi_prop_tag(PT_BOOLEAN,     0x0C12));
 define('PR_RECIPIENT_CERTIFICATE'                     ,mapi_prop_tag(PT_BINARY,      0x0C13));
 define('PR_RECIPIENT_NUMBER_FOR_ADVICE'               ,mapi_prop_tag(PT_TSTRING,     0x0C14));
-define('PR_RECIPIENT_NUMBER_FOR_ADVICE_W'             ,mapi_prop_tag(PT_UNICODE,     0x0C14));
-define('PR_RECIPIENT_NUMBER_FOR_ADVICE_A'             ,mapi_prop_tag(PT_STRING8,     0x0C14));
 define('PR_RECIPIENT_TYPE'                            ,mapi_prop_tag(PT_LONG,        0x0C15));
 define('PR_REGISTERED_MAIL_TYPE'                      ,mapi_prop_tag(PT_LONG,        0x0C16));
 define('PR_REPLY_REQUESTED'                           ,mapi_prop_tag(PT_BOOLEAN,     0x0C17));
 define('PR_REQUESTED_DELIVERY_METHOD'                 ,mapi_prop_tag(PT_LONG,        0x0C18));
 define('PR_SENDER_ENTRYID'                            ,mapi_prop_tag(PT_BINARY,      0x0C19));
 define('PR_SENDER_NAME'                               ,mapi_prop_tag(PT_TSTRING,     0x0C1A));
-define('PR_SENDER_NAME_W'                             ,mapi_prop_tag(PT_UNICODE,     0x0C1A));
-define('PR_SENDER_NAME_A'                             ,mapi_prop_tag(PT_STRING8,     0x0C1A));
 define('PR_SUPPLEMENTARY_INFO'                        ,mapi_prop_tag(PT_TSTRING,     0x0C1B));
-define('PR_SUPPLEMENTARY_INFO_W'                      ,mapi_prop_tag(PT_UNICODE,     0x0C1B));
-define('PR_SUPPLEMENTARY_INFO_A'                      ,mapi_prop_tag(PT_STRING8,     0x0C1B));
 define('PR_TYPE_OF_MTS_USER'                          ,mapi_prop_tag(PT_LONG,        0x0C1C));
 define('PR_SENDER_SEARCH_KEY'                         ,mapi_prop_tag(PT_BINARY,      0x0C1D));
 define('PR_SENDER_ADDRTYPE'                           ,mapi_prop_tag(PT_TSTRING,     0x0C1E));
-define('PR_SENDER_ADDRTYPE_W'                         ,mapi_prop_tag(PT_UNICODE,     0x0C1E));
-define('PR_SENDER_ADDRTYPE_A'                         ,mapi_prop_tag(PT_STRING8,     0x0C1E));
 define('PR_SENDER_EMAIL_ADDRESS'                      ,mapi_prop_tag(PT_TSTRING,     0x0C1F));
-define('PR_SENDER_EMAIL_ADDRESS_W'                    ,mapi_prop_tag(PT_UNICODE,     0x0C1F));
-define('PR_SENDER_EMAIL_ADDRESS_A'                    ,mapi_prop_tag(PT_STRING8,     0x0C1F));
 
 /*
  *  Message non-transmittable properties
@@ -350,17 +264,9 @@ define('PR_SENDER_EMAIL_ADDRESS_A'                    ,mapi_prop_tag(PT_STRING8,
 define('PR_CURRENT_VERSION'                           ,mapi_prop_tag(PT_I8,          0x0E00));
 define('PR_DELETE_AFTER_SUBMIT'                       ,mapi_prop_tag(PT_BOOLEAN,     0x0E01));
 define('PR_DISPLAY_BCC'                               ,mapi_prop_tag(PT_TSTRING,     0x0E02));
-define('PR_DISPLAY_BCC_W'                             ,mapi_prop_tag(PT_UNICODE,     0x0E02));
-define('PR_DISPLAY_BCC_A'                             ,mapi_prop_tag(PT_STRING8,     0x0E02));
 define('PR_DISPLAY_CC'                                ,mapi_prop_tag(PT_TSTRING,     0x0E03));
-define('PR_DISPLAY_CC_W'                              ,mapi_prop_tag(PT_UNICODE,     0x0E03));
-define('PR_DISPLAY_CC_A'                              ,mapi_prop_tag(PT_STRING8,     0x0E03));
 define('PR_DISPLAY_TO'                                ,mapi_prop_tag(PT_TSTRING,     0x0E04));
-define('PR_DISPLAY_TO_W'                              ,mapi_prop_tag(PT_UNICODE,     0x0E04));
-define('PR_DISPLAY_TO_A'                              ,mapi_prop_tag(PT_STRING8,     0x0E04));
 define('PR_PARENT_DISPLAY'                            ,mapi_prop_tag(PT_TSTRING,     0x0E05));
-define('PR_PARENT_DISPLAY_W'                          ,mapi_prop_tag(PT_UNICODE,     0x0E05));
-define('PR_PARENT_DISPLAY_A'                          ,mapi_prop_tag(PT_STRING8,     0x0E05));
 define('PR_MESSAGE_DELIVERY_TIME'                     ,mapi_prop_tag(PT_SYSTIME,     0x0E06));
 define('PR_MESSAGE_FLAGS'                             ,mapi_prop_tag(PT_LONG,        0x0E07));
 define('PR_MESSAGE_SIZE'                              ,mapi_prop_tag(PT_LONG,        0x0E08));
@@ -385,8 +291,6 @@ define('PR_MODIFY_VERSION'                            ,mapi_prop_tag(PT_I8,     
 define('PR_HASATTACH'                                 ,mapi_prop_tag(PT_BOOLEAN,     0x0E1B));
 define('PR_BODY_CRC'                                  ,mapi_prop_tag(PT_LONG,        0x0E1C));
 define('PR_NORMALIZED_SUBJECT'                        ,mapi_prop_tag(PT_TSTRING,     0x0E1D));
-define('PR_NORMALIZED_SUBJECT_W'                      ,mapi_prop_tag(PT_UNICODE,     0x0E1D));
-define('PR_NORMALIZED_SUBJECT_A'                      ,mapi_prop_tag(PT_STRING8,     0x0E1D));
 define('PR_RTF_IN_SYNC'                               ,mapi_prop_tag(PT_BOOLEAN,     0x0E1F));
 define('PR_ATTACH_SIZE'                               ,mapi_prop_tag(PT_LONG,        0x0E20));
 define('PR_ATTACH_NUM'                                ,mapi_prop_tag(PT_LONG,        0x0E21));
@@ -397,6 +301,7 @@ define('PR_PREPROCESS'                                ,mapi_prop_tag(PT_BOOLEAN,
 define('PR_ORIGINATING_MTA_CERTIFICATE'               ,mapi_prop_tag(PT_BINARY,      0x0E25));
 define('PR_PROOF_OF_SUBMISSION'                       ,mapi_prop_tag(PT_BINARY,      0x0E26));
 
+define('PR_TODO_ITEM_FLAGS'                           ,mapi_prop_tag(PT_LONG,        0x0E2B));
 
 /*
  * The range of non-message and non-recipient property IDs (0x3000 - 0x3FFF)); is
@@ -454,26 +359,15 @@ define('PR_ACCESS'                                    ,mapi_prop_tag(PT_LONG,   
 define('PR_ROWID'                                     ,mapi_prop_tag(PT_LONG,        0x3000));
 define('PR_DISPLAY_NAME'                              ,mapi_prop_tag(PT_TSTRING,     0x3001));
 define('PR_DISPLAY_NAME_W'                            ,mapi_prop_tag(PT_UNICODE,     0x3001));
-define('PR_DISPLAY_NAME_A'                            ,mapi_prop_tag(PT_STRING8,     0x3001));
 define('PR_ADDRTYPE'                                  ,mapi_prop_tag(PT_TSTRING,     0x3002));
-define('PR_ADDRTYPE_W'                                ,mapi_prop_tag(PT_UNICODE,     0x3002));
-define('PR_ADDRTYPE_A'                                ,mapi_prop_tag(PT_STRING8,     0x3002));
 define('PR_EMAIL_ADDRESS'                             ,mapi_prop_tag(PT_TSTRING,     0x3003));
-define('PR_EMAIL_ADDRESS_W'                           ,mapi_prop_tag(PT_UNICODE,     0x3003));
-define('PR_EMAIL_ADDRESS_A'                           ,mapi_prop_tag(PT_STRING8,     0x3003));
 define('PR_COMMENT'                                   ,mapi_prop_tag(PT_TSTRING,     0x3004));
-define('PR_COMMENT_W'                                 ,mapi_prop_tag(PT_UNICODE,     0x3004));
-define('PR_COMMENT_A'                                 ,mapi_prop_tag(PT_STRING8,     0x3004));
 define('PR_DEPTH'                                     ,mapi_prop_tag(PT_LONG,        0x3005));
 define('PR_PROVIDER_DISPLAY'                          ,mapi_prop_tag(PT_TSTRING,     0x3006));
-define('PR_PROVIDER_DISPLAY_W'                        ,mapi_prop_tag(PT_UNICODE,     0x3006));
-define('PR_PROVIDER_DISPLAY_A'                        ,mapi_prop_tag(PT_STRING8,     0x3006));
 define('PR_CREATION_TIME'                             ,mapi_prop_tag(PT_SYSTIME,     0x3007));
 define('PR_LAST_MODIFICATION_TIME'                    ,mapi_prop_tag(PT_SYSTIME,     0x3008));
 define('PR_RESOURCE_FLAGS'                            ,mapi_prop_tag(PT_LONG,        0x3009));
 define('PR_PROVIDER_DLL_NAME'                         ,mapi_prop_tag(PT_TSTRING,     0x300A));
-define('PR_PROVIDER_DLL_NAME_W'                       ,mapi_prop_tag(PT_UNICODE,     0x300A));
-define('PR_PROVIDER_DLL_NAME_A'                       ,mapi_prop_tag(PT_STRING8,     0x300A));
 define('PR_SEARCH_KEY'                                ,mapi_prop_tag(PT_BINARY,      0x300B));
 define('PR_PROVIDER_UID'                              ,mapi_prop_tag(PT_BINARY,      0x300C));
 define('PR_PROVIDER_ORDINAL'                          ,mapi_prop_tag(PT_LONG,        0x300D));
@@ -482,23 +376,13 @@ define('PR_PROVIDER_ORDINAL'                          ,mapi_prop_tag(PT_LONG,   
  *  MAPI Form properties
  */
 define('PR_FORM_VERSION'                              ,mapi_prop_tag(PT_TSTRING,     0x3301));
-define('PR_FORM_VERSION_W'                            ,mapi_prop_tag(PT_UNICODE,     0x3301));
-define('PR_FORM_VERSION_A'                            ,mapi_prop_tag(PT_STRING8,     0x3301));
 define('PR_FORM_CLSID'                                ,mapi_prop_tag(PT_CLSID,       0x3302));
 define('PR_FORM_CONTACT_NAME'                         ,mapi_prop_tag(PT_TSTRING,     0x3303));
-define('PR_FORM_CONTACT_NAME_W'                       ,mapi_prop_tag(PT_UNICODE,     0x3303));
-define('PR_FORM_CONTACT_NAME_A'                       ,mapi_prop_tag(PT_STRING8,     0x3303));
 define('PR_FORM_CATEGORY'                             ,mapi_prop_tag(PT_TSTRING,     0x3304));
-define('PR_FORM_CATEGORY_W'                           ,mapi_prop_tag(PT_UNICODE,     0x3304));
-define('PR_FORM_CATEGORY_A'                           ,mapi_prop_tag(PT_STRING8,     0x3304));
 define('PR_FORM_CATEGORY_SUB'                         ,mapi_prop_tag(PT_TSTRING,     0x3305));
-define('PR_FORM_CATEGORY_SUB_W'                       ,mapi_prop_tag(PT_UNICODE,     0x3305));
-define('PR_FORM_CATEGORY_SUB_A'                       ,mapi_prop_tag(PT_STRING8,     0x3305));
 define('PR_FORM_HOST_MAP'                             ,mapi_prop_tag(PT_MV_LONG,     0x3306));
 define('PR_FORM_HIDDEN'                               ,mapi_prop_tag(PT_BOOLEAN,     0x3307));
 define('PR_FORM_DESIGNER_NAME'                        ,mapi_prop_tag(PT_TSTRING,     0x3308));
-define('PR_FORM_DESIGNER_NAME_W'                      ,mapi_prop_tag(PT_UNICODE,     0x3308));
-define('PR_FORM_DESIGNER_NAME_A'                      ,mapi_prop_tag(PT_STRING8,     0x3308));
 define('PR_FORM_DESIGNER_GUID'                        ,mapi_prop_tag(PT_CLSID,       0x3309));
 define('PR_FORM_MESSAGE_BEHAVIOR'                     ,mapi_prop_tag(PT_LONG,        0x330A));
 
@@ -548,8 +432,6 @@ define('PR_SELECTABLE'                                ,mapi_prop_tag(PT_BOOLEAN,
 define('PR_SUBFOLDERS'                                ,mapi_prop_tag(PT_BOOLEAN,     0x360A));
 define('PR_STATUS'                                    ,mapi_prop_tag(PT_LONG,        0x360B));
 define('PR_ANR'                                       ,mapi_prop_tag(PT_TSTRING,     0x360C));
-define('PR_ANR_W'                                     ,mapi_prop_tag(PT_UNICODE,     0x360C));
-define('PR_ANR_A'                                     ,mapi_prop_tag(PT_STRING8,     0x360C));
 define('PR_CONTENTS_SORT_ORDER'                       ,mapi_prop_tag(PT_MV_LONG,     0x360D));
 define('PR_CONTAINER_HIERARCHY'                       ,mapi_prop_tag(PT_OBJECT,      0x360E));
 define('PR_CONTAINER_CONTENTS'                        ,mapi_prop_tag(PT_OBJECT,      0x360F));
@@ -557,8 +439,6 @@ define('PR_FOLDER_ASSOCIATED_CONTENTS'                ,mapi_prop_tag(PT_OBJECT, 
 define('PR_DEF_CREATE_DL'                             ,mapi_prop_tag(PT_BINARY,      0x3611));
 define('PR_DEF_CREATE_MAILUSER'                       ,mapi_prop_tag(PT_BINARY,      0x3612));
 define('PR_CONTAINER_CLASS'                           ,mapi_prop_tag(PT_TSTRING,     0x3613));
-define('PR_CONTAINER_CLASS_W'                         ,mapi_prop_tag(PT_UNICODE,     0x3613));
-define('PR_CONTAINER_CLASS_A'                         ,mapi_prop_tag(PT_STRING8,     0x3613));
 define('PR_CONTAINER_MODIFY_VERSION'                  ,mapi_prop_tag(PT_I8,          0x3614));
 define('PR_AB_PROVIDER_ID'                            ,mapi_prop_tag(PT_BINARY,      0x3615));
 define('PR_DEFAULT_VIEW_ENTRYID'                      ,mapi_prop_tag(PT_BINARY,      0x3616));
@@ -581,30 +461,17 @@ define('PR_ATTACH_CONTENT_ID_W'                       ,mapi_prop_tag(PT_UNICODE,
 define('PR_ATTACH_CONTENT_LOCATION'                   ,mapi_prop_tag(PT_STRING8,     0x3713));
 define('PR_ATTACH_ENCODING'                           ,mapi_prop_tag(PT_BINARY,      0x3702));
 define('PR_ATTACH_EXTENSION'                          ,mapi_prop_tag(PT_TSTRING,     0x3703));
-define('PR_ATTACH_EXTENSION_W'                        ,mapi_prop_tag(PT_UNICODE,     0x3703));
-define('PR_ATTACH_EXTENSION_A'                        ,mapi_prop_tag(PT_STRING8,     0x3703));
 define('PR_ATTACH_FILENAME'                           ,mapi_prop_tag(PT_TSTRING,     0x3704));
-define('PR_ATTACH_FILENAME_W'                         ,mapi_prop_tag(PT_UNICODE,     0x3704));
-define('PR_ATTACH_FILENAME_A'                         ,mapi_prop_tag(PT_STRING8,     0x3704));
 define('PR_ATTACH_METHOD'                             ,mapi_prop_tag(PT_LONG,        0x3705));
 define('PR_ATTACH_LONG_FILENAME'                      ,mapi_prop_tag(PT_TSTRING,     0x3707));
-define('PR_ATTACH_LONG_FILENAME_W'                    ,mapi_prop_tag(PT_UNICODE,     0x3707));
-define('PR_ATTACH_LONG_FILENAME_A'                    ,mapi_prop_tag(PT_STRING8,     0x3707));
 define('PR_ATTACH_PATHNAME'                           ,mapi_prop_tag(PT_TSTRING,     0x3708));
-define('PR_ATTACH_PATHNAME_W'                         ,mapi_prop_tag(PT_UNICODE,     0x3708));
-define('PR_ATTACH_PATHNAME_A'                         ,mapi_prop_tag(PT_STRING8,     0x3708));
 define('PR_ATTACH_RENDERING'                          ,mapi_prop_tag(PT_BINARY,      0x3709));
 define('PR_ATTACH_TAG'                                ,mapi_prop_tag(PT_BINARY,      0x370A));
 define('PR_RENDERING_POSITION'                        ,mapi_prop_tag(PT_LONG,        0x370B));
 define('PR_ATTACH_TRANSPORT_NAME'                     ,mapi_prop_tag(PT_TSTRING,     0x370C));
-define('PR_ATTACH_TRANSPORT_NAME_W'                   ,mapi_prop_tag(PT_UNICODE,     0x370C));
-define('PR_ATTACH_TRANSPORT_NAME_A'                   ,mapi_prop_tag(PT_STRING8,     0x370C));
 define('PR_ATTACH_LONG_PATHNAME'                      ,mapi_prop_tag(PT_TSTRING,     0x370D));
-define('PR_ATTACH_LONG_PATHNAME_W'                    ,mapi_prop_tag(PT_UNICODE,     0x370D));
-define('PR_ATTACH_LONG_PATHNAME_A'                    ,mapi_prop_tag(PT_STRING8,     0x370D));
 define('PR_ATTACH_MIME_TAG'                           ,mapi_prop_tag(PT_TSTRING,     0x370E));
 define('PR_ATTACH_MIME_TAG_W'                         ,mapi_prop_tag(PT_UNICODE,     0x370E));
-define('PR_ATTACH_MIME_TAG_A'                         ,mapi_prop_tag(PT_STRING8,     0x370E));
 define('PR_ATTACH_ADDITIONAL_INFO'                    ,mapi_prop_tag(PT_BINARY,      0x370F));
 define('PR_ATTACHMENT_FLAGS'                          ,mapi_prop_tag(PT_LONG,        0x7FFD));
 define('PR_ATTACHMENT_HIDDEN'                         ,mapi_prop_tag(PT_BOOLEAN,     0x7FFE));
@@ -628,123 +495,49 @@ define('PR_PRIMARY_CAPABILITY'                        ,mapi_prop_tag(PT_BINARY, 
  */
 define('PR_7BIT_DISPLAY_NAME'                         ,mapi_prop_tag(PT_STRING8,     0x39FF));
 define('PR_ACCOUNT'                                   ,mapi_prop_tag(PT_TSTRING,     0x3A00));
-define('PR_ACCOUNT_W'                                 ,mapi_prop_tag(PT_UNICODE,     0x3A00));
-define('PR_ACCOUNT_A'                                 ,mapi_prop_tag(PT_STRING8,     0x3A00));
 define('PR_ALTERNATE_RECIPIENT'                       ,mapi_prop_tag(PT_BINARY,      0x3A01));
 define('PR_CALLBACK_TELEPHONE_NUMBER'                 ,mapi_prop_tag(PT_TSTRING,     0x3A02));
-define('PR_CALLBACK_TELEPHONE_NUMBER_W'               ,mapi_prop_tag(PT_UNICODE,     0x3A02));
-define('PR_CALLBACK_TELEPHONE_NUMBER_A'               ,mapi_prop_tag(PT_STRING8,     0x3A02));
 define('PR_CONVERSION_PROHIBITED'                     ,mapi_prop_tag(PT_BOOLEAN,     0x3A03));
 define('PR_DISCLOSE_RECIPIENTS'                       ,mapi_prop_tag(PT_BOOLEAN,     0x3A04));
 define('PR_GENERATION'                                ,mapi_prop_tag(PT_TSTRING,     0x3A05));
-define('PR_GENERATION_W'                              ,mapi_prop_tag(PT_UNICODE,     0x3A05));
-define('PR_GENERATION_A'                              ,mapi_prop_tag(PT_STRING8,     0x3A05));
 define('PR_GIVEN_NAME'                                ,mapi_prop_tag(PT_TSTRING,     0x3A06));
-define('PR_GIVEN_NAME_W'                              ,mapi_prop_tag(PT_UNICODE,     0x3A06));
-define('PR_GIVEN_NAME_A'                              ,mapi_prop_tag(PT_STRING8,     0x3A06));
 define('PR_GOVERNMENT_ID_NUMBER'                      ,mapi_prop_tag(PT_TSTRING,     0x3A07));
-define('PR_GOVERNMENT_ID_NUMBER_W'                    ,mapi_prop_tag(PT_UNICODE,     0x3A07));
-define('PR_GOVERNMENT_ID_NUMBER_A'                    ,mapi_prop_tag(PT_STRING8,     0x3A07));
 define('PR_BUSINESS_TELEPHONE_NUMBER'                 ,mapi_prop_tag(PT_TSTRING,     0x3A08));
-define('PR_BUSINESS_TELEPHONE_NUMBER_W'               ,mapi_prop_tag(PT_UNICODE,     0x3A08));
-define('PR_BUSINESS_TELEPHONE_NUMBER_A'               ,mapi_prop_tag(PT_STRING8,     0x3A08));
 define('PR_OFFICE_TELEPHONE_NUMBER'                   ,PR_BUSINESS_TELEPHONE_NUMBER);
-define('PR_OFFICE_TELEPHONE_NUMBER_W'                 ,PR_BUSINESS_TELEPHONE_NUMBER_W);
-define('PR_OFFICE_TELEPHONE_NUMBER_A'                 ,PR_BUSINESS_TELEPHONE_NUMBER_A);
 define('PR_HOME_TELEPHONE_NUMBER'                     ,mapi_prop_tag(PT_TSTRING,     0x3A09));
-define('PR_HOME_TELEPHONE_NUMBER_W'                   ,mapi_prop_tag(PT_UNICODE,     0x3A09));
-define('PR_HOME_TELEPHONE_NUMBER_A'                   ,mapi_prop_tag(PT_STRING8,     0x3A09));
 define('PR_INITIALS'                                  ,mapi_prop_tag(PT_TSTRING,     0x3A0A));
-define('PR_INITIALS_W'                                ,mapi_prop_tag(PT_UNICODE,     0x3A0A));
-define('PR_INITIALS_A'                                ,mapi_prop_tag(PT_STRING8,     0x3A0A));
 define('PR_KEYWORD'                                   ,mapi_prop_tag(PT_TSTRING,     0x3A0B));
-define('PR_KEYWORD_W'                                 ,mapi_prop_tag(PT_UNICODE,     0x3A0B));
-define('PR_KEYWORD_A'                                 ,mapi_prop_tag(PT_STRING8,     0x3A0B));
 define('PR_LANGUAGE'                                  ,mapi_prop_tag(PT_TSTRING,     0x3A0C));
-define('PR_LANGUAGE_W'                                ,mapi_prop_tag(PT_UNICODE,     0x3A0C));
-define('PR_LANGUAGE_A'                                ,mapi_prop_tag(PT_STRING8,     0x3A0C));
 define('PR_LOCATION'                                  ,mapi_prop_tag(PT_TSTRING,     0x3A0D));
-define('PR_LOCATION_W'                                ,mapi_prop_tag(PT_UNICODE,     0x3A0D));
-define('PR_LOCATION_A'                                ,mapi_prop_tag(PT_STRING8,     0x3A0D));
 define('PR_MAIL_PERMISSION'                           ,mapi_prop_tag(PT_BOOLEAN,     0x3A0E));
 define('PR_MHS_COMMON_NAME'                           ,mapi_prop_tag(PT_TSTRING,     0x3A0F));
-define('PR_MHS_COMMON_NAME_W'                         ,mapi_prop_tag(PT_UNICODE,     0x3A0F));
-define('PR_MHS_COMMON_NAME_A'                         ,mapi_prop_tag(PT_STRING8,     0x3A0F));
 define('PR_ORGANIZATIONAL_ID_NUMBER'                  ,mapi_prop_tag(PT_TSTRING,     0x3A10));
-define('PR_ORGANIZATIONAL_ID_NUMBER_W'                ,mapi_prop_tag(PT_UNICODE,     0x3A10));
-define('PR_ORGANIZATIONAL_ID_NUMBER_A'                ,mapi_prop_tag(PT_STRING8,     0x3A10));
 define('PR_SURNAME'                                   ,mapi_prop_tag(PT_TSTRING,     0x3A11));
-define('PR_SURNAME_W'                                 ,mapi_prop_tag(PT_UNICODE,     0x3A11));
-define('PR_SURNAME_A'                                 ,mapi_prop_tag(PT_STRING8,     0x3A11));
 define('PR_ORIGINAL_ENTRYID'                          ,mapi_prop_tag(PT_BINARY,      0x3A12));
 define('PR_ORIGINAL_DISPLAY_NAME'                     ,mapi_prop_tag(PT_TSTRING,     0x3A13));
-define('PR_ORIGINAL_DISPLAY_NAME_W'                   ,mapi_prop_tag(PT_UNICODE,     0x3A13));
-define('PR_ORIGINAL_DISPLAY_NAME_A'                   ,mapi_prop_tag(PT_STRING8,     0x3A13));
 define('PR_ORIGINAL_SEARCH_KEY'                       ,mapi_prop_tag(PT_BINARY,      0x3A14));
 define('PR_POSTAL_ADDRESS'                            ,mapi_prop_tag(PT_TSTRING,     0x3A15));
-define('PR_POSTAL_ADDRESS_W'                          ,mapi_prop_tag(PT_UNICODE,     0x3A15));
-define('PR_POSTAL_ADDRESS_A'                          ,mapi_prop_tag(PT_STRING8,     0x3A15));
 define('PR_COMPANY_NAME'                              ,mapi_prop_tag(PT_TSTRING,     0x3A16));
-define('PR_COMPANY_NAME_W'                            ,mapi_prop_tag(PT_UNICODE,     0x3A16));
-define('PR_COMPANY_NAME_A'                            ,mapi_prop_tag(PT_STRING8,     0x3A16));
 define('PR_TITLE'                                     ,mapi_prop_tag(PT_TSTRING,     0x3A17));
-define('PR_TITLE_W'                                   ,mapi_prop_tag(PT_UNICODE,     0x3A17));
-define('PR_TITLE_A'                                   ,mapi_prop_tag(PT_STRING8,     0x3A17));
 define('PR_DEPARTMENT_NAME'                           ,mapi_prop_tag(PT_TSTRING,     0x3A18));
-define('PR_DEPARTMENT_NAME_W'                         ,mapi_prop_tag(PT_UNICODE,     0x3A18));
-define('PR_DEPARTMENT_NAME_A'                         ,mapi_prop_tag(PT_STRING8,     0x3A18));
 define('PR_OFFICE_LOCATION'                           ,mapi_prop_tag(PT_TSTRING,     0x3A19));
-define('PR_OFFICE_LOCATION_W'                         ,mapi_prop_tag(PT_UNICODE,     0x3A19));
-define('PR_OFFICE_LOCATION_A'                         ,mapi_prop_tag(PT_STRING8,     0x3A19));
 define('PR_PRIMARY_TELEPHONE_NUMBER'                  ,mapi_prop_tag(PT_TSTRING,     0x3A1A));
-define('PR_PRIMARY_TELEPHONE_NUMBER_W'                ,mapi_prop_tag(PT_UNICODE,     0x3A1A));
-define('PR_PRIMARY_TELEPHONE_NUMBER_A'                ,mapi_prop_tag(PT_STRING8,     0x3A1A));
 define('PR_BUSINESS2_TELEPHONE_NUMBER'                ,mapi_prop_tag(PT_TSTRING,     0x3A1B));
-define('PR_BUSINESS2_TELEPHONE_NUMBER_W'              ,mapi_prop_tag(PT_UNICODE,     0x3A1B));
-define('PR_BUSINESS2_TELEPHONE_NUMBER_A'              ,mapi_prop_tag(PT_STRING8,     0x3A1B));
 define('PR_OFFICE2_TELEPHONE_NUMBER'                  ,PR_BUSINESS2_TELEPHONE_NUMBER);
-define('PR_OFFICE2_TELEPHONE_NUMBER_W'                ,PR_BUSINESS2_TELEPHONE_NUMBER_W);
-define('PR_OFFICE2_TELEPHONE_NUMBER_A'                ,PR_BUSINESS2_TELEPHONE_NUMBER_A);
 define('PR_MOBILE_TELEPHONE_NUMBER'                   ,mapi_prop_tag(PT_TSTRING,     0x3A1C));
-define('PR_MOBILE_TELEPHONE_NUMBER_W'                 ,mapi_prop_tag(PT_UNICODE,     0x3A1C));
-define('PR_MOBILE_TELEPHONE_NUMBER_A'                 ,mapi_prop_tag(PT_STRING8,     0x3A1C));
 define('PR_CELLULAR_TELEPHONE_NUMBER'                 ,PR_MOBILE_TELEPHONE_NUMBER);
-define('PR_CELLULAR_TELEPHONE_NUMBER_W'               ,PR_MOBILE_TELEPHONE_NUMBER_W);
-define('PR_CELLULAR_TELEPHONE_NUMBER_A'               ,PR_MOBILE_TELEPHONE_NUMBER_A);
 define('PR_RADIO_TELEPHONE_NUMBER'                    ,mapi_prop_tag(PT_TSTRING,     0x3A1D));
-define('PR_RADIO_TELEPHONE_NUMBER_W'                  ,mapi_prop_tag(PT_UNICODE,     0x3A1D));
-define('PR_RADIO_TELEPHONE_NUMBER_A'                  ,mapi_prop_tag(PT_STRING8,     0x3A1D));
 define('PR_CAR_TELEPHONE_NUMBER'                      ,mapi_prop_tag(PT_TSTRING,     0x3A1E));
-define('PR_CAR_TELEPHONE_NUMBER_W'                    ,mapi_prop_tag(PT_UNICODE,     0x3A1E));
-define('PR_CAR_TELEPHONE_NUMBER_A'                    ,mapi_prop_tag(PT_STRING8,     0x3A1E));
 define('PR_OTHER_TELEPHONE_NUMBER'                    ,mapi_prop_tag(PT_TSTRING,     0x3A1F));
-define('PR_OTHER_TELEPHONE_NUMBER_W'                  ,mapi_prop_tag(PT_UNICODE,     0x3A1F));
-define('PR_OTHER_TELEPHONE_NUMBER_A'                  ,mapi_prop_tag(PT_STRING8,     0x3A1F));
 define('PR_TRANSMITABLE_DISPLAY_NAME'                 ,mapi_prop_tag(PT_TSTRING,     0x3A20));
-define('PR_TRANSMITABLE_DISPLAY_NAME_W'               ,mapi_prop_tag(PT_UNICODE,     0x3A20));
-define('PR_TRANSMITABLE_DISPLAY_NAME_A'               ,mapi_prop_tag(PT_STRING8,     0x3A20));
 define('PR_PAGER_TELEPHONE_NUMBER'                    ,mapi_prop_tag(PT_TSTRING,     0x3A21));
-define('PR_PAGER_TELEPHONE_NUMBER_W'                  ,mapi_prop_tag(PT_UNICODE,     0x3A21));
-define('PR_PAGER_TELEPHONE_NUMBER_A'                  ,mapi_prop_tag(PT_STRING8,     0x3A21));
 define('PR_BEEPER_TELEPHONE_NUMBER'                   ,PR_PAGER_TELEPHONE_NUMBER);
-define('PR_BEEPER_TELEPHONE_NUMBER_W'                 ,PR_PAGER_TELEPHONE_NUMBER_W);
-define('PR_BEEPER_TELEPHONE_NUMBER_A'                 ,PR_PAGER_TELEPHONE_NUMBER_A);
 define('PR_USER_CERTIFICATE'                          ,mapi_prop_tag(PT_BINARY,      0x3A22));
 define('PR_PRIMARY_FAX_NUMBER'                        ,mapi_prop_tag(PT_TSTRING,     0x3A23));
-define('PR_PRIMARY_FAX_NUMBER_W'                      ,mapi_prop_tag(PT_UNICODE,     0x3A23));
-define('PR_PRIMARY_FAX_NUMBER_A'                      ,mapi_prop_tag(PT_STRING8,     0x3A23));
 define('PR_BUSINESS_FAX_NUMBER'                       ,mapi_prop_tag(PT_TSTRING,     0x3A24));
-define('PR_BUSINESS_FAX_NUMBER_W'                     ,mapi_prop_tag(PT_UNICODE,     0x3A24));
-define('PR_BUSINESS_FAX_NUMBER_A'                     ,mapi_prop_tag(PT_STRING8,     0x3A24));
 define('PR_HOME_FAX_NUMBER'                           ,mapi_prop_tag(PT_TSTRING,     0x3A25));
-define('PR_HOME_FAX_NUMBER_W'                         ,mapi_prop_tag(PT_UNICODE,     0x3A25));
-define('PR_HOME_FAX_NUMBER_A'                         ,mapi_prop_tag(PT_STRING8,     0x3A25));
 define('PR_COUNTRY'                                   ,mapi_prop_tag(PT_TSTRING,     0x3A26));
-define('PR_COUNTRY_W'                                 ,mapi_prop_tag(PT_UNICODE,     0x3A26));
-define('PR_COUNTRY_A'                                 ,mapi_prop_tag(PT_STRING8,     0x3A26));
 define('PR_BUSINESS_ADDRESS_COUNTRY'                  ,PR_COUNTRY);
-define('PR_BUSINESS_ADDRESS_COUNTRY_W'                ,PR_COUNTRY_W);
-define('PR_BUSINESS_ADDRESS_COUNTRY_A'                ,PR_COUNTRY_A);
 
 define('PR_FLAG_STATUS'                               ,mapi_prop_tag(PT_LONG,        0x1090));
 define('PR_FLAG_COMPLETE_TIME'                        ,mapi_prop_tag(PT_SYSTIME,     0x1091));
@@ -752,193 +545,103 @@ define('PR_FLAG_ICON'                                 ,mapi_prop_tag(PT_LONG,   
 define('PR_BLOCK_STATUS'                              ,mapi_prop_tag(PT_LONG,        0x1096));
 
 define('PR_LOCALITY'                                  ,mapi_prop_tag(PT_TSTRING,     0x3A27));
-define('PR_LOCALITY_W'                                ,mapi_prop_tag(PT_UNICODE,     0x3A27));
-define('PR_LOCALITY_A'                                ,mapi_prop_tag(PT_STRING8,     0x3A27));
 define('PR_BUSINESS_ADDRESS_CITY'                     ,PR_LOCALITY);
-define('PR_BUSINESS_ADDRESS_CITY_W'                   ,PR_LOCALITY_W);
-define('PR_BUSINESS_ADDRESS_CITY_A'                   ,PR_LOCALITY_A);
 
 define('PR_STATE_OR_PROVINCE'                         ,mapi_prop_tag(PT_TSTRING,     0x3A28));
-define('PR_STATE_OR_PROVINCE_W'                       ,mapi_prop_tag(PT_UNICODE,     0x3A28));
-define('PR_STATE_OR_PROVINCE_A'                       ,mapi_prop_tag(PT_STRING8,     0x3A28));
 define('PR_BUSINESS_ADDRESS_STATE_OR_PROVINCE'        ,PR_STATE_OR_PROVINCE);
-define('PR_BUSINESS_ADDRESS_STATE_OR_PROVINCE_W'      ,PR_STATE_OR_PROVINCE_W);
-define('PR_BUSINESS_ADDRESS_STATE_OR_PROVINCE_A'      ,PR_STATE_OR_PROVINCE_A);
 
 define('PR_STREET_ADDRESS'                            ,mapi_prop_tag(PT_TSTRING,     0x3A29));
-define('PR_STREET_ADDRESS_W'                          ,mapi_prop_tag(PT_UNICODE,     0x3A29));
-define('PR_STREET_ADDRESS_A'                          ,mapi_prop_tag(PT_STRING8,     0x3A29));
 define('PR_BUSINESS_ADDRESS_STREET'                   ,PR_STREET_ADDRESS);
-define('PR_BUSINESS_ADDRESS_STREET_W'                 ,PR_STREET_ADDRESS_W);
-define('PR_BUSINESS_ADDRESS_STREET_A'                 ,PR_STREET_ADDRESS_A);
 
 define('PR_POSTAL_CODE'                               ,mapi_prop_tag(PT_TSTRING,     0x3A2A));
-define('PR_POSTAL_CODE_W'                             ,mapi_prop_tag(PT_UNICODE,     0x3A2A));
-define('PR_POSTAL_CODE_A'                             ,mapi_prop_tag(PT_STRING8,     0x3A2A));
 define('PR_BUSINESS_ADDRESS_POSTAL_CODE'              ,PR_POSTAL_CODE);
-define('PR_BUSINESS_ADDRESS_POSTAL_CODE_W'            ,PR_POSTAL_CODE_W);
-define('PR_BUSINESS_ADDRESS_POSTAL_CODE_A'            ,PR_POSTAL_CODE_A);
 
 
 define('PR_POST_OFFICE_BOX'                           ,mapi_prop_tag(PT_TSTRING,     0x3A2B));
-define('PR_POST_OFFICE_BOX_W'                         ,mapi_prop_tag(PT_UNICODE,     0x3A2B));
-define('PR_POST_OFFICE_BOX_A'                         ,mapi_prop_tag(PT_STRING8,     0x3A2B));
 define('PR_BUSINESS_ADDRESS_POST_OFFICE_BOX'          ,PR_POST_OFFICE_BOX);
-define('PR_BUSINESS_ADDRESS_POST_OFFICE_BOX_W'        ,PR_POST_OFFICE_BOX_W);
-define('PR_BUSINESS_ADDRESS_POST_OFFICE_BOX_A'        ,PR_POST_OFFICE_BOX_A);
 
 
 define('PR_TELEX_NUMBER'                              ,mapi_prop_tag(PT_TSTRING,     0x3A2C));
-define('PR_TELEX_NUMBER_W'                            ,mapi_prop_tag(PT_UNICODE,     0x3A2C));
-define('PR_TELEX_NUMBER_A'                            ,mapi_prop_tag(PT_STRING8,     0x3A2C));
 define('PR_ISDN_NUMBER'                               ,mapi_prop_tag(PT_TSTRING,     0x3A2D));
-define('PR_ISDN_NUMBER_W'                             ,mapi_prop_tag(PT_UNICODE,     0x3A2D));
-define('PR_ISDN_NUMBER_A'                             ,mapi_prop_tag(PT_STRING8,     0x3A2D));
 define('PR_ASSISTANT_TELEPHONE_NUMBER'                ,mapi_prop_tag(PT_TSTRING,     0x3A2E));
-define('PR_ASSISTANT_TELEPHONE_NUMBER_W'              ,mapi_prop_tag(PT_UNICODE,     0x3A2E));
-define('PR_ASSISTANT_TELEPHONE_NUMBER_A'              ,mapi_prop_tag(PT_STRING8,     0x3A2E));
 define('PR_HOME2_TELEPHONE_NUMBER'                    ,mapi_prop_tag(PT_TSTRING,     0x3A2F));
-define('PR_HOME2_TELEPHONE_NUMBER_W'                  ,mapi_prop_tag(PT_UNICODE,     0x3A2F));
-define('PR_HOME2_TELEPHONE_NUMBER_A'                  ,mapi_prop_tag(PT_STRING8,     0x3A2F));
 define('PR_ASSISTANT'                                 ,mapi_prop_tag(PT_TSTRING,     0x3A30));
-define('PR_ASSISTANT_W'                               ,mapi_prop_tag(PT_UNICODE,     0x3A30));
-define('PR_ASSISTANT_A'                               ,mapi_prop_tag(PT_STRING8,     0x3A30));
 define('PR_SEND_RICH_INFO'                            ,mapi_prop_tag(PT_BOOLEAN,     0x3A40));
 define('PR_WEDDING_ANNIVERSARY'                       ,mapi_prop_tag(PT_SYSTIME,     0x3A41));
 define('PR_BIRTHDAY'                                  ,mapi_prop_tag(PT_SYSTIME,     0x3A42));
 
 
 define('PR_HOBBIES'                                   ,mapi_prop_tag(PT_TSTRING,     0x3A43));
-define('PR_HOBBIES_W'                                 ,mapi_prop_tag(PT_UNICODE,     0x3A43));
-define('PR_HOBBIES_A'                                 ,mapi_prop_tag(PT_STRING8,     0x3A43));
 
 define('PR_MIDDLE_NAME'                               ,mapi_prop_tag(PT_TSTRING,     0x3A44));
-define('PR_MIDDLE_NAME_W'                             ,mapi_prop_tag(PT_UNICODE,     0x3A44));
-define('PR_MIDDLE_NAME_A'                             ,mapi_prop_tag(PT_STRING8,     0x3A44));
 
 define('PR_DISPLAY_NAME_PREFIX'                       ,mapi_prop_tag(PT_TSTRING,     0x3A45));
-define('PR_DISPLAY_NAME_PREFIX_W'                     ,mapi_prop_tag(PT_UNICODE,     0x3A45));
-define('PR_DISPLAY_NAME_PREFIX_A'                     ,mapi_prop_tag(PT_STRING8,     0x3A45));
 
 define('PR_PROFESSION'                                ,mapi_prop_tag(PT_TSTRING,     0x3A46));
-define('PR_PROFESSION_W'                              ,mapi_prop_tag(PT_UNICODE,     0x3A46));
-define('PR_PROFESSION_A'                              ,mapi_prop_tag(PT_STRING8,     0x3A46));
 
 define('PR_PREFERRED_BY_NAME'                         ,mapi_prop_tag(PT_TSTRING,     0x3A47));
-define('PR_PREFERRED_BY_NAME_W'                       ,mapi_prop_tag(PT_UNICODE,     0x3A47));
-define('PR_PREFERRED_BY_NAME_A'                       ,mapi_prop_tag(PT_STRING8,     0x3A47));
 
 define('PR_SPOUSE_NAME'                               ,mapi_prop_tag(PT_TSTRING,     0x3A48));
-define('PR_SPOUSE_NAME_W'                             ,mapi_prop_tag(PT_UNICODE,     0x3A48));
-define('PR_SPOUSE_NAME_A'                             ,mapi_prop_tag(PT_STRING8,     0x3A48));
 
 define('PR_COMPUTER_NETWORK_NAME'                     ,mapi_prop_tag(PT_TSTRING,     0x3A49));
-define('PR_COMPUTER_NETWORK_NAME_W'                   ,mapi_prop_tag(PT_UNICODE,     0x3A49));
-define('PR_COMPUTER_NETWORK_NAME_A'                   ,mapi_prop_tag(PT_STRING8,     0x3A49));
 
 define('PR_CUSTOMER_ID'                               ,mapi_prop_tag(PT_TSTRING,     0x3A4A));
-define('PR_CUSTOMER_ID_W'                             ,mapi_prop_tag(PT_UNICODE,     0x3A4A));
-define('PR_CUSTOMER_ID_A'                             ,mapi_prop_tag(PT_STRING8,     0x3A4A));
 
 define('PR_TTYTDD_PHONE_NUMBER'                       ,mapi_prop_tag(PT_TSTRING,     0x3A4B));
-define('PR_TTYTDD_PHONE_NUMBER_W'                     ,mapi_prop_tag(PT_UNICODE,     0x3A4B));
-define('PR_TTYTDD_PHONE_NUMBER_A'                     ,mapi_prop_tag(PT_STRING8,     0x3A4B));
 
 define('PR_FTP_SITE'                                  ,mapi_prop_tag(PT_TSTRING,     0x3A4C));
-define('PR_FTP_SITE_W'                                ,mapi_prop_tag(PT_UNICODE,     0x3A4C));
-define('PR_FTP_SITE_A'                                ,mapi_prop_tag(PT_STRING8,     0x3A4C));
 
 define('PR_GENDER'                                    ,mapi_prop_tag(PT_SHORT,       0x3A4D));
 
 define('PR_MANAGER_NAME'                              ,mapi_prop_tag(PT_TSTRING,     0x3A4E));
-define('PR_MANAGER_NAME_W'                            ,mapi_prop_tag(PT_UNICODE,     0x3A4E));
-define('PR_MANAGER_NAME_A'                            ,mapi_prop_tag(PT_STRING8,     0x3A4E));
 
 define('PR_NICKNAME'                                  ,mapi_prop_tag(PT_TSTRING,     0x3A4F));
-define('PR_NICKNAME_W'                                ,mapi_prop_tag(PT_UNICODE,     0x3A4F));
-define('PR_NICKNAME_A'                                ,mapi_prop_tag(PT_STRING8,     0x3A4F));
 
 define('PR_PERSONAL_HOME_PAGE'                        ,mapi_prop_tag(PT_TSTRING,     0x3A50));
-define('PR_PERSONAL_HOME_PAGE_W'                      ,mapi_prop_tag(PT_UNICODE,     0x3A50));
-define('PR_PERSONAL_HOME_PAGE_A'                      ,mapi_prop_tag(PT_STRING8,     0x3A50));
 
 
 define('PR_BUSINESS_HOME_PAGE'                        ,mapi_prop_tag(PT_TSTRING,     0x3A51));
-define('PR_BUSINESS_HOME_PAGE_W'                      ,mapi_prop_tag(PT_UNICODE,     0x3A51));
-define('PR_BUSINESS_HOME_PAGE_A'                      ,mapi_prop_tag(PT_STRING8,     0x3A51));
 
 define('PR_CONTACT_VERSION'                           ,mapi_prop_tag(PT_CLSID,       0x3A52));
 define('PR_CONTACT_ENTRYIDS'                          ,mapi_prop_tag(PT_MV_BINARY,   0x3A53));
 
 define('PR_CONTACT_ADDRTYPES'                         ,mapi_prop_tag(PT_MV_TSTRING,  0x3A54));
-define('PR_CONTACT_ADDRTYPES_W'                       ,mapi_prop_tag(PT_MV_UNICODE,  0x3A54));
-define('PR_CONTACT_ADDRTYPES_A'                       ,mapi_prop_tag(PT_MV_STRING8,  0x3A54));
 
 define('PR_CONTACT_DEFAULT_ADDRESS_INDEX'             ,mapi_prop_tag(PT_LONG,        0x3A55));
 
 define('PR_CONTACT_EMAIL_ADDRESSES'                   ,mapi_prop_tag(PT_MV_TSTRING,  0x3A56));
-define('PR_CONTACT_EMAIL_ADDRESSES_W'                 ,mapi_prop_tag(PT_MV_UNICODE,  0x3A56));
-define('PR_CONTACT_EMAIL_ADDRESSES_A'                 ,mapi_prop_tag(PT_MV_STRING8,  0x3A56));
 define('PR_ATTACHMENT_CONTACTPHOTO'                   ,mapi_prop_tag(PT_BOOLEAN,     0x7FFF));
 
 
 define('PR_COMPANY_MAIN_PHONE_NUMBER'                 ,mapi_prop_tag(PT_TSTRING,     0x3A57));
-define('PR_COMPANY_MAIN_PHONE_NUMBER_W'               ,mapi_prop_tag(PT_UNICODE,     0x3A57));
-define('PR_COMPANY_MAIN_PHONE_NUMBER_A'               ,mapi_prop_tag(PT_STRING8,     0x3A57));
 
 define('PR_CHILDRENS_NAMES'                           ,mapi_prop_tag(PT_MV_TSTRING,  0x3A58));
-define('PR_CHILDRENS_NAMES_W'                         ,mapi_prop_tag(PT_MV_UNICODE,  0x3A58));
-define('PR_CHILDRENS_NAMES_A'                         ,mapi_prop_tag(PT_MV_STRING8,  0x3A58));
 
 
 
 define('PR_HOME_ADDRESS_CITY'                         ,mapi_prop_tag(PT_TSTRING,     0x3A59));
-define('PR_HOME_ADDRESS_CITY_W'                       ,mapi_prop_tag(PT_UNICODE,     0x3A59));
-define('PR_HOME_ADDRESS_CITY_A'                       ,mapi_prop_tag(PT_STRING8,     0x3A59));
 
 define('PR_HOME_ADDRESS_COUNTRY'                      ,mapi_prop_tag(PT_TSTRING,     0x3A5A));
-define('PR_HOME_ADDRESS_COUNTRY_W'                    ,mapi_prop_tag(PT_UNICODE,     0x3A5A));
-define('PR_HOME_ADDRESS_COUNTRY_A'                    ,mapi_prop_tag(PT_STRING8,     0x3A5A));
 
 define('PR_HOME_ADDRESS_POSTAL_CODE'                  ,mapi_prop_tag(PT_TSTRING,     0x3A5B));
-define('PR_HOME_ADDRESS_POSTAL_CODE_W'                ,mapi_prop_tag(PT_UNICODE,     0x3A5B));
-define('PR_HOME_ADDRESS_POSTAL_CODE_A'                ,mapi_prop_tag(PT_STRING8,     0x3A5B));
 
 define('PR_HOME_ADDRESS_STATE_OR_PROVINCE'            ,mapi_prop_tag(PT_TSTRING,     0x3A5C));
-define('PR_HOME_ADDRESS_STATE_OR_PROVINCE_W'          ,mapi_prop_tag(PT_UNICODE,     0x3A5C));
-define('PR_HOME_ADDRESS_STATE_OR_PROVINCE_A'          ,mapi_prop_tag(PT_STRING8,     0x3A5C));
 
 define('PR_HOME_ADDRESS_STREET'                       ,mapi_prop_tag(PT_TSTRING,     0x3A5D));
-define('PR_HOME_ADDRESS_STREET_W'                     ,mapi_prop_tag(PT_UNICODE,     0x3A5D));
-define('PR_HOME_ADDRESS_STREET_A'                     ,mapi_prop_tag(PT_STRING8,     0x3A5D));
 
 define('PR_HOME_ADDRESS_POST_OFFICE_BOX'              ,mapi_prop_tag(PT_TSTRING,     0x3A5E));
-define('PR_HOME_ADDRESS_POST_OFFICE_BOX_W'            ,mapi_prop_tag(PT_UNICODE,     0x3A5E));
-define('PR_HOME_ADDRESS_POST_OFFICE_BOX_A'            ,mapi_prop_tag(PT_STRING8,     0x3A5E));
 
 define('PR_OTHER_ADDRESS_CITY'                        ,mapi_prop_tag(PT_TSTRING,     0x3A5F));
-define('PR_OTHER_ADDRESS_CITY_W'                      ,mapi_prop_tag(PT_UNICODE,     0x3A5F));
-define('PR_OTHER_ADDRESS_CITY_A'                      ,mapi_prop_tag(PT_STRING8,     0x3A5F));
 
 define('PR_OTHER_ADDRESS_COUNTRY'                     ,mapi_prop_tag(PT_TSTRING,     0x3A60));
-define('PR_OTHER_ADDRESS_COUNTRY_W'                   ,mapi_prop_tag(PT_UNICODE,     0x3A60));
-define('PR_OTHER_ADDRESS_COUNTRY_A'                   ,mapi_prop_tag(PT_STRING8,     0x3A60));
 
 define('PR_OTHER_ADDRESS_POSTAL_CODE'                 ,mapi_prop_tag(PT_TSTRING,     0x3A61));
-define('PR_OTHER_ADDRESS_POSTAL_CODE_W'               ,mapi_prop_tag(PT_UNICODE,     0x3A61));
-define('PR_OTHER_ADDRESS_POSTAL_CODE_A'               ,mapi_prop_tag(PT_STRING8,     0x3A61));
 
 define('PR_OTHER_ADDRESS_STATE_OR_PROVINCE'           ,mapi_prop_tag(PT_TSTRING,     0x3A62));
-define('PR_OTHER_ADDRESS_STATE_OR_PROVINCE_W'         ,mapi_prop_tag(PT_UNICODE,     0x3A62));
-define('PR_OTHER_ADDRESS_STATE_OR_PROVINCE_A'         ,mapi_prop_tag(PT_STRING8,     0x3A62));
 
 define('PR_OTHER_ADDRESS_STREET'                      ,mapi_prop_tag(PT_TSTRING,     0x3A63));
-define('PR_OTHER_ADDRESS_STREET_W'                    ,mapi_prop_tag(PT_UNICODE,     0x3A63));
-define('PR_OTHER_ADDRESS_STREET_A'                    ,mapi_prop_tag(PT_STRING8,     0x3A63));
 
 define('PR_OTHER_ADDRESS_POST_OFFICE_BOX'             ,mapi_prop_tag(PT_TSTRING,     0x3A64));
-define('PR_OTHER_ADDRESS_POST_OFFICE_BOX_W'           ,mapi_prop_tag(PT_UNICODE,     0x3A64));
-define('PR_OTHER_ADDRESS_POST_OFFICE_BOX_A'           ,mapi_prop_tag(PT_STRING8,     0x3A64));
 
 define('PR_USER_X509_CERTIFICATE'                     ,mapi_prop_tag(PT_MV_BINARY,   0x3A70));
 
@@ -957,33 +660,21 @@ define('PR_AB_DEFAULT_PAB'                            ,mapi_prop_tag(PT_BINARY, 
 
 define('PR_FILTERING_HOOKS'                           ,mapi_prop_tag(PT_BINARY,      0x3D08));
 define('PR_SERVICE_NAME'                              ,mapi_prop_tag(PT_TSTRING,     0x3D09));
-define('PR_SERVICE_NAME_W'                            ,mapi_prop_tag(PT_UNICODE,     0x3D09));
-define('PR_SERVICE_NAME_A'                            ,mapi_prop_tag(PT_STRING8,     0x3D09));
 define('PR_SERVICE_DLL_NAME'                          ,mapi_prop_tag(PT_TSTRING,     0x3D0A));
-define('PR_SERVICE_DLL_NAME_W'                        ,mapi_prop_tag(PT_UNICODE,     0x3D0A));
-define('PR_SERVICE_DLL_NAME_A'                        ,mapi_prop_tag(PT_STRING8,     0x3D0A));
 define('PR_SERVICE_ENTRY_NAME'                        ,mapi_prop_tag(PT_STRING8,     0x3D0B));
 define('PR_SERVICE_UID'                               ,mapi_prop_tag(PT_BINARY,      0x3D0C));
 define('PR_SERVICE_EXTRA_UIDS'                        ,mapi_prop_tag(PT_BINARY,      0x3D0D));
 define('PR_SERVICES'                                  ,mapi_prop_tag(PT_BINARY,      0x3D0E));
 define('PR_SERVICE_SUPPORT_FILES'                     ,mapi_prop_tag(PT_MV_TSTRING,  0x3D0F));
-define('PR_SERVICE_SUPPORT_FILES_W'                   ,mapi_prop_tag(PT_MV_UNICODE,  0x3D0F));
-define('PR_SERVICE_SUPPORT_FILES_A'                   ,mapi_prop_tag(PT_MV_STRING8,  0x3D0F));
 define('PR_SERVICE_DELETE_FILES'                      ,mapi_prop_tag(PT_MV_TSTRING,  0x3D10));
-define('PR_SERVICE_DELETE_FILES_W'                    ,mapi_prop_tag(PT_MV_UNICODE,  0x3D10));
-define('PR_SERVICE_DELETE_FILES_A'                    ,mapi_prop_tag(PT_MV_STRING8,  0x3D10));
 define('PR_AB_SEARCH_PATH_UPDATE'                     ,mapi_prop_tag(PT_BINARY,      0x3D11));
 define('PR_PROFILE_NAME'                              ,mapi_prop_tag(PT_TSTRING,     0x3D12));
-define('PR_PROFILE_NAME_A'                            ,mapi_prop_tag(PT_STRING8,     0x3D12));
-define('PR_PROFILE_NAME_W'                            ,mapi_prop_tag(PT_UNICODE,     0x3D12));
 
 /*
  *  Status object properties
  */
 
 define('PR_IDENTITY_DISPLAY'                          ,mapi_prop_tag(PT_TSTRING,     0x3E00));
-define('PR_IDENTITY_DISPLAY_W'                        ,mapi_prop_tag(PT_UNICODE,     0x3E00));
-define('PR_IDENTITY_DISPLAY_A'                        ,mapi_prop_tag(PT_STRING8,     0x3E00));
 define('PR_IDENTITY_ENTRYID'                          ,mapi_prop_tag(PT_BINARY,      0x3E01));
 define('PR_RESOURCE_METHODS'                          ,mapi_prop_tag(PT_LONG,        0x3E02));
 define('PR_RESOURCE_TYPE'                             ,mapi_prop_tag(PT_LONG,        0x3E03));
@@ -991,17 +682,11 @@ define('PR_STATUS_CODE'                               ,mapi_prop_tag(PT_LONG,   
 define('PR_IDENTITY_SEARCH_KEY'                       ,mapi_prop_tag(PT_BINARY,      0x3E05));
 define('PR_OWN_STORE_ENTRYID'                         ,mapi_prop_tag(PT_BINARY,      0x3E06));
 define('PR_RESOURCE_PATH'                             ,mapi_prop_tag(PT_TSTRING,     0x3E07));
-define('PR_RESOURCE_PATH_W'                           ,mapi_prop_tag(PT_UNICODE,     0x3E07));
-define('PR_RESOURCE_PATH_A'                           ,mapi_prop_tag(PT_STRING8,     0x3E07));
 define('PR_STATUS_STRING'                             ,mapi_prop_tag(PT_TSTRING,     0x3E08));
-define('PR_STATUS_STRING_W'                           ,mapi_prop_tag(PT_UNICODE,     0x3E08));
-define('PR_STATUS_STRING_A'                           ,mapi_prop_tag(PT_STRING8,     0x3E08));
 define('PR_X400_DEFERRED_DELIVERY_CANCEL'             ,mapi_prop_tag(PT_BOOLEAN,     0x3E09));
 define('PR_HEADER_FOLDER_ENTRYID'                     ,mapi_prop_tag(PT_BINARY,      0x3E0A));
 define('PR_REMOTE_PROGRESS'                           ,mapi_prop_tag(PT_LONG,        0x3E0B));
 define('PR_REMOTE_PROGRESS_TEXT'                      ,mapi_prop_tag(PT_TSTRING,     0x3E0C));
-define('PR_REMOTE_PROGRESS_TEXT_W'                    ,mapi_prop_tag(PT_UNICODE,     0x3E0C));
-define('PR_REMOTE_PROGRESS_TEXT_A'                    ,mapi_prop_tag(PT_STRING8,     0x3E0C));
 define('PR_REMOTE_VALIDATE_OK'                        ,mapi_prop_tag(PT_BOOLEAN,     0x3E0D));
 
 /*
@@ -1050,6 +735,7 @@ define('PR_ADDITIONAL_REN_ENTRYIDS'                   ,mapi_prop_tag(PT_MV_BINAR
 define('PR_FREEBUSY_ENTRYIDS'                         ,mapi_prop_tag(PT_MV_BINARY,   0x36E4));
 define('PR_REM_ONLINE_ENTRYID'                        ,mapi_prop_tag(PT_BINARY,      0x36D5));
 define('PR_REM_OFFLINE_ENTRYID'                       ,mapi_prop_tag(PT_BINARY,      0x36D6));
+define('PR_FREEBUSY_COUNT_MONTHS'                     ,mapi_prop_tag(PT_LONG,        0x6869));
 /*
 PR_IPM_OL2007_ENTRYIDS:
     This is a single binary property containing the entryids for:
@@ -1082,6 +768,9 @@ PR_IPM_OL2007_ENTRYIDS:
     00000000 (terminator?)
 */
 define('PR_IPM_OL2007_ENTRYIDS'                       ,mapi_prop_tag(PT_BINARY,      0x36D9));
+// Note: PR_IPM_OL2007_ENTRYIDS is the same property as PR_ADDITIONAL_REN_ENTRYIDS_EX, but Microsoft
+// seems to use the latter hence we will also use that to not confuse developers that want to Google it.
+define('PR_ADDITIONAL_REN_ENTRYIDS_EX'                ,mapi_prop_tag(PT_BINARY,      0x36D9));
 
 
 
@@ -1100,73 +789,71 @@ define('PR_RECIPIENT_TRACKSTATUS'                     ,mapi_prop_tag(PT_LONG,   
 define('PR_RECIPIENT_FLAGS'                           ,mapi_prop_tag(PT_LONG,        0x5FFD));
 define('PR_RECIPIENT_TRACKSTATUS_TIME'                ,mapi_prop_tag(PT_SYSTIME,     0x5FFB));
 
-define('PR_EC_BASE'                                   ,  0x6700);
-define('PR_EC_OUTOFOFFICE'                            ,mapi_prop_tag(PT_BOOLEAN,     PR_EC_BASE+0x60));
-define('PR_EC_OUTOFOFFICE_MSG'                        ,mapi_prop_tag(PT_STRING8,     PR_EC_BASE+0x61));
-define('PR_EC_OUTOFOFFICE_SUBJECT'                    ,mapi_prop_tag(PT_STRING8,     PR_EC_BASE+0x62));
-define('PR_EC_OUTOFOFFICE_FROM',                       mapi_prop_tag(PT_SYSTIME,     PR_EC_BASE+0x63));
-define('PR_EC_OUTOFOFFICE_UNTIL',                      mapi_prop_tag(PT_SYSTIME,     PR_EC_BASE+0x64));
+define('PR_EC_OUTOFOFFICE'                            ,mapi_prop_tag(PT_BOOLEAN,     0x6760));
+define('PR_EC_OUTOFOFFICE_MSG'                        ,mapi_prop_tag(PT_STRING8,     0x6761));
+define('PR_EC_OUTOFOFFICE_SUBJECT'                    ,mapi_prop_tag(PT_STRING8,     0x6762));
+define('PR_EC_OUTOFOFFICE_FROM'                       ,mapi_prop_tag(PT_SYSTIME,     0x6763));
+define('PR_EC_OUTOFOFFICE_UNTIL'                      ,mapi_prop_tag(PT_SYSTIME,     0x6764));
 
 /* quota support */
-define('PR_QUOTA_WARNING_THRESHOLD'                   ,mapi_prop_tag(PT_LONG,        PR_EC_BASE+0x21));
-define('PR_QUOTA_SEND_THRESHOLD'                      ,mapi_prop_tag(PT_LONG,        PR_EC_BASE+0x22));
-define('PR_QUOTA_RECEIVE_THRESHOLD'                   ,mapi_prop_tag(PT_LONG,        PR_EC_BASE+0x23));
+define('PR_QUOTA_WARNING_THRESHOLD'                   ,mapi_prop_tag(PT_LONG,        0x6721));
+define('PR_QUOTA_SEND_THRESHOLD'                      ,mapi_prop_tag(PT_LONG,        0x6722));
+define('PR_QUOTA_RECEIVE_THRESHOLD'                   ,mapi_prop_tag(PT_LONG,        0x6723));
 
 /* storage for the settings for the webaccess 6.xx */
-define('PR_EC_WEBACCESS_SETTINGS'                     ,mapi_prop_tag(PT_STRING8,     PR_EC_BASE+0x70));
-define('PR_EC_RECIPIENT_HISTORY'                      ,mapi_prop_tag(PT_STRING8,     PR_EC_BASE+0x71));
+define('PR_EC_WEBACCESS_SETTINGS'                     ,mapi_prop_tag(PT_STRING8,     0x6770));
+define('PR_EC_RECIPIENT_HISTORY'                      ,mapi_prop_tag(PT_STRING8,     0x6771));
 
 /* storage for the settings for the webaccess 7.xx */
-define('PR_EC_WEBACCESS_SETTINGS_JSON'                ,mapi_prop_tag(PT_STRING8,     PR_EC_BASE+0x72));
-define('PR_EC_RECIPIENT_HISTORY_JSON'                 ,mapi_prop_tag(PT_STRING8,     PR_EC_BASE+0x73));
+define('PR_EC_WEBACCESS_SETTINGS_JSON'                ,mapi_prop_tag(PT_STRING8,     0x6772));
+define('PR_EC_RECIPIENT_HISTORY_JSON'                 ,mapi_prop_tag(PT_STRING8,     0x6773));
+
+/* The peristent settings are settings that will not be touched when the settings are reset */
+define('PR_EC_WEBAPP_PERSISTENT_SETTINGS_JSON'        ,mapi_prop_tag(PT_STRING8,     0x6774));
 
 /* statistics properties */
-define('PR_EC_STATSTABLE_SYSTEM'                      ,mapi_prop_tag(PT_OBJECT,      PR_EC_BASE+0x30));
-define('PR_EC_STATSTABLE_SESSIONS'                    ,mapi_prop_tag(PT_OBJECT,      PR_EC_BASE+0x31));
-define('PR_EC_STATSTABLE_USERS'                       ,mapi_prop_tag(PT_OBJECT,      PR_EC_BASE+0x32));
-define('PR_EC_STATSTABLE_COMPANY'                     ,mapi_prop_tag(PT_OBJECT,      PR_EC_BASE+0x33));
+define('PR_EC_STATSTABLE_SYSTEM'                      ,mapi_prop_tag(PT_OBJECT,      0x6730));
+define('PR_EC_STATSTABLE_SESSIONS'                    ,mapi_prop_tag(PT_OBJECT,      0x6731));
+define('PR_EC_STATSTABLE_USERS'                       ,mapi_prop_tag(PT_OBJECT,      0x6732));
+define('PR_EC_STATSTABLE_COMPANY'                     ,mapi_prop_tag(PT_OBJECT,      0x6733));
 
-define('PR_EC_STATS_SYSTEM_DESCRIPTION'               ,mapi_prop_tag(PT_STRING8,     PR_EC_BASE+0x40));
-define('PR_EC_STATS_SYSTEM_VALUE'                     ,mapi_prop_tag(PT_STRING8,     PR_EC_BASE+0x41));
-define('PR_EC_STATS_SESSION_ID'                       ,mapi_prop_tag(PT_LONG,        PR_EC_BASE+0x42));
-define('PR_EC_STATS_SESSION_IPADDRESS'                ,mapi_prop_tag(PT_STRING8,     PR_EC_BASE+0x43));
-define('PR_EC_STATS_SESSION_IDLETIME'                 ,mapi_prop_tag(PT_LONG,        PR_EC_BASE+0x44));
-define('PR_EC_STATS_SESSION_CAPABILITY'               ,mapi_prop_tag(PT_LONG,        PR_EC_BASE+0x45));
-define('PR_EC_STATS_SESSION_LOCKED'                   ,mapi_prop_tag(PT_BOOLEAN,     PR_EC_BASE+0x46));
-define('PR_EC_STATS_SESSION_BUSYSTATES'               ,mapi_prop_tag(PT_MV_STRING8,  PR_EC_BASE+0x47));
-define('PR_EC_COMPANY_NAME'                           ,mapi_prop_tag(PT_STRING8,     PR_EC_BASE+0x48));
+define('PR_EC_STATS_SYSTEM_DESCRIPTION'               ,mapi_prop_tag(PT_STRING8,     0x6740));
+define('PR_EC_STATS_SYSTEM_VALUE'                     ,mapi_prop_tag(PT_STRING8,     0x6741));
+define('PR_EC_STATS_SESSION_ID'                       ,mapi_prop_tag(PT_LONG,        0x6742));
+define('PR_EC_STATS_SESSION_IPADDRESS'                ,mapi_prop_tag(PT_STRING8,     0x6743));
+define('PR_EC_STATS_SESSION_IDLETIME'                 ,mapi_prop_tag(PT_LONG,        0x6744));
+define('PR_EC_STATS_SESSION_CAPABILITY'               ,mapi_prop_tag(PT_LONG,        0x6745));
+define('PR_EC_STATS_SESSION_LOCKED'                   ,mapi_prop_tag(PT_BOOLEAN,     0x6746));
+define('PR_EC_STATS_SESSION_BUSYSTATES'               ,mapi_prop_tag(PT_MV_STRING8,  0x6747));
+define('PR_EC_COMPANY_NAME'                           ,mapi_prop_tag(PT_STRING8,     0x6748));
 
 /* user features */
-define('PR_EC_ENABLED_FEATURES'                       ,mapi_prop_tag(PT_MV_TSTRING,  PR_EC_BASE+0xB3));
-define('PR_EC_ENABLED_FEATURES_A'                     ,mapi_prop_tag(PT_MV_STRING8,  PR_EC_BASE+0xB3));
-define('PR_EC_ENABLED_FEATURES_W'                     ,mapi_prop_tag(PT_MV_UNICODE,  PR_EC_BASE+0xB3));
-
-define('PR_EC_DISABLED_FEATURES'                      ,mapi_prop_tag(PT_MV_TSTRING,  PR_EC_BASE+0xB4));
-define('PR_EC_DISABLED_FEATURES_A'                    ,mapi_prop_tag(PT_MV_STRING8,  PR_EC_BASE+0xB4));
-define('PR_EC_DISABLED_FEATURES_W'                    ,mapi_prop_tag(PT_MV_UNICODE,  PR_EC_BASE+0xB4));
+define('PR_EC_ENABLED_FEATURES'                       ,mapi_prop_tag(PT_MV_TSTRING,  0x67B3));
+define('PR_EC_DISABLED_FEATURES'                      ,mapi_prop_tag(PT_MV_TSTRING,  0x67B4));
 
 /* WA properties */
-define('PR_EC_WA_ATTACHMENT_HIDDEN_OVERRIDE'          ,mapi_prop_tag(PT_BOOLEAN,     PR_EC_BASE+0xE0));
+define('PR_EC_WA_ATTACHMENT_HIDDEN_OVERRIDE'          ,mapi_prop_tag(PT_BOOLEAN,     0x67E0));
+define('PR_EC_WA_ATTACHMENT_ID'                       ,mapi_prop_tag(PT_STRING8,     0x67E1));
 
 // edkmdb, rules properties
 #define pidSpecialMin                                   0x6670
-define('PR_RULE_ID'                                   ,mapi_prop_tag(PT_I8,          0x6670+0x04)); // only lower 32bits are used.
-define('PR_RULE_IDS'                                  ,mapi_prop_tag(PT_BINARY,      0x6670+0x05));
-define('PR_RULE_SEQUENCE'                             ,mapi_prop_tag(PT_LONG,        0x6670+0x06));
-define('PR_RULE_STATE'                                ,mapi_prop_tag(PT_LONG,        0x6670+0x07));
-define('PR_RULE_USER_FLAGS'                           ,mapi_prop_tag(PT_LONG,        0x6670+0x08));
-define('PR_RULE_CONDITION'                            ,mapi_prop_tag(PT_SRESTRICTION,0x6670+0x09));
-define('PR_RULE_ACTIONS'                              ,mapi_prop_tag(PT_ACTIONS,     0x6670+0x10));
-define('PR_RULE_PROVIDER'                             ,mapi_prop_tag(PT_STRING8,     0x6670+0x11));
-define('PR_RULE_NAME'                                 ,mapi_prop_tag(PT_TSTRING,     0x6670+0x12));
-define('PR_RULE_LEVEL'                                ,mapi_prop_tag(PT_LONG,        0x6670+0x13));
-define('PR_RULE_PROVIDER_DATA'                        ,mapi_prop_tag(PT_BINARY,      0x6670+0x14));
+define('PR_RULE_ID'                                   ,mapi_prop_tag(PT_I8,          0x6674)); // only lower 32bits are used.
+define('PR_RULE_IDS'                                  ,mapi_prop_tag(PT_BINARY,      0x6675));
+define('PR_RULE_SEQUENCE'                             ,mapi_prop_tag(PT_LONG,        0x6676));
+define('PR_RULE_STATE'                                ,mapi_prop_tag(PT_LONG,        0x6677));
+define('PR_RULE_USER_FLAGS'                           ,mapi_prop_tag(PT_LONG,        0x6678));
+define('PR_RULE_CONDITION'                            ,mapi_prop_tag(PT_SRESTRICTION,0x6679));
+define('PR_RULE_ACTIONS'                              ,mapi_prop_tag(PT_ACTIONS,     0x6680));
+define('PR_RULE_PROVIDER'                             ,mapi_prop_tag(PT_STRING8,     0x6681));
+define('PR_RULE_NAME'                                 ,mapi_prop_tag(PT_TSTRING,     0x6682));
+define('PR_RULE_LEVEL'                                ,mapi_prop_tag(PT_LONG,        0x6683));
+define('PR_RULE_PROVIDER_DATA'                        ,mapi_prop_tag(PT_BINARY,      0x6684));
 
 // edkmdb, ICS properties
-define('PR_SOURCE_KEY'                                ,mapi_prop_tag(PT_BINARY,      0x65E0+0x00));
-define('PR_PARENT_SOURCE_KEY'                         ,mapi_prop_tag(PT_BINARY,      0x65E0+0x01));
-define('PR_CHANGE_KEY'                                ,mapi_prop_tag(PT_BINARY,      0x65E0+0x02));
-define('PR_PREDECESSOR_CHANGE_LIST'                   ,mapi_prop_tag(PT_BINARY,      0x65E0+0x03));
+define('PR_SOURCE_KEY'                                ,mapi_prop_tag(PT_BINARY,      0x65E0));
+define('PR_PARENT_SOURCE_KEY'                         ,mapi_prop_tag(PT_BINARY,      0x65E1));
+define('PR_CHANGE_KEY'                                ,mapi_prop_tag(PT_BINARY,      0x65E2));
+define('PR_PREDECESSOR_CHANGE_LIST'                   ,mapi_prop_tag(PT_BINARY,      0x65E3));
 
 
 define('PR_PROCESS_MEETING_REQUESTS'                  ,mapi_prop_tag(PT_BOOLEAN,     0x686D));
@@ -1213,34 +900,34 @@ define('PR_EMS_AB_IS_MEMBER_OF_DL'                    ,mapi_prop_tag(PT_MV_BINAR
 define('PR_EMS_AB_OWNER'                              ,mapi_prop_tag(PT_BINARY,      0x800C));
 define('PR_EMS_AB_ROOM_CAPACITY'                      ,mapi_prop_tag(PT_LONG,        0x0807));
 define('PR_EMS_AB_TAGGED_X509_CERT'                   ,mapi_prop_tag(PT_MV_BINARY,   0x8C6A));
+define('PR_EMS_AB_THUMBNAIL_PHOTO'                    ,mapi_prop_tag(PT_BINARY,      0x8C9E));
 
 define('PR_EC_ARCHIVE_SERVERS'                        ,mapi_prop_tag(PT_MV_TSTRING,  0x67c4));
 
-/* zarafa contacts provider properties */
-define('PR_ZC_CONTACT_STORE_ENTRYIDS'                 ,mapi_prop_tag(PT_MV_BINARY,   PR_EC_BASE+0x11));
-define('PR_ZC_CONTACT_FOLDER_ENTRYIDS'                ,mapi_prop_tag(PT_MV_BINARY,   PR_EC_BASE+0x12));
-define('PR_ZC_CONTACT_FOLDER_NAMES'                   ,mapi_prop_tag(PT_MV_TSTRING,  PR_EC_BASE+0x13));
+/* kopano contacts provider properties */
+define('PR_ZC_CONTACT_STORE_ENTRYIDS'                 ,mapi_prop_tag(PT_MV_BINARY,   0x6711));
+define('PR_ZC_CONTACT_FOLDER_ENTRYIDS'                ,mapi_prop_tag(PT_MV_BINARY,   0x6712));
+define('PR_ZC_CONTACT_FOLDER_NAMES'                   ,mapi_prop_tag(PT_MV_TSTRING,  0x6713));
 
-//Properties defined for Z-Push
-define('PR_TODO_ITEM_FLAGS'                           ,mapi_prop_tag(PT_LONG,        0x0E2B));
+/* kopano specific properties for optimization of imap functionality */
+define('PR_EC_IMAP_EMAIL'                             ,mapi_prop_tag(PT_BINARY,      0x678C)); //the complete rfc822 email
+define('PR_EC_IMAP_EMAIL_SIZE'                        ,mapi_prop_tag(PT_LONG,        0x678D));
+define('PR_EC_IMAP_BODY'                              ,mapi_prop_tag(PT_STRING8,     0x678E)); //simplified bodystructure (mostly unused by clients)
+define('PR_EC_IMAP_BODYSTRUCTURE'                     ,mapi_prop_tag(PT_STRING8,     0x678F)); //extended bodystructure (often used by clients)
+
+/* Folder properties for unread counters */
 define('PR_LOCAL_COMMIT_TIME_MAX'                     ,mapi_prop_tag(PT_SYSTIME,     0x670A));
 define('PR_DELETED_MSG_COUNT'                         ,mapi_prop_tag(PT_LONG,        0x6640));
 
+/* Favorites folder properties*/
+define('PR_WLINK_ENTRYID'                             ,mapi_prop_tag(PT_BINARY,      0x684C));
+define('PR_WLINK_FLAGS'                               ,mapi_prop_tag(PT_LONG,        0x684A));
+define('PR_WLINK_ORDINAL'                             ,mapi_prop_tag(PT_BINARY,      0x684B));
+define('PR_WLINK_STORE_ENTRYID'                       ,mapi_prop_tag(PT_BINARY,      0x684E));
+define('PR_WLINK_TYPE'                                ,mapi_prop_tag(PT_LONG,        0x6849));
+define('PR_WLINK_SECTION'                             ,mapi_prop_tag(PT_LONG,        0x6852));
+define('PR_WLINK_RECKEY'                              ,mapi_prop_tag(PT_BINARY,      0x684D));
+define('PR_WB_SF_ID'                                  ,mapi_prop_tag(PT_BINARY,      0x6842));
 
-// PR_IPM_OL2007_ENTRYIDS / PR_ADDITIONAL_REN_ENTRYIDS_EX PersistIDs
-define('RSF_PID_RSS_SUBSCRIPTION'                     ,0x8001); // Indicates that the structure contains data for the RSS Feeds folder
-define('RSF_PID_SEND_AND_TRACK'                       ,0x8002); // Indicates that the structure contains data for the Tracked Mail Processing folder
-define('RSF_PID_TODO_SEARCH'                          ,0x8004); // Indicates that the structure contains data for the To-Do folder
-define('RSF_PID_CONV_ACTIONS'                         ,0x8006); // Indicates that the structure contains data for the Conversation Action Settings folder
-define('RSF_PID_COMBINED_ACTIONS'                     ,0x8007); // This value is reserved.
-define('RSF_PID_SUGGESTED_CONTACTS'                   ,0x8008); // Indicates that the structure contains data for the Suggested Contacts folder.
-define('RSF_PID_CONTACT_SEARCH'                       ,0x8009); // Indicates that the structure contains data for the Contacts Search folder.
-define('RSF_PID_BUDDYLIST_PDLS'                       ,0x800A); // Indicates that the structure contains data for the IM Contacts List folder.
-define('RSF_PID_BUDDYLIST_CONTACTS'                   ,0x800B); // Indicates that the structure contains data for the Quick Contacts folder.
-define('PERSIST_SENTINEL'                             ,0x0000); // Indicates that the PersistData structure is the last one contained in the PidTagAdditionalRenEntryIdsEx property
-
-// ElementIDs for persist data of PR_IPM_OL2007_ENTRYIDS / PR_ADDITIONAL_REN_ENTRYIDS_EX
-define('RSF_ELID_HEADER'                              ,0x0002); // 4 bytes Indicates that the ElementData field contains a 4-byte header value equal to 0x00000000.
-define('RSF_ELID_ENTRYID'                             ,0x0001); // variable Indicates that the ElementData field contains the entry ID of the special folder
-                                                                // that is of the type indicated by the value of the PersistID field of the PersistData structure.
-define('ELEMENT_SENTINEL'                             ,0x0000); // 0 bytes Indicates that the PersistElement structure is the last one contained in the DataElements field of the PersistData structure.
+/* Search folder properties */
+define('PR_EC_SUGGESTION'                             ,mapi_prop_tag(PT_TSTRING,     0x6707));

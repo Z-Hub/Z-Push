@@ -116,7 +116,7 @@ class BackendMaildir extends BackendDiff {
         // Parse e-mail
         $rfc822 = file_get_contents($this->getPath() . "/$fn");
 
-        $message = Mail_mimeDecode::decode(array('decode_headers' => true, 'decode_bodies' => true, 'include_bodies' => true, 'input' => $rfc822, 'crlf' => "\n", 'charset' => 'utf-8'));
+        $message = Mail_mimeDecode::decode(array('decode_headers' => 'utf-8', 'decode_bodies' => true, 'include_bodies' => true, 'input' => $rfc822, 'crlf' => "\n", 'charset' => 'utf-8'));
 
         $attachment = new SyncItemOperationsAttachment();
         $attachment->data = StringStreamWrapper::Open($message->parts[$part]->body);
@@ -333,7 +333,7 @@ class BackendMaildir extends BackendDiff {
         // Parse e-mail
         $rfc822 = file_get_contents($this->getPath() . "/" . $fn);
 
-        $message = Mail_mimeDecode::decode(array('decode_headers' => true, 'decode_bodies' => true, 'include_bodies' => true, 'input' => $rfc822, 'crlf' => "\n", 'charset' => 'utf-8'));
+        $message = Mail_mimeDecode::decode(array('decode_headers' => 'utf-8', 'decode_bodies' => true, 'include_bodies' => true, 'input' => $rfc822, 'crlf' => "\n", 'charset' => 'utf-8'));
 
         Utils::CheckAndFixEncodingInHeaders($mail, $message);
 

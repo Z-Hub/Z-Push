@@ -33,6 +33,7 @@ abstract class InterProcessData {
     static private $providerLoadOrder = array(
         'IpcSharedMemoryProvider' => 'backend/ipcsharedmemory/ipcsharedmemoryprovider.php',
         'IpcMemcachedProvider'    => 'backend/ipcmemcached/ipcmemcachedprovider.php',
+        'IpcWincacheProvider'     => 'backend/ipcwincache/ipcwincacheprovider.php',
     );
     static protected $devid;
     static protected $pid;
@@ -96,7 +97,7 @@ abstract class InterProcessData {
         if (!isset(self::$devid)) {
             self::$devid = Request::GetDeviceID();
             self::$pid = @getmypid();
-            self::$user = Request::GetAuthUser();
+            self::$user = Request::GetAuthUserString(); // we want to see everything here
             self::$start = time();
         }
         return true;

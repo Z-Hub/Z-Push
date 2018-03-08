@@ -366,8 +366,12 @@ class MAPIUtils {
         $sensitivity = mapi_getprops($mapimessage, array(PR_SENSITIVITY));
         if (isset($sensitivity[PR_SENSITIVITY]) && $sensitivity[PR_SENSITIVITY] >= SENSITIVITY_PRIVATE) {
             $hexFolderid = bin2hex($folderid);
-            $sharedUser = ZPush::GetAdditionalSyncFolderStore($hexFolderid);
             $shortId = ZPush::GetDeviceManager()->GetFolderIdForBackendId($hexFolderid);
+            if (Utils::GetFolderOriginFromId($shortId) == DeviceManager::FLD_ORIGIN_IMPERSONATED) {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("MAPIUtils->IsMessageSharedAndPrivate(): Message is in impersonated store '%s' and marked as private", ZPush::GetBackend()->GetImpersonatedUser()));
+                return true;
+            }
+            $sharedUser = ZPush::GetAdditionalSyncFolderStore($hexFolderid);
             if (Utils::GetFolderOriginFromId($shortId) != DeviceManager::FLD_ORIGIN_USER && $sharedUser != false && $sharedUser != 'SYSTEM') {
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("MAPIUtils->IsMessageSharedAndPrivate(): Message is in shared store '%s' and marked as private", $sharedUser));
                 return true;
@@ -623,5 +627,187 @@ class MAPIUtils {
             mapi_setprops($mapimessage, array(PR_MESSAGE_CLASS => 'IPM.Note.SMIME.MultipartSigned'));
         }
         // TODO check if we need to do this for encrypted (and signed?) message as well
+    }
+
+    /**
+     * Compares two entryIds. It is possible to have two different entryIds that should match as they
+     * represent the same object (in multiserver environments).
+     * @param string $entryId1
+     * @param string $entryId2
+     *
+     * @access public
+     * @return boolean
+     */
+    public static function CompareEntryIds($entryId1, $entryId2) {
+        if (!is_string($entryId1) || !is_string($entryId2)) {
+            return false;
+        }
+
+        if ($entryId1 === $entryId2) {
+            // if normal comparison succeeds then we can directly say that entryids are same
+            return true;
+        }
+
+        $eid1 = self::createEntryIdObj($entryId1);
+        $eid2 = self::createEntryIdObj($entryId2);
+
+        if ($eid1['length'] != $eid2['length'] ||
+            $eid1['abFlags'] != $eid2['abFlags'] ||
+            $eid1['version'] != $eid2['version'] ||
+            $eid1['type'] != $eid2['type']) {
+            return false;
+        }
+
+        if ($eid1['name'] == 'EID_V0') {
+            if ($eid1['length'] < $eid1['min_length'] || $eid1['id'] != $eid2['id']) {
+                return false;
+            }
+        }
+        elseif ($eid1['length'] < $eid1['min_length'] || $eid1['uniqueId'] != $eid2['uniqueId']) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Creates an object that has split up all the components of an entryID.
+     * @param string $entryid Entryid
+     *
+     * @access private
+     * @return Object EntryID object
+     */
+    private static function createEntryIdObj($entryid) {
+        // check if we are dealing with old or new object entryids
+        return (substr($entryid, 40, 8) == '00000000') ? self::getEID_V0Version($entryid) : self::getEIDVersion($entryid);
+    }
+
+    /**
+     * The entryid from the begin of zarafa till 5.20.
+     * @param string $entryid
+     *
+     * @access private
+     * @return Object EntryID object
+     *
+     */
+    private static function getEID_V0Version($entryid) {
+        // always make entryids in uppercase so comparison will be case insensitive
+        $entryId = strtoupper($entryid);
+
+        $res = array(
+            'abFlags'   => '',  // BYTE[4],  4 bytes,  8 hex characters
+            'guid'      => '',  // GUID,    16 bytes, 32 hex characters
+            'version'   => '',  // ULONG,    4 bytes,  8 hex characters
+            'type'      => '',  // ULONG,    4 bytes,  8 hex characters
+            'id'        => '',  // ULONG,    4 bytes,  8 hex characters
+            'server'    => '',  // CHAR,    variable length
+            'padding'   => '',  // TCHAR[3], 4 bytes,  8 hex characters (upto 4 bytes)
+        );
+
+        $res['length'] = strlen($entryId);
+        $offset = 0;
+
+        // First determine padding, and remove if from the entryId
+        $res['padding'] = self::getPadding($entryId);
+        $entryId = substr($entryId, 0, strlen($entryId) - strlen($res['padding']));
+
+        $res['abFlags'] = substr($entryId, $offset, 8);
+        $offset =+ 8;
+
+        $res['guid'] = substr($entryId, $offset, 32);
+        $offset += 32;
+
+        $res['version'] = substr($entryId, $offset, 8);
+        $offset += 8;
+
+        $res['type'] = substr($entryId, $offset, 8);
+        $offset += 8;
+
+        $res['id'] = substr($entryId, $offset, 8);
+        $offset += 8;
+
+        $res['server'] = substr($entryId, $offset);
+
+        $res['min_lenth'] = 64;
+        $res['name'] = 'EID_V0';
+
+        return $res;
+    }
+
+    /**
+     * Entryid from version 6.
+     * @param string $entryid
+     *
+     * @access private
+     * @return string[]|number[]|NULL[]
+     */
+    private static function getEIDVersion($entryid) {
+        // always make entryids in uppercase so comparison will be case insensitive
+        $entryId = strtoupper($entryid);
+
+        $res = array(
+            'abFlags'   => '',  // BYTE[4],  4 bytes,  8 hex characters
+            'guid'      => '',  // GUID,    16 bytes, 32 hex characters
+            'version'   => '',  // ULONG,    4 bytes,  8 hex characters
+            'type'      => '',  // ULONG,    4 bytes,  8 hex characters
+            'uniqueId'  => '',  // ULONG,   16 bytes,  32 hex characters
+            'server'    => '',  // CHAR,    variable length
+            'padding'   => '',  // TCHAR[3], 4 bytes,  8 hex characters (upto 4 bytes)
+        );
+
+        $res['length'] = strlen($entryId);
+        $offset = 0;
+
+        // First determine padding, and remove if from the entryId
+        $res['padding'] = self::getPadding($entryId);
+        $entryId = substr($entryId, 0, strlen($entryId) - strlen($res['padding']));
+
+        $res['abFlags'] = substr($entryId, $offset, 8);
+        $offset =+ 8;
+
+        $res['guid'] = substr($entryId, $offset, 32);
+        $offset += 32;
+
+        $res['version'] = substr($entryId, $offset, 8);
+        $offset += 8;
+
+        $res['type'] = substr($entryId, $offset, 8);
+        $offset += 8;
+
+        $res['uniqueId'] = substr($entryId, $offset, 32);
+        $offset += 32;
+
+        $res['server'] = substr($entryId, $offset);
+
+        $res['min_length'] = 88;
+        $res['name'] = 'EID';
+
+        return $res;
+    }
+
+    /**
+     * Detect padding (max 3 bytes) from the entryId.
+     * @param string $entryId
+     *
+     * @access private
+     * @return string
+     */
+    private static function getPadding($entryId) {
+        $len = strlen($entryId);
+        $padding = '';
+        $offset = 0;
+
+        for ($iterations = 4; $iterations > 0; $iterations--) {
+            if (substr($entryId, $len - ($offset + 2), $len - $offset) == '00') {
+                $padding .= '00';
+                $offset += 2;
+            }
+            else {
+                // if non-null character found then break the loop
+                break;
+            }
+        }
+
+        return $padding;
     }
 }

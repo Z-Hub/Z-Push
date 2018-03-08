@@ -25,7 +25,9 @@
 ************************************************/
 
 class Request {
+    const MAXMEMORYUSAGE = 0.9;     // use max. 90% of allowed memory when synching
     const UNKNOWN = "unknown";
+    const IMPERSONATE_DELIM = '#';
 
     /**
      * self::filterEvilInput() options
@@ -64,9 +66,11 @@ class Request {
     static private $getUser;
     static private $devid;
     static private $devtype;
+    static private $authUserString;
     static private $authUser;
     static private $authDomain;
     static private $authPassword;
+    static private $impersonatedUser;
     static private $asProtocolVersion;
     static private $policykey;
     static private $useragent;
@@ -83,6 +87,7 @@ class Request {
     static private $koeBuildDate;
     static private $koeCapabilites;
     static private $expectedConnectionTimeout;
+    static private $memoryLimit;
 
     /**
      * Initializes request data
@@ -177,12 +182,25 @@ class Request {
         // authUser & authPassword are unfiltered!
         // split username & domain if received as one
         if (isset($_SERVER['PHP_AUTH_USER'])) {
-            list(self::$authUser, self::$authDomain) = Utils::SplitDomainUser($_SERVER['PHP_AUTH_USER']);
+            list(self::$authUserString, self::$authDomain) = Utils::SplitDomainUser($_SERVER['PHP_AUTH_USER']);
             self::$authPassword = (isset($_SERVER['PHP_AUTH_PW']))?$_SERVER['PHP_AUTH_PW'] : "";
         }
+
+        // process impersonation
+        self::$authUser = self::$authUserString; // auth will fail when impersonating & KOE_CAPABILITY_IMPERSONATE is disabled
+
+        if (defined('KOE_CAPABILITY_IMPERSONATE') && KOE_CAPABILITY_IMPERSONATE && stripos(self::$authUserString, self::IMPERSONATE_DELIM) !== false) {
+            list(self::$authUser, self::$impersonatedUser) = explode(self::IMPERSONATE_DELIM, self::$authUserString);
+        }
+
         if(defined('USE_FULLEMAIL_FOR_LOGIN') && ! USE_FULLEMAIL_FOR_LOGIN) {
             self::$authUser = Utils::GetLocalPartFromEmail(self::$authUser);
         }
+
+        // get & convert configured memory limit
+        (int)preg_replace_callback('/(\-?\d+)(.?)/', function ($m) {
+            self::$memoryLimit = $m[1] * pow(1024, strpos('BKMG', $m[2])) * self::MAXMEMORYUSAGE;
+        }, strtoupper(ini_get('memory_limit')));
     }
 
     /**
@@ -236,11 +254,11 @@ class Request {
             }
         }
 
-        if (defined('USE_X_FORWARDED_FOR_HEADER') && USE_X_FORWARDED_FOR_HEADER == true && isset(self::$headers["x-forwarded-for"])) {
-            $forwardedIP = self::filterIP(self::$headers["x-forwarded-for"]);
-            if ($forwardedIP) {
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("'X-Forwarded-for' indicates remote IP: %s - connect is coming from IP: %s", $forwardedIP, self::$remoteAddr));
-                self::$remoteAddr = $forwardedIP;
+        if (defined('USE_CUSTOM_REMOTE_IP_HEADER') && USE_CUSTOM_REMOTE_IP_HEADER !== false && isset(self::$headers[strtolower(USE_CUSTOM_REMOTE_IP_HEADER)])) {
+            $remoteIP = self::filterIP(self::$headers[strtolower(USE_CUSTOM_REMOTE_IP_HEADER)]);
+            if ($remoteIP) {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("Using custom header '%s' to determine remote IP: %s - connect is coming from IP: %s", USE_CUSTOM_REMOTE_IP_HEADER, $remoteIP, self::$remoteAddr));
+                self::$remoteAddr = $remoteIP;
             }
         }
 
@@ -384,16 +402,57 @@ class Request {
     }
 
     /**
-     * Returns the authenticated user
+     * Returns user that is synchronizing data.
+     * If impersonation is active it returns the impersonated user,
+     * else the auth user.
+     *
+     * @access public
+     * @return string/boolean       false if not available
+     */
+    static public function GetUser() {
+        if (self::GetImpersonatedUser()) {
+            return self::GetImpersonatedUser();
+        }
+        return self::GetAuthUser();
+    }
+
+    /**
+     * Returns the AuthUser string send by the client.
+     *
+     * @access public
+     * @return string/boolean       false if not available
+     */
+    static public function GetAuthUserString() {
+        if (isset(self::$authUserString)) {
+            return self::$authUserString;
+        }
+        return false;
+    }
+
+    /**
+     * Returns the impersonated user. If not available, returns false.
+     *
+     * @access public
+     * @return string/boolean       false if not available
+     */
+    static public function GetImpersonatedUser() {
+        if (isset(self::$impersonatedUser)) {
+            return self::$impersonatedUser;
+        }
+        return false;
+    }
+
+    /**
+     * Returns the authenticated user.
      *
      * @access public
      * @return string/boolean       false if not available
      */
     static public function GetAuthUser() {
-        if (isset(self::$authUser))
+        if (isset(self::$authUser)) {
             return self::$authUser;
-        else
-            return false;
+        }
+        return false;
     }
 
     /**
@@ -633,27 +692,15 @@ class Request {
     }
 
     /**
-     * Checks the device type if it expects the globalobjid in meeting requests encoded as hex.
-     * If it's not the case, globalobjid will be base64 encoded.
-     *
-     * iOS device since 9.3 (?) version expect globalobjid to be hex encoded.
-     * @see https://jira.z-hub.io/projects/ZP/issues/ZP-1013
+     * Indicates if the memory usage limit is almost reached.
+     * Processing should stop then to prevent hard out-of-memory issues.
+     * The threshold is hardcoded at 90% in Request::MAXMEMORYUSAGE.
      *
      * @access public
      * @return boolean
      */
-    static public function IsGlobalObjIdHexClient() {
-        switch (self::GetDeviceType()) {
-            case "iPod":
-            case "iPad":
-            case "iPhone":
-                $matches = array();
-                if (preg_match("/^Apple-.*?\/(\d{4})\./", self::GetUserAgent(), $matches) && isset($matches[1]) && $matches[1] >= 1305) {
-                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("Request->IsGlobalObjIdHexClient(): %s->%s", self::GetDeviceType(), self::GetUserAgent()));
-                    return true;
-                }
-        }
-        return false;
+    static public function IsRequestMemoryLimitReached() {
+        return memory_get_peak_usage(true) >= self::$memoryLimit;
     }
 
     /**----------------------------------------------------------------------------------------------------------
@@ -672,14 +719,14 @@ class Request {
      */
     static private function filterEvilInput($input, $filter, $replacevalue = '') {
         $re = false;
-        if ($filter == self::LETTERS_ONLY)            $re = "/[^A-Za-z]/";
-        else if ($filter == self::HEX_ONLY)           $re = "/[^A-Fa-f0-9]/";
-        else if ($filter == self::WORDCHAR_ONLY)      $re = "/[^A-Za-z0-9]/";
-        else if ($filter == self::NUMBERS_ONLY)       $re = "/[^0-9]/";
-        else if ($filter == self::NUMBERSDOT_ONLY)    $re = "/[^0-9\.]/";
-        else if ($filter == self::HEX_EXTENDED)       $re = "/[^A-Fa-f0-9\:\.]/";
-        else if ($filter == self::HEX_EXTENDED2)      $re = "/[^A-Fa-f0-9\:USG]/"; // Folder origin constants from DeviceManager::FLD_ORIGIN_* (C already hex)
-        else if ($filter == self::ISO8601)            $re = "/[^\d{8}T\d{6}Z]/";
+        if ($filter == self::LETTERS_ONLY)          $re = "/[^A-Za-z]/";
+        elseif ($filter == self::HEX_ONLY)          $re = "/[^A-Fa-f0-9]/";
+        elseif ($filter == self::WORDCHAR_ONLY)     $re = "/[^A-Za-z0-9]/";
+        elseif ($filter == self::NUMBERS_ONLY)      $re = "/[^0-9]/";
+        elseif ($filter == self::NUMBERSDOT_ONLY)   $re = "/[^0-9\.]/";
+        elseif ($filter == self::HEX_EXTENDED)      $re = "/[^A-Fa-f0-9\:\.]/";
+        elseif ($filter == self::HEX_EXTENDED2)     $re = "/[^A-Fa-f0-9\:USGI]/"; // Folder origin constants from DeviceManager::FLD_ORIGIN_* (C already hex)
+        elseif ($filter == self::ISO8601)           $re = "/[^\d{8}T\d{6}Z]/";
 
         return ($re) ? preg_replace($re, $replacevalue, $input) : '';
     }

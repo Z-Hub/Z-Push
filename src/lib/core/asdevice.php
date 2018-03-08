@@ -59,6 +59,8 @@ class ASDevice extends StateObject {
                                     'koebuilddate' => false,
                                     'koegabbackendfolderid' => false,
                                     'koecapabilities' => array(),
+                                    'koelastaccess' => false,
+                                    'syncfiltertype' => false,
                                 );
 
     static private $loadedData;
@@ -666,6 +668,7 @@ class ASDevice extends StateObject {
      *                                                                  'C' (configured)
      *                                                                  'S' (shared)
      *                                                                  'G' (global address book)
+     *                                                                  'I' (impersonated)
      * @param string    $folderName             Folder name of the backend folder
      *
      * @access public
@@ -775,11 +778,11 @@ class ASDevice extends StateObject {
      * @return mixed/boolean        false means the status is not available
      */
     public function GetFolderSyncStatus($folderid) {
-        if (isset($this->contentData) && isset($this->contentData[$folderid]) &&
-            isset($this->contentData[$folderid][self::FOLDERUUID]) && $this->contentData[$folderid][self::FOLDERUUID] !== false &&
-            isset($this->contentData[$folderid][self::FOLDERSYNCSTATUS]) )
+        if (isset($this->contentData[$folderid][self::FOLDERUUID], $this->contentData[$folderid][self::FOLDERSYNCSTATUS]) &&
+                $this->contentData[$folderid][self::FOLDERUUID] !== false) {
 
             return $this->contentData[$folderid][self::FOLDERSYNCSTATUS];
+        }
 
         return false;
     }
@@ -1122,6 +1125,7 @@ class ASDevice extends StateObject {
      *                                                                  'C' (configured)
      *                                                                  'S' (shared)
      *                                                                  'G' (global address book)
+     *                                                                  'I' (impersonated)
      * @param string    $folderName             Folder name of the backend folder
      *
      * @access private

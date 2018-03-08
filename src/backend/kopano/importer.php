@@ -87,8 +87,13 @@ class ImportChangesICS implements IImportChanges {
             }
         }
         else {
-            $storeprops = mapi_getprops($store, array(PR_IPM_SUBTREE_ENTRYID));
-            $entryid = $storeprops[PR_IPM_SUBTREE_ENTRYID];
+            $storeprops = mapi_getprops($store, array(PR_IPM_SUBTREE_ENTRYID, PR_IPM_PUBLIC_FOLDERS_ENTRYID));
+            if (ZPush::GetBackend()->GetImpersonatedUser() == 'system') {
+                $entryid = $storeprops[PR_IPM_PUBLIC_FOLDERS_ENTRYID];
+            }
+            else {
+                $entryid = $storeprops[PR_IPM_SUBTREE_ENTRYID];
+            }
         }
 
         $folder = false;
@@ -254,7 +259,7 @@ class ImportChangesICS implements IImportChanges {
 
         $sharedUser = ZPush::GetAdditionalSyncFolderStore(bin2hex($this->folderid));
         // if this is either a user folder or SYSTEM and no restriction is set, we don't need to check
-        if (($sharedUser == false || $sharedUser == 'SYSTEM') && $this->cutoffdate === false) {
+        if (($sharedUser == false || $sharedUser == 'SYSTEM') && $this->cutoffdate === false && !ZPush::GetBackend()->GetImpersonatedUser()) {
             return true;
         }
 
@@ -570,12 +575,13 @@ class ImportChangesICS implements IImportChanges {
 
         if(!$entryid || !$srcmessage) {
             $code = SYNC_MOVEITEMSSTATUS_INVALIDSOURCEID;
+            $mapiLastHresult = mapi_last_hresult();
             // if we move to the trash and the source message is not found, we can also just tell the mobile that we successfully moved to avoid errors (ZP-624)
             if ($newfolder == ZPush::GetBackend()->GetWasteBasket()) {
                 $code = SYNC_MOVEITEMSSTATUS_SUCCESS;
             }
             $errorCase = !$entryid ? "resolve source message id" : "open source message";
-            throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Error, unable to %s: 0x%X", $sk, $newfolder, $errorCase, mapi_last_hresult()), $code);
+            throw new StatusException(sprintf("ImportChangesICS->ImportMessageMove('%s','%s'): Error, unable to %s: 0x%X", $sk, $newfolder, $errorCase, $mapiLastHresult), $code);
         }
 
         // check if it is in the synchronization interval and/or shared+private
@@ -663,9 +669,13 @@ class ImportChangesICS implements IImportChanges {
         if (!$id) {
             // the root folder is "0" - get IPM_SUBTREE
             if ($parent == "0") {
-                $parentprops = mapi_getprops($this->store, array(PR_IPM_SUBTREE_ENTRYID));
-                if (isset($parentprops[PR_IPM_SUBTREE_ENTRYID]))
+                $parentprops = mapi_getprops($this->store, array(PR_IPM_SUBTREE_ENTRYID, PR_IPM_PUBLIC_FOLDERS_ENTRYID));
+                if (ZPush::GetBackend()->GetImpersonatedUser() == 'system' && isset($parentprops[PR_IPM_PUBLIC_FOLDERS_ENTRYID])) {
+                    $parentfentryid = $parentprops[PR_IPM_PUBLIC_FOLDERS_ENTRYID];
+                }
+                elseif (isset($parentprops[PR_IPM_SUBTREE_ENTRYID])) {
                     $parentfentryid = $parentprops[PR_IPM_SUBTREE_ENTRYID];
+                }
             }
             else
                 $parentfentryid = mapi_msgstore_entryidfromsourcekey($this->store, hex2bin($parent));
@@ -687,7 +697,11 @@ class ImportChangesICS implements IImportChanges {
             $props =  mapi_getprops($newfolder, array(PR_SOURCE_KEY));
             if (isset($props[PR_SOURCE_KEY])) {
                 $folder->BackendId = bin2hex($props[PR_SOURCE_KEY]);
-                $folder->serverid = ZPush::GetDeviceManager()->GetFolderIdForBackendId($folder->BackendId, true, DeviceManager::FLD_ORIGIN_USER, $folder->displayname);
+                $folderOrigin = DeviceManager::FLD_ORIGIN_USER;
+                if (ZPush::GetBackend()->GetImpersonatedUser()) {
+                    $folderOrigin = DeviceManager::FLD_ORIGIN_IMPERSONATED;
+                }
+                $folder->serverid = ZPush::GetDeviceManager()->GetFolderIdForBackendId($folder->BackendId, true, $folderOrigin, $folder->displayname);
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("ImportChangesICS->ImportFolderChange(): Created folder '%s' with id: '%s' backendid: '%s'", $displayname, $folder->serverid, $folder->BackendId));
                 return $folder;
             }
@@ -714,8 +728,13 @@ class ImportChangesICS implements IImportChanges {
 
         // get the real parent source key from mapi
         if ($parent == "0") {
-            $parentprops = mapi_getprops($this->store, array(PR_IPM_SUBTREE_ENTRYID));
-            $parentfentryid = $parentprops[PR_IPM_SUBTREE_ENTRYID];
+            $parentprops = mapi_getprops($this->store, array(PR_IPM_SUBTREE_ENTRYID, PR_IPM_PUBLIC_FOLDERS_ENTRYID));
+            if (ZPush::GetBackend()->GetImpersonatedUser() == 'system') {
+                $parentfentryid = $parentprops[PR_IPM_PUBLIC_FOLDERS_ENTRYID];
+            }
+            else {
+                $parentfentryid = $parentprops[PR_IPM_SUBTREE_ENTRYID];
+            }
             $mapifolder = mapi_msgstore_openentry($this->store, $parentfentryid);
 
             $rootfolderprops = mapi_getprops($mapifolder, array(PR_SOURCE_KEY));

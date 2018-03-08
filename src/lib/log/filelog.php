@@ -44,7 +44,17 @@ class FileLog extends Log {
      */
     private function getLogToUserFile() {
         if ($this->log_to_user_file === false) {
-            $this->setLogToUserFile(preg_replace('/[^a-z0-9]/', '_', strtolower($this->GetAuthUser())) . '.log');
+            if (in_array(strtolower($this->GetDevid()), ['','webservice','validate'])) {
+                $this->setLogToUserFile(preg_replace('/[^a-z0-9]/', '_', strtolower($this->GetAuthUser())) . '.log');
+            }
+            else {
+                $this->setLogToUserFile(
+                        preg_replace('/[^a-z0-9]/', '_', strtolower($this->GetAuthUser())) .'-'.
+                        (($this->GetAuthUser() != $this->GetUser()) ? preg_replace('/[^a-z0-9]/', '_', strtolower($this->GetUser())) .'-' : '') .
+                        preg_replace('/[^a-z0-9]/', '_', strtolower($this->GetDevid())) .
+                        '.log'
+                        );
+            }
         }
         return $this->log_to_user_file;
     }
@@ -64,16 +74,27 @@ class FileLog extends Log {
     /**
      * Returns the string to be logged.
      *
-     * @param int $loglevel
-     * @param string $message
+     * @param int       $loglevel
+     * @param string    $message
+     * @param boolean   $includeUserDevice  puts username and device in the string, default: true
      *
      * @access public
      * @return string
      */
-    public function BuildLogString($loglevel, $message) {
-        $log = Utils::GetFormattedTime() . ' ' . $this->GetPidstr() . ' ' . $this->GetLogLevelString($loglevel, $loglevel >= LOGLEVEL_INFO) . ' ' . $this->GetUser();
-        if (LOGLEVEL >= LOGLEVEL_DEVICEID || (LOGUSERLEVEL >= LOGLEVEL_DEVICEID && $this->IsAuthUserInSpecialLogUsers())) {
-            $log .= ' ' . $this->GetDevid();
+    public function BuildLogString($loglevel, $message, $includeUserDevice = true) {
+        $log = Utils::GetFormattedTime() .' ['. str_pad($this->GetPid(),5," ",STR_PAD_LEFT) .'] '. $this->GetLogLevelString($loglevel, $loglevel >= LOGLEVEL_INFO);
+
+        if ($includeUserDevice) {
+            // when the users differ, we need to log both
+            if (strcasecmp($this->GetAuthUser(), $this->GetUser()) == 0) {
+                $log .= ' ['. $this->GetUser() .']';
+            }
+            else {
+                $log .= ' ['. $this->GetAuthUser() . Request::IMPERSONATE_DELIM . $this->GetUser() .']';
+            }
+        }
+        if ($includeUserDevice && (LOGLEVEL >= LOGLEVEL_DEVICEID || (LOGUSERLEVEL >= LOGLEVEL_DEVICEID && $this->IsAuthUserInSpecialLogUsers()))) {
+            $log .= ' ['. $this->GetDevid() .']';
         }
         $log .= ' ' . $message;
         return $log;
@@ -93,7 +114,7 @@ class FileLog extends Log {
      * @return void
      */
     protected function Write($loglevel, $message) {
-        $data = $this->buildLogString($loglevel, $message) . PHP_EOL;
+        $data = $this->BuildLogString($loglevel, $message) . PHP_EOL;
         @file_put_contents(LOGFILE, $data, FILE_APPEND);
     }
 
@@ -106,7 +127,7 @@ class FileLog extends Log {
      * @return void
      */
     public function WriteForUser($loglevel, $message) {
-        $data = $this->buildLogString($loglevel, $message) . PHP_EOL;
+        $data = $this->BuildLogString($loglevel, $message, false) . PHP_EOL;
         @file_put_contents(LOGFILEDIR . $this->getLogToUserFile(), $data, FILE_APPEND);
     }
 
@@ -119,7 +140,7 @@ class FileLog extends Log {
      */
     protected function afterLog($loglevel, $message) {
         if ($loglevel & (LOGLEVEL_FATAL | LOGLEVEL_ERROR | LOGLEVEL_WARN)) {
-            $data = $this->buildLogString($loglevel, $message) . PHP_EOL;
+            $data = $this->BuildLogString($loglevel, $message) . PHP_EOL;
             @file_put_contents(LOGERRORFILE, $data, FILE_APPEND);
         }
     }
