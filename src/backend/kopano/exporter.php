@@ -69,8 +69,13 @@ class ExportChangesICS implements IExportChanges{
                 $entryid = mapi_msgstore_entryidfromsourcekey($store, $folderid);
             }
             else {
-                $storeprops = mapi_getprops($this->store, array(PR_IPM_SUBTREE_ENTRYID));
-                $entryid = $storeprops[PR_IPM_SUBTREE_ENTRYID];
+                $storeprops = mapi_getprops($this->store, array(PR_IPM_SUBTREE_ENTRYID, PR_IPM_PUBLIC_FOLDERS_ENTRYID));
+                if (ZPush::GetBackend()->GetImpersonatedUser() == 'system') {
+                    $entryid = $storeprops[PR_IPM_PUBLIC_FOLDERS_ENTRYID];
+                }
+                else {
+                    $entryid = $storeprops[PR_IPM_SUBTREE_ENTRYID];
+                }
             }
 
             $folder = false;
