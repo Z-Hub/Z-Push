@@ -994,7 +994,7 @@ class MAPIProvider {
             $folderOrigin = DeviceManager::FLD_ORIGIN_IMPERSONATED;
         }
         $folder->serverid = ZPush::GetDeviceManager()->GetFolderIdForBackendId($folder->BackendId, true, $folderOrigin, $folderprops[PR_DISPLAY_NAME]);
-        if($folderprops[PR_PARENT_ENTRYID] == $storeprops[PR_IPM_SUBTREE_ENTRYID]) {
+        if($folderprops[PR_PARENT_ENTRYID] == $storeprops[PR_IPM_SUBTREE_ENTRYID] || $folderprops[PR_PARENT_ENTRYID] == $storeprops[PR_IPM_PUBLIC_FOLDERS_ENTRYID]) {
             $folder->parentid = "0";
         }
         else {
