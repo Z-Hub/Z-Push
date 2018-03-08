@@ -87,8 +87,13 @@ class ImportChangesICS implements IImportChanges {
             }
         }
         else {
-            $storeprops = mapi_getprops($store, array(PR_IPM_SUBTREE_ENTRYID));
-            $entryid = $storeprops[PR_IPM_SUBTREE_ENTRYID];
+            $storeprops = mapi_getprops($store, array(PR_IPM_SUBTREE_ENTRYID, PR_IPM_PUBLIC_FOLDERS_ENTRYID));
+            if (ZPush::GetBackend()->GetImpersonatedUser() == 'system') {
+                $entryid = $storeprops[PR_IPM_PUBLIC_FOLDERS_ENTRYID];
+            }
+            else {
+                $entryid = $storeprops[PR_IPM_SUBTREE_ENTRYID];
+            }
         }
 
         $folder = false;
@@ -664,9 +669,13 @@ class ImportChangesICS implements IImportChanges {
         if (!$id) {
             // the root folder is "0" - get IPM_SUBTREE
             if ($parent == "0") {
-                $parentprops = mapi_getprops($this->store, array(PR_IPM_SUBTREE_ENTRYID));
-                if (isset($parentprops[PR_IPM_SUBTREE_ENTRYID]))
+                $parentprops = mapi_getprops($this->store, array(PR_IPM_SUBTREE_ENTRYID, PR_IPM_PUBLIC_FOLDERS_ENTRYID));
+                if (ZPush::GetBackend()->GetImpersonatedUser() == 'system' && isset($parentprops[PR_IPM_PUBLIC_FOLDERS_ENTRYID])) {
+                    $parentfentryid = $parentprops[PR_IPM_PUBLIC_FOLDERS_ENTRYID];
+                }
+                elseif (isset($parentprops[PR_IPM_SUBTREE_ENTRYID])) {
                     $parentfentryid = $parentprops[PR_IPM_SUBTREE_ENTRYID];
+                }
             }
             else
                 $parentfentryid = mapi_msgstore_entryidfromsourcekey($this->store, hex2bin($parent));
@@ -719,8 +728,13 @@ class ImportChangesICS implements IImportChanges {
 
         // get the real parent source key from mapi
         if ($parent == "0") {
-            $parentprops = mapi_getprops($this->store, array(PR_IPM_SUBTREE_ENTRYID));
-            $parentfentryid = $parentprops[PR_IPM_SUBTREE_ENTRYID];
+            $parentprops = mapi_getprops($this->store, array(PR_IPM_SUBTREE_ENTRYID, PR_IPM_PUBLIC_FOLDERS_ENTRYID));
+            if (ZPush::GetBackend()->GetImpersonatedUser() == 'system') {
+                $parentfentryid = $parentprops[PR_IPM_PUBLIC_FOLDERS_ENTRYID];
+            }
+            else {
+                $parentfentryid = $parentprops[PR_IPM_SUBTREE_ENTRYID];
+            }
             $mapifolder = mapi_msgstore_openentry($this->store, $parentfentryid);
 
             $rootfolderprops = mapi_getprops($mapifolder, array(PR_SOURCE_KEY));
