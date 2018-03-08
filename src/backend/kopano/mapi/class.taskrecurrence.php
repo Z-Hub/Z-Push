@@ -298,7 +298,7 @@
             mapi_savechanges($newMessage);
 
             // Update body of original message
-            $msgbody = mapi_message_openproperty($this->message, PR_BODY);
+            $msgbody = mapi_openproperty($this->message, PR_BODY);
             $msgbody = trim($msgbody, "\0");
             $separator = "------------\r\n";
 
