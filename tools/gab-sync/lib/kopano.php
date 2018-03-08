@@ -55,6 +55,12 @@ class Kopano extends SyncWorker {
      */
     public function __construct() {
         parent::__construct();
+
+        // check if the php-mapi classes can be loaded
+        if (!defined('MAPI_E_FAILONEPROVIDER') || !defined('PR_CONTAINER_CLASS') || !function_exists('getPropIdsFromStrings')) {
+            $this->Terminate("Please verify the php-mapi configuration, as the php-mapi includes can not be found in the php include path. Aborting.");
+        }
+
         // send Z-Push version and user agent to ZCP >7.2.0
         if ($this->checkMapiExtVersion('7.2.0')) {
             $this->session = mapi_logon_zarafa(USERNAME, PASSWORD, SERVER, CERTIFICATE, CERTIFICATE_PASSWORD, 0, self::VERSION, self::NAME. " ". self::VERSION);
