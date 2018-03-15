@@ -467,13 +467,8 @@ service nginx reload || true
 %zpush_dir/
 %doc src/LICENSE
 
-%if 0%{?suse_version}
-%attr(770,wwwrun,z-push) %dir %_localstatedir/lib/z-push
-%attr(770,wwwrun,z-push) %dir %_localstatedir/log/z-push
-%else
-%attr(750,apache,z-push) %dir %_localstatedir/lib/z-push
-%attr(750,apache,z-push) %dir %_localstatedir/log/z-push
-%endif
+%attr(770,root,z-push) %dir %_localstatedir/lib/z-push
+%attr(770,root,z-push) %dir %_localstatedir/log/z-push
 
 %_bindir/z-push-admin
 %_bindir/z-push-top
