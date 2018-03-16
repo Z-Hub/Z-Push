@@ -198,9 +198,17 @@ class Request {
         }
 
         // get & convert configured memory limit
-        (int)preg_replace_callback('/(\-?\d+)(.?)/', function ($m) {
-            self::$memoryLimit = $m[1] * pow(1024, strpos('BKMG', $m[2])) * self::MAXMEMORYUSAGE;
-        }, strtoupper(ini_get('memory_limit')));
+        $memoryLimit = ini_get('memory_limit');
+        if ($memoryLimit == -1) {
+            self::$memoryLimit = false;
+        }
+        else {
+            (int)preg_replace_callback('/(\-?\d+)(.?)/',
+                    function ($m) {
+                        self::$memoryLimit = $m[1] * pow(1024, strpos('BKMG', $m[2])) * self::MAXMEMORYUSAGE;
+                    },
+                    strtoupper($memoryLimit));
+        }
     }
 
     /**
@@ -700,6 +708,9 @@ class Request {
      * @return boolean
      */
     static public function IsRequestMemoryLimitReached() {
+        if (self::$memoryLimit === false) {
+            return false;
+        }
         return memory_get_peak_usage(true) >= self::$memoryLimit;
     }
 
