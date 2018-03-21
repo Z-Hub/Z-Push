@@ -42,6 +42,9 @@ include_once(SYNC_CONFIG);
                 fwrite(STDERR, GabSyncCLI::GetErrorMessage() . PHP_EOL.PHP_EOL);
 
             echo GabSyncCLI::UsageInstructions();
+            if (GabSyncCLI::$help) {
+                exit(0);
+            }
             exit(1);
         }
         else if (!GabSyncCLI::SetupSyncWorker()) {
@@ -73,6 +76,8 @@ class GabSyncCLI {
     static private $uniqueId = false;
     static private $targetGab = false;
     static private $errormessage;
+
+    static public $help = false;
 
     /**
      * Returns usage instructions.
@@ -142,7 +147,7 @@ class GabSyncCLI {
         if (self::$errormessage)
             return;
 
-        $options = getopt("u:a:t:");
+        $options = getopt("u:a:t:h", array('help'));
 
         // get 'unique-id'
         if (isset($options['u']) && !empty($options['u']))
@@ -162,6 +167,11 @@ class GabSyncCLI {
             $action = strtolower(trim($options['a']));
         elseif (isset($options['action']) && !empty($options['action']))
             $action = strtolower(trim($options['action']));
+
+        if ((isset($options['h']) || isset($options['help'])) && $action === false) {
+            self::$help = true;
+            $action = 'help';
+        }
 
         // get a command for the requested action
         switch ($action) {
@@ -195,8 +205,12 @@ class GabSyncCLI {
                 self::$command = self::COMMAND_DELETEALL;
                 break;
 
+            case "help":
+                break;
+
             default:
                 self::UsageInstructions();
+                self::$help = false;
         }
     }
 
