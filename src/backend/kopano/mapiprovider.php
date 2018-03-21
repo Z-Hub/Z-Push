@@ -2805,6 +2805,9 @@ class MAPIProvider {
             if(!isset($this->storeProps[PR_IPM_OUTBOX_ENTRYID])) {
                 $this->storeProps[PR_IPM_OUTBOX_ENTRYID] = false;
             }
+            if(!isset($this->storeProps[PR_IPM_PUBLIC_FOLDERS_ENTRYID])) {
+                $this->storeProps[PR_IPM_PUBLIC_FOLDERS_ENTRYID] = false;
+            }
         }
         return $this->storeProps;
     }
