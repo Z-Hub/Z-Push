@@ -254,11 +254,20 @@ class Request {
             }
         }
 
-        if (defined('USE_CUSTOM_REMOTE_IP_HEADER') && USE_CUSTOM_REMOTE_IP_HEADER !== false && isset(self::$headers[strtolower(USE_CUSTOM_REMOTE_IP_HEADER)])) {
-            $remoteIP = self::filterIP(self::$headers[strtolower(USE_CUSTOM_REMOTE_IP_HEADER)]);
-            if ($remoteIP) {
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("Using custom header '%s' to determine remote IP: %s - connect is coming from IP: %s", USE_CUSTOM_REMOTE_IP_HEADER, $remoteIP, self::$remoteAddr));
-                self::$remoteAddr = $remoteIP;
+        if (defined('USE_CUSTOM_REMOTE_IP_HEADER') && USE_CUSTOM_REMOTE_IP_HEADER !== false) {
+            // make custom header compatible with Apache modphp (see ZP-1332)
+            $header = $apacheHeader = strtolower(USE_CUSTOM_REMOTE_IP_HEADER);
+            if (substr($apacheHeader, 0, 5) === 'http_') {
+                $apacheHeader = substr($apacheHeader, 5);
+            }
+            $apacheHeader = str_replace("_", "-", $apacheHeader);
+            if (isset(self::$headers[$header]) || isset(self::$headers[$apacheHeader])) {
+                $remoteIP = isset(self::$headers[$header]) ? self::$headers[$header] : self::$headers[$apacheHeader];
+                $remoteIP = self::filterIP($remoteIP);
+                if ($remoteIP) {
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("Using custom header '%s' to determine remote IP: %s - connect is coming from IP: %s", USE_CUSTOM_REMOTE_IP_HEADER, $remoteIP, self::$remoteAddr));
+                    self::$remoteAddr = $remoteIP;
+                }
             }
         }
 
