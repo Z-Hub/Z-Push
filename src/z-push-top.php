@@ -51,7 +51,7 @@ require_once 'vendor/autoload.php';
         // check if help was requested from CLI
         if (in_array('-h', $argv) || in_array('--help', $argv)) {
             echo $zpt->UsageInstructions();
-            exit(1);
+            exit(0);
         }
 
         if ($zpt->IsAvailable()) {
