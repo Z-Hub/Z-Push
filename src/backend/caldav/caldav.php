@@ -662,12 +662,34 @@ class BackendCalDAV extends BackendDiff {
                     break;
 
                 case "TRANSP":
+                    if(!isset($message->busystatus)){
+                        switch ($property->Value()) {
+                            case "TRANSPARENT":
+                                $message->busystatus = "0";
+                                break;
+                            case "OPAQUE":
+                                $message->busystatus = "2";
+                                break;
+                        }
+                    }
+                    break;
+
+                case "X-MICROSOFT-CDO-INTENDEDSTATUS":
                     switch ($property->Value()) {
-                        case "TRANSPARENT":
+                        case "FREE":
                             $message->busystatus = "0";
                             break;
-                        case "OPAQUE":
+                        case "TENTATIVE":
+                            $message->busystatus = "1";
+                            break;
+                        case "BUSY":
                             $message->busystatus = "2";
+                            break;
+                        case "OOF":
+                            $message->busystatus = "3";
+                            break;
+                        case "WORKINGELSEWHERE":
+                            $message->busystatus = "4";
                             break;
                     }
                     break;
@@ -1022,13 +1044,25 @@ class BackendCalDAV extends BackendDiff {
         }
         if (isset($data->busystatus)) {
             switch ($data->busystatus) {
-                case "0":
-                case "1":
+                case "0": //Free
                     $vevent->AddProperty("TRANSP", "TRANSPARENT");
+                    $vevent->AddProperty("X-MICROSOFT-CDO-INTENDEDSTATUS", "FREE");
                     break;
-                case "2":
-                case "3":
+                case "1": //Tentative
                     $vevent->AddProperty("TRANSP", "OPAQUE");
+                    $vevent->AddProperty("X-MICROSOFT-CDO-INTENDEDSTATUS", "TENTATIVE");
+                    break;
+                case "2": //Busy
+                    $vevent->AddProperty("TRANSP", "OPAQUE");
+                    $vevent->AddProperty("X-MICROSOFT-CDO-INTENDEDSTATUS", "BUSY");
+                    break;
+                case "3": //Out of office
+                    $vevent->AddProperty("TRANSP", "TRANSPARENT");
+                    $vevent->AddProperty("X-MICROSOFT-CDO-INTENDEDSTATUS", "OOF");
+                    break;
+                case "4": //Working elsewhere (not yet in Android)
+                    $vevent->AddProperty("TRANSP", "TRANSPARENT");
+                    $vevent->AddProperty("X-MICROSOFT-CDO-INTENDEDSTATUS", "WORKINGELSEWHERE");
                     break;
             }
         }
@@ -1110,7 +1144,6 @@ class BackendCalDAV extends BackendDiff {
 
 // X-MICROSOFT-CDO-APPT-SEQUENCE:0
 // X-MICROSOFT-CDO-OWNERAPPTID:2113393086
-// X-MICROSOFT-CDO-INTENDEDSTATUS:BUSY
 // X-MICROSOFT-CDO-IMPORTANCE:1
 // X-MICROSOFT-CDO-INSTTYPE:0
 
