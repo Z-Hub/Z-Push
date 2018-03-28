@@ -40,7 +40,7 @@
     // is available, the provided value will be used, else REMOTE_ADDR is maintained.
     // set to false to disable this behaviour.
     // common values: 'HTTP_X_FORWARDED_FOR', 'HTTP_X_REAL_IP' (casing is ignored)
-    define('USE_CUSTOM_REMOTE_IP_HEADER', 'HTTP_X_REAL_IP');
+    define('USE_CUSTOM_REMOTE_IP_HEADER', false);
 
     // When using client certificates, we can check if the login sent matches the owner of the certificate.
     // This setting specifies the owner parameter in the certificate to look at.

@@ -35,7 +35,7 @@ require_once("backend/imap/user_identity.php");
 // Add the path for Andrew's Web Libraries to include_path
 // because it is required for the emails with ics attachments
 // @see https://jira.z-hub.io/browse/ZP-1149
-set_include_path(get_include_path() . PATH_SEPARATOR . '/usr/share/awl/inc');
+set_include_path(get_include_path() . PATH_SEPARATOR . '/usr/share/awl/inc' . PATH_SEPARATOR . dirname(__FILE__) . '/');
 
 class BackendIMAP extends BackendDiff implements ISearchProvider {
     private $wasteID;
@@ -205,8 +205,12 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->SendMail(): To defined: %s", $toaddr));
         }
 
-        $message->headers["to"] = Utils::CheckAndFixEncodingInHeadersOfSentMail($Mail_RFC822->parseAddressList($message->headers["to"]));
-        $message->headers["cc"] = Utils::CheckAndFixEncodingInHeadersOfSentMail($Mail_RFC822->parseAddressList($message->headers["cc"]));
+        if (isset($message->headers["to"])) {
+            $message->headers["to"] = Utils::CheckAndFixEncodingInHeadersOfSentMail($Mail_RFC822->parseAddressList($message->headers["to"]));
+        }
+        if (isset($message->headers["cc"])) {
+            $message->headers["cc"] = Utils::CheckAndFixEncodingInHeadersOfSentMail($Mail_RFC822->parseAddressList($message->headers["cc"]));
+        }
 
         unset($Mail_RFC822);
 
