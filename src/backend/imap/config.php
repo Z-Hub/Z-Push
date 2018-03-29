@@ -208,3 +208,7 @@ define('SYSTEM_MIME_TYPES_MAPPING', '/etc/mime.types');
 
 // Use BackendCalDAV for Meetings. You cannot hope to get that functionality working without a caldav backend.
 define('IMAP_MEETING_USE_CALDAV', false);
+
+// If your IMAP server allows authenticating via GSSAPI, php-imap will not fall back properly to other authentication
+// methods and you will be unable to log in. Uncomment the following line to enable use in such an environment.
+// define('IMAP_DISABLE_AUTHENTICATOR', 'GSSAPI');
