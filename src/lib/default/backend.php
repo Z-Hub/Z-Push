@@ -185,10 +185,10 @@ abstract class Backend implements IBackend {
                 $emailaddresses->smtpaddress[] = ZPush::GetBackend()->GetUserDetails(Request::GetUser())['emailaddress'];
                 $emailaddresses->primarysmtpaddress = ZPush::GetBackend()->GetUserDetails(Request::GetUser())['emailaddress'];
                 $account->emailaddresses = $emailaddresses;
-                $userinformation->accounts[] = $account;
+                $settings->accounts[] = $account;
             }
             else {
-                $userinformation->emailaddresses = array(ZPush::GetBackend()->GetUserDetails(Request::GetUser())['emailaddress']);
+                $settings->emailaddresses = array(ZPush::GetBackend()->GetUserDetails(Request::GetUser())['emailaddress']);
             }
 
             $settings->emailaddresses = array(ZPush::GetBackend()->GetUserDetails(Request::GetUser())['emailaddress']);
