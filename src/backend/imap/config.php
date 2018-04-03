@@ -210,5 +210,6 @@ define('SYSTEM_MIME_TYPES_MAPPING', '/etc/mime.types');
 define('IMAP_MEETING_USE_CALDAV', false);
 
 // If your IMAP server allows authenticating via GSSAPI, php-imap will not fall back properly to other authentication
-// methods and you will be unable to log in. Uncomment the following line to enable use in such an environment.
+// methods and you will be unable to log in. Uncomment the following line to disable that authentication method.
+// Multiple methods can be specified as a comma-separated string.
 // define('IMAP_DISABLE_AUTHENTICATOR', 'GSSAPI');

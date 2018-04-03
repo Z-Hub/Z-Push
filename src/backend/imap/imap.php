@@ -70,7 +70,8 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             ZLog::Write(LOGLEVEL_WARN, sprintf("BackendIMAP(): php-mbstring module is not installed, you should install it for better encoding conversions"));
         }
         if (defined("IMAP_DISABLE_AUTHENTICATOR")) {
-	    $this->imapParams = array("DISABLE_AUTHENTICATOR" => IMAP_DISABLE_AUTHENTICATOR);
+            ZLog::Write(LOGLEVEL_INFO, sprintf("BackendIMAP(): The following authentication methods are disabled: %s", IMAP_DISABLE_AUTHENTICATOR));
+            $this->imapParams = array("DISABLE_AUTHENTICATOR" => array_map('trim' ,explode(',', IMAP_DISABLE_AUTHENTICATOR)));
         }
     }
 
