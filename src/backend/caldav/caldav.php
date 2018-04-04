@@ -967,11 +967,11 @@ class BackendCalDAV extends BackendDiff {
                         continue;
                     }
                 }
+                $vtransition = new iCalComponent();
                 $vtransition->AddProperty("TZOFFSETFROM", $offset_from);
                 $vtransition->AddProperty("TZOFFSETTO", $offset_to);
                 $offset_from = $offset_to;
 
-                $vtransition = new iCalComponent();
                 $type = $transitions[$i]['isdst'] == 1 ? "DAYLIGHT" : "STANDARD";
                 $vtransition->SetType($type);
                 $vtransition->AddProperty("TZNAME", $transitions[$i]['abbr']);
