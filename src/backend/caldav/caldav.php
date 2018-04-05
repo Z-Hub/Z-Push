@@ -547,16 +547,17 @@ class BackendCalDAV extends BackendDiff {
         $message->alldayevent = "0";
         $message->timezone = date_default_timezone_get();
         foreach ($vevents as $event) {
-            if (count($event->GetProperties("RECURRENCE-ID")) > 0) {continue;}
-
+            if (count($event->GetProperties("RECURRENCE-ID")) > 0) {
+                continue;
+            }
             if (strlen($event->GetPValue("DTSTART")) == 8
                 || strlen($event->GetPValue("DTEND")) == 8
                 || $event->GetPValue("X-MICROSOFT-CDO-ALLDAYEVENT") == "TRUE"
             ) {
                 $message->alldayevent = "1";
             }
-
             $message->timezone = TimezoneUtil::GetPhpSupportedTimezone($event->GetPParamValue("DTSTART", "TZID"));
+				break;
         }
         // Now process all vevents
         foreach ($vevents as $event) {
