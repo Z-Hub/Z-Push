@@ -557,7 +557,7 @@ class BackendCalDAV extends BackendDiff {
                 $message->alldayevent = "1";
             }
             $message->timezone = TimezoneUtil::GetPhpSupportedTimezone($event->GetPParamValue("DTSTART", "TZID"));
-				break;
+            break;
         }
         // Now process all vevents
         foreach ($vevents as $event) {
