@@ -199,7 +199,7 @@ class PHPWrapper {
                         if($ratio > DELETION_RATIO_THR || $ratio == 0){
                             throw new StatusException(sprintf("PHPWrapper->ImportMessageDeletion(): Received %d remove requests from ICS for devId='%s' folder='%s' folderCount='%d' ratio='%0.2f' threshold='%0.2f' . Triggering folder re-sync.", $amount, $this->devid, bin2hex($this->folderid), $wi_mfolderElementsCount, $ratio, DELETION_RATIO_THR), SYNC_STATUS_INVALIDSYNCKEY, null, LOGLEVEL_ERROR);
                         }else{
-                            ZLog::Write(LOGLEVEL_DEBUG, sprintf("PHPWrapper->ImportMessageDeletion(): Received %d remove requests from ICS for devId='%s' folder='%s' folderCount='%d' ratio='%0.2f' threshold='%0.2f' . Not Triggering folder re-sync. ", $amount, $this->devid, bin2hex($this->folderid), $wi_mfolderElementsCount, $ratio, DELETION_RATIO_THR));
+                            ZLog::Write(LOGLEVEL_INFO, sprintf("PHPWrapper->ImportMessageDeletion(): Received %d remove requests from ICS for devId='%s' folder='%s' folderCount='%d' ratio='%0.2f' threshold='%0.2f' . Not Triggering folder re-sync. ", $amount, $this->devid, bin2hex($this->folderid), $wi_mfolderElementsCount, $ratio, DELETION_RATIO_THR));
                         }
                     }
                 }    
