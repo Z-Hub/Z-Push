@@ -52,6 +52,9 @@ require_once 'vendor/autoload.php';
                 fwrite(STDERR, ZPushAdminCLI::GetErrorMessage() . "\n");
 
             echo ZPushAdminCLI::UsageInstructions();
+            if (ZPushAdminCLI::$help) {
+                exit(0);
+            }
             exit(1);
         }
 
@@ -100,6 +103,8 @@ class ZPushAdminCLI {
     static private $store = false;
     static private $folderid = false;
     static private $flags = 0;
+
+    static public $help = false;
 
     /**
      * Returns usage instructions
@@ -172,7 +177,7 @@ class ZPushAdminCLI {
         if (self::$errormessage)
             return;
 
-        $options = getopt("u:d:a:t:sn:o:f:g::", array('user:', 'device:', 'action:', 'type:', 'days-old:', 'days-ago:', 'shared', 'foldername:', 'store', 'folderid:', 'flags::'));
+        $options = getopt("u:d:a:t:sn:o:f:g::h", array('user:', 'device:', 'action:', 'type:', 'days-old:', 'days-ago:', 'shared', 'foldername:', 'store', 'folderid:', 'flags::', 'help'));
 
         // get 'user'
         if (isset($options['u']) && !empty($options['u']))
@@ -267,6 +272,11 @@ class ZPushAdminCLI {
                         "or a 6, 44 or 48 byte long folder id (as hex).";
                     return;
                 }
+        }
+
+        if ((isset($options['h']) || isset($options['help'])) && $action === false) {
+            self::$help = true;
+            $action = 'help';
         }
 
         // get a command for the requested action
@@ -381,8 +391,12 @@ class ZPushAdminCLI {
                 self::$command = self::COMMAND_REMOVESHARED;
                 break;
 
+            case "help":
+                break;
+
             default:
                 self::UsageInstructions();
+                self::$help = false;
         }
     }
 

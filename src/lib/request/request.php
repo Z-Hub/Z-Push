@@ -198,9 +198,17 @@ class Request {
         }
 
         // get & convert configured memory limit
-        (int)preg_replace_callback('/(\-?\d+)(.?)/', function ($m) {
-            self::$memoryLimit = $m[1] * pow(1024, strpos('BKMG', $m[2])) * self::MAXMEMORYUSAGE;
-        }, strtoupper(ini_get('memory_limit')));
+        $memoryLimit = ini_get('memory_limit');
+        if ($memoryLimit == -1) {
+            self::$memoryLimit = false;
+        }
+        else {
+            (int)preg_replace_callback('/(\-?\d+)(.?)/',
+                    function ($m) {
+                        self::$memoryLimit = $m[1] * pow(1024, strpos('BKMG', $m[2])) * self::MAXMEMORYUSAGE;
+                    },
+                    strtoupper($memoryLimit));
+        }
     }
 
     /**
@@ -254,11 +262,20 @@ class Request {
             }
         }
 
-        if (defined('USE_CUSTOM_REMOTE_IP_HEADER') && USE_CUSTOM_REMOTE_IP_HEADER !== false && isset(self::$headers[strtolower(USE_CUSTOM_REMOTE_IP_HEADER)])) {
-            $remoteIP = self::filterIP(self::$headers[strtolower(USE_CUSTOM_REMOTE_IP_HEADER)]);
-            if ($remoteIP) {
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("Using custom header '%s' to determine remote IP: %s - connect is coming from IP: %s", USE_CUSTOM_REMOTE_IP_HEADER, $remoteIP, self::$remoteAddr));
-                self::$remoteAddr = $remoteIP;
+        if (defined('USE_CUSTOM_REMOTE_IP_HEADER') && USE_CUSTOM_REMOTE_IP_HEADER !== false) {
+            // make custom header compatible with Apache modphp (see ZP-1332)
+            $header = $apacheHeader = strtolower(USE_CUSTOM_REMOTE_IP_HEADER);
+            if (substr($apacheHeader, 0, 5) === 'http_') {
+                $apacheHeader = substr($apacheHeader, 5);
+            }
+            $apacheHeader = str_replace("_", "-", $apacheHeader);
+            if (isset(self::$headers[$header]) || isset(self::$headers[$apacheHeader])) {
+                $remoteIP = isset(self::$headers[$header]) ? self::$headers[$header] : self::$headers[$apacheHeader];
+                $remoteIP = self::filterIP($remoteIP);
+                if ($remoteIP) {
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("Using custom header '%s' to determine remote IP: %s - connect is coming from IP: %s", USE_CUSTOM_REMOTE_IP_HEADER, $remoteIP, self::$remoteAddr));
+                    self::$remoteAddr = $remoteIP;
+                }
             }
         }
 
@@ -700,6 +717,9 @@ class Request {
      * @return boolean
      */
     static public function IsRequestMemoryLimitReached() {
+        if (self::$memoryLimit === false) {
+            return false;
+        }
         return memory_get_peak_usage(true) >= self::$memoryLimit;
     }
 

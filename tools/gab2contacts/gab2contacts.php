@@ -48,6 +48,9 @@ define('PATH_TO_ZPUSH', '../../src/');
                 fwrite(STDERR, GAB2ContactsCLI::GetErrorMessage() . PHP_EOL.PHP_EOL);
 
             echo GAB2ContactsCLI::UsageInstructions();
+            if (GAB2ContactsCLI::$help) {
+                exit(0);
+            }
             exit(1);
         }
         else if (!GAB2ContactsCLI::SetupContactWorker()) {
@@ -75,6 +78,8 @@ class GAB2ContactsCLI {
     static private $command;
     static private $sourceGAB;
     static private $errormessage;
+
+    static public $help = false;
 
     /**
      * Returns usage instructions.
@@ -144,7 +149,7 @@ class GAB2ContactsCLI {
         if (self::$errormessage)
             return;
 
-        $options = getopt("a:");
+        $options = getopt("a:h", array('help'));
 
         // get 'action'
         $action = false;
@@ -152,6 +157,11 @@ class GAB2ContactsCLI {
             $action = strtolower(trim($options['a']));
         elseif (isset($options['action']) && !empty($options['action']))
             $action = strtolower(trim($options['action']));
+
+        if ((isset($options['h']) || isset($options['help'])) && $action === false) {
+            self::$help = true;
+            $action = 'help';
+        }
 
         // get a command for the requested action
         switch ($action) {
@@ -165,8 +175,12 @@ class GAB2ContactsCLI {
                 self::$command = self::COMMAND_DELETE;
                 break;
 
+            case "help":
+                break;
+
             default:
                 self::UsageInstructions();
+                self::$help = false;
         }
     }
 
