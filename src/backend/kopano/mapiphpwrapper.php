@@ -43,7 +43,6 @@ class PHPWrapper {
     private $contentparameters;
     private $folderid;
     private $prefix;
-    private $devid;
 
 
     /**
@@ -63,7 +62,6 @@ class PHPWrapper {
         $this->mapiprovider = new MAPIProvider($session, $this->store);
         $this->folderid = $folderid;
         $this->prefix = '';
-        $this->devid = '';        
 
         if ($folderid) {
             $folderidHex = bin2hex($folderid);
@@ -71,7 +69,6 @@ class PHPWrapper {
             if ($folderid != $folderidHex) {
                 $this->prefix = $folderid . ':';
             }
-            $this->devid = ZPush::GetDeviceManager()->devid;
         }
     }
 
@@ -168,41 +165,45 @@ class PHPWrapper {
      * @access public
      * @return
      */
-    public function ImportMessageDeletion($flags, $sourcekeys) {    	
+    public function ImportMessageDeletion($flags, $sourcekeys) {
         $amount = count($sourcekeys);
 
         if ((!defined('DELETION_COUNT_THR') || !defined('DELETION_RATIO_THR')) && $amount > 1000) {
-            throw new StatusException(sprintf("PHPWrapper->ImportMessageDeletion(): Received %d remove requests from ICS for folder '%s' (max. 1000 allowed). Triggering folder re-sync.", $amount, bin2hex($this->folderid)), SYNC_STATUS_INVALIDSYNCKEY, null, LOGLEVEL_ERROR);
+            throw new StatusException(sprintf("PHPWrapper->ImportMessageDeletion(): Received %d remove requests from ICS for folder '%s' (max. 1000 allowed). Triggering folder re-sync.", $amount, bin2hex($this->folderid)), SYNC_STATUS_SYNCCANNOTBECOMPLETED, null, LOGLEVEL_ERROR);
         }
         // Analyse only if above DELETION_COUNT_THR threshold
-        else if ( defined('DELETION_COUNT_THR') && defined('DELETION_RATIO_THR') && $amount > DELETION_COUNT_THR) {
-            // Convert an PR_SOURCE_KEY to an PR_ENTRYID, for example to be able to open a folder if you only have a PR_SOURCE_KEY.
+        elseif (defined('DELETION_COUNT_THR') && defined('DELETION_RATIO_THR') && $amount > DELETION_COUNT_THR) {
+            // Convert a PR_SOURCE_KEY to an PR_ENTRYID, for example to be able to open a folder if you only have a PR_SOURCE_KEY.
             $entryid = mapi_msgstore_entryidfromsourcekey($this->store, $this->folderid);
-            if(!$entryid) {
-                ZLog::Write(LOGLEVEL_WARN, sprintf("PHPWrapper->ImportMessageDeletion(): Error, mapi_msgstore_entryidfromsourcekey failed for folder '%s' Stop Analysis and revert to normal delete. Error %s", bin2hex($this->folderid), mapi_last_hresult()));
-            }else{
+            if (!$entryid) {
+                ZLog::Write(LOGLEVEL_WARN, sprintf("PHPWrapper->ImportMessageDeletion(): Error, mapi_msgstore_entryidfromsourcekey failed for folder '%s'. Stop Analysis and revert to normal delete. Error 0x%08X", bin2hex($this->folderid), mapi_last_hresult()));
+            }
+            else {
                 // opens current folder
                 $wi_mfolder = mapi_msgstore_openentry($this->store, $entryid);
-                if(!$wi_mfolder) {
-                ZLog::Write(LOGLEVEL_WARN, sprintf("PHPWrapper->ImportMessageDeletion(): Error, mapi_msgstore_openentry failed for folder '%s' Stop Analysis and revert to normal delete. Error %s", bin2hex($this->folderid), mapi_last_hresult()));
-                }else{
+                if (!$wi_mfolder) {
+                    ZLog::Write(LOGLEVEL_WARN, sprintf("PHPWrapper->ImportMessageDeletion(): Error, mapi_msgstore_openentry failed for folder '%s'. Stop Analysis and revert to normal delete. Error 0x%08X", bin2hex($this->folderid), mapi_last_hresult()));
+                }
+                else {
                     // retrieve folder properties
                     $wi_mfolderProps = mapi_getprops($wi_mfolder, array(PR_CONTENT_COUNT));
-                    
-                    if(!isset($wi_mfolderProps[PR_CONTENT_COUNT])) {
-                        ZLog::Write(LOGLEVEL_WARN, sprintf("PHPWrapper->ImportMessageDeletion(): Error, mapi_getprops failed for folder '%s' Stop Analysis and revert to normal delete. Error %s", bin2hex($this->folderid), mapi_last_hresult()));
-                    }else{
+
+                    if (!isset($wi_mfolderProps[PR_CONTENT_COUNT])) {
+                        ZLog::Write(LOGLEVEL_WARN, sprintf("PHPWrapper->ImportMessageDeletion(): Error, mapi_getprops failed for folder '%s'. Stop Analysis and revert to normal delete. Error 0x%08X", bin2hex($this->folderid), mapi_last_hresult()));
+                    }
+                    else {
                         //get count of remaining folder elements
                         $wi_mfolderElementsCount = $wi_mfolderProps[PR_CONTENT_COUNT];
                         //get ratio between deleted element count and remaining elements count
                         $ratio = $amount / $wi_mfolderElementsCount;
-                        if($ratio > DELETION_RATIO_THR || $ratio == 0){
-                            throw new StatusException(sprintf("PHPWrapper->ImportMessageDeletion(): Received %d remove requests from ICS for devId='%s' folder='%s' folderCount='%d' ratio='%0.2f' threshold='%0.2f' . Triggering folder re-sync.", $amount, $this->devid, bin2hex($this->folderid), $wi_mfolderElementsCount, $ratio, DELETION_RATIO_THR), SYNC_STATUS_INVALIDSYNCKEY, null, LOGLEVEL_ERROR);
-                        }else{
-                            ZLog::Write(LOGLEVEL_INFO, sprintf("PHPWrapper->ImportMessageDeletion(): Received %d remove requests from ICS for devId='%s' folder='%s' folderCount='%d' ratio='%0.2f' threshold='%0.2f' . Not Triggering folder re-sync. ", $amount, $this->devid, bin2hex($this->folderid), $wi_mfolderElementsCount, $ratio, DELETION_RATIO_THR));
+                        if ($ratio > DELETION_RATIO_THR || $ratio == 0) {
+                            throw new StatusException(sprintf("PHPWrapper->ImportMessageDeletion(): Received %d remove requests from ICS folder='%s' folderCount='%d' ratio='%0.2f' threshold='%0.2f'. Triggering folder re-sync.", $amount, bin2hex($this->folderid), $wi_mfolderElementsCount, $ratio, DELETION_RATIO_THR), SYNC_STATUS_SYNCCANNOTBECOMPLETED, null, LOGLEVEL_ERROR);
+                        }
+                        else {
+                            ZLog::Write(LOGLEVEL_INFO, sprintf("PHPWrapper->ImportMessageDeletion(): Received %d remove requests from ICS folder='%s' folderCount='%d' ratio='%0.2f' threshold='%0.2f'. Not Triggering folder re-sync. ", $amount, bin2hex($this->folderid), $wi_mfolderElementsCount, $ratio, DELETION_RATIO_THR));
                         }
                     }
-                }    
+                }
             }
         }
         else {
