@@ -1278,4 +1278,14 @@ class DeviceManager {
         }
         return $folder;
     }
+    
+    /**
+     * Returns the device id
+     *
+     * @access public
+     * @return string
+     */
+    public function GetDevid() {
+        return $this->devid;
+    }
 }
