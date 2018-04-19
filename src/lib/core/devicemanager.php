@@ -1278,9 +1278,9 @@ class DeviceManager {
         }
         return $folder;
     }
-    
+
     /**
-     * Returns the device id
+     * Returns the device id.
      *
      * @access public
      * @return string
