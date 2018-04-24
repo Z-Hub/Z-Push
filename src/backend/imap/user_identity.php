@@ -24,7 +24,7 @@
 ************************************************/
 
 /**
- * Returns the default email address
+ * Returns the default email address.
  *
  * @return string
  */
