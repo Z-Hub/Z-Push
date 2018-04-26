@@ -989,11 +989,12 @@ class ZPushAdminCLI {
             $synchedFolders = 0;
             $synchedFolderTypes = array();
             $syncedFoldersInProgress = 0;
+            $hc = $device->GetHierarchyCache();
             foreach ($folders as $folderid) {
                 if ($device->GetFolderUUID($folderid)) {
                     $synchedFolders++;
                     $type = $device->GetFolderType($folderid);
-                    $folder = $device->GetHierarchyCache()->GetFolder($folderid);
+                    $folder = $hc->GetFolder($folderid);
                     $name = $folder ? $folder->displayname : "unknown";
                     switch($type) {
                         case SYNC_FOLDER_TYPE_APPOINTMENT:
