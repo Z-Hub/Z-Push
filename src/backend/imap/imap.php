@@ -52,6 +52,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
     private $folderhierarchy;
     private $excludedFolders;
     private static $mimeTypes = false;
+    private $imapParams = array();
 
 
     public function __construct() {
@@ -67,6 +68,10 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
 
         if (!function_exists("mb_detect_order")) {
             ZLog::Write(LOGLEVEL_WARN, sprintf("BackendIMAP(): php-mbstring module is not installed, you should install it for better encoding conversions"));
+        }
+        if (defined("IMAP_DISABLE_AUTHENTICATOR")) {
+            ZLog::Write(LOGLEVEL_INFO, sprintf("BackendIMAP(): The following authentication methods are disabled: %s", IMAP_DISABLE_AUTHENTICATOR));
+            $this->imapParams = array("DISABLE_AUTHENTICATOR" => array_map('trim' ,explode(',', IMAP_DISABLE_AUTHENTICATOR)));
         }
     }
 
@@ -105,7 +110,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
         /* END fmbiete's contribution r1527, ZP-319 */
 
         // open the IMAP-mailbox
-        $this->mbox = @imap_open($this->server , $username, $password, OP_HALFOPEN);
+        $this->mbox = @imap_open($this->server , $username, $password, OP_HALFOPEN, 0, $this->imapParams);
         $this->mboxFolder = "";
 
         if ($this->mbox) {
@@ -1755,10 +1760,9 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
      * @return Array
      */
     public function GetUserDetails($username) {
-        // If the username it's not the email address, here we will have an error. We try creating a valid address
         $email = $username;
-        if (strpos($username, "@") === false && strlen($this->domain) > 0) {
-            $email .= "@" . $this->domain;
+        if (!USE_FULLEMAIL_FOR_LOGIN) {
+            $email = getDefaultEmailValue($username, $this->domain);
         }
         return array('emailaddress' => $email, 'fullname' => getDefaultFullNameValue($username, $this->domain));
     }
@@ -2224,7 +2228,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             imap_ping($this->mbox);
         }
         else {
-            $this->mbox = @imap_open($this->server, $this->username, $this->password, OP_HALFOPEN);
+            $this->mbox = @imap_open($this->server, $this->username, $this->password, OP_HALFOPEN, 0, $this->imapParams);
             $this->mboxFolder = "";
         }
     }

@@ -289,6 +289,21 @@ class ZPush {
         if (defined('USE_X_FORWARDED_FOR_HEADER')) {
             ZLog::Write(LOGLEVEL_INFO, "The configuration parameter 'USE_X_FORWARDED_FOR_HEADER' was deprecated in favor of 'USE_CUSTOM_REMOTE_IP_HEADER'. Please update your configuration.");
         }
+
+        //check folder re-sync triggering settings
+        if (defined('DELETION_COUNT_THR') && !defined('DELETION_RATIO_THR')) {
+            throw new FatalMisconfigurationException("Only DELETION_COUNT_THR defined. Please define DELETION_RATIO_THR.");
+        }
+        elseif (!defined('DELETION_COUNT_THR') && defined('DELETION_RATIO_THR')) {
+            throw new FatalMisconfigurationException("Only DELETION_RATIO_THR defined. Please define DELETION_COUNT_THR.");
+        }
+        if ((defined('DELETION_COUNT_THR')) && (!is_int(DELETION_COUNT_THR) || DELETION_COUNT_THR < 1)) {
+            throw new FatalMisconfigurationException("The DELETION_COUNT_THR value must be a number higher than 0.");
+        }
+        if ((defined('DELETION_RATIO_THR')) && (!is_numeric(DELETION_RATIO_THR) || DELETION_RATIO_THR <= 0)) {
+            throw new FatalMisconfigurationException("The DELETION_RATIO_THR value must be a number higher than 0.");
+        }
+
         return true;
     }
 

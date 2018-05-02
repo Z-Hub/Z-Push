@@ -520,6 +520,16 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
             $foldername = $folders[$folderid]->displayname;
         }
 
+        // get the foldername from MAPI when impersonating - ZP-1369
+        if ($foldername == "unknown") {
+            $entryid = mapi_msgstore_entryidfromsourcekey($this->store, $this->folderid);
+            $mapifolder = mapi_msgstore_openentry($this->store, $entryid);
+            $folderprops = mapi_getprops($mapifolder, array(PR_DISPLAY_NAME));
+            if (isset($folderprops[PR_DISPLAY_NAME])) {
+                $foldername = $folderprops[PR_DISPLAY_NAME];
+            }
+        }
+
         // get the differences between the two objects
         $data = substr(get_class($oldmessage), 4) . "\r\n";
         // get the suppported fields as we need them to determine the ghosted properties

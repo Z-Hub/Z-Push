@@ -65,7 +65,7 @@ abstract class SyncObject extends Streamer {
     public function emptySupported($supportedFields) {
         // Some devices do not send supported tag. In such a case remove all not set properties.
         if (($supportedFields === false || !is_array($supportedFields) || (empty($supportedFields)))) {
-            if (defined('UNSET_UNDEFINED_PROPERTIES') && UNSET_UNDEFINED_PROPERTIES && ($this instanceof SyncContact || $this instanceof SyncAppointment)) {
+            if (defined('UNSET_UNDEFINED_PROPERTIES') && UNSET_UNDEFINED_PROPERTIES && ($this instanceof SyncContact || $this instanceof SyncAppointment || $this instanceof SyncTask)) {
                 ZLog::Write(LOGLEVEL_INFO, sprintf("%s->emptySupported(): no supported list available, emptying all not set parameters", get_class($this)));
                 $supportedFields = array_keys($this->mapping);
             }
@@ -96,7 +96,7 @@ abstract class SyncObject extends Streamer {
      * @see SyncObject
      * @param SyncObject $odo other SyncObject
      * @param boolean $log flag to turn on logging
-     * @param boolean $strictTypeCompare to enforce type matching 
+     * @param boolean $strictTypeCompare to enforce type matching
      * @return boolean
      */
     public function equals($odo, $log = false, $strictTypeCompare = false) {
