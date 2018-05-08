@@ -1577,7 +1577,7 @@ class BackendCalDAV extends BackendDiff {
         try {
             //Generate a timezone string (PHP 5.3 needed for this)
             $timezone = new DateTimeZone($timezone);
-            $trans = $timezone->getTransitions(date("U", time()), date("U", time()));
+            $trans = $timezone->getTransitions(date('U',strtotime(date('Y-01-01'))), date('U',strtotime(date('Y-12-31'))));
             $stdTime = null;
             $dstTime = null;
             if (count($trans) < 1) {
