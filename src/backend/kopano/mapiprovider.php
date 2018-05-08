@@ -2609,7 +2609,7 @@ class MAPIProvider {
         }
         else {
             $addrbook = $this->getAddressbook();
-            $stream = mapi_inetmapi_imtoinet($this->session, $addrbook, $mapimessage, array('use_tnef' => -1));
+            $stream = mapi_inetmapi_imtoinet($this->session, $addrbook, $mapimessage, array('use_tnef' => -1, 'ignore_missing_attachments' => 1));
         }
         if (is_resource($stream)) {
             $mstreamstat = mapi_stream_stat($stream);
