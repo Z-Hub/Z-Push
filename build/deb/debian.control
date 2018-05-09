@@ -8,7 +8,7 @@ Homepage: http://z-push.org
 
 Package: z-push-common
 Architecture: all
-Depends: ${misc:Depends}, php5 (>= 5.4) | php (>= 5.4) , php5-cli | php-cli, php-soap, ${dist:Depends}
+Depends: ${misc:Depends}, php (>= 5.4) | php5 (>= 5.4) , php-cli | php5-cli, php-soap, ${dist:Depends}
 Conflicts: d-push, z-push
 Replaces: d-push, z-push
 Description: open source implementation of the ActiveSync protocol
@@ -26,7 +26,7 @@ Description: Z-Push caldav backend
 
 Package: z-push-backend-carddav
 Architecture: all
-Depends: ${misc:Depends}, z-push-common (= ${binary:Version}), php-curl | php5-curl, php5-xsl | php-xml
+Depends: ${misc:Depends}, z-push-common (= ${binary:Version}), php-curl | php5-curl, php-xml | php5-xsl
 Description: Z-Push carddav backend
  Backend for Z-Push, that adds the ability to connect to a carddav server
 
@@ -50,7 +50,7 @@ Description: Z-Push ldap backend
 
 Package: z-push-backend-kopano
 Architecture: all
-Depends: ${misc:Depends}, z-push-common (= ${binary:Version}), php5-mapi | php7-mapi
+Depends: ${misc:Depends}, z-push-common (= ${binary:Version}), php7-mapi | php5-mapi
 Description: Z-Push Kopano backend
  Backend for Z-Push, that adds the ability to connect to a Kopano server
 
@@ -62,13 +62,13 @@ Description: Z-Push for Kopano
 
 Package: z-push-kopano-gabsync
 Architecture: all
-Depends: ${misc:Depends}, php5-mapi | php7-mapi
+Depends: ${misc:Depends}, php7-mapi | php5-mapi
 Description: GAB sync for Kopano
  Synchronizes the global address book for the Kopano Outlook Extension
 
 Package: z-push-kopano-gab2contacts
 Architecture: all
-Depends: ${misc:Depends}, z-push-common (= ${binary:Version}), php5-mapi | php7-mapi
+Depends: ${misc:Depends}, z-push-common (= ${binary:Version}), php7-mapi | php5-mapi
 Description: GAB sync into a contacts folder for Kopano
  Synchronizes the global address book into a contacts folder
 
