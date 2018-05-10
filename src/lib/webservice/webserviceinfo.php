@@ -84,4 +84,23 @@ class WebserviceInfo {
         ZLog::Write(LOGLEVEL_INFO, sprintf("WebserviceInfo->About(): returning Z-Push version '%s'", @constant('ZPUSH_VERSION')));
         return @constant('ZPUSH_VERSION');
     }
+
+    /**
+     * Returns information about the user's store:
+     * number of folders, store size, full name, email address.
+     *
+     * @access public
+     * @return array
+     */
+    public function GetUserInfo() {
+        $out = array();
+        $user = Request::GetGETUser();
+        $hasRights = ZPush::GetBackend()->Setup($user);
+        ZLog::Write(LOGLEVEL_INFO, sprintf("WebserviceInfo::GetUserInfo(): permissions to open store '%s': %s", $user, Utils::PrintAsString($hasRights)));
+
+        if ($hasRights) {
+            $out = ZPush::GetBackend()->GetUserInfo();
+        }
+        return $out;
+    }
 }

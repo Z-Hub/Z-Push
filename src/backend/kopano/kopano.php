@@ -1623,6 +1623,50 @@ class BackendKopano implements IBackend, ISearchProvider {
         return $sigs;
     }
 
+    /**
+     * Returns information about the user's store:
+     * number of folders, store size, full name, email address.
+     *
+     * @access public
+     * @return array
+     */
+    public function GetUserInfo() {
+        $out = array();
+
+        $rootfolder = mapi_msgstore_openentry($this->store);
+        $hierarchy =  mapi_folder_gethierarchytable($rootfolder, CONVENIENT_DEPTH);
+        // Do not take hidden and system folders into account
+        // TODO make this restriction generic and use for hierarchy?
+        $restrict = array(RES_AND, array(
+                            array(  RES_PROPERTY,
+                                array(  RELOP => RELOP_NE,
+                                        ULPROPTAG => PR_ATTR_HIDDEN,
+                                        VALUE => true),
+                            ),
+                            array(  RES_PROPERTY,
+                                array(  RELOP => RELOP_EQ,
+                                        ULPROPTAG => PR_FOLDER_TYPE,
+                                        VALUE => FOLDER_GENERIC),
+                            ),
+                            array(  RES_EXIST,
+                                array(  ULPROPTAG => PR_CONTAINER_CLASS),
+                            ),
+                        ));
+        mapi_table_restrict($hierarchy, $restrict);
+        $out['foldercnt'] = mapi_table_getrowcount($hierarchy);
+
+        $storeProps = mapi_getprops($this->store, array(PR_MESSAGE_SIZE_EXTENDED));
+        $out['storesize'] = isset($storeProps[PR_MESSAGE_SIZE_EXTENDED]) ? $storeProps[PR_MESSAGE_SIZE_EXTENDED] : 0;
+
+        $userDetails = $this->GetUserDetails($this->mainUser);
+        $out['fullname'] = $userDetails['fullname'];
+        $out['emailaddress'] = $userDetails['emailaddress'];
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->GetUserInfo(): user %s (%s) store size is %d bytes and contains %d folders",
+                Utils::PrintAsString($out['fullname']), Utils::PrintAsString($out['emailaddress']), $out['storesize'], $out['foldercnt']));
+
+        return $out;
+    }
+
     /**----------------------------------------------------------------------------------------------------------
      * Private methods
      */
