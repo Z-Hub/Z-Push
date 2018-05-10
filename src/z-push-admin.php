@@ -114,7 +114,7 @@ class ZPushAdminCLI {
      */
     static public function UsageInstructions() {
         return  "Usage:\n\tz-push-admin.php -a ACTION [options]\n\n" .
-                "Parameters:\n\t-a list/lastsync/wipe/remove/resync/clearloop/fixstates/addshared\n\t[-u] username\n\t[-d] deviceid\n" .
+                "Parameters:\n\t-a list/lastsync/wipe/remove/resync/clearloop/fixstates/addshared/removeshared\n\t[-u] username\n\t[-d] deviceid\n" .
                 "\t[-t] type\tthe following types are available: '".self::TYPE_OPTION_EMAIL."', '".self::TYPE_OPTION_CALENDAR."', '".self::TYPE_OPTION_CONTACT."', '".self::TYPE_OPTION_TASK."', '".self::TYPE_OPTION_NOTE."', '".self::TYPE_OPTION_HIERARCHY."' of '".self::TYPE_OPTION_GAB."' (for KOE) or a folder id.\n" .
                 "\t[--shared|-s]\tshow detailed information about shared folders of a user in list.\n".
                 "\t[--days-old] n\tshow or remove profiles older than n days with lastsync or remove. n must be a positive integer.\n\n".
