@@ -203,7 +203,7 @@ class Request {
             self::$memoryLimit = false;
         }
         else {
-            (int)preg_replace_callback('/(\-?\d+)(.?)/',
+            preg_replace_callback('/(\-?\d+)(.?)/',
                     function ($m) {
                         self::$memoryLimit = $m[1] * pow(1024, strpos('BKMG', $m[2])) * self::MAXMEMORYUSAGE;
                     },
