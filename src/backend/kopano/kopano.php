@@ -1628,10 +1628,10 @@ class BackendKopano implements IBackend, ISearchProvider {
      * number of folders, store size, full name, email address.
      *
      * @access public
-     * @return array
+     * @return UserStoreInfo
      */
-    public function GetUserInfo() {
-        $out = array();
+    public function GetUserStoreInfo() {
+        $userStoreInfo = new UserStoreInfo();
 
         $rootfolder = mapi_msgstore_openentry($this->store);
         $hierarchy =  mapi_folder_gethierarchytable($rootfolder, CONVENIENT_DEPTH);
@@ -1653,18 +1653,20 @@ class BackendKopano implements IBackend, ISearchProvider {
                             ),
                         ));
         mapi_table_restrict($hierarchy, $restrict);
-        $out['foldercnt'] = mapi_table_getrowcount($hierarchy);
+        $data = array();
+        $data['foldercount'] = mapi_table_getrowcount($hierarchy);
 
         $storeProps = mapi_getprops($this->store, array(PR_MESSAGE_SIZE_EXTENDED));
-        $out['storesize'] = isset($storeProps[PR_MESSAGE_SIZE_EXTENDED]) ? $storeProps[PR_MESSAGE_SIZE_EXTENDED] : 0;
+        $data['storesize'] = isset($storeProps[PR_MESSAGE_SIZE_EXTENDED]) ? $storeProps[PR_MESSAGE_SIZE_EXTENDED] : 0;
 
         $userDetails = $this->GetUserDetails($this->mainUser);
-        $out['fullname'] = $userDetails['fullname'];
-        $out['emailaddress'] = $userDetails['emailaddress'];
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->GetUserInfo(): user %s (%s) store size is %d bytes and contains %d folders",
-                Utils::PrintAsString($out['fullname']), Utils::PrintAsString($out['emailaddress']), $out['storesize'], $out['foldercnt']));
+        $data['fullname'] = $userDetails['fullname'];
+        $data['emailaddress'] = $userDetails['emailaddress'];
+        $userStoreInfo->SetData($data);
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->GetUserStoreInfo(): user %s (%s) store size is %d bytes and contains %d folders",
+                Utils::PrintAsString($data['fullname']), Utils::PrintAsString($data['emailaddress']), $data['storesize'], $data['foldercount']));
 
-        return $out;
+        return $userStoreInfo;
     }
 
     /**----------------------------------------------------------------------------------------------------------

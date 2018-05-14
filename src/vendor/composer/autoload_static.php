@@ -185,6 +185,7 @@ class ComposerStaticInit153a56a781a72686b71399955d98204f
         'TimezoneUtil' => __DIR__ . '/../..' . '/lib/utils/timezoneutil.php',
         'TopCollector' => __DIR__ . '/../..' . '/lib/core/topcollector.php',
         'UnavailableException' => __DIR__ . '/../..' . '/lib/exceptions/unavailableexception.php',
+        'UserStoreInfo' => __DIR__ . '/../..' . '/lib/core/userstoreinfo.php',
         'Utils' => __DIR__ . '/../..' . '/lib/utils/utils.php',
         'ValidateCert' => __DIR__ . '/../..' . '/lib/request/validatecert.php',
         'WBXMLDecoder' => __DIR__ . '/../..' . '/lib/wbxml/wbxmldecoder.php',

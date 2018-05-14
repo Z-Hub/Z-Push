@@ -347,7 +347,7 @@ interface IBackend {
      * number of folders, store size, full name, email address.
      *
      * @access public
-     * @return array
+     * @return UserStoreInfo
      */
-    public function GetUserInfo();
+    public function GetUserStoreInfo();
 }

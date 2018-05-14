@@ -90,17 +90,17 @@ class WebserviceInfo {
      * number of folders, store size, full name, email address.
      *
      * @access public
-     * @return array
+     * @return UserStoreInfo
      */
-    public function GetUserInfo() {
-        $out = array();
+    public function GetUserStoreInfo() {
+        $userStoreInfo = null;
         $user = Request::GetGETUser();
         $hasRights = ZPush::GetBackend()->Setup($user);
-        ZLog::Write(LOGLEVEL_INFO, sprintf("WebserviceInfo::GetUserInfo(): permissions to open store '%s': %s", $user, Utils::PrintAsString($hasRights)));
+        ZLog::Write(LOGLEVEL_INFO, sprintf("WebserviceInfo::GetUserStoreInfo(): permissions to open store '%s': %s", $user, Utils::PrintAsString($hasRights)));
 
         if ($hasRights) {
-            $out = ZPush::GetBackend()->GetUserInfo();
+            $userStoreInfo = ZPush::GetBackend()->GetUserStoreInfo();
         }
-        return $out;
+        return $userStoreInfo;
     }
 }

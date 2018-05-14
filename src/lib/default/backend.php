@@ -278,10 +278,10 @@ abstract class Backend implements IBackend {
      * number of folders, store size, full name, email address.
      *
      * @access public
-     * @return array
+     * @return UserStoreInfo
      */
-    public function GetUserInfo() {
-        return array();
+    public function GetUserStoreInfo() {
+        return new UserStoreInfo();
     }
 
     /**----------------------------------------------------------------------------------------------------------
