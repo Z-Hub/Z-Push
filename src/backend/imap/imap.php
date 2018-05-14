@@ -2089,30 +2089,18 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             $this->GetFolderList();
         }
 
-        if ($case_sensitive) {
-            if (isset($this->permanentStorage->fmFimapFid[$imapid])) {
-                $folderid = $this->permanentStorage->fmFimapFid[$imapid];
+        if ($case_sensitive && isset($fmFimapFid[$imapid])) {
+                $folderid = $fmFimapFid[$imapid];
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->getFolderIdFromImapId('%s') = %s", $imapid, $folderid));
                 return $folderid;
-            }
-            else {
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->getFolderIdFromImapId('%s') = %s", $imapid, 'not found'));
-                return false;
-            }
-        }
-        else {
-            if (isset($this->permanentStorage->fmFimapFidLowercase[strtolower($imapid)])) {
-                $folderid = $this->permanentStorage->fmFimapFidLowercase[strtolower($imapid)];
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->getFolderIdFromImapId('%s', false) = %s", $imapid, $folderid));
-                return $folderid;
-            }
-            else {
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->getFolderIdFromImapId('%s', false) = %s", $imapid, 'not found'));
-                return false;
-            }
         }
 
-        ZLog::Write(LOGLEVEL_WARN, sprintf("BackendIMAP->getFolderIdFromImapId('%s') = %s", $imapid, 'not initialized!'));
+        if (!$case_sensitive && isset($fmFimapFidLowercase[strtolower($imapid)])) {
+                $folderid = $fmFimapFidLowercase[strtolower($imapid)];
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->getFolderIdFromImapId('%s', false) = %s", $imapid, $folderid));
+                return $folderid;
+        }
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->getFolderIdFromImapId('%s', '%s') = %s\n", $imapid, Utils::PrintAsString($case_sensitive), 'not found'));
         return false;
     }
 
