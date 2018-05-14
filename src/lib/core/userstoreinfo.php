@@ -63,4 +63,44 @@ class UserStoreInfo {
             $this->emailaddress = $data['emailaddress'];
         }
     }
+
+    /**
+     * Returns the number of folders in user's store.
+     *
+     * @access public
+     * @return int
+     */
+    public function GetFolderCount() {
+        return $this->foldercount;
+    }
+
+    /**
+     * Returns the user's store size in bytes.
+     *
+     * @access public
+     * @return int
+     */
+    public function GetStoreSize() {
+        return $this->storesize;
+    }
+
+    /**
+     * Returns the fullname of the user.
+     *
+     * @access public
+     * @return string
+     */
+    public function GetFullName() {
+        return $this->fullname;
+    }
+
+    /**
+     * Returns the email address of the user.
+     *
+     * @access public
+     * @return string
+     */
+    public function GetEmailAddress() {
+        return $this->emailaddress;
+    }
 }
