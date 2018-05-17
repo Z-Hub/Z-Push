@@ -1367,7 +1367,7 @@ class ZPushAdminCLI {
      * @return void
      */
     static private function printShares($shares) {
-        $dashes = str_repeat('-', 125);
+        $dashes = str_repeat('-', 145);
         foreach ($shares as $user => $userShares) {
             printf("Shares of user %s\n\n", $user);
 
@@ -1376,9 +1376,6 @@ class ZPushAdminCLI {
                 foreach ($folderShares as $share) {
                     if (strlen($share['name']) > 26) {
                        $share['name'] = substr($share['name'], 0, 26) . '...';
-                    }
-                    if (strlen($share['deviceId']) > 10) {
-                        $share['deviceId'] = substr($share['deviceId'],0 ,10) . '...';
                     }
                     printf("\n%-30s %-48s %-30s %-10s", $share['name'], $folderid, $share['user'], $share['deviceId']);
                 }
