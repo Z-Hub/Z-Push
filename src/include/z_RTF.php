@@ -456,7 +456,7 @@ class rtf {
                     $this->out.= "<plain>".$this->queue."</plain>";
                 else if($this->wantHTML) {
                     // only output html if a valid (for now, just numeric;) fonttable is given
-					if (!isset($this->flags["fonttbl_current_read"])) $this->flags["fonttbl_current_read"] = "";
+                    if (!isset($this->flags["fonttbl_current_read"])) $this->flags["fonttbl_current_read"] = "";
                     if(preg_match("/^[0-9]+$/", $this->flags["fonttbl_current_read"])) {
                         if($this->flags["beginparagraph"] == true) {
                             $this->flags["beginparagraph"] = false;
@@ -487,7 +487,7 @@ class rtf {
                         /* close modifiers */
                         $this->checkHtmlSpanContent("stop");
                         /* close span */
-                        "</span>";
+                        $this->out .= "</span>";
                     }
                 }
                 $this->queue = "";
