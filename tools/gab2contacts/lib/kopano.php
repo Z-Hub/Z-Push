@@ -202,17 +202,17 @@ class Kopano extends ContactWorker {
                 continue;
             }
             // ignore ROOMS
-            elseif (isset($entry[PR_DISPLAY_TYPE_EX]) && $entry[PR_DISPLAY_TYPE_EX] & DT_ROOM) {
+            elseif (isset($entry[PR_DISPLAY_TYPE_EX]) && $entry[PR_DISPLAY_TYPE_EX] == DT_ROOM) {
                 $ignored++;
                 continue;
             }
             // ignore EQUIPMENT
-            elseif (isset($entry[PR_DISPLAY_TYPE_EX]) && $entry[PR_DISPLAY_TYPE_EX] & DT_EQUIPMENT) {
+            elseif (isset($entry[PR_DISPLAY_TYPE_EX]) && $entry[PR_DISPLAY_TYPE_EX] == DT_EQUIPMENT) {
                 $ignored++;
                 continue;
             }
             // ignore ORGANIZATION
-            elseif (isset($entry[PR_DISPLAY_TYPE_EX]) && $entry[PR_DISPLAY_TYPE_EX] & DT_ORGANIZATION) {
+            elseif (isset($entry[PR_DISPLAY_TYPE_EX]) && $entry[PR_DISPLAY_TYPE_EX] == DT_ORGANIZATION) {
                 $ignored++;
                 continue;
             }

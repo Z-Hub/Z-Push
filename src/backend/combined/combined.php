@@ -666,4 +666,22 @@ class BackendCombined extends Backend implements ISearchProvider {
 
         return false;
     }
+
+    /**
+     * Returns the email address and the display name of the user. Used by autodiscover and caldav.
+     *
+     * @param string        $username           The username
+     *
+     * @access public
+     * @return Array
+     */
+    public function GetUserDetails($username) {
+        // Find a backend that can provide the information
+        foreach ($this->backends as $backend) {
+            if (method_exists($backend, "GetUserDetails")) {
+                return $backend->GetUserDetails($username);
+            }
+        }
+        return parent::GetUserDetails($username);
+    }
 }

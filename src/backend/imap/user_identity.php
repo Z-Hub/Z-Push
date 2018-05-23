@@ -24,6 +24,40 @@
 ************************************************/
 
 /**
+ * Returns the default email address.
+ *
+ * @return string
+ */
+function getDefaultEmailValue($username, $domain) {
+    $v = "";
+
+    if (defined('IMAP_DEFAULTFROM')) {
+        switch (IMAP_DEFAULTFROM) {
+            case 'username':
+                $v = $username;
+                break;
+            case 'domain':
+                $v = $domain;
+                break;
+            case 'ldap':
+                $v = getIdentityFromLdap($username, $domain, IMAP_FROM_LDAP_EMAIL, false);
+                break;
+            case 'sql':
+                $v = getIdentityFromSql($username, $domain, IMAP_FROM_SQL_EMAIL, false);
+                break;
+            case 'passwd':
+                $v = getIdentityFromPasswd($username, $domain, 'EMAIL', false);
+                break;
+            default:
+                $v = $username . IMAP_DEFAULTFROM;
+                break;
+        }
+    }
+
+    return $v;
+}
+
+/**
  * Returns the default value for "From"
  *
  * @return string
@@ -206,15 +240,15 @@ function getIdentityFromPasswd($username, $domain, $identity, $encode = true) {
             $tmp = $local_user['gecos'];
             $tmp = explode(',', $tmp);
             $name = $tmp[0];
+            $email = $tmp[1];
             unset($tmp);
 
             switch ($identity) {
+                case 'EMAIL':
+                    $ret_value = sprintf("%s", $email);
+                    break;
                 case 'FROM':
-                    if (strlen($domain) > 0) {
-                        $ret_value = sprintf("%s <%s@%s>", $name, $username, $domain);
-                    } else {
-                        ZLog::Write(LOGLEVEL_WARN, sprintf("BackendIMAP->getIdentityFromPasswd() - No domain passed. Cannot construct From address."));
-                    }
+                    $ret_value = sprintf("%s <%s>", $name, $email);
                     break;
                 case 'FULLNAME':
                     $ret_value = sprintf("%s", $name);

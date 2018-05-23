@@ -894,14 +894,15 @@ class Utils {
             $perm_dir = stat($dir);
             $perm_file = stat($file);
 
-            if ($perm_file['uid'] == 0 && $perm_dir['uid'] == 0) {
+            if ($perm_file['uid'] == 0 && $perm_dir['uid'] == 0 && $perm_dir['gid'] == 0) {
                 unlink($file);
-                throw new FatalException("FixFileOwner: $dir must be owned by the nginx/apache/php user instead of root");
+                throw new FatalException("FixFileOwner: $dir must be owned by the nginx/apache/php user instead of root for debian based systems and by root:z-push for RHEL-based systems");
             }
 
             if($perm_dir['uid'] !== $perm_file['uid'] || $perm_dir['gid'] !== $perm_file['gid']) {
                 chown($file, $perm_dir['uid']);
                 chgrp($file, $perm_dir['gid']);
+                chmod($file, 0664);
             }
         }
         return true;
@@ -1361,7 +1362,7 @@ class Utils {
         if (!$rawheaders) {
             return;
         }
-        $message->headers["subject"] = Utils::convertRawHeader2Utf8($rawheaders["subject"], $message->headers["subject"]);
+        $message->headers["subject"] = isset($message->headers["subject"]) ? Utils::convertRawHeader2Utf8($rawheaders["subject"], $message->headers["subject"]) : "";
         $message->headers["from"] = Utils::convertRawHeader2Utf8($rawheaders["from"], $message->headers["from"]);
     }
 }

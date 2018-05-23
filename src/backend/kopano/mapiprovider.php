@@ -1637,13 +1637,13 @@ class MAPIProvider {
                 $pic = mapi_message_createattach($mapimessage);
                 // Set properties of the attachment
                 $picprops = array(
-                    PR_ATTACH_LONG_FILENAME_A => "ContactPicture.jpg",
+                    PR_ATTACH_LONG_FILENAME => "ContactPicture.jpg",
                     PR_DISPLAY_NAME => "ContactPicture.jpg",
                     0x7FFF000B => true,
                     PR_ATTACHMENT_HIDDEN => false,
                     PR_ATTACHMENT_FLAGS => 1,
                     PR_ATTACH_METHOD => ATTACH_BY_VALUE,
-                    PR_ATTACH_EXTENSION_A => ".jpg",
+                    PR_ATTACH_EXTENSION => ".jpg",
                     PR_ATTACH_NUM => 1,
                     PR_ATTACH_SIZE => $picsize,
                     PR_ATTACH_DATA_BIN => $picbinary,
@@ -2609,7 +2609,7 @@ class MAPIProvider {
         }
         else {
             $addrbook = $this->getAddressbook();
-            $stream = mapi_inetmapi_imtoinet($this->session, $addrbook, $mapimessage, array('use_tnef' => -1));
+            $stream = mapi_inetmapi_imtoinet($this->session, $addrbook, $mapimessage, array('use_tnef' => -1, 'ignore_missing_attachments' => 1));
         }
         if (is_resource($stream)) {
             $mstreamstat = mapi_stream_stat($stream);
