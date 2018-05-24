@@ -1701,8 +1701,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
 
                 if (is_calendar($part)) {
                     ZLog::Write(LOGLEVEL_DEBUG, "BackendIMAP->MeetingResponse - text/calendar part found, trying to reply");
-                    // FIXME: here we should use the user email address, that could not be username
-                    $body_part = reply_meeting_calendar($part, $response, $this->username);
+                    $body_part = reply_meeting_calendar($part, $response, GetUserDetails($this->username)['emailaddress']);
                 }
             }
             unset($mparts);
