@@ -44,24 +44,19 @@ class UserStoreInfo {
     /**
      * Sets data for the user's store.
      *
-     * @param array $data
-     * @access public
+     * @param int $foldercount
+     * @param int $storesize
+     * @param string $fullname
+     * @param string $emailaddress
      *
+     * @access public
      * @return void
      */
-    public function SetData($data) {
-        if (isset($data['foldercount'])) {
-            $this->foldercount = $data['foldercount'];
-        }
-        if (isset($data['storesize'])) {
-            $this->storesize = $data['storesize'];
-        }
-        if (isset($data['fullname'])) {
-            $this->fullname = $data['fullname'];
-        }
-        if (isset($data['emailaddress'])) {
-            $this->emailaddress = $data['emailaddress'];
-        }
+    public function SetData($foldercount, $storesize, $fullname, $emailaddress) {
+        $this->foldercount = $foldercount;
+        $this->storesize = $storesize;
+        $this->fullname = $fullname;
+        $this->emailaddress = $emailaddress;
     }
 
     /**

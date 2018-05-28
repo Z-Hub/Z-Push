@@ -1653,18 +1653,15 @@ class BackendKopano implements IBackend, ISearchProvider {
                             ),
                         ));
         mapi_table_restrict($hierarchy, $restrict);
-        $data = array();
-        $data['foldercount'] = mapi_table_getrowcount($hierarchy);
+        $foldercount = mapi_table_getrowcount($hierarchy);
 
         $storeProps = mapi_getprops($this->store, array(PR_MESSAGE_SIZE_EXTENDED));
-        $data['storesize'] = isset($storeProps[PR_MESSAGE_SIZE_EXTENDED]) ? $storeProps[PR_MESSAGE_SIZE_EXTENDED] : 0;
+        $storesize = isset($storeProps[PR_MESSAGE_SIZE_EXTENDED]) ? $storeProps[PR_MESSAGE_SIZE_EXTENDED] : 0;
 
         $userDetails = $this->GetUserDetails($this->mainUser);
-        $data['fullname'] = $userDetails['fullname'];
-        $data['emailaddress'] = $userDetails['emailaddress'];
-        $userStoreInfo->SetData($data);
+        $userStoreInfo->SetData($foldercount, $storesize, $userDetails['fullname'], $userDetails['emailaddress']);
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->GetUserStoreInfo(): user %s (%s) store size is %d bytes and contains %d folders",
-                Utils::PrintAsString($data['fullname']), Utils::PrintAsString($data['emailaddress']), $data['storesize'], $data['foldercount']));
+                Utils::PrintAsString($userDetails['fullname']), Utils::PrintAsString($userDetails['emailaddress']), $storesize, $foldercount));
 
         return $userStoreInfo;
     }
