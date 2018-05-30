@@ -155,10 +155,10 @@ class ZPushAdminCLI {
                         "\t\t\t\t\t\t FOLDERID is the id of shared folder.\n" .
                 "\tlistshares -o STORE -f FOLDERID\n".
                         "\t\t\t\t\t\t Lists opened shared folders and who opened them on which device.\n" .
-                        "\t\t\t\t\t\t STORE and FOLDERID are optional. If they're not provided then the script will display all open shares." .
-                        "\t\t\t\t\t\t STORE - whose shared folders to list, e.g. \"SYSTEM\" (for public folders) or a username." .
-                        "\t\t\t\t\t\t FOLDERID - list who opened the shared folder." .
-                        "\t\t\t\t\t\t If both STORE and FOLDERID are provided the script will only list who opened the folder ignoring the STORE parameter." .
+                        "\t\t\t\t\t\t STORE and FOLDERID are optional. If they're not provided then the script will display all open shares.\n" .
+                        "\t\t\t\t\t\t STORE - whose shared folders to list, e.g. \"SYSTEM\" (for public folders) or a username.\n" .
+                        "\t\t\t\t\t\t FOLDERID - list who opened the shared folder.\n" .
+                        "\t\t\t\t\t\t If both STORE and FOLDERID are provided the script will only list who opened the folder ignoring the STORE parameter.\n" .
                 "\n";
     }
 
