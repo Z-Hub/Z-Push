@@ -1623,6 +1623,49 @@ class BackendKopano implements IBackend, ISearchProvider {
         return $sigs;
     }
 
+    /**
+     * Returns information about the user's store:
+     * number of folders, store size, full name, email address.
+     *
+     * @access public
+     * @return UserStoreInfo
+     */
+    public function GetUserStoreInfo() {
+        $userStoreInfo = new UserStoreInfo();
+
+        $rootfolder = mapi_msgstore_openentry($this->store);
+        $hierarchy =  mapi_folder_gethierarchytable($rootfolder, CONVENIENT_DEPTH);
+        // Do not take hidden and system folders into account
+        // TODO make this restriction generic and use for hierarchy?
+        $restrict = array(RES_AND, array(
+                            array(  RES_PROPERTY,
+                                array(  RELOP => RELOP_NE,
+                                        ULPROPTAG => PR_ATTR_HIDDEN,
+                                        VALUE => true),
+                            ),
+                            array(  RES_PROPERTY,
+                                array(  RELOP => RELOP_EQ,
+                                        ULPROPTAG => PR_FOLDER_TYPE,
+                                        VALUE => FOLDER_GENERIC),
+                            ),
+                            array(  RES_EXIST,
+                                array(  ULPROPTAG => PR_CONTAINER_CLASS),
+                            ),
+                        ));
+        mapi_table_restrict($hierarchy, $restrict);
+        $foldercount = mapi_table_getrowcount($hierarchy);
+
+        $storeProps = mapi_getprops($this->store, array(PR_MESSAGE_SIZE_EXTENDED));
+        $storesize = isset($storeProps[PR_MESSAGE_SIZE_EXTENDED]) ? $storeProps[PR_MESSAGE_SIZE_EXTENDED] : 0;
+
+        $userDetails = $this->GetUserDetails($this->mainUser);
+        $userStoreInfo->SetData($foldercount, $storesize, $userDetails['fullname'], $userDetails['emailaddress']);
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->GetUserStoreInfo(): user %s (%s) store size is %d bytes and contains %d folders",
+                Utils::PrintAsString($userDetails['fullname']), Utils::PrintAsString($userDetails['emailaddress']), $storesize, $foldercount));
+
+        return $userStoreInfo;
+    }
+
     /**----------------------------------------------------------------------------------------------------------
      * Private methods
      */

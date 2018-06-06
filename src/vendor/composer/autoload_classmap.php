@@ -178,6 +178,7 @@ return array(
     'TimezoneUtil' => $baseDir . '/lib/utils/timezoneutil.php',
     'TopCollector' => $baseDir . '/lib/core/topcollector.php',
     'UnavailableException' => $baseDir . '/lib/exceptions/unavailableexception.php',
+    'UserStoreInfo' => $baseDir . '/lib/core/userstoreinfo.php',
     'Utils' => $baseDir . '/lib/utils/utils.php',
     'ValidateCert' => $baseDir . '/lib/request/validatecert.php',
     'WBXMLDecoder' => $baseDir . '/lib/wbxml/wbxmldecoder.php',
