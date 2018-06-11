@@ -1,6 +1,6 @@
 /var/log/z-push/*.log {
 	size 1k
-	create root z-push
+	create 664 root z-push
 	compress
 	rotate 4
 	su root z-push
