@@ -583,7 +583,7 @@ class Utils {
      * @return boolean
      */
     static public function CheckEmail($email) {
-        return strpos($email, '@') !== false ? true : false;
+        return strpos($email, '@') !== false && substr_count($email, '@') == 1 ? true : false;
     }
 
     /**
