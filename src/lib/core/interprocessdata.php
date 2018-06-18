@@ -76,7 +76,7 @@ abstract class InterProcessData {
             if (!($this instanceof TopCollector) && $this->provider_class !== 'IpcSharedMemoryProvider') {
                 $this->type = Request::GetDeviceID(). "-". $this->type;
             }
-            $this->ipcProvider = new $this->provider_class($this->type, $this->allocate, get_class($this));
+            $this->ipcProvider = new $this->provider_class($this->type, $this->allocate, get_class($this), Request::GetDeviceID());
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("%s initialised with IPC provider '%s' with type '%s'", get_class($this), $this->provider_class, $this->type));
 
         }
