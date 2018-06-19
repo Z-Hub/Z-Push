@@ -1387,19 +1387,18 @@ class MAPIProvider {
             if(isset($appointment->exceptions)) {
                 foreach($appointment->exceptions as $exception) {
                     // we always need the base date
-                    if(!isset($exception->exceptionstarttime))
+                    if(!isset($exception->exceptionstarttime)) {
                         continue;
+                    }
 
+                    $basedate = $this->getDayStartOfTimestamp($exception->exceptionstarttime);
                     if(isset($exception->deleted) && $exception->deleted) {
+                        $noexceptions = false;
                         // Delete exception
-                        if(!isset($recur["deleted_occurences"]))
-                            $recur["deleted_occurences"] = array();
-
-                        array_push($recur["deleted_occurences"], $this->getDayStartOfTimestamp($this->getLocaltimeByTZ($exception->exceptionstarttime, $tz)));
+                        $recurrence->createException(array(), $basedate, true);
                     }
                     else {
                         // Change exception
-                        $basedate = $this->getDayStartOfTimestamp($exception->exceptionstarttime);
                         $mapiexception = array("basedate" => $basedate);
                         //other exception properties which are not handled in recurrence
                         $exceptionprops = array();
