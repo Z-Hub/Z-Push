@@ -28,6 +28,8 @@
 // config file
 require_once("backend/caldav/config.php");
 
+include 'sabre21/Sabre/VObject/autoload.php';
+
 class BackendCalDAV extends BackendDiff {
     /**
      * @var CalDAVClient
@@ -540,22 +542,19 @@ class BackendCalDAV extends BackendDiff {
         $truncsize = Utils::GetTruncSize($contentparameters->GetTruncation());
         $message = new SyncAppointment();
 
-        $ical = new iCalComponent($data);
-        $timezones = $ical->GetComponents("VTIMEZONE");
-        $timezone = "";
-        if (count($timezones) > 0) {
-            $timezone = TimezoneUtil::GetPhpSupportedTimezone($timezones[0]->GetPValue("TZID"));
-        }
-        if (!$timezone) {
-            $timezone = date_default_timezone_get();
-        }
-        $message->timezone = $this->_GetTimezoneString($timezone);
+          $vcal = sabre\vobject\reader::read($data, sabre\vobject\reader::OPTION_FORGIVING);
+        ZLog::Write(LOGLEVEL_DEBUG, "VObject vcal: ".print_r($vcal->serialize(), 1));
 
-        $vevents = $ical->GetComponents("VTIMEZONE", false);
-        foreach ($vevents as $event) {
-            $rec = $event->GetProperties("RECURRENCE-ID");
-            if (count($rec) > 0) {
-                $recurrence_id = reset($rec);
+          $tzid = $vcal->VEVENT->DTSTART->getDateTime()->getTimezone()->getName();
+        $message->timezone = $this->_GetTimezoneString($tzid);
+
+        foreach ($vcal->children as $vevent) {
+            if ($vevent->name != "VEVENT") {
+                    continue;
+                }
+                if (isset($vevent->{'RECURRENCE-ID'})) {
+/*
+                    $recurrence_id = reset($rec);
                 $exception = new SyncAppointmentException();
                 $tzid = TimezoneUtil::GetPhpSupportedTimezone($recurrence_id->GetParameterValue("TZID"));
                 if (!$tzid) {
@@ -563,16 +562,18 @@ class BackendCalDAV extends BackendDiff {
                 }
                 $exception->exceptionstarttime = TimezoneUtil::MakeUTCDate($recurrence_id->Value(), $tzid);
                 $exception->deleted = "0";
-                $exception = $this->_ParseVEventToSyncObject($event, $exception, $truncsize);
+                $exception = $this->_ParseVEventToSyncObject($vevent, $exception, $truncsize);
                 if (!isset($message->exceptions)) {
                     $message->exceptions = array();
                 }
                 $message->exceptions[] = $exception;
-            }
-            else {
-                $message = $this->_ParseVEventToSyncObject($event, $message, $truncsize);
-            }
+*/
+                }
+                else {
+                    $message = $this->_ParseVEventToSyncObject($vevent, $message, $truncsize);
+                }
         }
+
         return $message;
     }
 
@@ -582,163 +583,47 @@ class BackendCalDAV extends BackendDiff {
      * @param SyncAppointment(Exception) $message
      * @param int $truncsize
      */
-    private function _ParseVEventToSyncObject($event, $message, $truncsize) {
+    private function _ParseVEventToSyncObject($vevent, $message, $truncsize) {
         //Defaults
         $message->busystatus = "2";
 
-        $properties = $event->GetProperties();
-        foreach ($properties as $property) {
-            switch ($property->Name()) {
-                case "LAST-MODIFIED":
-                    $message->dtstamp = TimezoneUtil::MakeUTCDate($property->Value());
-                    break;
-
-                case "DTSTART":
-                    $message->starttime = TimezoneUtil::MakeUTCDate($property->Value(), TimezoneUtil::GetPhpSupportedTimezone($property->GetParameterValue("TZID")));
-                    if (strlen($property->Value()) == 8) {
-                        $message->alldayevent = "1";
-                    }
-                    break;
-
-                case "SUMMARY":
-                    $message->subject = $property->Value();
-                    break;
-
-                case "UID":
-                    $message->uid = $property->Value();
-                    break;
-
-                case "ORGANIZER":
-                    $org_mail = str_ireplace("MAILTO:", "", $property->Value());
-                    $message->organizeremail = $org_mail;
-                    $org_cn = $property->GetParameterValue("CN");
-                    if ($org_cn) {
-                        $message->organizername = $org_cn;
-                    }
-                    break;
-
-                case "LOCATION":
-                    $message->location = $property->Value();
-                    break;
-
-                case "DTEND":
-                    $message->endtime = TimezoneUtil::MakeUTCDate($property->Value(), TimezoneUtil::GetPhpSupportedTimezone($property->GetParameterValue("TZID")));
-                    if (strlen($property->Value()) == 8) {
-                        $message->alldayevent = "1";
-                    }
-                    break;
-
-                case "X-MICROSOFT-CDO-ALLDAYEVENT":
-                    if ($property->Value() == "TRUE") {
-                        $message->alldayevent = "1";
-                    }
-                    break;
-
+        foreach ($vevent->children as $value) {
+            switch ($value->name) {
+                 case "DTSTART":
+                      $message->starttime = $value->getDateTime()->getTimestamp();
+                      if (strlen((string)$value) == 8) {
+                            $message->alldayevent = "1";
+                      }
+                      break;
+                 case "DTEND":
+                      $message->endtime = $value->getDateTime()->getTimestamp();
+                      if (strlen((string)$value) == 8) {
+                            $message->alldayevent = "1";
+                      }
+                      break;
                 case "DURATION":
                     if (!isset($message->endtime)) {
                         $start = date_create("@" . $message->starttime);
-                        $val = str_replace("+", "", $property->Value());
+                        $val = str_replace("+", "", (string)$value);
                         $interval = new DateInterval($val);
                         $message->endtime = date_timestamp_get(date_add($start, $interval));
                     }
-                break;
-
-                case "RRULE":
-                    $message->recurrence = $this->_ParseRecurrence($property->Value(), "vevent");
                     break;
-
-                case "CLASS":
-                    switch ($property->Value()) {
-                        case "PUBLIC":
-                            $message->sensitivity = "0";
-                            break;
-                        case "PRIVATE":
-                            $message->sensitivity = "2";
-                            break;
-                        case "CONFIDENTIAL":
-                            $message->sensitivity = "3";
-                            break;
-                    }
-                    break;
-
-                case "TRANSP":
-                    if(!isset($message->busystatus)){
-                        switch ($property->Value()) {
-                            case "TRANSPARENT":
-                                $message->busystatus = "0";
-                                break;
-                            case "OPAQUE":
-                                $message->busystatus = "2";
-                                break;
-                        }
-                    }
-                    break;
-
-                case "X-MICROSOFT-CDO-INTENDEDSTATUS":
-                    switch ($property->Value()) {
-                        case "FREE":
-                            $message->busystatus = "0";
-                            break;
-                        case "TENTATIVE":
-                            $message->busystatus = "1";
-                            break;
-                        case "BUSY":
-                            $message->busystatus = "2";
-                            break;
-                        case "OOF":
-                            $message->busystatus = "3";
-                            break;
-                        case "WORKINGELSEWHERE":
-                            $message->busystatus = "4";
-                            break;
-                    }
-                    break;
-
-                // SYNC_POOMCAL_MEETINGSTATUS
-                // Meetingstatus values
-                //  0 = is not a meeting
-                //  1 = is a meeting
-                //  3 = Meeting received
-                //  5 = Meeting is canceled
-                //  7 = Meeting is canceled and received
-                //  9 = as 1
-                // 11 = as 3
-                // 13 = as 5
-                // 15 = as 7
-                case "STATUS":
-                    switch ($property->Value()) {
-                        case "TENTATIVE":
-                            $message->meetingstatus = "3"; // was 1
-                            break;
-                        case "CONFIRMED":
-                            $message->meetingstatus = "1"; // was 3
-                            break;
-                        case "CANCELLED":
-                            $message->meetingstatus = "5"; // could also be 7
-                            break;
-                    }
-                    break;
-
-                case "ATTENDEE":
-                    $attendee = new SyncAttendee();
-                    $att_email = str_ireplace("MAILTO:", "", $property->Value());
-                    $attendee->email = $att_email;
-                    $att_cn = $property->GetParameterValue("CN");
-                    if ($att_cn) {
-                        $attendee->name = $att_cn;
-                    }
-                    if (isset($message->attendees) && is_array($message->attendees)) {
-                        $message->attendees[] = $attendee;
-                    }
-                    else {
-                        $message->attendees = array($attendee);
-                    }
-                    break;
-
+                 case "X-MICROSOFT-CDO-ALLDAYEVENT":
+                      if ((string)$value == "TRUE") {
+                            $message->alldayevent = "1";
+                      }
+                      break;
+                 case "SUMMARY":
+                      $message->subject = (string)$value;
+                      break;
+                 case "LOCATION":
+                      $message->location = (string)$value;
+                      break;
                 case "DESCRIPTION":
                     if (Request::GetProtocolVersion() >= 12.0) {
                         $message->asbody = new SyncBaseBody();
-                        $data = str_replace("\n","\r\n", str_replace("\r","",Utils::ConvertHtmlToText($property->Value())));
+                        $data = str_replace("\n","\r\n", str_replace("\r","",Utils::ConvertHtmlToText((string)$value)));
                         // truncate body, if requested
                         if (strlen($data) > $truncsize) {
                             $message->asbody->truncated = 1;
@@ -765,20 +650,116 @@ class BackendCalDAV extends BackendDiff {
                         $message->body = $body;
                     }
                     break;
-
+                case "CLASS":
+                    switch ((string)$value) {
+                        case "PUBLIC":
+                            $message->sensitivity = "0";
+                            break;
+                        case "PRIVATE":
+                            $message->sensitivity = "2";
+                            break;
+                        case "CONFIDENTIAL":
+                            $message->sensitivity = "3";
+                            break;
+                    }
+                    break;
+                case "TRANSP":
+                    if(!isset($message->busystatus)){
+                        switch ((string)$value) {
+                            case "TRANSPARENT":
+                                $message->busystatus = "0";
+                                break;
+                            case "OPAQUE":
+                                $message->busystatus = "2";
+                                break;
+                        }
+                    }
+                    break;
+                case "X-MICROSOFT-CDO-INTENDEDSTATUS":
+                    switch ((string)$value) {
+                        case "FREE":
+                            $message->busystatus = "0";
+                            break;
+                        case "TENTATIVE":
+                            $message->busystatus = "1";
+                            break;
+                        case "BUSY":
+                            $message->busystatus = "2";
+                            break;
+                        case "OOF":
+                            $message->busystatus = "3";
+                            break;
+                        case "WORKINGELSEWHERE":
+                            $message->busystatus = "4";
+                            break;
+                    }
+                    break;
+                // SYNC_POOMCAL_MEETINGSTATUS
+                // Meetingstatus values
+                //  0 = is not a meeting
+                //  1 = is a meeting
+                //  3 = Meeting received
+                //  5 = Meeting is canceled
+                //  7 = Meeting is canceled and received
+                //  9 = as 1
+                // 11 = as 3
+                // 13 = as 5
+                // 15 = as 7
+                case "STATUS":
+                    switch ((string)$value) {
+                        case "TENTATIVE":
+                            $message->meetingstatus = "3"; // was 1
+                            break;
+                        case "CONFIRMED":
+                            $message->meetingstatus = "1"; // was 3
+                            break;
+                        case "CANCELLED":
+                            $message->meetingstatus = "5"; // could also be 7
+                            break;
+                    }
+                    break;
+                case "ORGANIZER":
+                    $org_mail = str_ireplace("MAILTO:", "", (string)$value);
+                    $message->organizeremail = $org_mail;
+                    if (isset($value['CN'])) {
+                        $message->organizername = $value['CN'];
+                    }
+                    break;
+                case "ATTENDEE":
+                    $attendee = new SyncAttendee();
+                    $att_email = str_ireplace("MAILTO:", "", (string)$value);
+                    $attendee->email = $att_email;
+                    if (isset($value['CN'])) {
+                        $attendee->name = $value['CN'];
+                    }
+                    if (isset($message->attendees) && is_array($message->attendees)) {
+                        $message->attendees[] = $attendee;
+                    }
+                    else {
+                        $message->attendees = array($attendee);
+                    }
+                    break;
+                case "RRULE":
+                    $message->recurrence = $this->_ParseRecurrence((string)$value, "vevent");
+                    break;
                 case "CATEGORIES":
-                    $categories = explode(",", $property->Value());
+                    $categories = explode(",", (string)$value);
                     $message->categories = $categories;
                     break;
-
                 case "EXDATE":
                     $exception = new SyncAppointmentException();
                     $exception->deleted = "1";
-                    $exception->exceptionstarttime = TimezoneUtil::MakeUTCDate($property->Value());
+                    $exception->exceptionstarttime = $value->getDateTime()->getTimestamp();
                     if (!isset($message->exceptions)) {
                         $message->exceptions = array();
                     }
                     $message->exceptions[] = $exception;
+                    break;
+                case "UID":
+                      $message->uid = (string)$value;
+                      break;
+                case "LAST-MODIFIED":
+                    $message->dtstamp = $value->getDateTime()->getTimestamp();
                     break;
 
                 //We can ignore the following
@@ -791,12 +772,11 @@ class BackendCalDAV extends BackendDiff {
                 case "X-LIC-ERROR":
                 case "RECURRENCE-ID":
                     break;
-
                 default:
                     ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->_ParseVEventToSyncObject(): '%s' is not yet supported.", $property->Name()));
             }
-        }
-
+          }
+          
         if ($message->meetingstatus > 0) {
             // No organizer was set for the meeting, assume it is the user
             if (!isset($message->organizeremail)) {
@@ -810,7 +790,9 @@ class BackendCalDAV extends BackendDiff {
                 $message->organizername = Utils::GetLocalPartFromEmail($message->organizeremail);
             }
         }
+          return $message;
 
+          //TODO valarm
         $valarm = current($event->GetComponents("VALARM"));
         if ($valarm) {
             $properties = $valarm->GetProperties();
