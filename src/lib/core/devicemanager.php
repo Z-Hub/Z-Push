@@ -48,6 +48,7 @@ class DeviceManager {
     const FLD_FLAGS_SENDASOWNER = 1;
     const FLD_FLAGS_TRACKSHARENAME = 2;
     const FLD_FLAGS_CALENDARREMINDERS = 4;
+    const FLD_FLAGS_NOREADONLYNOTIFY = 8;
 
     private $device;
     private $deviceHash;
@@ -555,7 +556,7 @@ class DeviceManager {
      * @access public
      * @return boolean|string
      */
-    public function GetAdditionalUserSyncFolderStore($folderid) {
+    public function GetAdditionalUserSyncFolder($folderid) {
         // is this the KOE GAB folder?
         if ($folderid && $folderid === $this->GetKoeGabBackendFolderId()) {
             return KOE_GAB_STORE;
@@ -563,7 +564,7 @@ class DeviceManager {
 
         $f = $this->device->GetAdditionalFolder($folderid);
         if ($f) {
-            return $f['store'];
+            return $f;
         }
 
         return false;
