@@ -966,7 +966,7 @@ class Utils {
         while (($i <= $attempts) && (($res = file_put_contents($tmp, $data)) === false)) {
             ZLog::Write(LOGLEVEL_WARN, sprintf("Utils->SafePutContents: Failed on writing data in tmp - attempt: %d - filename: %s", $i, $tmp));
             $i++;
-            sleep($sleep_time / 1000);
+            usleep($sleep_time * 1000);
         }
         if ($res !== false){
             self::FixFileOwner($tmp);
@@ -974,7 +974,7 @@ class Utils {
             while (($i <= $attempts) && (($res = rename($tmp, $filename)) !== true)) {
                 ZLog::Write(LOGLEVEL_WARN, sprintf("Utils->SafePutContents: Failed on rename - attempt: %d - filename: %s", $i, $tmp));
                 $i++;
-                sleep($sleep_time / 1000);
+                usleep($sleep_time * 1000);
             }      
         }
         return $res;
