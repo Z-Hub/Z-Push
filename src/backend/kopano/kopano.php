@@ -709,8 +709,16 @@ class BackendKopano implements IBackend, ISearchProvider {
         mapi_message_submitmessage($mapimessage);
         $hr = mapi_last_hresult();
 
-        if ($hr)
-            throw new StatusException(sprintf("KopanoBackend->SendMail(): Error saving/submitting the message to the Outbox: 0x%X", mapi_last_hresult()), SYNC_COMMONSTATUS_MAILSUBMISSIONFAILED);
+        if ($hr){
+            switch ($hr) {
+                case MAPI_E_STORE_FULL:
+                    $code = SYNC_COMMONSTATUS_MAILBOXQUOTAEXCEEDED;
+                    break;
+                default:
+                    $code = SYNC_COMMONSTATUS_MAILSUBMISSIONFAILED;
+            }
+            throw new StatusException(sprintf("KopanoBackend->SendMail(): Error saving/submitting the message to the Outbox: 0x%X", $hr), $code);
+        }
 
         ZLog::Write(LOGLEVEL_DEBUG, "KopanoBackend->SendMail(): email submitted");
         return true;
