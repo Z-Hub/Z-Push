@@ -709,7 +709,7 @@ class BackendKopano implements IBackend, ISearchProvider {
         mapi_message_submitmessage($mapimessage);
         $hr = mapi_last_hresult();
 
-        if ($hr){
+        if ($hr) {
             switch ($hr) {
                 case MAPI_E_STORE_FULL:
                     $code = SYNC_COMMONSTATUS_MAILBOXQUOTAEXCEEDED;
