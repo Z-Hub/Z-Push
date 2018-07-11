@@ -205,7 +205,9 @@ class ComposerStaticInit153a56a781a72686b71399955d98204f
         'iCalComponent' => __DIR__ . '/../..' . '/include/iCalendar.php',
         'iCalProp' => __DIR__ . '/../..' . '/include/iCalendar.php',
         'iCalendar' => __DIR__ . '/../..' . '/include/iCalendar.php',
-        'rtf' => __DIR__ . '/../..' . '/include/z_RTF.php',
+        'rtf' => __DIR__ . '/../..' . '/include/rtfclass.php',
+        'rtfState' => __DIR__ . '/../..' . '/include/rtfclass.php',
+        'z_RTF' => __DIR__ . '/../..' . '/include/z_RTF.php',
     );
 
     public static function getInitializer(ClassLoader $loader)

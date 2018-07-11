@@ -1083,7 +1083,7 @@ class BackendCalDAV extends BackendDiff {
             $vevent->AddComponent($valarm);
         }
         if (isset($data->rtf)) {
-            $rtfparser = new rtf();
+            $rtfparser = new z_RTF();
             $rtfparser->loadrtf(base64_decode($data->rtf));
             $rtfparser->output("ascii");
             $rtfparser->parse();
@@ -1404,7 +1404,7 @@ class BackendCalDAV extends BackendDiff {
         }
         if (isset($data->asbody->data)) {
             if (isset($data->nativebodytype) && $data->nativebodytype == SYNC_BODYPREFERENCE_RTF) {
-                $rtfparser = new rtf();
+                $rtfparser = new z_RTF();
                 $rtfparser->loadrtf(base64_decode(stream_get_contents($data->asbody->data)));
                 $rtfparser->output("ascii");
                 $rtfparser->parse();
@@ -1471,7 +1471,7 @@ class BackendCalDAV extends BackendDiff {
             $vtodo->AddProperty("SUMMARY", $data->subject);
         }
         if (isset($data->rtf)) {
-            $rtfparser = new rtf();
+            $rtfparser = new z_RTF();
             $rtfparser->loadrtf(base64_decode($data->rtf));
             $rtfparser->output("ascii");
             $rtfparser->parse();
