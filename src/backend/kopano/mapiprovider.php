@@ -1319,9 +1319,6 @@ class MAPIProvider {
         //appointment specific properties to be set
         $props = array();
 
-        //we also have to set the responsestatus and not only meetingstatus, so we use another mapi tag
-        $props[$appointmentprops["responsestatus"]] = (isset($appointment->responsestatus)) ? $appointment->responsestatus : olResponseNone;
-
         //sensitivity is not enough to mark an appointment as private, so we use another mapi tag
         $private = (isset($appointment->sensitivity) && $appointment->sensitivity >= SENSITIVITY_PRIVATE) ? true : false;
 
@@ -1466,7 +1463,7 @@ class MAPIProvider {
 
         //always set the PR_SENT_REPRESENTING_* props so that the attendee status update also works with the webaccess
         $p = array( $appointmentprops["representingentryid"], $appointmentprops["representingname"], $appointmentprops["sentrepresentingaddt"],
-                    $appointmentprops["sentrepresentingemail"], $appointmentprops["sentrepresentinsrchk"]);
+                    $appointmentprops["sentrepresentingemail"], $appointmentprops["sentrepresentinsrchk"], $appointmentprops["responsestatus"]);
         $representingprops = $this->getProps($mapimessage, $p);
 
         if (!isset($representingprops[$appointmentprops["representingentryid"]])) {
@@ -1488,6 +1485,16 @@ class MAPIProvider {
                 $props[$appointmentprops["mrwassent"]] = true;
                 $props[$appointmentprops["responsestatus"]] = olResponseOrganized;
                 $props[$appointmentprops["meetingstatus"]] = olMeeting;
+            }
+        }
+        //we also have to set the responsestatus and not only meetingstatus, so we use another mapi tag
+        if (!isset($props[$appointmentprops["responsestatus"]])) {
+            if (isset($appointment->responsetype)) {
+                $props[$appointmentprops["responsestatus"]] = $appointment->responsetype;
+            }
+            // only set responsestatus to none if it is not set on the server
+            elseif (!isset($representingprops[$appointmentprops["responsestatus"]])) {
+                $props[$appointmentprops["responsestatus"]] = olResponseNone;
             }
         }
 
@@ -1524,6 +1531,7 @@ class MAPIProvider {
                     $recip[PR_ENTRYID] = $userinfo[0][PR_ENTRYID];
                     $recip[PR_RECIPIENT_TYPE] = isset($attendee->attendeetype) ? $attendee->attendeetype : MAPI_TO;
                     $recip[PR_RECIPIENT_FLAGS] = recipSendable;
+                    $recip[PR_RECIPIENT_TRACKSTATUS] = isset($attendee->attendeestatus) ? $attendee->attendeestatus : olResponseNone;
                 }
                 else {
                     $recip[PR_DISPLAY_NAME] = u2w($attendee->name);
