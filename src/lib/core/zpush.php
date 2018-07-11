@@ -661,7 +661,10 @@ class ZPush {
             $val = self::getAddSyncFolders()[$backendid]->Store;
         }
         else {
-            $val = self::GetDeviceManager()->GetAdditionalUserSyncFolderStore($backendid);
+            $val = self::GetDeviceManager()->GetAdditionalUserSyncFolder($backendid);
+            if (isset($val['store'])) {
+                $val = $val['store'];
+            }
         }
 
         if (!$noDebug)
