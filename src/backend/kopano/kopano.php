@@ -273,16 +273,26 @@ class BackendKopano implements IBackend, ISearchProvider {
             if ($checkACLonly == true) {
                 // check for admin rights
                 if (!$folderid) {
-                    if ($user != $mainUser) {
-                        $zarafauserinfo = @mapi_zarafa_getuser_by_name($this->defaultstore, $mainUser);
-                        $admin = (isset($zarafauserinfo['admin']) && $zarafauserinfo['admin'])?true:false;
+                    if ($user != $this->mainUser) {
+                        if ($this->impersonateUser) {
+                            $storeProps = mapi_getprops($userstore, array(PR_IPM_SUBTREE_ENTRYID));
+                            $rights = $this->HasSecretaryACLs($userstore, '', $storeProps[PR_IPM_SUBTREE_ENTRYID]);
+                            ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->Setup(): Checking for secretary ACLs on root folder of impersonated store '%s': '%s'", $user, Utils::PrintAsString($rights)));
+                        }
+                        else {
+                            $zarafauserinfo = @mapi_zarafa_getuser_by_name($this->defaultstore, $this->mainUser);
+                            $rights = (isset($zarafauserinfo['admin']) && $zarafauserinfo['admin'])?true:false;
+                            ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->Setup(): Checking for admin ACLs on store '%s': '%s'", $user, Utils::PrintAsString($rights)));
+                        }
                     }
                     // the user has always full access to his own store
-                    else
-                        $admin = true;
+                    else {
+                        $rights = true;
+                        ZLog::Write(LOGLEVEL_DEBUG, "KopanoBackend->Setup(): the user has always full access to his own store");
+                    }
 
-                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->Setup(): Checking for admin ACLs on store '%s': '%s'", $user, Utils::PrintAsString($admin)));
-                    return $admin;
+
+                    return $rights;
                 }
                 // check permissions on this folder
                 else {
@@ -1666,7 +1676,7 @@ class BackendKopano implements IBackend, ISearchProvider {
         $storeProps = mapi_getprops($this->store, array(PR_MESSAGE_SIZE_EXTENDED));
         $storesize = isset($storeProps[PR_MESSAGE_SIZE_EXTENDED]) ? $storeProps[PR_MESSAGE_SIZE_EXTENDED] : 0;
 
-        $userDetails = $this->GetUserDetails($this->mainUser);
+        $userDetails = $this->GetUserDetails($this->impersonateUser ?: $this->mainUser);
         $userStoreInfo->SetData($foldercount, $storesize, $userDetails['fullname'], $userDetails['emailaddress']);
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->GetUserStoreInfo(): user %s (%s) store size is %d bytes and contains %d folders",
                 Utils::PrintAsString($userDetails['fullname']), Utils::PrintAsString($userDetails['emailaddress']), $storesize, $foldercount));
@@ -1792,11 +1802,13 @@ class BackendKopano implements IBackend, ISearchProvider {
      * @access public
      * @return boolean
      */
-    public function HasSecretaryACLs($store, $folderid) {
-        $entryid = mapi_msgstore_entryidfromsourcekey($store, hex2bin($folderid));
+    public function HasSecretaryACLs($store, $folderid, $entryid = false) {
         if (!$entryid) {
-            ZLog::Write(LOGLEVEL_WARN, sprintf("KopanoBackend->HasSecretaryACLs(): error, no entryid resolved for %s on store %s", $folderid, $store));
-            return false;
+            $entryid = mapi_msgstore_entryidfromsourcekey($store, hex2bin($folderid));
+            if (!$entryid) {
+                ZLog::Write(LOGLEVEL_WARN, sprintf("KopanoBackend->HasSecretaryACLs(): error, no entryid resolved for %s on store %s", $folderid, $store));
+                return false;
+            }
         }
 
         $folder = mapi_msgstore_openentry($store, $entryid);
