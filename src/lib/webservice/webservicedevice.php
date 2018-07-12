@@ -97,8 +97,11 @@ class WebserviceDevice {
      * @throws SoapFault
      */
     public function WipeDevice($deviceId) {
+        if (Request::GetImpersonatedUser()) {
+            throw new SoapFault("ERROR", "Impersonated user is not allowed to wipe devices.");
+        }
         $deviceId = preg_replace("/[^A-Za-z0-9]/", "", $deviceId);
-        $user = Request::GetImpersonatedUser() ? Request::GetImpersonatedUser() : Request::GetGETUser();
+        $user = Request::GetGETUser();
         ZLog::Write(LOGLEVEL_INFO, sprintf("WebserviceDevice::WipeDevice('%s'): mark device of user '%s' for remote wipe", $deviceId, $user));
 
         if (! ZPushAdmin::WipeDevice(Request::GetAuthUser(), $user, $deviceId)) {
