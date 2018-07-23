@@ -583,7 +583,7 @@ class Utils {
      * @return boolean
      */
     static public function CheckEmail($email) {
-        return strpos($email, '@') !== false && substr_count($email, '@') == 1 ? true : false;
+        return strpos($email, '@') !== false ? true : false;
     }
 
     /**
@@ -975,7 +975,7 @@ class Utils {
                 ZLog::Write(LOGLEVEL_WARN, sprintf("Utils->SafePutContents: Failed on rename - attempt: %d - filename: %s", $i, $tmp));
                 $i++;
                 usleep($sleep_time * 1000);
-            }      
+            }
         }
         return $res;
     }
