@@ -325,8 +325,13 @@ ln -s "%zpush_dir/z-push-top.php" "$b/%_bindir/z-push-top";
 mkdir -p "$b/%_localstatedir/lib/z-push";
 mkdir -p "$b/%_localstatedir/log/z-push";
 mkdir -p "$b/%_sysconfdir/logrotate.d";
+%if "%_repository" == "RHEL_6_PHP_56"
+install -Dpm 644 config/z-push-rhel6.lr \
+    "$b/%_sysconfdir/logrotate.d/z-push.lr"
+%else
 install -Dpm 644 config/z-push-rhel.lr \
     "$b/%_sysconfdir/logrotate.d/z-push.lr"
+%endif
 
 # CALDAV
 mv "$bdir/caldav/config.php" "$cdir/caldav.conf.php";
