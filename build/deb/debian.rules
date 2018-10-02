@@ -4,13 +4,10 @@ export DH_VERBOSE=1
 
 #include /usr/share/quilt/quilt.make
 
-# Since only Ubuntu 16.04 requires php-mbstring we detect that here
-ifeq ($(shell dpkg-vendor --derives-from Ubuntu && echo yes),yes)
-		ifeq ($(shell grep -q Xenial /etc/os-release && echo yes),yes)
-				SUBSTVARS = -Vdist:Depends="php-mbstring"
-		endif
+# Ubuntu 16.04 and newer Debian releases have a dedicated package for mbstring
+ifeq ($(shell grep -Eq 'Xenial|stretch|bionic' /etc/os-release && echo yes),yes)
+	SUBSTVARS = -Vdist:Depends="php-mbstring"
 endif
-
 
 DEB_VERSION := $(shell dpkg-parsechangelog | egrep '^Version:' | cut -f 2 -d ' ')
 
