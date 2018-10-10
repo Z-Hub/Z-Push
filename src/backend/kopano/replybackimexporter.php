@@ -343,12 +343,13 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
      *
      * @param string        $id
      * @param int           $flags
+     * @param array         $categories
      *
      * @access public
      * @return boolean
      * @throws StatusException
      */
-    public function ImportMessageReadFlag($id, $flags) {
+    public function ImportMessageReadFlag($id, $flags, $categories = array()) {
         $this->changes[] = array(self::READFLAG, $id, $flags);
         return true;
     }
