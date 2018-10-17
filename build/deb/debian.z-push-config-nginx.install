@@ -1,1 +1,3 @@
 config/nginx/z-push.conf /etc/nginx/sites-available/
+config/nginx/z-push-autodiscover.conf /etc/nginx/snippets/
+config/nginx/z-push-php.conf /etc/nginx/snippets/
