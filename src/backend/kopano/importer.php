@@ -488,13 +488,12 @@ class ImportChangesICS implements IImportChanges {
      *
      * @param string        $id
      * @param int           $flags - read/unread
-     * @param array         $categories
      *
      * @access public
      * @return boolean
      * @throws StatusException
      */
-    public function ImportMessageReadFlag($id, $flags, $categories = array()) {
+    public function ImportMessageReadFlag($id, $flags) {
         list($fsk,$sk) = Utils::SplitMessageId($id);
 
         // if $fsk is set, we convert it into a backend id.

@@ -227,14 +227,8 @@ class PHPWrapper {
      */
     public function ImportPerUserReadStateChange($readstates) {
         foreach($readstates as $readstate) {
-            $categories = array();
-            $entryid = mapi_msgstore_entryidfromsourcekey($this->store, $this->folderid, $readstate["sourcekey"]);
-            if ($entryid) {
-                $mapimessage = mapi_msgstore_openentry($this->store, $entryid);
-                $message = $this->mapiprovider->GetMessage($mapimessage, $this->contentparameters);
-                $categories = $message->categories;
-            }
-            $this->importer->ImportMessageReadFlag($this->prefix.bin2hex($readstate["sourcekey"]), $readstate["flags"] & MSGFLAG_READ, $categories);
+            $this->importer->ImportMessageReadFlag($this->prefix.bin2hex($readstate["sourcekey"]), $readstate["flags"] & MSGFLAG_READ);
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("PHPWrapper->ImportPerUserReadStateChange(): read for :'%s'", $this->prefix.bin2hex($readstate["sourcekey"])));
         }
     }
 

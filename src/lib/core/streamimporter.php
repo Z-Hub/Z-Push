@@ -210,13 +210,11 @@ class ImportChangesStream implements IImportChanges {
      *
      * @param string        $id
      * @param int           $flags - read/unread
-     * @param array         $categories
      *
      * @access public
      * @return boolean
-     * @throws StatusException
      */
-    public function ImportMessageReadFlag($id, $flags, $categories = array()) {
+    public function ImportMessageReadFlag($id, $flags) {
         if(!($this->objclass instanceof SyncMail))
             return false;
 
@@ -230,15 +228,6 @@ class ImportChangesStream implements IImportChanges {
                 $this->encoder->startTag(SYNC_POOMMAIL_READ);
                     $this->encoder->content($flags);
                 $this->encoder->endTag();
-                if (!empty($categories) && is_array($categories)) {
-                    $this->encoder->startTag(SYNC_POOMMAIL_CATEGORIES);
-                    foreach($categories as $category) {
-                        $this->encoder->startTag(SYNC_POOMMAIL_CATEGORY);
-                        $this->encoder->content($category);
-                        $this->encoder->endTag();
-                    }
-                    $this->encoder->endTag();
-                }
             $this->encoder->endTag();
         $this->encoder->endTag();
 

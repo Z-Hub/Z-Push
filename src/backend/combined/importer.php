@@ -102,18 +102,16 @@ class ImportChangesCombined implements IImportChanges {
      *
      * @param string        $id
      * @param int           $flags
-     * @param array         $categories
      *
      * @access public
      * @return boolean
-     * @throws StatusException
      */
-    public function ImportMessageReadFlag($id, $flags, $categories = array()) {
+    public function ImportMessageReadFlag($id, $flags) {
         if (!$this->icc) {
             ZLog::Write(LOGLEVEL_ERROR, "ImportChangesCombined->ImportMessageReadFlag() icc not configured");
             return false;
         }
-        return $this->icc->ImportMessageReadFlag($id, $flags, $categories);
+        return $this->icc->ImportMessageReadFlag($id, $flags);
     }
 
     /**

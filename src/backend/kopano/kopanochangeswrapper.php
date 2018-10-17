@@ -375,14 +375,14 @@ class KopanoChangesWrapper implements IImportChanges, IExportChanges {
      * This can never conflict.
      *
      * @param string        $id
-     * @param array         $categories
+     * @param int           $flags
      *
      * @access public
      * @return boolean
      * @throws StatusException
      */
-    public function ImportMessageReadFlag($id, $flags, $categories = array()) {
-        return $this->current->ImportMessageReadFlag($id, $flags, $categories);
+    public function ImportMessageReadFlag($id, $flags) {
+        return $this->current->ImportMessageReadFlag($id, $flags);
     }
 
     /**
