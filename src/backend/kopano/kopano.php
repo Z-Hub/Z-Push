@@ -2292,7 +2292,7 @@ class BackendKopano implements IBackend, ISearchProvider {
                 return $recipientGal;
             }
             // get the certificate every time because caching the certificate is less expensive than opening addressbook entry again
-            $abentries = mapi_table_queryrows($table, array(PR_ENTRYID, PR_DISPLAY_NAME, PR_EMS_AB_TAGGED_X509_CERT, PR_OBJECT_TYPE), 0, $rowsToQuery);
+            $abentries = mapi_table_queryrows($table, array(PR_ENTRYID, PR_DISPLAY_NAME, PR_EMS_AB_TAGGED_X509_CERT, PR_OBJECT_TYPE, PR_SMTP_ADDRESS), 0, $rowsToQuery);
             for ($i = 0, $nrEntries = count($abentries); $i < $nrEntries; $i++) {
                 if ($abentries[$i][PR_OBJECT_TYPE] == MAPI_DISTLIST) {
                     // dist lists must be expanded into their members
@@ -2306,7 +2306,7 @@ class BackendKopano implements IBackend, ISearchProvider {
                     }
                 }
                 elseif ($abentries[$i][PR_OBJECT_TYPE] == MAPI_MAILUSER) {
-                    $recipientGal[] = $this->createResolveRecipient(SYNC_RESOLVERECIPIENTS_TYPE_GAL, $to, $abentries[$i]);
+                    $recipientGal[] = $this->createResolveRecipient(SYNC_RESOLVERECIPIENTS_TYPE_GAL, $abentries[$i][PR_SMTP_ADDRESS], $abentries[$i]);
                 }
             }
 
