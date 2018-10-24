@@ -402,9 +402,9 @@ install -Dpm 644 config/apache2/z-push-autodiscover.conf \
 # NGINX
 mkdir -p "$b/%_sysconfdir/nginx/sites-available/";
 mkdir -p "$b/%_sysconfdir/nginx/snippets/";
-install -Dpm 644 config/nginx/z-push.conf "$b/%_sysconfdir/nginx/sites-available/z-push.conf"
-install -Dpm 644 config/nginx/z-push-autodiscover.conf "$b/%_sysconfdir/nginx/snippets/z-push-autodiscover.conf"
-install -Dpm 644 config/nginx/z-push-php.conf "$b/%_sysconfdir/nginx/snippets/z-push-php.conf"
+install -Dpm 644 config/nginx/z-push.conf "$b/%_sysconfdir/nginx/sites-available/z-push.conf";
+install -Dpm 644 config/nginx/z-push-autodiscover.conf "$b/%_sysconfdir/nginx/snippets/z-push-autodiscover.conf";
+install -Dpm 644 config/nginx/z-push-php.conf "$b/%_sysconfdir/nginx/snippets/z-push-php.conf";
 
 # MANPAGES
 mkdir -p "$b/%_mandir/man1"
@@ -618,6 +618,9 @@ service nginx reload || true
 %files -n %name-config-nginx
 %dir %_sysconfdir/nginx
 %dir %_sysconfdir/nginx/sites-available
+%dir %_sysconfdir/nginx/snippets
 %config(noreplace) %attr(0640,nginx,z-push) %_sysconfdir/nginx/sites-available/z-push.conf
+%config(noreplace) %attr(0640,nginx,z-push) %_sysconfdir/nginx/snippets/z-push-autodiscover.conf
+%config(noreplace) %attr(0640,nginx,z-push) %_sysconfdir/nginx/snippets/z-push-php.conf
 
 %changelog
