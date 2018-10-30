@@ -228,7 +228,7 @@ Requires:   %name-common = %version
 Requires:   rh-php56-php-mysqlnd
 Requires:   rh-php56-php-pdo
 %else
-Requires:   php-mysqlnd or php-mysql
+Requires:   (php-mysqlnd or php-mysql)
 Requires:   php-pdo
 %endif
 
