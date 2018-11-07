@@ -228,7 +228,7 @@ Requires:   %name-common = %version
 Requires:   rh-php56-php-mysqlnd
 Requires:   rh-php56-php-pdo
 %else
-Requires:   php-mysql
+Requires:   php-mysqlnd
 Requires:   php-pdo
 %endif
 
@@ -325,8 +325,13 @@ ln -s "%zpush_dir/z-push-top.php" "$b/%_bindir/z-push-top";
 mkdir -p "$b/%_localstatedir/lib/z-push";
 mkdir -p "$b/%_localstatedir/log/z-push";
 mkdir -p "$b/%_sysconfdir/logrotate.d";
+%if "%_repository" == "RHEL_6_PHP_56"
+install -Dpm 644 config/z-push-rhel6.lr \
+    "$b/%_sysconfdir/logrotate.d/z-push.lr"
+%else
 install -Dpm 644 config/z-push-rhel.lr \
     "$b/%_sysconfdir/logrotate.d/z-push.lr"
+%endif
 
 # CALDAV
 mv "$bdir/caldav/config.php" "$cdir/caldav.conf.php";
@@ -396,7 +401,10 @@ install -Dpm 644 config/apache2/z-push-autodiscover.conf \
 
 # NGINX
 mkdir -p "$b/%_sysconfdir/nginx/sites-available/";
-install -Dpm 644 config/nginx/z-push.conf "$b/%_sysconfdir/nginx/sites-available/z-push.conf"
+mkdir -p "$b/%_sysconfdir/nginx/snippets/";
+install -Dpm 644 config/nginx/z-push.conf "$b/%_sysconfdir/nginx/sites-available/z-push.conf";
+install -Dpm 644 config/nginx/z-push-autodiscover.conf "$b/%_sysconfdir/nginx/snippets/z-push-autodiscover.conf";
+install -Dpm 644 config/nginx/z-push-php.conf "$b/%_sysconfdir/nginx/snippets/z-push-php.conf";
 
 # MANPAGES
 mkdir -p "$b/%_mandir/man1"
@@ -610,6 +618,9 @@ service nginx reload || true
 %files -n %name-config-nginx
 %dir %_sysconfdir/nginx
 %dir %_sysconfdir/nginx/sites-available
+%dir %_sysconfdir/nginx/snippets
 %config(noreplace) %attr(0640,nginx,z-push) %_sysconfdir/nginx/sites-available/z-push.conf
+%config(noreplace) %attr(0640,nginx,z-push) %_sysconfdir/nginx/snippets/z-push-autodiscover.conf
+%config(noreplace) %attr(0640,nginx,z-push) %_sysconfdir/nginx/snippets/z-push-php.conf
 
 %changelog
