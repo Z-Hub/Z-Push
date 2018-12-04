@@ -154,7 +154,7 @@ class BackendCalDAV extends BackendDiff {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->GetFolder('%s')", $id));
         $val = $this->_caldav->GetCalendarDetails($this->_caldav_path . substr($id, 1) .  "/");
         $folder = new SyncFolder();
-        $folder->parentid = "0";
+        $folder->parentid = 0;
         $folder->displayname = $val->displayname;
         $folder->serverid = $id;
         if ($id[0] == "C") {
@@ -276,7 +276,7 @@ class BackendCalDAV extends BackendDiff {
         }
         $message = array();
         $message['id'] = $data['href'];
-        $message['flags'] = "1";
+        $message['flags'] = 1;
         $message['mod'] = $data['etag'];
         return $message;
     }
@@ -542,36 +542,28 @@ class BackendCalDAV extends BackendDiff {
         $truncsize = Utils::GetTruncSize($contentparameters->GetTruncation());
         $message = new SyncAppointment();
 
-          $vcal = sabre\vobject\reader::read($data, sabre\vobject\reader::OPTION_FORGIVING);
+        $vcal = sabre\vobject\reader::read($data, sabre\vobject\reader::OPTION_FORGIVING);
         ZLog::Write(LOGLEVEL_DEBUG, "VObject vcal: ".print_r($vcal->serialize(), 1));
 
-          $tzid = $vcal->VEVENT->DTSTART->getDateTime()->getTimezone()->getName();
+        $tzid = $vcal->VEVENT->DTSTART->getDateTime()->getTimezone()->getName();
         $message->timezone = $this->_GetTimezoneString($tzid);
 
-        foreach ($vcal->children as $vevent) {
-            if ($vevent->name != "VEVENT") {
-                    continue;
-                }
-                if (isset($vevent->{'RECURRENCE-ID'})) {
-/*
-                    $recurrence_id = reset($rec);
+        foreach ($vcal->VEVENT as $vevent) {
+            if (isset($vevent->{'RECURRENCE-ID'})) {
                 $exception = new SyncAppointmentException();
-                $tzid = TimezoneUtil::GetPhpSupportedTimezone($recurrence_id->GetParameterValue("TZID"));
-                if (!$tzid) {
-                    $tzid = $timezone;
-                }
-                $exception->exceptionstarttime = TimezoneUtil::MakeUTCDate($recurrence_id->Value(), $tzid);
-                $exception->deleted = "0";
+                $exception->exceptionstarttime = $vevent->{'RECURRENCE-ID'}->getDateTime()->getTimestamp();
+                $exception->timezone = $message->timezone;
+                $exception->deleted = 0;
                 $exception = $this->_ParseVEventToSyncObject($vevent, $exception, $truncsize);
+                unset($exception->recurrence);
                 if (!isset($message->exceptions)) {
                     $message->exceptions = array();
                 }
                 $message->exceptions[] = $exception;
-*/
-                }
-                else {
-                    $message = $this->_ParseVEventToSyncObject($vevent, $message, $truncsize);
-                }
+            }
+            else {
+                $message = $this->_ParseVEventToSyncObject($vevent, $message, $truncsize);
+            }
         }
 
         return $message;
@@ -585,22 +577,24 @@ class BackendCalDAV extends BackendDiff {
      */
     private function _ParseVEventToSyncObject($vevent, $message, $truncsize) {
         //Defaults
-        $message->busystatus = "2";
+        $message->busystatus = 2;
+        $message->meetingstatus = 0;
+        $message->alldayevent = 0;
 
         foreach ($vevent->children as $value) {
             switch ($value->name) {
-                 case "DTSTART":
-                      $message->starttime = $value->getDateTime()->getTimestamp();
-                      if (strlen((string)$value) == 8) {
-                            $message->alldayevent = "1";
-                      }
-                      break;
-                 case "DTEND":
-                      $message->endtime = $value->getDateTime()->getTimestamp();
-                      if (strlen((string)$value) == 8) {
-                            $message->alldayevent = "1";
-                      }
-                      break;
+                case "DTSTART":
+                    $message->starttime = $value->getDateTime()->getTimestamp();
+                    if (strlen((string)$value) == 8) {
+                        $message->alldayevent = 1;
+                    }
+                    break;
+                case "DTEND":
+                    $message->endtime = $value->getDateTime()->getTimestamp();
+                    if (strlen((string)$value) == 8) {
+                        $message->alldayevent = 1;
+                    }
+                    break;
                 case "DURATION":
                     if (!isset($message->endtime)) {
                         $start = date_create("@" . $message->starttime);
@@ -609,17 +603,17 @@ class BackendCalDAV extends BackendDiff {
                         $message->endtime = date_timestamp_get(date_add($start, $interval));
                     }
                     break;
-                 case "X-MICROSOFT-CDO-ALLDAYEVENT":
-                      if ((string)$value == "TRUE") {
-                            $message->alldayevent = "1";
-                      }
-                      break;
-                 case "SUMMARY":
-                      $message->subject = (string)$value;
-                      break;
-                 case "LOCATION":
-                      $message->location = (string)$value;
-                      break;
+                case "X-MICROSOFT-CDO-ALLDAYEVENT":
+                    if ((string)$value == "TRUE") {
+                        $message->alldayevent = 1;
+                    }
+                    break;
+                case "SUMMARY":
+                    $message->subject = (string)$value;
+                    break;
+                case "LOCATION":
+                    $message->location = (string)$value;
+                    break;
                 case "DESCRIPTION":
                     if (Request::GetProtocolVersion() >= 12.0) {
                         $message->asbody = new SyncBaseBody();
@@ -643,7 +637,8 @@ class BackendCalDAV extends BackendDiff {
                         if(strlen($body) > $truncsize) {
                             $body = Utils::Utf8_truncate($body, $truncsize);
                             $message->bodytruncated = 1;
-                        } else {
+                        }
+                        else {
                             $message->bodytruncated = 0;
                         }
                         $body = str_replace("\n","\r\n", str_replace("\r","",$body));
@@ -653,13 +648,13 @@ class BackendCalDAV extends BackendDiff {
                 case "CLASS":
                     switch ((string)$value) {
                         case "PUBLIC":
-                            $message->sensitivity = "0";
+                            $message->sensitivity = 0;
                             break;
                         case "PRIVATE":
-                            $message->sensitivity = "2";
+                            $message->sensitivity = 2;
                             break;
                         case "CONFIDENTIAL":
-                            $message->sensitivity = "3";
+                            $message->sensitivity = 3;
                             break;
                     }
                     break;
@@ -667,10 +662,10 @@ class BackendCalDAV extends BackendDiff {
                     if(!isset($message->busystatus)){
                         switch ((string)$value) {
                             case "TRANSPARENT":
-                                $message->busystatus = "0";
+                                $message->busystatus = 0;
                                 break;
                             case "OPAQUE":
-                                $message->busystatus = "2";
+                                $message->busystatus = 2;
                                 break;
                         }
                     }
@@ -678,43 +673,32 @@ class BackendCalDAV extends BackendDiff {
                 case "X-MICROSOFT-CDO-INTENDEDSTATUS":
                     switch ((string)$value) {
                         case "FREE":
-                            $message->busystatus = "0";
+                            $message->busystatus = 0;
                             break;
                         case "TENTATIVE":
-                            $message->busystatus = "1";
+                            $message->busystatus = 1;
                             break;
                         case "BUSY":
-                            $message->busystatus = "2";
+                            $message->busystatus = 2;
                             break;
                         case "OOF":
-                            $message->busystatus = "3";
+                            $message->busystatus = 3;
                             break;
                         case "WORKINGELSEWHERE":
-                            $message->busystatus = "4";
+                            $message->busystatus = 4;
                             break;
                     }
                     break;
-                // SYNC_POOMCAL_MEETINGSTATUS
-                // Meetingstatus values
-                //  0 = is not a meeting
-                //  1 = is a meeting
-                //  3 = Meeting received
-                //  5 = Meeting is canceled
-                //  7 = Meeting is canceled and received
-                //  9 = as 1
-                // 11 = as 3
-                // 13 = as 5
-                // 15 = as 7
                 case "STATUS":
                     switch ((string)$value) {
                         case "TENTATIVE":
-                            $message->meetingstatus = "3"; // was 1
+                            $message->meetingstatus = 3; // Meeting received
                             break;
                         case "CONFIRMED":
-                            $message->meetingstatus = "1"; // was 3
+                            $message->meetingstatus = 1; // is a meeting
                             break;
                         case "CANCELLED":
-                            $message->meetingstatus = "5"; // could also be 7
+                            $message->meetingstatus = 5; // Meeting is canceled
                             break;
                     }
                     break;
@@ -732,6 +716,38 @@ class BackendCalDAV extends BackendDiff {
                     if (isset($value['CN'])) {
                         $attendee->name = $value['CN'];
                     }
+                    if (isset($value['PARTSTAT'])) {
+						switch($value['PARTSTAT']){
+							case "TENTATIVE":
+								$attendee->attendeestatus = 2;
+								break;
+							case "ACCEPTED":
+								$attendee->attendeestatus = 3;
+								break;
+							case "DECLINED":
+								$attendee->attendeestatus = 4;
+								break;
+							case "NEEDS-ACTION":
+								$attendee->attendeestatus = 5;
+								break;
+                        }
+                    }
+                    if (isset($value['ROLE'])) {
+						switch($value['ROLE']){
+							case "CHAIR":
+								$attendee->attendeestatus = 1;
+								break;
+							case "REQ-PARTICIPANT":
+								$attendee->attendeestatus = 1;
+								break;
+							case "OPT-PARTICIPANT":
+								$attendee->attendeestatus = 2;
+								break;
+							case "NON-PARTICIPANT":
+								$attendee->attendeestatus = 3;
+								break;
+                        }
+                    }
                     if (isset($message->attendees) && is_array($message->attendees)) {
                         $message->attendees[] = $attendee;
                     }
@@ -748,7 +764,7 @@ class BackendCalDAV extends BackendDiff {
                     break;
                 case "EXDATE":
                     $exception = new SyncAppointmentException();
-                    $exception->deleted = "1";
+                    $exception->deleted = 1;
                     $exception->exceptionstarttime = $value->getDateTime()->getTimestamp();
                     if (!isset($message->exceptions)) {
                         $message->exceptions = array();
@@ -756,10 +772,29 @@ class BackendCalDAV extends BackendDiff {
                     $message->exceptions[] = $exception;
                     break;
                 case "UID":
-                      $message->uid = (string)$value;
-                      break;
+                    $message->uid = (string)$value;
+                    break;
                 case "LAST-MODIFIED":
                     $message->dtstamp = $value->getDateTime()->getTimestamp();
+                    break;
+                case "VALARM":
+                    foreach($value->children as $valarm_child){
+                        if($valarm_child->name == "TRIGGER"){
+                            if(isset($valarm_child->parameters['VALUE'])){
+                                // the specific date and time is specified
+                                $begin = date_create("@" . $vevent->DTSTART->getDateTime()->getTimestamp());
+                                $trigger = date_create("@" . TimezoneUtil::MakeUTCDate((string)$valarm_child));
+                                $interval = date_diff($begin, $trigger);
+                                $message->reminder = $interval->format("%i") + $interval->format("%h") * 60 + $interval->format("%a") * 60 * 24;
+                            }else{
+                                // the trigger is relative
+                                // ICAL allows the trigger to be relative to something other than the start, AS does not support this
+                                $val = str_replace("-", "", (string)$valarm_child);
+                                $interval = new DateInterval($val);
+                                $message->reminder = $interval->format("%i") + $interval->format("%h") * 60 + $interval->format("%a") * 60 * 24;
+                            }
+                        }
+                    }
                     break;
 
                 //We can ignore the following
@@ -773,10 +808,10 @@ class BackendCalDAV extends BackendDiff {
                 case "RECURRENCE-ID":
                     break;
                 default:
-                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->_ParseVEventToSyncObject(): '%s' is not yet supported.", $property->Name()));
+                    ZLog::Write(LOGLEVEL_WARN, sprintf("BackendCalDAV->_ParseVEventToSyncObject(): '%s' is not yet supported.", $value->name));
             }
-          }
-          
+        }
+
         if ($message->meetingstatus > 0) {
             // No organizer was set for the meeting, assume it is the user
             if (!isset($message->organizeremail)) {
@@ -790,30 +825,6 @@ class BackendCalDAV extends BackendDiff {
                 $message->organizername = Utils::GetLocalPartFromEmail($message->organizeremail);
             }
         }
-          return $message;
-
-          //TODO valarm
-        $valarm = current($event->GetComponents("VALARM"));
-        if ($valarm) {
-            $properties = $valarm->GetProperties();
-            foreach ($properties as $property) {
-                if ($property->Name() == "TRIGGER") {
-                    $parameters = $property->Parameters();
-                    if (array_key_exists("VALUE", $parameters) && $parameters["VALUE"] == "DATE-TIME") {
-                        $trigger = date_create("@" . TimezoneUtil::MakeUTCDate($property->Value()));
-                        $begin = date_create("@" . $message->starttime);
-                        $interval = date_diff($begin, $trigger);
-                        $message->reminder = $interval->format("%i") + $interval->format("%h") * 60 + $interval->format("%a") * 60 * 24;
-                    }
-                    elseif (!array_key_exists("VALUE", $parameters) || $parameters["VALUE"] == "DURATION") {
-                        $val = str_replace("-", "", $property->Value());
-                        $interval = new DateInterval($val);
-                        $message->reminder = $interval->format("%i") + $interval->format("%h") * 60 + $interval->format("%a") * 60 * 24;
-                    }
-                }
-            }
-        }
-
         return $message;
     }
 
@@ -833,16 +844,16 @@ class BackendCalDAV extends BackendDiff {
                 case "FREQ":
                     switch ($rule[1]) {
                         case "DAILY":
-                            $recurrence->type = "0";
+                            $recurrence->type = 0;
                             break;
                         case "WEEKLY":
-                            $recurrence->type = "1";
+                            $recurrence->type = 1;
                             break;
                         case "MONTHLY":
-                            $recurrence->type = "2";
+                            $recurrence->type = 2;
                             break;
                         case "YEARLY":
-                            $recurrence->type = "5";
+                            $recurrence->type = 5;
                     }
                     break;
 
@@ -862,7 +873,7 @@ class BackendCalDAV extends BackendDiff {
                     $dval = 0;
                     $days = explode(",", $rule[1]);
                     foreach ($days as $day) {
-                        if ($recurrence->type == "2") {
+                        if ($recurrence->type == 2) {
                             if (strlen($day) > 2) {
                                 $recurrence->weekofmonth = intval($day);
                                 $day = substr($day,-2);
@@ -870,7 +881,7 @@ class BackendCalDAV extends BackendDiff {
                             else {
                                 $recurrence->weekofmonth = 1;
                             }
-                            $recurrence->type = "3";
+                            $recurrence->type = 3;
                         }
                         switch ($day) {
                             //   1 = Sunday
@@ -931,206 +942,252 @@ class BackendCalDAV extends BackendDiff {
      * @param string $id
      */
     private function _ParseASToVCalendar($data, $folderid, $id) {
-        $ical = new iCalComponent();
-        $ical->SetType("VCALENDAR");
-        $ical->AddProperty("VERSION", "2.0");
-        $ical->AddProperty("PRODID", "-//z-push-contrib//NONSGML Z-Push-contrib Calendar//EN");
-        $ical->AddProperty("CALSCALE", "GREGORIAN");
+        $vcal = new Sabre\VObject\Component\VCalendar;
+        $vcal->PRODID = "-//z-push-contrib//NONSGML Z-Push-contrib Calendar//EN";
 
-        if ($folderid[0] == "C") {
-            $vevent = $this->_ParseASEventToVEvent($data, $id);
-            $vevent->AddProperty("UID", $id);
-            $ical->AddComponent($vevent);
-            if (isset($data->exceptions) && is_array($data->exceptions)) {
-                foreach ($data->exceptions as $ex) {
-                    if (isset($ex->deleted) && $ex->deleted == "1") {
-                        if ($exdate = $vevent->GetPValue("EXDATE")) {
-                            $vevent->SetPValue("EXDATE", $exdate.",".gmdate("Ymd\THis\Z", $ex->exceptionstarttime));
+        switch ($folderid[0]){
+            case "C":
+                $vevent = $this->_ParseASEventToVEvent($vcal, $data);
+				$vevent->UID = $id;
+                if (isset($data->exceptions) && is_array($data->exceptions)) {
+					$exceptions = array();
+                    foreach ($data->exceptions as $ex) {
+                        if (isset($ex->deleted) && $ex->deleted == 1) {
+							if ($data->alldayevent == 1) {
+								$exdate = $this->_GetDateFromUTC("Ymd", $ex->exceptionstarttime, $data->timezone);
+							}
+							else {
+								$exdate = gmdate("Ymd\THis\Z", $ex->exceptionstarttime);
+							}
+                            if (isset($vevent->EXDATE)) {
+								$vevent->EXDATE .= ",".$exdate;
+							}
+							else {
+								$vevent->EXDATE = $exdate;
+							}
+                            continue;
+                        }
+
+                        $exception = $this->_ParseASEventToVEvent($vcal, $ex);
+						$exception->UID = $id;
+                        if ($data->alldayevent == 1) {
+							$exception->add('RECURRENCE-ID', $this->_GetDateFromUTC("Ymd", $ex->exceptionstarttime, $data->timezone), array("VALUE" => "DATE"));
                         }
                         else {
-                            $vevent->AddProperty("EXDATE", gmdate("Ymd\THis\Z", $ex->exceptionstarttime));
+							$exception->add('RECURRENCE-ID', gmdate("Ymd\THis\Z", $ex->exceptionstarttime));
                         }
-                        continue;
+						$exceptions[] = $exception;
                     }
-
-                    $exception = $this->_ParseASEventToVEvent($ex, $id);
-                    if ($data->alldayevent == 1) {
-                        $exception->AddProperty("RECURRENCE-ID", $this->_GetDateFromUTC("Ymd", $ex->exceptionstarttime, $data->timezone), array("VALUE" => "DATE"));
-                    }
-                    else {
-                        $exception->AddProperty("RECURRENCE-ID", gmdate("Ymd\THis\Z", $ex->exceptionstarttime));
-                    }
-                    $exception->AddProperty("UID", $id);
-                    $ical->AddComponent($exception);
                 }
-            }
-        }
-        if ($folderid[0] == "T") {
-            $vtodo = $this->_ParseASTaskToVTodo($data, $id);
-            $vtodo->AddProperty("UID", $id);
-            $vtodo->AddProperty("DTSTAMP", gmdate("Ymd\THis\Z"));
-            $ical->AddComponent($vtodo);
+				$vcal->add($vevent);
+				foreach ($exceptions as $exception) {
+					$vcal->add($exception);
+				}
+                break;
+            case "T":
+                /*
+				// TODO: vtodo
+                $vtodo = $this->_ParseASTaskToVTodo($data);
+				$vtodo->UID = $id;
+                $vtodo->AddProperty("DTSTAMP", gmdate("Ymd\THis\Z"));
+                $ical->AddComponent($vtodo);
+                */
+                break;
         }
 
-        return $ical->Render();
+        ZLog::Write(LOGLEVEL_DEBUG, "VObject vcal: ".print_r($vcal->serialize(), 1));
+
+        return $vcal->serialize();
     }
 
     /**
      * Generate a VEVENT from a SyncAppointment(Exception).
      * @param string $data
-     * @param string $id
      * @return iCalComponent
      */
-    private function _ParseASEventToVEvent($data, $id) {
-        $vevent = new iCalComponent();
-        $vevent->SetType("VEVENT");
+    private function _ParseASEventToVEvent($vcal, $data) {
+        $vevent = $vcal->createComponent('VEVENT');
 
         if (isset($data->dtstamp)) {
-            $vevent->AddProperty("DTSTAMP", gmdate("Ymd\THis\Z", $data->dtstamp));
-            $vevent->AddProperty("LAST-MODIFIED", gmdate("Ymd\THis\Z", $data->dtstamp));
+            $vevent->DTSTAMP = gmdate("Ymd\THis\Z", $data->dtstamp);
+            $vevent->{'LAST-MODIFIED'} = gmdate("Ymd\THis\Z", $data->dtstamp);
+        }
+        if ($data->alldayevent == 1) {
+            $vevent->{'X-MICROSOFT-CDO-ALLDAYEVENT'} = 'TRUE';
+        }
+        else {
+            $vevent->{'X-MICROSOFT-CDO-ALLDAYEVENT'} = 'FALSE';
+        }
+        if (isset($data->timezone)) {
+            $tzid = $this->_GetTimezoneFromString($data->timezone);
         }
         if (isset($data->starttime)) {
             if ($data->alldayevent == 1) {
-                $vevent->AddProperty("DTSTART", $this->_GetDateFromUTC("Ymd", $data->starttime, $data->timezone), array("VALUE" => "DATE"));
+                $vevent->DTSTART = $this->_GetDateFromUTC("Ymd", $data->starttime, $data->timezone);
+                $vevent->DTSTART['VALUE'] = 'DATE';
+            }else{
+                $vevent->DTSTART = gmdate("Ymd\THis\Z", $data->starttime);
+                if (isset($tzid)) {
+                    $vevent->DTSTART['TZID'] = $tzid;
+                }
             }
-            else {
-                $vevent->AddProperty("DTSTART", gmdate("Ymd\THis\Z", $data->starttime));
-            }
-        }
-        if (isset($data->subject)) {
-            $vevent->AddProperty("SUMMARY", $data->subject);
-        }
-        if (isset($data->location)) {
-            $vevent->AddProperty("LOCATION", $data->location);
         }
         if (isset($data->endtime)) {
             if ($data->alldayevent == 1) {
-                $vevent->AddProperty("DTEND", $this->_GetDateFromUTC("Ymd", $data->endtime, $data->timezone), array("VALUE" => "DATE"));
-                $vevent->AddProperty("X-MICROSOFT-CDO-ALLDAYEVENT", "TRUE");
-            }
-            else {
-                $vevent->AddProperty("DTEND", gmdate("Ymd\THis\Z", $data->endtime));
-                $vevent->AddProperty("X-MICROSOFT-CDO-ALLDAYEVENT", "FALSE");
+                $vevent->DTEND = $this->_GetDateFromUTC("Ymd", $data->endtime, $data->timezone);
+                $vevent->DTEND['VALUE'] = 'DATE';
+            }else{
+                $vevent->DTEND = gmdate("Ymd\THis\Z", $data->endtime);
+                if (isset($tzid)) {
+                    $vevent->DTEND['TZID'] = $tzid;
+                }
             }
         }
-        else {
-            $vevent->AddProperty("X-MICROSOFT-CDO-ALLDAYEVENT", "TRUE");
+        if (isset($data->subject)) {
+            $vevent->SUMMARY = $data->subject;
+        }
+        if (isset($data->location)) {
+            $vevent->LOCATION = $data->location;
         }
         if (isset($data->recurrence)) {
-            $vevent->AddProperty("RRULE", $this->_GenerateRecurrence($data->recurrence));
+            $vevent->RRULE = $this->_GenerateRecurrence($data->recurrence);
         }
         if (isset($data->sensitivity)) {
             switch ($data->sensitivity) {
-                case "0":
-                    $vevent->AddProperty("CLASS", "PUBLIC");
+                case 0:
+                    $vevent->CLASS = "PUBLIC";
                     break;
-                case "2":
-                    $vevent->AddProperty("CLASS", "PRIVATE");
+                case 2:
+                    $vevent->CLASS = "PRIVATE";
                     break;
-                case "3":
-                    $vevent->AddProperty("CLASS", "CONFIDENTIAL");
+                case 3:
+                    $vevent->CLASS = "CONFIDENTIAL";
                     break;
             }
         }
         if (isset($data->busystatus)) {
             switch ($data->busystatus) {
-                case "0": //Free
-                    $vevent->AddProperty("TRANSP", "TRANSPARENT");
-                    $vevent->AddProperty("X-MICROSOFT-CDO-INTENDEDSTATUS", "FREE");
+                case 0: //Free
+                    $vevent->TRANSP = "TRANSPARENT";
+                    $vevent->{'X-MICROSOFT-CDO-INTENDEDSTATUS'} = "FREE";
                     break;
-                case "1": //Tentative
-                    $vevent->AddProperty("TRANSP", "OPAQUE");
-                    $vevent->AddProperty("X-MICROSOFT-CDO-INTENDEDSTATUS", "TENTATIVE");
+                case 1: //Tentative
+                    $vevent->TRANSP = "OPAQUE";
+                    $vevent->{'X-MICROSOFT-CDO-INTENDEDSTATUS'} = "TENTATIVE";
                     break;
-                case "2": //Busy
-                    $vevent->AddProperty("TRANSP", "OPAQUE");
-                    $vevent->AddProperty("X-MICROSOFT-CDO-INTENDEDSTATUS", "BUSY");
+                case 2: //Busy
+                    $vevent->TRANSP = "OPAQUE";
+                    $vevent->{'X-MICROSOFT-CDO-INTENDEDSTATUS'} = "BUSY";
                     break;
-                case "3": //Out of office
-                    $vevent->AddProperty("TRANSP", "TRANSPARENT");
-                    $vevent->AddProperty("X-MICROSOFT-CDO-INTENDEDSTATUS", "OOF");
+                case 3: //Out of office
+                    $vevent->TRANSP = "TRANSPARENT";
+                    $vevent->{'X-MICROSOFT-CDO-INTENDEDSTATUS'} = "OOF";
                     break;
-                case "4": //Working elsewhere (not yet in Android)
-                    $vevent->AddProperty("TRANSP", "TRANSPARENT");
-                    $vevent->AddProperty("X-MICROSOFT-CDO-INTENDEDSTATUS", "WORKINGELSEWHERE");
+                case 4: //Working elsewhere (not yet in Android)
+                    $vevent->TRANSP = "TRANSPARENT";
+                    $vevent->{'X-MICROSOFT-CDO-INTENDEDSTATUS'} = "WORKINGELSEWHERE";
                     break;
             }
         }
         if (isset($data->reminder)) {
-            $valarm = new iCalComponent();
-            $valarm->SetType("VALARM");
-            $valarm->AddProperty("ACTION", "DISPLAY");
-            $trigger = "-PT" . $data->reminder . "M";
-            $valarm->AddProperty("TRIGGER", $trigger);
-            $vevent->AddComponent($valarm);
+			$valarm = $vcal->createComponent('VALARM');
+			$valarm->add('ACTION', "DISPLAY");
+			$valarm->add('TRIGGER', "-PT".$data->reminder."M", ['RELATED' => "START"]);
+			$vevent->add($valarm);
         }
         if (isset($data->rtf)) {
             $rtfparser = new rtf();
             $rtfparser->loadrtf(base64_decode($data->rtf));
             $rtfparser->output("ascii");
             $rtfparser->parse();
-            $vevent->AddProperty("DESCRIPTION", $rtfparser->out);
-        }
-        if (isset($data->meetingstatus) && $data->meetingstatus > 0) {
-            switch ($data->meetingstatus) {
-                case "1":
-                    $vevent->AddProperty("STATUS", "TENTATIVE");
-                    $vevent->AddProperty("X-MICROSOFT-CDO-BUSYSTATUS", "TENTATIVE");
-                    $vevent->AddProperty("X-MICROSOFT-DISALLOW-COUNTER", "FALSE");
-                    break;
-                case "3":
-                    $vevent->AddProperty("STATUS", "CONFIRMED");
-                    $vevent->AddProperty("X-MICROSOFT-CDO-BUSYSTATUS", "CONFIRMED");
-                    $vevent->AddProperty("X-MICROSOFT-DISALLOW-COUNTER", "FALSE");
-                    break;
-                case "5":
-                case "7":
-                    $vevent->AddProperty("STATUS", "CANCELLED");
-                    $vevent->AddProperty("X-MICROSOFT-CDO-BUSYSTATUS", "CANCELLED");
-                    $vevent->AddProperty("X-MICROSOFT-DISALLOW-COUNTER", "TRUE");
-                    break;
-            }
-            if (isset($data->organizeremail) && isset($data->organizername)) {
-                $vevent->AddProperty("ORGANIZER", sprintf("MAILTO:%s", $data->organizeremail), array("CN" => $data->organizername));
-            }
-            elseif (isset($data->organizeremail)) {
-                $vevent->AddProperty("ORGANIZER", sprintf("MAILTO:%s", $data->organizeremail));
-            }
-            else {
-                //Some phones doesn't send the organizeremail, so we gotto get it somewhere else.
-                $userDetails = ZPush::GetBackend()->GetCurrentUsername();
-                $vevent->AddProperty("ORGANIZER", sprintf("MAILTO:%s", $userDetails['emailaddress']), array("CN" => $userDetails['fullname']));
-            }
-            if (isset($data->attendees) && is_array($data->attendees)) {
-                foreach ($data->attendees as $att) {
-                    if (isset($att->name)) {
-                        $vevent->AddProperty("ATTENDEE", sprintf("MAILTO:%s", $att->email), array("CN" => $att->name));
-                    }
-                    else {
-                        $vevent->AddProperty("ATTENDEE", sprintf("MAILTO:%s", $att->email));
-                    }
-                }
-            }
+            $vevent->DESCRIPTION = $rtfparser->out;
         }
         if (isset($data->body) && strlen($data->body) > 0) {
-            $vevent->AddProperty("DESCRIPTION", $data->body);
+            $vevent->DESCRIPTION = $data->body;
         }
         if (isset($data->asbody->data)) {
             $asbody = stream_get_contents($data->asbody->data);
             if (strlen($asbody) > 0) {
-                $vevent->AddProperty("DESCRIPTION", $asbody);
+                $vevent->DESCRIPTION = $asbody;
+            }
+        }
+        if (isset($data->meetingstatus) && $data->meetingstatus > 0) {
+            switch ($data->meetingstatus) {
+				//  0 = not a meeting
+                case 1: // a meeting
+                case 9: // as 1
+                    $vevent->STATUS = "TENTATIVE";
+                    $vevent->{'X-MICROSOFT-CDO-BUSYSTATUS'} = "TENTATIVE";
+                    $vevent->{'X-MICROSOFT-DISALLOW-COUNTER'} = "FALSE";
+                    break;
+                case 3: // Meeting received
+                case 11: // as 3
+                    $vevent->STATUS = "CONFIRMED";
+                    $vevent->{'X-MICROSOFT-CDO-BUSYSTATUS'} = "CONFIRMED";
+                    $vevent->{'X-MICROSOFT-DISALLOW-COUNTER'} = "FALSE";
+                    break;
+                case 5: // Meeting is canceled
+                case 13: // as 5
+                case 7: // Meeting is canceled and received
+                case 15: // as 7
+                    $vevent->STATUS = "CANCELLED";
+                    $vevent->{'X-MICROSOFT-CDO-BUSYSTATUS'} = "CANCELLED";
+                    $vevent->{'X-MICROSOFT-DISALLOW-COUNTER'} = "TRUE";
+                    break;
+            }
+            if (isset($data->organizeremail) && isset($data->organizername)) {
+                $vevent->add('ORGANIZER', "mailto:".$data->organizeremail, ['CN' => $data->organizername]);
+            }
+            elseif (isset($data->organizeremail)) {
+                $vevent->ORGANIZER = "mailto:".$data->organizeremail;
+            }
+            else {
+                //Some phones doesn't send the organizeremail, so we gotto get it somewhere else.
+                $userDetails = ZPush::GetBackend()->GetCurrentUsername();
+                $vevent->add('ORGANIZER', "mailto:".$userDetails['emailaddress'], ['CN' => $userDetails['fullname']]);
+            }
+            if (isset($data->attendees) && is_array($data->attendees)) {
+                foreach ($data->attendees as $att) {
+					$params = array();
+                    if (isset($att->name) && strlen($att->name) > 0) {
+                        $params['CN'] = $att->name;
+                    }
+                    if (isset($att->attendeestatus) && $att->attendeestatus > 0) {
+						switch ($att->attendeestatus){
+							case 2: // Tentative
+								$params['PARTSTAT'] = "TENTATIVE";
+								break;
+							case 3: // Accept
+								$params['PARTSTAT'] = "ACCEPTED";
+								break;
+							case 4: // Decline
+								$params['PARTSTAT'] = "DECLINED";
+								break;
+							case 5: // Not responded
+								$params['PARTSTAT'] = "NEEDS-ACTION";
+								break;
+						}
+                    }
+                    if (isset($att->attendeetype) && $att->attendeetype > 0) {
+						switch ($att->attendeetype){
+							case 1: // Required
+								$params['ROLE'] = "REQ-PARTICIPANT";
+								break;
+							case 2: // Optional
+								$params['ROLE'] = "OPT-PARTICIPANT";
+								break;
+							case 3: // Resource
+								$params['ROLE'] = "NON-PARTICIPANT";
+								break;
+						}
+                    }
+					$vevent->add('ATTENDEE', "mailto:".$att->email, $params);
+                }
             }
         }
         if (isset($data->categories) && is_array($data->categories)) {
-            $vevent->AddProperty("CATEGORIES", implode(",", $data->categories));
+            $vevent->CATEGORIES = implode(",", $data->categories);
         }
-
-// X-MICROSOFT-CDO-APPT-SEQUENCE:0
-// X-MICROSOFT-CDO-OWNERAPPTID:2113393086
-// X-MICROSOFT-CDO-IMPORTANCE:1
-// X-MICROSOFT-CDO-INSTTYPE:0
-
-
         return $vevent;
     }
 
@@ -1143,17 +1200,17 @@ class BackendCalDAV extends BackendDiff {
         if (isset($rec->type)) {
             $freq = "";
             switch ($rec->type) {
-                case "0":
+                case 0:
                     $freq = "DAILY";
                     break;
-                case "1":
+                case 1:
                     $freq = "WEEKLY";
                     break;
-                case "2":
-                case "3":
+                case 2:
+                case 3:
                     $freq = "MONTHLY";
                     break;
-                case "5":
+                case 5:
                     $freq = "YEARLY";
                     break;
             }
@@ -1269,9 +1326,9 @@ class BackendCalDAV extends BackendDiff {
      */
     private function _ParseVTodoToSyncObject($vtodo, $message, $truncsize) {
         //Default
-        $message->reminderset = "0";
-        $message->importance = "1";
-        $message->complete = "0";
+        $message->reminderset = 0;
+        $message->importance = 1;
+        $message->complete = 0;
 
         $properties = $vtodo->GetProperties();
         foreach ($properties as $property) {
@@ -1284,11 +1341,11 @@ class BackendCalDAV extends BackendDiff {
                     switch ($property->Value()) {
                         case "NEEDS-ACTION":
                         case "IN-PROCESS":
-                            $message->complete = "0";
+                            $message->complete = 0;
                             break;
                         case "COMPLETED":
                         case "CANCELLED":
-                            $message->complete = "1";
+                            $message->complete = 1;
                             break;
                     }
                     break;
@@ -1304,11 +1361,11 @@ class BackendCalDAV extends BackendDiff {
                 case "PRIORITY":
                     $priority = $property->Value();
                     if ($priority <= 3)
-                        $message->importance = "0";
+                        $message->importance = 0;
                     if ($priority <= 6)
-                        $message->importance = "1";
+                        $message->importance = 1;
                     if ($priority > 6)
-                        $message->importance = "2";
+                        $message->importance = 2;
                     break;
 
                 case "RRULE":
@@ -1318,13 +1375,13 @@ class BackendCalDAV extends BackendDiff {
                 case "CLASS":
                     switch ($property->Value()) {
                         case "PUBLIC":
-                            $message->sensitivity = "0";
+                            $message->sensitivity = 0;
                             break;
                         case "PRIVATE":
-                            $message->sensitivity = "2";
+                            $message->sensitivity = 2;
                             break;
                         case "CONFIDENTIAL":
-                            $message->sensitivity = "3";
+                            $message->sensitivity = 3;
                             break;
                     }
                     break;
@@ -1356,14 +1413,14 @@ class BackendCalDAV extends BackendDiff {
                     $parameters = $property->Parameters();
                     if (array_key_exists("VALUE", $parameters) && $parameters["VALUE"] == "DATE-TIME") {
                         $message->remindertime = TimezoneUtil::MakeUTCDate($property->Value());
-                        $message->reminderset = "1";
+                        $message->reminderset = 1;
                     }
                     elseif (!array_key_exists("VALUE", $parameters) || $parameters["VALUE"] == "DURATION") {
                         $val = str_replace("-", "", $property->Value());
                         $interval = new DateInterval($val);
                         $start = date_create("@" . $message->utcstartdate);
                         $message->remindertime = date_timestamp_get(date_sub($start, $interval));
-                        $message->reminderset = "1";
+                        $message->reminderset = 1;
                     }
                 }
             }
@@ -1374,10 +1431,9 @@ class BackendCalDAV extends BackendDiff {
     /**
      * Generate a VTODO from a SyncAppointment(Exception)
      * @param string $data
-     * @param string $id
      * @return iCalComponent
      */
-    private function _ParseASTaskToVTodo($data, $id) {
+    private function _ParseASTaskToVTodo($data) {
         $vtodo = new iCalComponent();
         $vtodo->SetType("VTODO");
 
@@ -1397,7 +1453,7 @@ class BackendCalDAV extends BackendDiff {
             }
         }
         if (isset($data->complete)) {
-            if ($data->complete == "0") {
+            if ($data->complete == 0) {
                 $vtodo->AddProperty("STATUS", "NEEDS-ACTION");
             }
             else {
@@ -1411,10 +1467,10 @@ class BackendCalDAV extends BackendDiff {
             $vtodo->AddProperty("DUE", gmdate("Ymd\THis\Z", $data->utcduedate));
         }
         if (isset($data->importance)) {
-            if ($data->importance == "1") {
+            if ($data->importance == 1) {
                 $vtodo->AddProperty("PRIORITY", 6);
             }
-            elseif ($data->importance == "2") {
+            elseif ($data->importance == 2) {
                 $vtodo->AddProperty("PRIORITY", 9);
             }
             else {
@@ -1433,15 +1489,15 @@ class BackendCalDAV extends BackendDiff {
         }
         if (isset($data->sensitivity)) {
             switch ($data->sensitivity) {
-                case "0":
+                case 0:
                     $vtodo->AddProperty("CLASS", "PUBLIC");
                     break;
 
-                case "2":
+                case 2:
                     $vtodo->AddProperty("CLASS", "PRIVATE");
                     break;
 
-                case "3":
+                case 3:
                     $vtodo->AddProperty("CLASS", "CONFIDENTIAL");
                     break;
             }
