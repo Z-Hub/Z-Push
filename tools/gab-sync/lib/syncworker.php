@@ -173,7 +173,7 @@ abstract class SyncWorker {
         $l  = sprintf("\nSync:\n\tItems in GAB:\t\t\t%d\n\tTotal data size: \t\t%d B\n\n", count($gab), $bytes);
         $l .= sprintf("\tAvg. of items per chunk: \t%g\n\tMin. of items per chunk: \t%d\n\tMax. of items per chunk: \t%d\n\n", ($entries/count($chunks)), $minEntries, $maxEntries);
         $l .= sprintf("\tAvg. of size per chunk: \t%d B\n\tMin. of size per chunk: \t%d B\n\tMax. of size per chunk: \t%d B\n\n", ($bytes/count($chunks)), $minSize, $maxSize);
-        $l .= sprintf("\tConfigured amout of chunks:\t%d\n\tIdeal amount by entries: \t%d\n\tIdeal amount by size: \t\t%d", AMOUNT_OF_CHUNKS, $idealByEntries, $idealBySize);
+        $l .= sprintf("\tConfigured amount of chunks:\t%d\n\tIdeal amount by entries: \t%d\n\tIdeal amount by size: \t\t%d", AMOUNT_OF_CHUNKS, $idealByEntries, $idealBySize);
         $this->Log($l);
     }
 
