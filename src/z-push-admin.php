@@ -162,7 +162,7 @@ class ZPushAdminCLI {
                         "\t\t\t\t\t\t FOLDERID - list who opened the shared folder.\n" .
                         "\t\t\t\t\t\t If both STORE and FOLDERID are provided the script will only list who opened the folder ignoring the STORE parameter.\n" .
                 "\tlistfolders -u USER -d DEVICE\n".
-                        "\t\t\t\t\t\t Returns each folder and FOLDERID of user USER and device DEVICE. Useful for getting FOLDERID to be used with the command: resync -t FOLDERID -u USER\n".
+                        "\t\t\t\t\t\t Returns each folder and FOLDERID of user USER and device DEVICE. Useful for getting FOLDERID to be used with the command: resync -t FOLDERID -u USER.\n".
                 "\n";
     }
 
@@ -414,7 +414,7 @@ class ZPushAdminCLI {
                 if (self::$folderid !== false)
                     self::$command = self::COMMAND_LISTFOLDERSHARES;
                 break;
-            
+
             case "listfolders":
                 self::$command = self::COMMAND_LISTFOLDERS;
                 break;
@@ -930,63 +930,50 @@ class ZPushAdminCLI {
     /**
      * Command to list each folder and FOLDERID of user USER and device DEVICE.
      *
-     * @param string    $deviceId       the id of the device
-     * @param string    $user           the user
-     * 
+     * @access public
      * @return void
-     * @access private
      */
     static public function CommandListFolders() {
 
         $device = ZPushAdmin::GetDeviceDetails(self::$device, self::$user, true);
         if (! $device instanceof ASDevice) {
-            echo sprintf("Folder details failed: %s\n", ZLog::GetLastMessage(LOGLEVEL_ERROR));
+            printf("Folder details failed: %s\n", ZLog::GetLastMessage(LOGLEVEL_ERROR));
             return false;
         }
 
         echo "Folders list of DeviceId: ".self::$device."\n";
-        echo "-----------------------------------------------------\n";
-        if (!self::$shared) {
-            $folders = $device->GetAllFolderIds();
-            $synchedFolders = 0;
-            $notSynchedFolders = 0;
-            $hc = $device->GetHierarchyCache();
-            echo "FolderID\t\t\t\t\tShortID\tDisplay Name\n";
-            echo "-----------------------------------------------------------------------\n";
-            foreach ($folders as $folderid) {
-                if ($device->GetFolderUUID($folderid)) {
-                    $synchedFolders++;
-                    $folder = $hc->GetFolder($folderid);
-                    $name = $folder ? $folder->displayname : "unknown";
-                    if (strcmp($name,'unknown') == 0){
-                        echo "\t\t\t\t\t".$folder->BackendId."\t".$folderid."\t".$name."\n";
-                    }
-                    else{
-                        echo $folder->BackendId."\t".$folderid."\t".$name."\n";
-                    }
-
-                    //echo "\t".$folder->BackendId."\t".$folderid."\t".$name."\n";
-                }
-                else{
-                    $notSynchedFolders++;
-                    $folder = $hc->GetFolder($folderid);
-                    $name = $folder ? $folder->displayname : "unknown";
-                    if (strcmp($name,'unknown') == 0){
-                        echo "\t\t\t\t\t".$folder->BackendId."\t".$folderid."\t".$name."\t"."NOT SYNCHED"."\n";
-                    }
-                    else{
-                        echo $folder->BackendId."\t".$folderid."\t".$name."\t"."NOT SYNCHED"."\n";
-                    }
-
-                    //echo "\t".$folder->BackendId."\t".$folderid."\t".$name."\t"."NOT SYNCHED"."\n";
-                }
+        echo "-----------------------------------------------------------------------\n";
+        $folders = $device->GetAllFolderIds();
+        $synchedFolders = 0;
+        $notSynchedFolders = 0;
+        $sharedFolders = 0;
+        $hc = $device->GetHierarchyCache();
+        echo "FolderID\t\t\t\t\tShortID\tDisplay Name\n";
+        echo "-----------------------------------------------------------------------\n";
+        foreach ($folders as $folderid) {
+            if ($device->GetFolderUUID($folderid)) {
+                $synchedFolders++;
+                $notSynced = '';
             }
-            echo "\nShort folder Ids: ". ($device->HasFolderIdMapping() ? "Yes":"No") ."\n";
-            echo "Synchronized folders: ".$synchedFolders."\n";
-            echo "Not Synchronized folders: ".$notSynchedFolders."\n";
-            echo "Total folders: ".count($folders)."\n";
+            else {
+                $notSynchedFolders++;
+                $notSynced = "\t"."NOT SYNCHED";
+            }
+            $folder = $hc->GetFolder($folderid);
+            $name = $folder ? $folder->displayname : "unknown";
+            if (strcmp($name, 'unknown') == 0) {
+                echo "\t\t\t\t\t";
+            }
+            echo $folder->BackendId."\t".$folderid."\t".$name.$notSynced."\n";
+            if (Utils::GetFolderOriginFromId($folderid) != DeviceManager::FLD_ORIGIN_USER) {
+                $sharedFolders++;
+            }
         }
-
+        echo "\nTotal folders: ".count($folders)."\n";
+        echo "Synchronized folders: ".$synchedFolders."\n";
+        echo "Not synchronized folders: ".$notSynchedFolders."\n";
+        echo "Shared/impersonated folders: ".$sharedFolders."\n";
+        echo "Short folder Ids: ". ($device->HasFolderIdMapping() ? "Yes":"No") ."\n";
     }
 
     /**
