@@ -829,7 +829,15 @@ class ZPushAdmin {
         $fixedUsers = 0;
 
         $devices = self::GetAllDevices();
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::FixStatesDifferentUsernameCases(): found %d devices", count($devices)));
+        if (defined('LOGFIXSTATES') && LOGFIXSTATES === true){
+            $devicesCount = count($devices);
+            $num_processed = 0;
+        }
         foreach ($devices as $devid) {
+            if (defined('LOGFIXSTATES') && LOGFIXSTATES === true){
+                ZLog::Write(LOGLEVEL_INFO, sprintf("ZPushAdmin::FixStatesDifferentUsernameCases(): Processing %d on %d . Device %s", ++$num_processed , $devicesCount, $devid));
+            }
             $users = self::ListUsers($devid);
             $obsoleteUsers = array();
 
@@ -899,8 +907,14 @@ class ZPushAdmin {
         $fixed = 0;
         $devices = self::GetAllDevices();
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::FixStatesDeviceToUserLinking(): found %d devices", count($devices)));
-
+        if (defined('LOGFIXSTATES') && LOGFIXSTATES === true){
+            $devicesCount = count($devices);
+            $num_processed = 0;
+        }
         foreach ($devices as $devid) {
+            if (defined('LOGFIXSTATES') && LOGFIXSTATES === true){
+                ZLog::Write(LOGLEVEL_INFO, sprintf("ZPushAdmin::FixStatesDeviceToUserLinking(): Processing %d on %d . Device %s", ++$num_processed , $devicesCount, $devid));
+            }
             $users = self::ListUsers($devid);
             foreach ($users as $username) {
                 $seen++;
@@ -923,11 +937,19 @@ class ZPushAdmin {
     static public function FixStatesUserToStatesLinking() {
         $processed = 0;
         $deleted = 0;
+        $tot_processed = 0;
+        $tot_deleted = 0;
         $devices = self::GetAllDevices();
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::FixStatesUserToStatesLinking(): found %d devices", count($devices)));
-
+        if (defined('LOGFIXSTATES') && LOGFIXSTATES === true){
+            $devicesCount = count($devices);
+            $num_processed = 0;
+        }
         foreach ($devices as $devid) {
             try {
+                if (defined('LOGFIXSTATES') && LOGFIXSTATES === true){
+                    ZLog::Write(LOGLEVEL_INFO, sprintf("ZPushAdmin::FixStatesUserToStatesLinking(): Processing %d on %d . Device %s", ++$num_processed , $devicesCount, $devid));
+                }
                 // we work on device level
                 $devicedata = ZPush::GetStateMachine()->GetState($devid, IStateMachine::DEVICEDATA);
                 $knownUuids = array();
@@ -956,9 +978,12 @@ class ZPushAdmin {
             // get all uuids for deviceid from statemachine
             $existingStates = ZPush::GetStateMachine()->GetAllStatesForDevice($devid);
             $processed = count($existingStates);
-
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::FixStatesUserToStatesLinking(): found %d valid uuids and %d states for device '%s'", count($knownUuids), $processed, $devid));
-
+            $deleted = 0;
+            if (defined('LOGFIXSTATES') && LOGFIXSTATES === true){
+                ZLog::Write(LOGLEVEL_INFO, sprintf("ZPushAdmin::FixStatesUserToStatesLinking(): found %d valid uuids and %d states for device '%s'", count($knownUuids), $processed, $devid));
+            }else{
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::FixStatesUserToStatesLinking(): found %d valid uuids and %d states for device '%s'", count($knownUuids), $processed, $devid));
+            }
             // remove states for all unknown uuids
             foreach ($existingStates as $obsoleteState) {
                 if ($obsoleteState['type'] === IStateMachine::DEVICEDATA)
@@ -967,13 +992,17 @@ class ZPushAdmin {
                 if (!in_array($obsoleteState['uuid'], $knownUuids)) {
                     if (is_numeric($obsoleteState['counter']))
                         $obsoleteState['counter']++;
-
+                    if (defined('LOGFIXSTATES') && LOGFIXSTATES === true){
+                        ZLog::Write(LOGLEVEL_INFO, sprintf("ZPushAdmin::FixStatesUserToStatesLinking(): obsoleteState TYPE '%s' UUID '%s' COUNTER %d for device '%s'", $obsoleteState['type'], $obsoleteState['uuid'], $obsoleteState['counter'], $devid));
+                    }
                     ZPush::GetStateMachine()->CleanStates($devid, $obsoleteState['type'], $obsoleteState['uuid'], $obsoleteState['counter']);
                     $deleted++;
                 }
             }
+            $tot_processed +=  $processed;
+            $tot_deleted += $deleted; 
         }
-        return array($processed, $deleted);
+        return array($tot_processed, $tot_deleted);
     }
 
     /**
@@ -989,9 +1018,15 @@ class ZPushAdmin {
         $fixed = 0;
         $asdevices = self::GetAllDevices();
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::FixStatesHierarchyFolderData(): found %d devices", count($asdevices)));
-
+        if (defined('LOGFIXSTATES') && LOGFIXSTATES === true){
+            $devicesCount = count($asdevices);
+            $num_processed = 0;
+        }
         foreach ($asdevices as $devid) {
             try {
+                if (defined('LOGFIXSTATES') && LOGFIXSTATES === true){
+                    ZLog::Write(LOGLEVEL_INFO, sprintf("ZPushAdmin::FixStatesHierarchyFolderData(): Processing %d on %d . Device %s", ++$num_processed , $devicesCount, $devid));
+                }
                 // get the device
                 $devicedata = ZPush::GetStateMachine()->GetState($devid, IStateMachine::DEVICEDATA);
                 $devices++;
@@ -1065,9 +1100,15 @@ class ZPushAdmin {
         $fixed = 0;
         $asdevices = self::GetAllDevices();
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::FixStatesAdditionalFolders(): found %d devices", count($asdevices)));
-
+        if (defined('LOGFIXSTATES') && LOGFIXSTATES === true){
+            $devicesCount = count($asdevices);
+            $num_processed = 0;
+        }
         foreach ($asdevices as $devid) {
             try {
+                if (defined('LOGFIXSTATES') && LOGFIXSTATES === true){
+                    ZLog::Write(LOGLEVEL_INFO, sprintf("ZPushAdmin::FixStatesAdditionalFolders(): Processing %d on %d . Device %s", ++$num_processed , $devicesCount, $devid));
+                }
                 // get the device
                 $devicedata = ZPush::GetStateMachine()->GetState($devid, IStateMachine::DEVICEDATA);
                 $devices++;
@@ -1119,6 +1160,9 @@ class ZPushAdmin {
     public static function GetAllDevices() {
         if (empty(self::$devices)) {
             self::$devices = ZPush::GetStateMachine()->GetAllDevices(false);
+            if (defined('LOGFIXSTATES') && LOGFIXSTATES === true){
+                ZLog::Write(LOGLEVEL_INFO, sprintf("ZPushAdmin::GetAllDevices(): found %d devices", count(self::$devices)));
+            }
         }
         return self::$devices;
     }

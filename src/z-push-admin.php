@@ -1019,32 +1019,32 @@ class ZPushAdminCLI {
     static private function CommandFixStates() {
         echo "Validating and fixing states (this can take some time):\n";
 
-        echo "\tChecking username casings: ";
+        echo "\t".date('G:i:s')." Checking username casings: ";
         if ($stat = ZPushAdmin::FixStatesDifferentUsernameCases())
             printf("Processed: %d - Converted: %d - Removed: %d\n", $stat[0], $stat[1], $stat[2]);
         else
             echo ZLog::GetLastMessage(LOGLEVEL_ERROR) . "\n";
 
         // fixes ZP-339
-        echo "\tChecking available devicedata & user linking: ";
+        echo "\t".date('G:i:s')." Checking available devicedata & user linking: ";
         if ($stat = ZPushAdmin::FixStatesDeviceToUserLinking())
             printf("Processed: %d - Fixed: %d\n", $stat[0], $stat[1]);
         else
             echo ZLog::GetLastMessage(LOGLEVEL_ERROR) . "\n";
 
-        echo "\tChecking for unreferenced (obsolete) state files: ";
+        echo "\t".date('G:i:s')." Checking for unreferenced (obsolete) state files: ";
         if (($stat = ZPushAdmin::FixStatesUserToStatesLinking()) !== false)
             printf("Processed: %d - Deleted: %d\n",  $stat[0], $stat[1]);
         else
             echo ZLog::GetLastMessage(LOGLEVEL_ERROR) . "\n";
 
-        echo "\tChecking for hierarchy folder data state: ";
+        echo "\t".date('G:i:s')." Checking for hierarchy folder data state: ";
         if (($stat = ZPushAdmin::FixStatesHierarchyFolderData()) !== false)
             printf("Devices: %d - Processed: %d - Fixed: %d - Device+User without hierarchy: %d\n",  $stat[0], $stat[1], $stat[2], $stat[3]);
         else
             echo ZLog::GetLastMessage(LOGLEVEL_ERROR) . "\n";
 
-        echo "\tChecking flags of shared folders: ";
+        echo "\t".date('G:i:s')." Checking flags of shared folders: ";
         if (($stat = ZPushAdmin::FixStatesAdditionalFolders()) !== false)
             printf("Devices: %d - Devices with additional folders: %d - Fixed: %d\n",  $stat[0], $stat[1], $stat[2]);
         else
