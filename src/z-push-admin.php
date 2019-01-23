@@ -163,6 +163,8 @@ class ZPushAdminCLI {
                         "\t\t\t\t\t\t If both STORE and FOLDERID are provided the script will only list who opened the folder ignoring the STORE parameter.\n" .
                 "\tlistfolders -u USER -d DEVICE\n".
                         "\t\t\t\t\t\t Returns each folder and FOLDERID of user USER and device DEVICE. Useful for getting FOLDERID to be used with the command: resync -t FOLDERID -u USER.\n".
+                        "\t\t\t\t\t\t Note that if a device is offline, broken or not being synched for some time, this list will not be updated. If folders were created/renamed/removed\n".
+                        "\t\t\t\t\t\t after the last synchronization, this will not be reflected in this list.\n".
                 "\n";
     }
 
