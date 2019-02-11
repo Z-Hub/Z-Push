@@ -104,7 +104,7 @@ abstract class SyncWorker {
             return;
         }
 
-        $this->Log(sprintf("Starting %sGAB sync to store '%s' %s on id '%s'", (!$doWrite?"simulated ":""), HIDDEN_FOLDERSTORE, ($gabId?"of '".$gabName."'":""), $folderid));
+        $this->Log(sprintf("Starting %sGAB sync to store '%s' %s on id '%s'", (!$doWrite?"simulated ":""), HIDDEN_FOLDERSTORE, ($gabId?"of '".$gabName."' (".$gabId.")":""), $folderid));
 
         // remove all messages that do not match the current $chunkType
         if ($doWrite)
