@@ -1985,7 +1985,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
     private function getSearchRestriction($cpo) {
         $searchText = $cpo->GetSearchFreeText();
         $searchGreater = strftime("%Y-%m-%d", strtotime($cpo->GetSearchValueGreater()));
-        $searchLess = strftime("%Y-%m-%d", strtotime($cpo->GetSearchValueLess()));
+        $searchLess = strftime("%Y-%m-%d", strtotime($cpo->GetSearchValueLess() ?: 'now'));
 
         $filter = '';
         if ($searchGreater != '') {
