@@ -959,9 +959,9 @@ class Utils {
         $tmp = dirname($filename).DIRECTORY_SEPARATOR.'tmp-'.getmypid().'-'.basename($filename);
 
         //number of attempts
-        $attempts = (defined('FILE_STATE_WRITE_ATTEMPTS') ? FILE_STATE_WRITE_ATTEMPTS : 3);
+        $attempts = (defined('FILE_STATE_ATTEMPTS') ? FILE_STATE_ATTEMPTS : 3);
         //ms to sleep between attempts
-        $sleep_time = (defined('FILE_STATE_WRITE_SLEEP') ? FILE_STATE_WRITE_SLEEP : 100);
+        $sleep_time = (defined('FILE_STATE_SLEEP') ? FILE_STATE_SLEEP : 100);
         $i = 1;
         while (($i <= $attempts) && (($res = file_put_contents($tmp, $data)) === false)) {
             ZLog::Write(LOGLEVEL_WARN, sprintf("Utils->SafePutContents: Failed on writing data in tmp - attempt: %d - filename: %s", $i, $tmp));
@@ -1379,6 +1379,36 @@ class Utils {
         $message->headers["subject"] = isset($message->headers["subject"]) ? Utils::convertRawHeader2Utf8($rawheaders["subject"], $message->headers["subject"]) : "";
         $message->headers["from"] = Utils::convertRawHeader2Utf8($rawheaders["from"], $message->headers["from"]);
     }
+
+    /**
+     * Tries to load the content of a file from disk with retries in case of file system returns an empty file.
+     * 
+     * @param $filename
+     *        $filename is the name of the file to be opened
+     * 
+     * @param $functName
+     *        $functName is the name of the caller function. Usefull to be printed into the log file
+     *
+     * @param $suppressWarnings
+     *        $suppressWarnings boolean. True if file_get_contents function has to be called with suppress warnings enabled, False otherwise
+     * 
+     * @access private
+     * @return string
+     */
+    public static function getContents($filename, $functName, $suppressWarnings) {
+        $attempts = (defined('FILE_STATE_ATTEMPTS') ? FILE_STATE_ATTEMPTS : 3);
+        $sleep_time = (defined('FILE_STATE_SLEEP') ? FILE_STATE_SLEEP : 100); 
+        $i = 1;
+        while (($i <= $attempts) && (($filecontents = ($suppressWarnings ? @file_get_contents($filename) : file_get_contents($filename))) === '')) {
+            ZLog::Write(LOGLEVEL_WARN, sprintf("FileStateMachine->%s(): Failed on reading filename '%s' - attempt: %d", $functName, $filename, $i));
+            $i++;
+            usleep($sleep_time * 1000);
+        }
+        if ($i > $attempts)
+            ZLog::Write(LOGLEVEL_FATAL, sprintf("FileStateMachine->%s(): Unable to read filename '%s' after %s retries",$functName, $filename, --$i));
+
+        return $filecontents;
+    }    
 }
 
 
