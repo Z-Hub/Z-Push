@@ -497,6 +497,19 @@ class Kopano extends SyncWorker {
             return false;
         }
         $chunkdata = $this->findChunk($store, $folderid, $chunkName);
+        // remove chunk if it's empty
+        if ($amountEntries == 0 && !empty($chunkdata)) {
+            $this->Log(sprintf("Kopano->setChunkData: %s - removing empty chunk", $chunkName));
+            $folder = $this->getFolder($store, $folderid);
+            mapi_folder_deletemessages($folder, array($chunkdata[PR_ENTRYID]), DELETE_HARD_DELETE);
+            if (mapi_last_hresult()) {
+                $this->Log("Kopano->setChunkData: error deleting empty chunk from the GAB folder: 0x%08X", mapi_last_hresult());
+            }
+            return true;
+        }
+        elseif ($amountEntries == 0) {
+            return true;
+        }
         $message = false;
 
         // message not found, create it
@@ -543,7 +556,7 @@ class Kopano extends SyncWorker {
         }
 
         // output log
-        $this->log($log);
+        $this->Log($log);
         return true;
     }
 
@@ -567,7 +580,7 @@ class Kopano extends SyncWorker {
         $folder = $this->getFolder($store, $folderid);
         $table = mapi_folder_getcontentstable($folder);
         if (!$table)
-            $this->Log(sprintf("Kopano->findChunk: Error, unable to read contents table to find chunk '%d': 0x%08X", $chunkId, mapi_last_hresult()));
+            $this->Log(sprintf("Kopano->findChunk: Error, unable to read contents table to find chunk '%s': 0x%08X", $chunkName, mapi_last_hresult()));
 
         $restriction = array(RES_PROPERTY, array(RELOP => RELOP_EQ, ULPROPTAG => PR_SUBJECT, VALUE => $chunkName));
         mapi_table_restrict($table, $restriction);
