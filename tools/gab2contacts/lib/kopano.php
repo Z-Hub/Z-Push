@@ -25,12 +25,12 @@
 
 include_once("contactworker.php");
 include_once("synccontact.php");
-include_once(PATH_TO_ZPUSH .'backend/kopano/mapi/mapi.util.php');
-include_once(PATH_TO_ZPUSH .'backend/kopano/mapi/mapidefs.php');
-include_once(PATH_TO_ZPUSH .'backend/kopano/mapi/mapitags.php');
-include_once(PATH_TO_ZPUSH .'backend/kopano/mapi/mapicode.php');
-include_once(PATH_TO_ZPUSH .'backend/kopano/mapi/mapiguid.php');
-include_once(PATH_TO_ZPUSH .'lib/utils/utils.php');
+include_once('backend/kopano/mapi/mapi.util.php');
+include_once('backend/kopano/mapi/mapidefs.php');
+include_once('backend/kopano/mapi/mapitags.php');
+include_once('backend/kopano/mapi/mapicode.php');
+include_once('backend/kopano/mapi/mapiguid.php');
+include_once('lib/utils/utils.php');
 
 if (!defined('PR_EMS_AB_THUMBNAIL_PHOTO')) {
     define('PR_EMS_AB_THUMBNAIL_PHOTO', mapi_prop_tag(PT_BINARY, 0x8C9E));

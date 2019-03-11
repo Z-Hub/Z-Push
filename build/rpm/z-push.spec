@@ -363,7 +363,7 @@ mkdir -p "$b/%zpush_dir/tools"
 cp -a tools/gab-sync "$b/%zpush_dir/tools/"
 mv "$b/%zpush_dir/tools/gab-sync/config.php" "$cdir/gabsync.conf.php";
 ln -s "%_sysconfdir/z-push/gabsync.conf.php" "$b/%zpush_dir/tools/gab-sync/config.php";
-sed -i -s "s/PATH_TO_ZPUSH', BASE_PATH_CLI\.'\.\.\/\.\.\/src\/')/PATH_TO_ZPUSH', '\/usr\/share\/z-push\/')/" "$b/%zpush_dir/tools/gab-sync/gab-sync.php"
+sed -i -s "s/PATH_TO_ZPUSH', '\.\.\/\.\.\/src\/')/PATH_TO_ZPUSH', '\/usr\/share\/z-push\/')/" "$b/%zpush_dir/tools/gab-sync/gab-sync.php"
 mkdir -p "$b/%_bindir"
 ln -s "%zpush_dir/tools/gab-sync/gab-sync.php" "$b/%_bindir/z-push-gabsync";
 
@@ -372,7 +372,7 @@ mkdir -p "$b/%zpush_dir/tools"
 cp -a tools/gab2contacts "$b/%zpush_dir/tools/"
 mv "$b/%zpush_dir/tools/gab2contacts/config.php" "$cdir/gab2contacts.conf.php";
 ln -s "%_sysconfdir/z-push/gab2contacts.conf.php" "$b/%zpush_dir/tools/gab2contacts/config.php";
-sed -i -s "s/PATH_TO_ZPUSH', BASE_PATH_CLI\.'\.\.\/\.\.\/src\/')/PATH_TO_ZPUSH', '\/usr\/share\/z-push\/')/" "$b/%zpush_dir/tools/gab2contacts/gab2contacts.php"
+sed -i -s "s/PATH_TO_ZPUSH', '\.\.\/\.\.\/src\/')/PATH_TO_ZPUSH', '\/usr\/share\/z-push\/')/" "$b/%zpush_dir/tools/gab2contacts/gab2contacts.php"
 mkdir -p "$b/%_bindir"
 ln -s "%zpush_dir/tools/gab2contacts/gab2contacts.php" "$b/%_bindir/z-push-gab2contacts";
 

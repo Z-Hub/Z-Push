@@ -23,10 +23,10 @@ override_dh_install:
 	sed -s "s/ZPUSHVERSION/${DEB_VERSION}/" build/version.php.in > version.php
 
 	# fix z-push directory in gab-sync script
-	sed -i -s "s/PATH_TO_ZPUSH', BASE_PATH_CLI\.'\.\.\/\.\.\/src\/')/PATH_TO_ZPUSH', '\/usr\/share\/z-push\/')/" tools/gab-sync/gab-sync.php
+	sed -i -s "s/PATH_TO_ZPUSH', '\.\.\/\.\.\/src\/')/PATH_TO_ZPUSH', '\/usr\/share\/z-push\/')/" tools/gab-sync/gab-sync.php
 
 	# fix z-push directory in gab2contacts script
-	sed -i -s "s/PATH_TO_ZPUSH', BASE_PATH_CLI\.'\.\.\/\.\.\/src\/')/PATH_TO_ZPUSH', '\/usr\/share\/z-push\/')/" tools/gab2contacts/gab2contacts.php
+	sed -i -s "s/PATH_TO_ZPUSH', '\.\.\/\.\.\/src\/')/PATH_TO_ZPUSH', '\/usr\/share\/z-push\/')/" tools/gab2contacts/gab2contacts.php
 
 	mv "config.php" "z-push.conf.php";
 

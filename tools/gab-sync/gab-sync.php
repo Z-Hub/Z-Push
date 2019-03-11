@@ -24,6 +24,12 @@
 * Consult LICENSE file for details
 * ************************************************/
 
+// Path to the Z-Push directory relative to the gab-sync script.
+// The path set by default is as required for a GIT checkout.
+// It is also possible to use absolute path to z-push installation, e.g.
+// /usr/share/z-push
+define('PATH_TO_ZPUSH', '../../src/');
+
 if (!defined('SYNC_CONFIG')) define('SYNC_CONFIG', 'config.php');
 include_once(SYNC_CONFIG);
 
@@ -31,9 +37,7 @@ include_once(SYNC_CONFIG);
  * MAIN
  */
     define('BASE_PATH_CLI',  dirname(__FILE__) ."/");
-    // define and add z-push root path to include path, required to load z-push backend files, like mapi helper classes
-    define('PATH_TO_ZPUSH', BASE_PATH_CLI.'../../src/');
-    set_include_path(get_include_path() . PATH_SEPARATOR . BASE_PATH_CLI . PATH_SEPARATOR . PATH_TO_ZPUSH);
+    set_include_path(get_include_path() . PATH_SEPARATOR . BASE_PATH_CLI . PATH_TO_ZPUSH . PATH_SEPARATOR . PATH_TO_ZPUSH);
 
     try {
         GabSyncCLI::CheckEnv();
