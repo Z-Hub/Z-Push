@@ -31,9 +31,9 @@ include_once(SYNC_CONFIG);
  * MAIN
  */
     define('BASE_PATH_CLI',  dirname(__FILE__) ."/");
-	// define and add z-push root path to include path, required to load z-push backend files, like mapi helper classes
-	define('PATH_TO_ZPUSH_ROOT', BASE_PATH_CLI . '../../');
-    set_include_path(get_include_path() . PATH_SEPARATOR . BASE_PATH_CLI . PATH_SEPARATOR . PATH_TO_ZPUSH_ROOT);
+    // define and add z-push root path to include path, required to load z-push backend files, like mapi helper classes
+    define('PATH_TO_ZPUSH', '../../src/');
+    set_include_path(get_include_path() . PATH_SEPARATOR . BASE_PATH_CLI . PATH_SEPARATOR . PATH_TO_ZPUSH);
     try {
         GabSyncCLI::CheckEnv();
         GabSyncCLI::CheckOptions();
