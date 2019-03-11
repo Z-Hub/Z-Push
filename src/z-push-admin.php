@@ -1019,32 +1019,32 @@ class ZPushAdminCLI {
     static private function CommandFixStates() {
         echo "Validating and fixing states (this can take some time):\n";
 
-        echo "\t".date('G:i:s')." Checking username casings: ";
+        echo "\t".date('H:i:s')." Checking username casings: ";
         if ($stat = ZPushAdmin::FixStatesDifferentUsernameCases())
             printf("Processed: %d - Converted: %d - Removed: %d\n", $stat[0], $stat[1], $stat[2]);
         else
             echo ZLog::GetLastMessage(LOGLEVEL_ERROR) . "\n";
 
         // fixes ZP-339
-        echo "\t".date('G:i:s')." Checking available devicedata & user linking: ";
+        echo "\t".date('H:i:s')." Checking available devicedata & user linking: ";
         if ($stat = ZPushAdmin::FixStatesDeviceToUserLinking())
             printf("Processed: %d - Fixed: %d\n", $stat[0], $stat[1]);
         else
             echo ZLog::GetLastMessage(LOGLEVEL_ERROR) . "\n";
 
-        echo "\t".date('G:i:s')." Checking for unreferenced (obsolete) state files: ";
+        echo "\t".date('H:i:s')." Checking for unreferenced (obsolete) state files: ";
         if (($stat = ZPushAdmin::FixStatesUserToStatesLinking()) !== false)
             printf("Processed: %d - Deleted: %d\n",  $stat[0], $stat[1]);
         else
             echo ZLog::GetLastMessage(LOGLEVEL_ERROR) . "\n";
 
-        echo "\t".date('G:i:s')." Checking for hierarchy folder data state: ";
+        echo "\t".date('H:i:s')." Checking for hierarchy folder data state: ";
         if (($stat = ZPushAdmin::FixStatesHierarchyFolderData()) !== false)
             printf("Devices: %d - Processed: %d - Fixed: %d - Device+User without hierarchy: %d\n",  $stat[0], $stat[1], $stat[2], $stat[3]);
         else
             echo ZLog::GetLastMessage(LOGLEVEL_ERROR) . "\n";
 
-        echo "\t".date('G:i:s')." Checking flags of shared folders: ";
+        echo "\t".date('H:i:s')." Checking flags of shared folders: ";
         if (($stat = ZPushAdmin::FixStatesAdditionalFolders()) !== false)
             printf("Devices: %d - Devices with additional folders: %d - Fixed: %d\n",  $stat[0], $stat[1], $stat[2]);
         else
