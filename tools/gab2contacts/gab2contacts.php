@@ -24,14 +24,13 @@
 * Consult LICENSE file for details
 * ************************************************/
 
-// Path to the Z-Push directory relative to the gab2contacts script.
-// The path set by default is as required for a GIT checkout.
-define('PATH_TO_ZPUSH', '../../src/');
-
 /************************************************
  * MAIN
  */
     define('BASE_PATH_CLI',  dirname(__FILE__) ."/");
+    // Path to the Z-Push directory relative to the gab2contacts script.
+    // The path set by default is as required for a GIT checkout.
+    define('PATH_TO_ZPUSH', BASE_PATH_CLI.'../../src/');
     set_include_path(get_include_path() . PATH_SEPARATOR . BASE_PATH_CLI . PATH_SEPARATOR . PATH_TO_ZPUSH);
     include_once("vendor/autoload.php");
 

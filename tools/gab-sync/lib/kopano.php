@@ -25,11 +25,11 @@
 
 include_once("syncworker.php");
 
-include_once('mapi/mapi.util.php');
-include_once('mapi/mapidefs.php');
-include_once('mapi/mapitags.php');
-include_once('mapi/mapicode.php');
-include_once('mapi/mapiguid.php');
+include_once(PATH_TO_ZPUSH .'backend/kopano/mapi/mapi.util.php');
+include_once(PATH_TO_ZPUSH .'backend/kopano/mapi/mapidefs.php');
+include_once(PATH_TO_ZPUSH .'backend/kopano/mapi/mapitags.php');
+include_once(PATH_TO_ZPUSH .'backend/kopano/mapi/mapicode.php');
+include_once(PATH_TO_ZPUSH .'backend/kopano/mapi/mapiguid.php');
 
 if (!defined('PR_EMS_AB_THUMBNAIL_PHOTO')) {
     define('PR_EMS_AB_THUMBNAIL_PHOTO', mapi_prop_tag(PT_BINARY, 0x8C9E));
