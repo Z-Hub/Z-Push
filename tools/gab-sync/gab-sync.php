@@ -27,7 +27,7 @@
 // Path to the Z-Push directory relative to the gab-sync script.
 // The path set by default is as required for a GIT checkout.
 // It is also possible to use absolute path to z-push installation, e.g.
-// /usr/share/z-push
+// /usr/share/z-push/
 define('PATH_TO_ZPUSH', '../../src/');
 
 if (!defined('SYNC_CONFIG')) define('SYNC_CONFIG', 'config.php');
