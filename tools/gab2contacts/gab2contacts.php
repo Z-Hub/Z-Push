@@ -28,7 +28,7 @@
 // The path set by default is as required for a GIT checkout.
 // It is also possible to use absolute path to z-push installation, e.g.
 // /usr/share/z-push
-define('PATH_TO_ZPUSH', '../../src');
+define('PATH_TO_ZPUSH', '../../src/');
 
 /************************************************
  * MAIN
