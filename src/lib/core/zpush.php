@@ -310,7 +310,10 @@ class ZPush {
         }
         if ((defined('FILE_STATE_SLEEP')) && (!is_int(FILE_STATE_SLEEP) || FILE_STATE_SLEEP < 1)) {
             throw new FatalMisconfigurationException("The FILE_STATE_SLEEP value must be a number higher than 0.");
-        }        
+        }   
+        if (defined('FILE_STATE_WRITE_ATTEMPTS') || defined('FILE_STATE_WRITE_SLEEP')){
+            throw new FatalMisconfigurationException("The configuration parameter 'FILE_STATE_WRITE_ATTEMPTS' and 'FILE_STATE_WRITE_SLEEP' were deprecated in favor of 'FILE_STATE_ATTEMPTS' and 'FILE_STATE_SLEEP'. Please update your configuration.");
+        }
 
         return true;
     }

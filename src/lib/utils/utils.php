@@ -1395,7 +1395,7 @@ class Utils {
      * @access private
      * @return string
      */
-    public static function getContents($filename, $functName, $suppressWarnings) {
+    public static function SafeGetContents($filename, $functName, $suppressWarnings) {
         $attempts = (defined('FILE_STATE_ATTEMPTS') ? FILE_STATE_ATTEMPTS : 3);
         $sleep_time = (defined('FILE_STATE_SLEEP') ? FILE_STATE_SLEEP : 100); 
         $i = 1;
