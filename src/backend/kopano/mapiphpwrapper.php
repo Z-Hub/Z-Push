@@ -210,7 +210,7 @@ class PHPWrapper {
                 }
             }
             elseif ($amount > DELETION_COUNT_LIMIT){
-                throw new StatusException(sprintf("PHPWrapper->ImportMessageDeletion(): Received %d remove requests from ICS for devId='%s' folder='%s' . Requests over limit='%d' . Triggering folder re-sync.", $amount, $devid, bin2hex($this->folderid), DELETION_COUNT_LIMIT), SYNC_STATUS_INVALIDSYNCKEY, null, LOGLEVEL_ERROR);
+                throw new StatusException(sprintf("PHPWrapper->ImportMessageDeletion(): Received %d remove requests from ICS for devId='%s' folder='%s' . Requests over limit='%d' . Triggering folder re-sync.", $amount, ZPush::GetDeviceManager()->GetDevid(), bin2hex($this->folderid), DELETION_COUNT_LIMIT), SYNC_STATUS_INVALIDSYNCKEY, null, LOGLEVEL_ERROR);
             }
         }
         else {
