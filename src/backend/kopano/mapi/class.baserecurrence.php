@@ -1760,7 +1760,7 @@
                                 // keep the track of no. of time correct selection pattern(like 2nd weekday, 4th fiday, etc.)is matched
                                 $ndaycounter = 0;
                                 // Find matching weekday in this month
-                                for($day = 0; $day < $this->daysInMonth($now, 1); $day++)
+                                for($day = 0, $total = $this->daysInMonth($now, 1); $day < $total; $day++)
                                 {
                                     $daynow = $now + $day * 60 * 60 * 24;
                                     $nowtime = $this->gmtime($daynow); // Get the weekday of the current day
