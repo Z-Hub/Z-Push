@@ -141,7 +141,8 @@ class ZPushAdminCLI {
                 "\tresync -t hierarchy -u USER -d DEVICE\t Resynchronize the folder hierarchy data for an optional USER and optional DEVICE.\n" .
                 "\tclearloop\t\t\t\t Clears system wide loop detection data.\n" .
                 "\tclearloop -d DEVICE -u USER\t\t Clears all loop detection data of a device DEVICE and an optional user USER.\n" .
-                "\tfixstates\t\t\t\t Checks the states for integrity and fixes potential issues.\n\n" .
+                "\tfixstates\t\t\t\t Checks the states for integrity and fixes potential issues.\n" .
+                "\tfixstates -u USER\t\t\t Checks the states for integrity and fixes potential issues of user USER.\n\n" .
                 "\taddshared -u USER -d DEVICE -n FOLDERNAME -o STORE -t TYPE -f FOLDERID -g FLAGS\n" .
                         "\t\t\t\t\t\t Adds a shared folder for a user.\n" .
                         "\t\t\t\t\t\t USER is required. If no DEVICE is given, the shared folder will be added to all of the devices of the user.\n" .
@@ -534,7 +535,11 @@ class ZPushAdminCLI {
                 break;
 
             case self::COMMAND_FIXSTATES:
-                self::CommandFixStates();
+            	if(self::$user===false){
+            	    self::CommandFixStates();
+            	}else{
+            	    self::CommandFixStates(self::$user);
+            	}
                 break;
 
             case self::COMMAND_ADDSHARED:
@@ -1078,36 +1083,36 @@ class ZPushAdminCLI {
      * @return
      * @access private
      */
-    static private function CommandFixStates() {
+    static private function CommandFixStates($username=false) {
         echo "Validating and fixing states (this can take some time):\n";
 
         echo "\tChecking username casings: ";
-        if ($stat = ZPushAdmin::FixStatesDifferentUsernameCases())
+        if ($stat = ZPushAdmin::FixStatesDifferentUsernameCases($username))
             printf("Processed: %d - Converted: %d - Removed: %d\n", $stat[0], $stat[1], $stat[2]);
         else
             echo ZLog::GetLastMessage(LOGLEVEL_ERROR) . "\n";
 
         // fixes ZP-339
         echo "\tChecking available devicedata & user linking: ";
-        if ($stat = ZPushAdmin::FixStatesDeviceToUserLinking())
+        if ($stat = ZPushAdmin::FixStatesDeviceToUserLinking($username))
             printf("Processed: %d - Fixed: %d\n", $stat[0], $stat[1]);
         else
             echo ZLog::GetLastMessage(LOGLEVEL_ERROR) . "\n";
 
         echo "\tChecking for unreferenced (obsolete) state files: ";
-        if (($stat = ZPushAdmin::FixStatesUserToStatesLinking()) !== false)
+        if (($stat = ZPushAdmin::FixStatesUserToStatesLinking($username)) !== false)
             printf("Processed: %d - Deleted: %d\n",  $stat[0], $stat[1]);
         else
             echo ZLog::GetLastMessage(LOGLEVEL_ERROR) . "\n";
 
         echo "\tChecking for hierarchy folder data state: ";
-        if (($stat = ZPushAdmin::FixStatesHierarchyFolderData()) !== false)
+        if (($stat = ZPushAdmin::FixStatesHierarchyFolderData($username)) !== false)
             printf("Devices: %d - Processed: %d - Fixed: %d - Device+User without hierarchy: %d\n",  $stat[0], $stat[1], $stat[2], $stat[3]);
         else
             echo ZLog::GetLastMessage(LOGLEVEL_ERROR) . "\n";
 
         echo "\tChecking flags of shared folders: ";
-        if (($stat = ZPushAdmin::FixStatesAdditionalFolders()) !== false)
+        if (($stat = ZPushAdmin::FixStatesAdditionalFolders($username)) !== false)
             printf("Devices: %d - Devices with additional folders: %d - Fixed: %d\n",  $stat[0], $stat[1], $stat[2]);
         else
             echo ZLog::GetLastMessage(LOGLEVEL_ERROR) . "\n";
