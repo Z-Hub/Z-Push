@@ -242,7 +242,7 @@ class Kopano extends SyncWorker {
         }
         else {
             $this->Log(sprintf("Kopano->clearAllNotCurrentChunkType: found %d invalid items, deleting", $querycnt));
-            $entries = mapi_table_queryallrows($table, array(PR_ENTRYID, $this->mapiprops['chunktype']));
+            $entries = mapi_table_queryrows($table, array(PR_ENTRYID, $this->mapiprops['chunktype']), 0, $querycnt);
             $entry_ids = array_reduce($entries, function ($result, $item) {
                                                     $result[] = $item[PR_ENTRYID];
                                                     return $result;
@@ -311,6 +311,24 @@ class Kopano extends SyncWorker {
 
         // get all the groups
         $groups = mapi_zarafa_getgrouplist($this->store, $ab_entryid);
+        $groupsUsers = array();
+        foreach ($groups as $groupDetails ) {
+            // All users are in group Everyone, so we don't have to get its members
+            if (strtoupper($groupDetails['groupname']) == 'EVERYONE') {
+                continue;
+            }
+            $groupentry = mapi_ab_openentry($addrbook, $groupDetails['groupid']);
+            $grouptable = @mapi_folder_getcontentstable($groupentry, MAPI_DEFERRED_ERRORS);
+            // some groups can not be listed - ZP-1196
+            if (mapi_last_hresult()) {
+                $this->Log(sprintf("Kopano->GetGAB(): Ignoring group '%s' as members can not be listed - possibly hidden, code: 0x%08X \n", $entry[PR_ACCOUNT], mapi_last_hresult() ));
+                continue;
+            }
+            $groupMembers = mapi_table_queryallrows($grouptable, array(PR_ACCOUNT));
+            if (!empty($groupMembers)) {
+                $groupsUsers[$groupDetails['groupname']] = $this->arrayFlatten($groupMembers, PR_ACCOUNT);
+            }
+        }
 
         // restrict the table if we should only return one
         if ($uniqueId) {
@@ -325,8 +343,9 @@ class Kopano extends SyncWorker {
                 $this->Terminate(sprintf("Kopano->getGAB(): Single GAB entry '%s' requested but %d entries found. Aborting.", $uniqueId, $querycnt));
             }
         }
+        $querycnt = mapi_table_getrowcount($table);
 
-        $gabentries = mapi_table_queryallrows($table, array(PR_ENTRYID,
+        $gabentries = mapi_table_queryrows($table, array(   PR_ENTRYID,
                                                             PR_ACCOUNT,
                                                             PR_DISPLAY_NAME,
                                                             PR_SMTP_ADDRESS,
@@ -350,7 +369,7 @@ class Kopano extends SyncWorker {
                                                             PR_EMS_AB_THUMBNAIL_PHOTO,
                                                             PR_EC_AB_HIDDEN,
                                                             PR_DISPLAY_TYPE_EX
-                                                    ));
+                                           ), 0, $querycnt);
         if(!is_array($gabentries)) {
             $this->Log("Kopano->GetGAB(): GAB data can not be retrieved.");
             return $data;
@@ -368,11 +387,8 @@ class Kopano extends SyncWorker {
 
             $a = new GABEntry();
             $a->type = GABEntry::CONTACT;
-            $a->memberOf = array();
-            $memberOf = mapi_zarafa_getgrouplistofuser($this->store, $entry[PR_ENTRYID]);
-            if (is_array($memberOf)) {
-                $a->memberOf = array_keys($memberOf);
-            }
+            $a->memberOf = $this->getMemberOf($groupsUsers, $entry[PR_ACCOUNT]);
+
             // the company name is 'Everyone'
             if ($gabId != null && $entry[PR_DISPLAY_NAME] == $gabName) {
                 $entry[PR_ACCOUNT] = "Everyone";
@@ -497,6 +513,19 @@ class Kopano extends SyncWorker {
             return false;
         }
         $chunkdata = $this->findChunk($store, $folderid, $chunkName);
+        // remove chunk if it's empty
+        if ($amountEntries == 0 && !empty($chunkdata)) {
+            $this->Log(sprintf("Kopano->setChunkData: %s - removing empty chunk", $chunkName));
+            $folder = $this->getFolder($store, $folderid);
+            mapi_folder_deletemessages($folder, array($chunkdata[PR_ENTRYID]), DELETE_HARD_DELETE);
+            if (mapi_last_hresult()) {
+                $this->Log("Kopano->setChunkData: error deleting empty chunk from the GAB folder: 0x%08X", mapi_last_hresult());
+            }
+            return true;
+        }
+        elseif ($amountEntries == 0) {
+            return true;
+        }
         $message = false;
 
         // message not found, create it
@@ -543,7 +572,7 @@ class Kopano extends SyncWorker {
         }
 
         // output log
-        $this->log($log);
+        $this->Log($log);
         return true;
     }
 
@@ -567,7 +596,7 @@ class Kopano extends SyncWorker {
         $folder = $this->getFolder($store, $folderid);
         $table = mapi_folder_getcontentstable($folder);
         if (!$table)
-            $this->Log(sprintf("Kopano->findChunk: Error, unable to read contents table to find chunk '%d': 0x%08X", $chunkId, mapi_last_hresult()));
+            $this->Log(sprintf("Kopano->findChunk: Error, unable to read contents table to find chunk '%s': 0x%08X", $chunkName, mapi_last_hresult()));
 
         $restriction = array(RES_PROPERTY, array(RELOP => RELOP_EQ, ULPROPTAG => PR_SUBJECT, VALUE => $chunkName));
         mapi_table_restrict($table, $restriction);
@@ -764,7 +793,7 @@ class Kopano extends SyncWorker {
             return "";
         }
         elseif ($ret) {
-            $this->Log("Kopano->readPropStream error opening stream: 0x%08X", $ret);
+            $this->Log(sprintf("Kopano->readPropStream error opening stream: 0x%08X", $ret));
             return "";
         }
         $data = "";
@@ -803,5 +832,55 @@ class Kopano extends SyncWorker {
             return false;
 
         return true;
+    }
+
+    /**
+     * Returns the array of groups in which the user is in.
+     *
+     * @param array     $groupsUsers    list of groups and their users
+     * @param string    $user           username
+     *
+     * @access private
+     * @return array
+     */
+    private function getMemberOf($groupsUsers, $user) {
+        // every user is in Everyone group
+        $groups = array('Everyone');
+        foreach ($groupsUsers as $group => $userDetails) {
+            if (in_array($user, $userDetails)) {
+                $groups[] = $group;
+                continue;
+            }
+        }
+        return $groups;
+    }
+
+    /**
+     * Flattens multi-dimensional array similar to array_column() function
+     * which is available since PHP 5.5.
+     *
+     * Input:
+     * Array (
+     *  [0] => Array([973078558] => entry0)
+     *  [1] => Array([973078558] => entry1)
+     *  [2] => Array([973078558] => entry2)
+     *  [3] => Array([973078558] => entry3)
+     *  [4] => Array([973078558] => entry4)
+     * )
+     * Result:
+     * Array (
+     *  [0] => entry0
+     *  [1] => entry1
+     *  [2] => entry2
+     *  [3] => entry3
+     *  [4] => entry4
+     * )
+     *
+     * @param unknown $array
+     * @param unknown $column_name
+     * @return array
+     */
+    private function arrayFlatten($array, $key) {
+        return array_map(function($element) use($key) {return $element[$key];}, $array);
     }
 }
