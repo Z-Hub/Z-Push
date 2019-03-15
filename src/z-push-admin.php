@@ -1079,7 +1079,9 @@ class ZPushAdminCLI {
     }
 
     /**
-     * Fixes the states for potential issues
+     * Fixes the states for potential issues.
+     *
+     * @param string    $username
      *
      * @return
      * @access private

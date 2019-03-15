@@ -914,6 +914,7 @@ class ZPushAdmin {
         $seen = 0;
         $fixed = 0;
         $processedDevices = 0;
+
         if ($username) {
             $devices = self::GetUserDevices($username);
         }
@@ -953,7 +954,6 @@ class ZPushAdmin {
         $processedDevices = 0;
         $processedStates = 0;
         $deletedStates = 0;
-
         if ($username) {
             $devices = self::GetUserDevices($username);
         }
@@ -1027,7 +1027,6 @@ class ZPushAdmin {
      * Fixes hierarchy states writing folderdata states.
      *
      * @param string    $username
-     *
      *
      * @access public
      * @return array(seenDevices, seenHierarchyStates, fixedHierarchyStates, usersWithoutHierarchy)

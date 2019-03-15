@@ -963,12 +963,12 @@ class Utils {
         //ms to sleep between attempts
         $sleep_time = (defined('FILE_STATE_WRITE_SLEEP') ? FILE_STATE_WRITE_SLEEP : 100);
         $i = 1;
-        while (($i <= $attempts) && (($bytes = file_put_contents($tmp, $data)) === false)) {
+        while (($i <= $attempts) && (($res = file_put_contents($tmp, $data)) === false)) {
             ZLog::Write(LOGLEVEL_WARN, sprintf("Utils->SafePutContents: Failed on writing data in tmp - attempt: %d - filename: %s", $i, $tmp));
             $i++;
             usleep($sleep_time * 1000);
         }
-        if ($bytes !== false){
+        if ($res !== false){
             self::FixFileOwner($tmp);
             $i = 1;
             while (($i <= $attempts) && (($res = rename($tmp, $filename)) !== true)) {
@@ -976,9 +976,8 @@ class Utils {
                 $i++;
                 usleep($sleep_time * 1000);
             }
-            if ($res !== true) $bytes = false;
         }
-        return $bytes;
+        return $res;
     }
 
     /**
