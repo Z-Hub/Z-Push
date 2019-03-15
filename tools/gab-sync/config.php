@@ -52,7 +52,7 @@ define('UNIQUEID', 'account');
 
 define('SERVER', 'default:');
 
-define('USERNAME', '');
+define('USERNAME', 'SYSTEM');
 define('PASSWORD', '');
 define('CERTIFICATE', null);
 define('CERTIFICATE_PASSWORD', null);

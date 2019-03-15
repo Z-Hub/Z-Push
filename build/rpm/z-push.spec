@@ -147,6 +147,7 @@ Z-Push for Kopano meta package
 %package -n %name-kopano-gabsync
 Summary:    GAB sync for Kopano
 Group:      Productivity/Networking/Email/Utilities
+Requires:   %name-backend-kopano = %version
 %if 0%{?fedora_version} || 0%{?centos_version} || 0%{?rhel_version}
 Requires:   php-mapi-webapp
 %else
@@ -159,7 +160,7 @@ Synchronizes a Kopano global address book
 %package -n %name-kopano-gab2contacts
 Summary:    GAB sync into a contacts folder for Kopano
 Group:      Productivity/Networking/Email/Utilities
-Requires:   %name-common = %version
+Requires:   %name-backend-kopano = %version
 %if 0%{?fedora_version} || 0%{?centos_version} || 0%{?rhel_version}
 Requires:   php-mapi-webapp
 %else
@@ -362,6 +363,7 @@ mkdir -p "$b/%zpush_dir/tools"
 cp -a tools/gab-sync "$b/%zpush_dir/tools/"
 mv "$b/%zpush_dir/tools/gab-sync/config.php" "$cdir/gabsync.conf.php";
 ln -s "%_sysconfdir/z-push/gabsync.conf.php" "$b/%zpush_dir/tools/gab-sync/config.php";
+sed -i -s "s/PATH_TO_ZPUSH', '\.\.\/\.\.\/src\/')/PATH_TO_ZPUSH', '\/usr\/share\/z-push\/')/" "$b/%zpush_dir/tools/gab-sync/gab-sync.php"
 mkdir -p "$b/%_bindir"
 ln -s "%zpush_dir/tools/gab-sync/gab-sync.php" "$b/%_bindir/z-push-gabsync";
 
