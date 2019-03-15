@@ -232,7 +232,7 @@ class Kopano extends ContactWorker {
             if (isset($entry[PR_TITLE]))                                $contact->jobtitle              = $entry[PR_TITLE];
             if (isset($entry[PR_SMTP_ADDRESS]))                         $contact->email1address         = $entry[PR_SMTP_ADDRESS];
             if (isset($entry[PR_BUSINESS_TELEPHONE_NUMBER]))            $contact->businessphonenumber   = $entry[PR_BUSINESS_TELEPHONE_NUMBER];
-            if (isset($entry[PR_PRIMARY_FAX_NUMBER]))                   $contact->businessphonenumber   = $entry[PR_PRIMARY_FAX_NUMBER];
+            if (isset($entry[PR_PRIMARY_FAX_NUMBER]))                   $contact->businessfaxnumber     = $entry[PR_PRIMARY_FAX_NUMBER];
             if (isset($entry[PR_POSTAL_ADDRESS]))                       $contact->businessstreet        = $entry[PR_POSTAL_ADDRESS];
             if (isset($entry[PR_BUSINESS_ADDRESS_POSTAL_CODE]))         $contact->businesspostalcode    = $entry[PR_BUSINESS_ADDRESS_POSTAL_CODE];
             if (isset($entry[PR_BUSINESS_ADDRESS_STATE_OR_PROVINCE]))   $contact->businessstate         = $entry[PR_BUSINESS_ADDRESS_STATE_OR_PROVINCE];
