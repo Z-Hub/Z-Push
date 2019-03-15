@@ -86,6 +86,7 @@ class ZPushAdminCLI {
     const COMMAND_LISTALLSHARES = 14;
     const COMMAND_LISTSTORESHARES = 15;
     const COMMAND_LISTFOLDERSHARES = 16;
+    const COMMAND_LISTFOLDERS = 17;
 
     const TYPE_OPTION_EMAIL = "email";
     const TYPE_OPTION_CALENDAR = "calendar";
@@ -140,7 +141,8 @@ class ZPushAdminCLI {
                 "\tresync -t hierarchy -u USER -d DEVICE\t Resynchronize the folder hierarchy data for an optional USER and optional DEVICE.\n" .
                 "\tclearloop\t\t\t\t Clears system wide loop detection data.\n" .
                 "\tclearloop -d DEVICE -u USER\t\t Clears all loop detection data of a device DEVICE and an optional user USER.\n" .
-                "\tfixstates\t\t\t\t Checks the states for integrity and fixes potential issues.\n\n" .
+                "\tfixstates\t\t\t\t Checks the states for integrity and fixes potential issues.\n" .
+                "\tfixstates -u USER\t\t\t Checks the states for integrity and fixes potential issues of user USER.\n\n" .
                 "\taddshared -u USER -d DEVICE -n FOLDERNAME -o STORE -t TYPE -f FOLDERID -g FLAGS\n" .
                         "\t\t\t\t\t\t Adds a shared folder for a user.\n" .
                         "\t\t\t\t\t\t USER is required. If no DEVICE is given, the shared folder will be added to all of the devices of the user.\n" .
@@ -160,6 +162,10 @@ class ZPushAdminCLI {
                         "\t\t\t\t\t\t STORE - whose shared folders to list, e.g. \"SYSTEM\" (for public folders) or a username.\n" .
                         "\t\t\t\t\t\t FOLDERID - list who opened the shared folder.\n" .
                         "\t\t\t\t\t\t If both STORE and FOLDERID are provided the script will only list who opened the folder ignoring the STORE parameter.\n" .
+                "\tlistfolders -u USER -d DEVICE\n".
+                        "\t\t\t\t\t\t Returns each folder and FOLDERID of user USER and device DEVICE. Useful for getting FOLDERID to be used with the command: resync -t FOLDERID -u USER.\n".
+                        "\t\t\t\t\t\t Note that if a device is offline, broken or not being synched for some time, this list will not be updated. If folders were created/renamed/removed\n".
+                        "\t\t\t\t\t\t after the last synchronization, this will not be reflected in this list.\n".
                 "\n";
     }
 
@@ -412,6 +418,10 @@ class ZPushAdminCLI {
                     self::$command = self::COMMAND_LISTFOLDERSHARES;
                 break;
 
+            case "listfolders":
+                self::$command = self::COMMAND_LISTFOLDERS;
+                break;
+
             case "help":
                 break;
 
@@ -525,7 +535,12 @@ class ZPushAdminCLI {
                 break;
 
             case self::COMMAND_FIXSTATES:
-                self::CommandFixStates();
+                if (self::$user === false) {
+                    self::CommandFixStates();
+                }
+                else {
+                    self::CommandFixStates(self::$user);
+                }
                 break;
 
             case self::COMMAND_ADDSHARED:
@@ -540,6 +555,10 @@ class ZPushAdminCLI {
             case self::COMMAND_LISTSTORESHARES:
             case self::COMMAND_LISTFOLDERSHARES:
                 self::CommandListShares();
+                break;
+
+            case self::COMMAND_LISTFOLDERS:
+                self::CommandListFolders();
                 break;
         }
         echo "\n";
@@ -917,6 +936,55 @@ class ZPushAdminCLI {
     }
 
     /**
+     * Command to list each folder and FOLDERID of user USER and device DEVICE.
+     *
+     * @access public
+     * @return void
+     */
+    static public function CommandListFolders() {
+
+        $device = ZPushAdmin::GetDeviceDetails(self::$device, self::$user, true);
+        if (! $device instanceof ASDevice) {
+            printf("Folder details failed: %s\n", ZLog::GetLastMessage(LOGLEVEL_ERROR));
+            return false;
+        }
+
+        echo "Folders list of DeviceId: ".self::$device."\n";
+        echo "-----------------------------------------------------------------------\n";
+        $folders = $device->GetAllFolderIds();
+        $synchedFolders = 0;
+        $notSynchedFolders = 0;
+        $sharedFolders = 0;
+        $hc = $device->GetHierarchyCache();
+        echo "FolderID\t\t\t\t\tShortID\tDisplay Name\n";
+        echo "-----------------------------------------------------------------------\n";
+        foreach ($folders as $folderid) {
+            if ($device->GetFolderUUID($folderid)) {
+                $synchedFolders++;
+                $notSynced = '';
+            }
+            else {
+                $notSynchedFolders++;
+                $notSynced = "\t"."NOT SYNCHED";
+            }
+            $folder = $hc->GetFolder($folderid);
+            $name = $folder ? $folder->displayname : "unknown";
+            if (strcmp($name, 'unknown') == 0) {
+                echo "\t\t\t\t\t";
+            }
+            echo $folder->BackendId."\t".$folderid."\t".$name.$notSynced."\n";
+            if (Utils::GetFolderOriginFromId($folderid) != DeviceManager::FLD_ORIGIN_USER) {
+                $sharedFolders++;
+            }
+        }
+        echo "\nTotal folders: ".count($folders)."\n";
+        echo "Synchronized folders: ".$synchedFolders."\n";
+        echo "Not synchronized folders: ".$notSynchedFolders."\n";
+        echo "Shared/impersonated folders: ".$sharedFolders."\n";
+        echo "Short folder Ids: ". ($device->HasFolderIdMapping() ? "Yes":"No") ."\n";
+    }
+
+    /**
      * Resynchronizes a folder type of a device & user
      *
      * @param string    $deviceId       the id of the device
@@ -1011,41 +1079,43 @@ class ZPushAdminCLI {
     }
 
     /**
-     * Fixes the states for potential issues
+     * Fixes the states for potential issues.
+     *
+     * @param string    $username
      *
      * @return
      * @access private
      */
-    static private function CommandFixStates() {
+    static private function CommandFixStates($username=false) {
         echo "Validating and fixing states (this can take some time):\n";
 
         echo "\t".date('H:i:s')." Checking username casings: ";
-        if ($stat = ZPushAdmin::FixStatesDifferentUsernameCases())
+        if ($stat = ZPushAdmin::FixStatesDifferentUsernameCases($username))
             printf("Processed: %d - Converted: %d - Removed: %d\n", $stat[0], $stat[1], $stat[2]);
         else
             echo ZLog::GetLastMessage(LOGLEVEL_ERROR) . "\n";
 
         // fixes ZP-339
         echo "\t".date('H:i:s')." Checking available devicedata & user linking: ";
-        if ($stat = ZPushAdmin::FixStatesDeviceToUserLinking())
+        if ($stat = ZPushAdmin::FixStatesDeviceToUserLinking($username))
             printf("Processed: %d - Fixed: %d\n", $stat[0], $stat[1]);
         else
             echo ZLog::GetLastMessage(LOGLEVEL_ERROR) . "\n";
 
         echo "\t".date('H:i:s')." Checking for unreferenced (obsolete) state files: ";
-        if (($stat = ZPushAdmin::FixStatesUserToStatesLinking()) !== false)
+        if (($stat = ZPushAdmin::FixStatesUserToStatesLinking($username)) !== false)
             printf("Processed: %d - Deleted: %d\n",  $stat[0], $stat[1]);
         else
             echo ZLog::GetLastMessage(LOGLEVEL_ERROR) . "\n";
 
         echo "\t".date('H:i:s')." Checking for hierarchy folder data state: ";
-        if (($stat = ZPushAdmin::FixStatesHierarchyFolderData()) !== false)
+        if (($stat = ZPushAdmin::FixStatesHierarchyFolderData($username)) !== false)
             printf("Devices: %d - Processed: %d - Fixed: %d - Device+User without hierarchy: %d\n",  $stat[0], $stat[1], $stat[2], $stat[3]);
         else
             echo ZLog::GetLastMessage(LOGLEVEL_ERROR) . "\n";
 
         echo "\t".date('H:i:s')." Checking flags of shared folders: ";
-        if (($stat = ZPushAdmin::FixStatesAdditionalFolders()) !== false)
+        if (($stat = ZPushAdmin::FixStatesAdditionalFolders($username)) !== false)
             printf("Devices: %d - Devices with additional folders: %d - Fixed: %d\n",  $stat[0], $stat[1], $stat[2]);
         else
             echo ZLog::GetLastMessage(LOGLEVEL_ERROR) . "\n";

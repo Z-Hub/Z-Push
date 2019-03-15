@@ -33,6 +33,7 @@ class ZPushAdmin {
 
     public static $status = self::STATUS_SUCCESS;
     public static $devices;
+    public static $userDevices;
 
     /**
      * List devices known to Z-Push.
@@ -818,18 +819,25 @@ class ZPushAdmin {
     }
 
     /**
-     * Fixes states with usernames in different cases
+     * Fixes states with usernames in different cases.
+     *
+     * @param string    $username
      *
      * @return boolean
      * @access public
      */
-    static public function FixStatesDifferentUsernameCases() {
+    static public function FixStatesDifferentUsernameCases($username=false) {
         $processed = 0;
         $dropedUsers = 0;
         $fixedUsers = 0;
         $processedDevices = 0;
 
-        $devices = self::GetAllDevices();
+        if ($username) {
+            $devices = self::GetUserDevices($username);
+        }
+        else {
+            $devices = self::GetAllDevices();
+        }
         $devicesCount = count($devices);
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::FixStatesDifferentUsernameCases(): found %d devices", $devicesCount));
         foreach ($devices as $devid) {
@@ -895,17 +903,25 @@ class ZPushAdmin {
     }
 
     /**
-     * Fixes states of available device data to the user linking
+     * Fixes states of available device data to the user linking.
+     *
+     * @param string    $username
      *
      * @return int
      * @access public
      */
-    static public function FixStatesDeviceToUserLinking() {
+    static public function FixStatesDeviceToUserLinking($username=false) {
         $seen = 0;
         $fixed = 0;
         $processedDevices = 0;
 
-        $devices = self::GetAllDevices();
+        if ($username) {
+            $devices = self::GetUserDevices($username);
+        }
+        else {
+            $devices = self::GetAllDevices();
+        }
+
         $devicesCount = count($devices);
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::FixStatesDeviceToUserLinking(): found %d devices", $devicesCount));
         foreach ($devices as $devid) {
@@ -926,19 +942,25 @@ class ZPushAdmin {
 
     /**
      * Fixes states of the user linking to the states
-     * and removes all obsolete states
+     * and removes all obsolete states.
+     *
+     * @param string    $username
      *
      * @return boolean
      * @access public
      */
-    static public function FixStatesUserToStatesLinking() {
+    static public function FixStatesUserToStatesLinking($username=false) {
         $processed = 0;
         $deleted = 0;
         $processedDevices = 0;
         $processedStates = 0;
         $deletedStates = 0;
-
-        $devices = self::GetAllDevices();
+        if ($username) {
+            $devices = self::GetUserDevices($username);
+        }
+        else {
+            $devices = self::GetAllDevices();
+        }
         $devicesCount = count($devices);
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::FixStatesUserToStatesLinking(): found %d devices", $devicesCount));
         foreach ($devices as $devid) {
@@ -1005,17 +1027,24 @@ class ZPushAdmin {
     /**
      * Fixes hierarchy states writing folderdata states.
      *
+     * @param string    $username
+     *
      * @access public
      * @return array(seenDevices, seenHierarchyStates, fixedHierarchyStates, usersWithoutHierarchy)
      */
-    static public function FixStatesHierarchyFolderData() {
+    static public function FixStatesHierarchyFolderData($username=false) {
         $devices = 0;
         $seen = 0;
         $nouuid = 0;
         $fixed = 0;
         $processedDevices = 0;
 
-        $asdevices = self::GetAllDevices();
+        if ($username) {
+            $asdevices = self::GetUserDevices($username);
+        }
+        else {
+            $asdevices = self::GetAllDevices();
+        }
         $devicesCount = count($asdevices);
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::FixStatesHierarchyFolderData(): found %d devices", $devicesCount));
         foreach ($asdevices as $devid) {
@@ -1087,16 +1116,23 @@ class ZPushAdmin {
     /**
      * Fixes missing flags or parentids on additional folders.
      *
+     * @param string    $username
+     *
      * @access public
      * @return array(seenDevices, devicesWithAdditionalFolders, fixedAdditionalFolders)
      */
-    static public function FixStatesAdditionalFolders() {
+    static public function FixStatesAdditionalFolders($username=false) {
         $devices = 0;
         $devicesWithAddFolders = 0;
         $fixed = 0;
         $processedDevices = 0;
 
-        $asdevices = self::GetAllDevices();
+        if ($username) {
+            $asdevices = self::GetUserDevices($username);
+        }
+        else {
+            $asdevices = self::GetAllDevices();
+        }
         $devicesCount = count($asdevices);
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("ZPushAdmin::FixStatesAdditionalFolders(): found %d devices", $devicesCount));
         foreach ($asdevices as $devid) {
@@ -1160,6 +1196,45 @@ class ZPushAdmin {
             }
         }
         return self::$devices;
+    }
+
+     /**
+     * Returns the list of all devices of a specific user.
+     *
+     * @access public
+     * @return array
+     */
+    public static function GetUserDevices($username) {
+        if (empty(self::$userDevices) && empty(self::$devices)) {
+            if (defined('LOGFIXSTATES') && LOGFIXSTATES === true){
+                ZLog::Write(LOGLEVEL_INFO, sprintf("ZPushAdmin::GetUserDevices(): Getting all devices for '%s'", $username));
+            }
+            $devices = self::GetAllDevices();
+            $devicesCount = count($devices);
+            self::$userDevices = array();
+            $processed = 0;
+
+            foreach ($devices as $devid) {
+                if (defined('LOGFIXSTATES') && LOGFIXSTATES === true){
+                    ZLog::Write(LOGLEVEL_INFO, sprintf("ZPushAdmin::GetUserDevices(): Processing %d on %d . Device %s", ++$processed , $devicesCount, $devid));
+                }
+                $users = self::ListUsers($devid);
+                foreach ($users as $user) {
+                    if ($user === $username){
+                        ZLog::Write(LOGLEVEL_INFO, sprintf("ZPushAdmin::GetUserDevices(): Found user '%s' into device %s", $username , $devid));
+                        self::$userDevices[] = $devid;
+                        continue;
+                    }
+                }
+            }
+
+            if (empty(self::$userDevices) && $username!==false && defined('LOGFIXSTATES') && LOGFIXSTATES === true){
+                ZLog::Write(LOGLEVEL_INFO, sprintf("ZPushAdmin::GetUserDevices(): No devices found for '%s'", $username));
+            }else if(defined('LOGFIXSTATES') && LOGFIXSTATES === true){
+                ZLog::Write(LOGLEVEL_INFO, sprintf("ZPushAdmin::GetUserDevices(): Found user '%s' into '%d' devices", $username , count(self::$userDevices)));
+            }
+        }
+        return self::$userDevices;
     }
 
 }
