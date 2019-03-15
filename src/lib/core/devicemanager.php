@@ -968,6 +968,26 @@ class DeviceManager {
     }
 
     /**
+     * Indicates if a folder is synchronizing by the saved status.
+     *
+     * @param string     $folderid          folder id
+     *
+     * @access public
+     * @return boolean
+     */
+    public function HasFolderSyncStatus($folderid) {
+        $currentStatus = $this->device->GetFolderSyncStatus($folderid);
+
+        // status available ?
+        $hasStatus = isset($currentStatus[ASDevice::FOLDERSYNCSTATUS]);
+        if ($hasStatus) {
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("HasFolderSyncStatus(): saved folder status for %s: %s", $folderid, $currentStatus[ASDevice::FOLDERSYNCSTATUS]));
+        }
+
+        return $hasStatus;
+    }
+
+    /**
      * Returns the indicator if the FolderSync was completed successfully  (all folders synchronized)
      *
      * @access public
