@@ -86,6 +86,7 @@ class ZPushAdminCLI {
     const COMMAND_LISTALLSHARES = 14;
     const COMMAND_LISTSTORESHARES = 15;
     const COMMAND_LISTFOLDERSHARES = 16;
+    const COMMAND_LISTFOLDERS = 17;
 
     const TYPE_OPTION_EMAIL = "email";
     const TYPE_OPTION_CALENDAR = "calendar";
@@ -160,6 +161,10 @@ class ZPushAdminCLI {
                         "\t\t\t\t\t\t STORE - whose shared folders to list, e.g. \"SYSTEM\" (for public folders) or a username.\n" .
                         "\t\t\t\t\t\t FOLDERID - list who opened the shared folder.\n" .
                         "\t\t\t\t\t\t If both STORE and FOLDERID are provided the script will only list who opened the folder ignoring the STORE parameter.\n" .
+                "\tlistfolders -u USER -d DEVICE\n".
+                        "\t\t\t\t\t\t Returns each folder and FOLDERID of user USER and device DEVICE. Useful for getting FOLDERID to be used with the command: resync -t FOLDERID -u USER.\n".
+                        "\t\t\t\t\t\t Note that if a device is offline, broken or not being synched for some time, this list will not be updated. If folders were created/renamed/removed\n".
+                        "\t\t\t\t\t\t after the last synchronization, this will not be reflected in this list.\n".
                 "\n";
     }
 
@@ -412,6 +417,10 @@ class ZPushAdminCLI {
                     self::$command = self::COMMAND_LISTFOLDERSHARES;
                 break;
 
+            case "listfolders":
+                self::$command = self::COMMAND_LISTFOLDERS;
+                break;
+
             case "help":
                 break;
 
@@ -540,6 +549,10 @@ class ZPushAdminCLI {
             case self::COMMAND_LISTSTORESHARES:
             case self::COMMAND_LISTFOLDERSHARES:
                 self::CommandListShares();
+                break;
+
+            case self::COMMAND_LISTFOLDERS:
+                self::CommandListFolders();
                 break;
         }
         echo "\n";
@@ -914,6 +927,55 @@ class ZPushAdminCLI {
             print("Displaying opened shares of all users.\n");
             self::printShares($shares);
         }
+    }
+
+    /**
+     * Command to list each folder and FOLDERID of user USER and device DEVICE.
+     *
+     * @access public
+     * @return void
+     */
+    static public function CommandListFolders() {
+
+        $device = ZPushAdmin::GetDeviceDetails(self::$device, self::$user, true);
+        if (! $device instanceof ASDevice) {
+            printf("Folder details failed: %s\n", ZLog::GetLastMessage(LOGLEVEL_ERROR));
+            return false;
+        }
+
+        echo "Folders list of DeviceId: ".self::$device."\n";
+        echo "-----------------------------------------------------------------------\n";
+        $folders = $device->GetAllFolderIds();
+        $synchedFolders = 0;
+        $notSynchedFolders = 0;
+        $sharedFolders = 0;
+        $hc = $device->GetHierarchyCache();
+        echo "FolderID\t\t\t\t\tShortID\tDisplay Name\n";
+        echo "-----------------------------------------------------------------------\n";
+        foreach ($folders as $folderid) {
+            if ($device->GetFolderUUID($folderid)) {
+                $synchedFolders++;
+                $notSynced = '';
+            }
+            else {
+                $notSynchedFolders++;
+                $notSynced = "\t"."NOT SYNCHED";
+            }
+            $folder = $hc->GetFolder($folderid);
+            $name = $folder ? $folder->displayname : "unknown";
+            if (strcmp($name, 'unknown') == 0) {
+                echo "\t\t\t\t\t";
+            }
+            echo $folder->BackendId."\t".$folderid."\t".$name.$notSynced."\n";
+            if (Utils::GetFolderOriginFromId($folderid) != DeviceManager::FLD_ORIGIN_USER) {
+                $sharedFolders++;
+            }
+        }
+        echo "\nTotal folders: ".count($folders)."\n";
+        echo "Synchronized folders: ".$synchedFolders."\n";
+        echo "Not synchronized folders: ".$notSynchedFolders."\n";
+        echo "Shared/impersonated folders: ".$sharedFolders."\n";
+        echo "Short folder Ids: ". ($device->HasFolderIdMapping() ? "Yes":"No") ."\n";
     }
 
     /**
