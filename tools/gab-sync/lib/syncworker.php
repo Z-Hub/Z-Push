@@ -164,6 +164,18 @@ abstract class SyncWorker {
             }
         }
 
+        // remove empty chunks
+        if ($doWrite) {
+            $chunks = array_keys($chunks);
+            if (count($chunks) < AMOUNT_OF_CHUNKS) {
+                $emptyChunks = array_diff(range(0, AMOUNT_OF_CHUNKS - 1), $chunks);
+                foreach ($emptyChunks as $emptyChunk) {
+                    $chunkName = $this->chunkType . "/". $emptyChunk;
+                    $this->setChunkData($folderid, $chunkName, 0, null, null, $gabId, $gabName);
+                }
+            }
+        }
+
         // Calc the ideal amount of chunks (round up to 5)
         //   by size: we want to have chunks with arount 500 KB of data in it
         //   by entries: max 10 entries per chunk
