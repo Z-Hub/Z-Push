@@ -646,8 +646,17 @@ class DeviceManager {
         $this->setLatestFolder($folderid);
 
         // detect if this is a loop condition
-        if ($this->loopdetection->Detect($folderid, $uuid, $statecounter, $items, $queuedmessages))
-            $items = ($items == 0) ? 0: 1+($this->loopdetection->IgnoreNextMessage(false)?1:0) ;
+        $loop = $this->loopdetection->Detect($folderid, $uuid, $statecounter, $items, $queuedmessages);
+        if ($loop !== false) {
+            if ($loop === true) {
+                $items = ($items == 0) ? 0: 1+($this->loopdetection->IgnoreNextMessage(false)?1:0) ;
+            }
+            else {
+                // we got a new suggested window size
+                $items = $loop;
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("Mobile loop pre stage detected! Forcing smaller window size of %d before entering loop detection mode", $items));
+            }
+        }
 
         if ($items >= 0 && $items <= 2)
             ZLog::Write(LOGLEVEL_WARN, sprintf("Mobile loop detected! Messages sent to the mobile will be restricted to %d items in order to identify the conflict", $items));
