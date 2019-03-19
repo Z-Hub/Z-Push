@@ -781,13 +781,13 @@ class LoopDetection extends InterProcessData {
                 else if ($current['count'] == $counter && $current['queued'] > 0) {
 
                     if (!isset($current['loopcount'])) {
-                        # ZP-1213 we are potentially synching a lot of data, e.g. OL with 512 WindowSize
-                        # In case there are more then 40 items in the last request,we limit to 25 items
-                        # before entering 1-by-1 loop detection if counter is re-requested
+                        // ZP-1213 we are potentially synching a lot of data, e.g. OL with 512 WindowSize
+                        // In case there are more then 40 items in the last request, we limit to 25 items
+                        // before entering 1-by-1 loop detection if counter is re-requested
                         if ($maxItems > 40 && !isset($current['windowLimit'])) {
                             // case 3.0) we have just encountered a loop, but with a big window size, lower window first
                             ZLog::Write(LOGLEVEL_DEBUG, sprintf("LoopDetection->Detect(): case 3.0 detected - big windowsize of %d, lowering before entering loop mode", $maxItems));
-                            # return suggested new window size
+                            // return suggested new window size
                             $current['windowLimit'] = 25;
                             $loop = $current['windowLimit'];
                         }

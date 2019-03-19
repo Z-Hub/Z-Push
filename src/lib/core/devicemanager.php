@@ -652,7 +652,7 @@ class DeviceManager {
                 $items = ($items == 0) ? 0: 1+($this->loopdetection->IgnoreNextMessage(false)?1:0) ;
             }
             else {
-                # we got a new suggested window size
+                // we got a new suggested window size
                 $items = $loop;
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("Mobile loop pre stage detected! Forcing smaller window size of %d before entering loop detection mode", $items));
             }
