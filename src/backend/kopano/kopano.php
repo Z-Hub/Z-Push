@@ -2262,7 +2262,7 @@ class BackendKopano implements IBackend, ISearchProvider {
      * @return array|boolean
      */
     private function resolveRecipientGAL($to, $maxAmbiguousRecipients) {
-        ZLog::Write(LOGLEVEL_WBXML, sprintf("Resolving recipient '%s' in GAL", $to));
+        ZLog::Write(LOGLEVEL_WBXML, sprintf("Kopano->resolveRecipientGAL(): Resolving recipient '%s' in GAL", $to));
         $addrbook = $this->getAddressbook();
         // FIXME: create a function to get the adressbook contentstable
         $ab_entryid = mapi_ab_getdefaultdir($addrbook);
@@ -2272,7 +2272,7 @@ class BackendKopano implements IBackend, ISearchProvider {
             $table = mapi_folder_getcontentstable($ab_dir);
 
         if (!$table) {
-            ZLog::Write(LOGLEVEL_WARN, sprintf("Unable to open addressbook:0x%X", mapi_last_hresult()));
+            ZLog::Write(LOGLEVEL_WARN, sprintf("Kopano->resolveRecipientGAL(): Unable to open addressbook:0x%X", mapi_last_hresult()));
             return false;
         }
 
@@ -2288,20 +2288,27 @@ class BackendKopano implements IBackend, ISearchProvider {
                 $rowsToQuery = 1;
             }
             elseif ($querycnt > 1 && $maxAmbiguousRecipients == 0) {
-                ZLog::Write(LOGLEVEL_INFO, sprintf("GAL search found %d recipients but the device hasn't requested ambiguous recipients", $querycnt));
+                ZLog::Write(LOGLEVEL_INFO, sprintf("Kopano->resolveRecipientGAL(): GAL search found %d recipients but the device hasn't requested ambiguous recipients", $querycnt));
                 return $recipientGal;
+            }
+            elseif ($querycnt > 1 && $maxAmbiguousRecipients == 1) {
+                $rowsToQuery = $querycnt;
             }
             // get the certificate every time because caching the certificate is less expensive than opening addressbook entry again
             $abentries = mapi_table_queryrows($table, array(PR_ENTRYID, PR_DISPLAY_NAME, PR_EMS_AB_TAGGED_X509_CERT, PR_OBJECT_TYPE, PR_SMTP_ADDRESS), 0, $rowsToQuery);
             for ($i = 0, $nrEntries = count($abentries); $i < $nrEntries; $i++) {
+                if (strcasecmp($abentries[$i][PR_SMTP_ADDRESS], $to) !== 0 && $maxAmbiguousRecipients == 1) {
+                    ZLog::Write(LOGLEVEL_INFO, sprintf("Kopano->resolveRecipientGAL(): maxAmbiguousRecipients is 1 and found non-matching user (to '%s' found: '%s')", $to, $abentries[$i][PR_SMTP_ADDRESS]));
+                    continue;
+                }
                 if ($abentries[$i][PR_OBJECT_TYPE] == MAPI_DISTLIST) {
                     // dist lists must be expanded into their members
-                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("'%s' is a dist list. Expand it to members.", $to));
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("Kopano->resolveRecipientGAL(): '%s' is a dist list. Expand it to members.", $to));
                     $distList = mapi_ab_openentry($addrbook, $abentries[$i][PR_ENTRYID]);
                     $distListContent = mapi_folder_getcontentstable($distList);
                     $distListMembers = mapi_table_queryallrows($distListContent, array(PR_ENTRYID, PR_DISPLAY_NAME, PR_EMS_AB_TAGGED_X509_CERT));
                     for ($j = 0, $nrDistListMembers = mapi_table_getrowcount($distListContent); $j < $nrDistListMembers; $j++) {
-                        ZLog::Write(LOGLEVEL_WBXML, sprintf("distlist's '%s' member", $to, $distListMembers[$j][PR_DISPLAY_NAME]));
+                        ZLog::Write(LOGLEVEL_WBXML, sprintf("Kopano->resolveRecipientGAL(): distlist's '%s' member", $to, $distListMembers[$j][PR_DISPLAY_NAME]));
                         $recipientGal[] = $this->createResolveRecipient(SYNC_RESOLVERECIPIENTS_TYPE_GAL, $to, $distListMembers[$j], $nrDistListMembers);
                     }
                 }
@@ -2310,11 +2317,11 @@ class BackendKopano implements IBackend, ISearchProvider {
                 }
             }
 
-            ZLog::Write(LOGLEVEL_WBXML, "Found a recipient in GAL");
+            ZLog::Write(LOGLEVEL_WBXML, "Kopano->resolveRecipientGAL(): Found a recipient in GAL");
             return $recipientGal;
         }
         else {
-            ZLog::Write(LOGLEVEL_WARN, sprintf("No recipient found for: '%s' in GAL", $to));
+            ZLog::Write(LOGLEVEL_WARN, sprintf("Kopano->resolveRecipientGAL(): No recipient found for: '%s' in GAL", $to));
             return SYNC_RESOLVERECIPSSTATUS_RESPONSE_UNRESOLVEDRECIP;
         }
         return false;
