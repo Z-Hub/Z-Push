@@ -105,6 +105,29 @@ abstract class SyncWorker {
         }
 
         $this->Log(sprintf("Starting %sGAB sync to store '%s' %s on id '%s'", (!$doWrite?"simulated ":""), HIDDEN_FOLDERSTORE, ($gabId?"of '".$gabName."' (".$gabId.")":""), $folderid));
+        if (GAB_SYNC_TYPES != GAB_SYNC_ALL) {
+            $ignored = '';
+            if (! (GAB_SYNC_TYPES & GAB_SYNC_USER)) {
+                $ignored .= 'users, ';
+            }
+            if (! (GAB_SYNC_TYPES & GAB_SYNC_CONTACT)) {
+                $ignored .= 'contacts, ';
+            }
+            if (! (GAB_SYNC_TYPES & GAB_SYNC_GROUP)) {
+                $ignored .= 'groups, ';
+            }
+            if (! (GAB_SYNC_TYPES & GAB_SYNC_ROOM)) {
+                $ignored .= 'rooms, ';
+            }
+            if (! (GAB_SYNC_TYPES & GAB_SYNC_EQUIPMENT)) {
+                $ignored .= 'equipments, ';
+            }
+
+            if (strrpos($ignored, ', ') == strlen($ignored) - 2) {
+                $ignored = substr($ignored, 0, -2);
+            }
+            $this->Log(sprintf("GAB sync will ignore %s.", $ignored));
+        }
 
         // remove all messages that do not match the current $chunkType
         if ($doWrite)
