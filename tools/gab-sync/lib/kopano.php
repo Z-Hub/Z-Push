@@ -384,6 +384,12 @@ class Kopano extends SyncWorker {
                 $this->Log(sprintf("Kopano->GetGAB(): Ignoring user '%s' as account is hidden", $entry[PR_ACCOUNT]));
                 continue;
             }
+            // ignore if user sync is disabled
+            if (isset($entry[PR_DISPLAY_TYPE_EX]) && $entry[PR_DISPLAY_TYPE_EX] == DT_MAILUSER) {
+                if (! (GAB_SYNC_TYPES & GAB_SYNC_USER)) {
+                    continue;
+                }
+            }
 
             $a = new GABEntry();
             $a->type = GABEntry::CONTACT;
@@ -396,6 +402,9 @@ class Kopano extends SyncWorker {
             }
             // is this a group?
             if (array_key_exists($entry[PR_ACCOUNT], $groups)) {
+                if (! (GAB_SYNC_TYPES & GAB_SYNC_GROUP)) {
+                    continue;
+                }
                 $a->type = GABEntry::GROUP;
                 $groupentry = mapi_ab_openentry($addrbook, $entry[PR_ENTRYID]);
                 $grouptable = @mapi_folder_getcontentstable($groupentry, MAPI_DEFERRED_ERRORS);
@@ -420,10 +429,22 @@ class Kopano extends SyncWorker {
                     }
                 }
             }
-            else if (isset($entry[PR_DISPLAY_TYPE_EX]) && $entry[PR_DISPLAY_TYPE_EX] == DT_ROOM) {
+            elseif (isset($entry[PR_DISPLAY_TYPE_EX]) && $entry[PR_DISPLAY_TYPE_EX] == DT_REMOTE_MAILUSER) {
+                if (! (GAB_SYNC_TYPES & GAB_SYNC_CONTACT)) {
+                    continue;
+                }
+                $a->type = GABEntry::CONTACT;
+            }
+            elseif (isset($entry[PR_DISPLAY_TYPE_EX]) && $entry[PR_DISPLAY_TYPE_EX] == DT_ROOM) {
+                if (! (GAB_SYNC_TYPES & GAB_SYNC_ROOM)) {
+                    continue;
+                }
                 $a->type = GABEntry::ROOM;
             }
-            else if (isset($entry[PR_DISPLAY_TYPE_EX]) && $entry[PR_DISPLAY_TYPE_EX] ==  DT_EQUIPMENT) {
+            elseif (isset($entry[PR_DISPLAY_TYPE_EX]) && $entry[PR_DISPLAY_TYPE_EX] == DT_EQUIPMENT) {
+                if (! (GAB_SYNC_TYPES & GAB_SYNC_EQUIPMENT)) {
+                    continue;
+                }
                 $a->type = GABEntry::EQUIPMENT;
             }
 
