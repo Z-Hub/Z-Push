@@ -977,8 +977,8 @@ class BackendCalDAV extends BackendDiff {
             case "C":
                 $vevent = $this->_ParseASEventToVEvent($vcal, $data);
                 $vevent->UID = $id;
+                $exceptions = array();
                 if (isset($data->exceptions) && is_array($data->exceptions)) {
-                    $exceptions = array();
                     foreach ($data->exceptions as $ex) {
                         if (isset($ex->deleted) && $ex->deleted == 1) {
                             if ($data->alldayevent == 1) {
