@@ -25,12 +25,12 @@
 
 include_once("contactworker.php");
 include_once("synccontact.php");
-include_once(PATH_TO_ZPUSH .'backend/kopano/mapi/mapi.util.php');
-include_once(PATH_TO_ZPUSH .'backend/kopano/mapi/mapidefs.php');
-include_once(PATH_TO_ZPUSH .'backend/kopano/mapi/mapitags.php');
-include_once(PATH_TO_ZPUSH .'backend/kopano/mapi/mapicode.php');
-include_once(PATH_TO_ZPUSH .'backend/kopano/mapi/mapiguid.php');
-include_once(PATH_TO_ZPUSH .'lib/utils/utils.php');
+include_once('backend/kopano/mapi/mapi.util.php');
+include_once('backend/kopano/mapi/mapidefs.php');
+include_once('backend/kopano/mapi/mapitags.php');
+include_once('backend/kopano/mapi/mapicode.php');
+include_once('backend/kopano/mapi/mapiguid.php');
+include_once('lib/utils/utils.php');
 
 if (!defined('PR_EMS_AB_THUMBNAIL_PHOTO')) {
     define('PR_EMS_AB_THUMBNAIL_PHOTO', mapi_prop_tag(PT_BINARY, 0x8C9E));
@@ -232,7 +232,7 @@ class Kopano extends ContactWorker {
             if (isset($entry[PR_TITLE]))                                $contact->jobtitle              = $entry[PR_TITLE];
             if (isset($entry[PR_SMTP_ADDRESS]))                         $contact->email1address         = $entry[PR_SMTP_ADDRESS];
             if (isset($entry[PR_BUSINESS_TELEPHONE_NUMBER]))            $contact->businessphonenumber   = $entry[PR_BUSINESS_TELEPHONE_NUMBER];
-            if (isset($entry[PR_PRIMARY_FAX_NUMBER]))                   $contact->businessphonenumber   = $entry[PR_PRIMARY_FAX_NUMBER];
+            if (isset($entry[PR_PRIMARY_FAX_NUMBER]))                   $contact->businessfaxnumber     = $entry[PR_PRIMARY_FAX_NUMBER];
             if (isset($entry[PR_POSTAL_ADDRESS]))                       $contact->businessstreet        = $entry[PR_POSTAL_ADDRESS];
             if (isset($entry[PR_BUSINESS_ADDRESS_POSTAL_CODE]))         $contact->businesspostalcode    = $entry[PR_BUSINESS_ADDRESS_POSTAL_CODE];
             if (isset($entry[PR_BUSINESS_ADDRESS_STATE_OR_PROVINCE]))   $contact->businessstate         = $entry[PR_BUSINESS_ADDRESS_STATE_OR_PROVINCE];

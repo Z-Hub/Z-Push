@@ -273,16 +273,26 @@ class BackendKopano implements IBackend, ISearchProvider {
             if ($checkACLonly == true) {
                 // check for admin rights
                 if (!$folderid) {
-                    if ($user != $mainUser) {
-                        $zarafauserinfo = @mapi_zarafa_getuser_by_name($this->defaultstore, $mainUser);
-                        $admin = (isset($zarafauserinfo['admin']) && $zarafauserinfo['admin'])?true:false;
+                    if ($user != $this->mainUser) {
+                        if ($this->impersonateUser) {
+                            $storeProps = mapi_getprops($userstore, array(PR_IPM_SUBTREE_ENTRYID));
+                            $rights = $this->HasSecretaryACLs($userstore, '', $storeProps[PR_IPM_SUBTREE_ENTRYID]);
+                            ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->Setup(): Checking for secretary ACLs on root folder of impersonated store '%s': '%s'", $user, Utils::PrintAsString($rights)));
+                        }
+                        else {
+                            $zarafauserinfo = @mapi_zarafa_getuser_by_name($this->defaultstore, $this->mainUser);
+                            $rights = (isset($zarafauserinfo['admin']) && $zarafauserinfo['admin'])?true:false;
+                            ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->Setup(): Checking for admin ACLs on store '%s': '%s'", $user, Utils::PrintAsString($rights)));
+                        }
                     }
                     // the user has always full access to his own store
-                    else
-                        $admin = true;
+                    else {
+                        $rights = true;
+                        ZLog::Write(LOGLEVEL_DEBUG, "KopanoBackend->Setup(): the user has always full access to his own store");
+                    }
 
-                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->Setup(): Checking for admin ACLs on store '%s': '%s'", $user, Utils::PrintAsString($admin)));
-                    return $admin;
+
+                    return $rights;
                 }
                 // check permissions on this folder
                 else {
@@ -709,8 +719,16 @@ class BackendKopano implements IBackend, ISearchProvider {
         mapi_message_submitmessage($mapimessage);
         $hr = mapi_last_hresult();
 
-        if ($hr)
-            throw new StatusException(sprintf("KopanoBackend->SendMail(): Error saving/submitting the message to the Outbox: 0x%X", mapi_last_hresult()), SYNC_COMMONSTATUS_MAILSUBMISSIONFAILED);
+        if ($hr) {
+            switch ($hr) {
+                case MAPI_E_STORE_FULL:
+                    $code = SYNC_COMMONSTATUS_MAILBOXQUOTAEXCEEDED;
+                    break;
+                default:
+                    $code = SYNC_COMMONSTATUS_MAILSUBMISSIONFAILED;
+            }
+            throw new StatusException(sprintf("KopanoBackend->SendMail(): Error saving/submitting the message to the Outbox: 0x%X", $hr), $code);
+        }
 
         ZLog::Write(LOGLEVEL_DEBUG, "KopanoBackend->SendMail(): email submitted");
         return true;
@@ -1658,7 +1676,7 @@ class BackendKopano implements IBackend, ISearchProvider {
         $storeProps = mapi_getprops($this->store, array(PR_MESSAGE_SIZE_EXTENDED));
         $storesize = isset($storeProps[PR_MESSAGE_SIZE_EXTENDED]) ? $storeProps[PR_MESSAGE_SIZE_EXTENDED] : 0;
 
-        $userDetails = $this->GetUserDetails($this->mainUser);
+        $userDetails = $this->GetUserDetails($this->impersonateUser ?: $this->mainUser);
         $userStoreInfo->SetData($foldercount, $storesize, $userDetails['fullname'], $userDetails['emailaddress']);
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->GetUserStoreInfo(): user %s (%s) store size is %d bytes and contains %d folders",
                 Utils::PrintAsString($userDetails['fullname']), Utils::PrintAsString($userDetails['emailaddress']), $storesize, $foldercount));
@@ -1784,11 +1802,13 @@ class BackendKopano implements IBackend, ISearchProvider {
      * @access public
      * @return boolean
      */
-    public function HasSecretaryACLs($store, $folderid) {
-        $entryid = mapi_msgstore_entryidfromsourcekey($store, hex2bin($folderid));
+    public function HasSecretaryACLs($store, $folderid, $entryid = false) {
         if (!$entryid) {
-            ZLog::Write(LOGLEVEL_WARN, sprintf("KopanoBackend->HasSecretaryACLs(): error, no entryid resolved for %s on store %s", $folderid, $store));
-            return false;
+            $entryid = mapi_msgstore_entryidfromsourcekey($store, hex2bin($folderid));
+            if (!$entryid) {
+                ZLog::Write(LOGLEVEL_WARN, sprintf("KopanoBackend->HasSecretaryACLs(): error, no entryid resolved for %s on store %s", $folderid, $store));
+                return false;
+            }
         }
 
         $folder = mapi_msgstore_openentry($store, $entryid);
@@ -2242,7 +2262,7 @@ class BackendKopano implements IBackend, ISearchProvider {
      * @return array|boolean
      */
     private function resolveRecipientGAL($to, $maxAmbiguousRecipients) {
-        ZLog::Write(LOGLEVEL_WBXML, sprintf("Resolving recipient '%s' in GAL", $to));
+        ZLog::Write(LOGLEVEL_WBXML, sprintf("Kopano->resolveRecipientGAL(): Resolving recipient '%s' in GAL", $to));
         $addrbook = $this->getAddressbook();
         // FIXME: create a function to get the adressbook contentstable
         $ab_entryid = mapi_ab_getdefaultdir($addrbook);
@@ -2252,7 +2272,7 @@ class BackendKopano implements IBackend, ISearchProvider {
             $table = mapi_folder_getcontentstable($ab_dir);
 
         if (!$table) {
-            ZLog::Write(LOGLEVEL_WARN, sprintf("Unable to open addressbook:0x%X", mapi_last_hresult()));
+            ZLog::Write(LOGLEVEL_WARN, sprintf("Kopano->resolveRecipientGAL(): Unable to open addressbook:0x%X", mapi_last_hresult()));
             return false;
         }
 
@@ -2268,33 +2288,40 @@ class BackendKopano implements IBackend, ISearchProvider {
                 $rowsToQuery = 1;
             }
             elseif ($querycnt > 1 && $maxAmbiguousRecipients == 0) {
-                ZLog::Write(LOGLEVEL_INFO, sprintf("GAL search found %d recipients but the device hasn't requested ambiguous recipients", $querycnt));
+                ZLog::Write(LOGLEVEL_INFO, sprintf("Kopano->resolveRecipientGAL(): GAL search found %d recipients but the device hasn't requested ambiguous recipients", $querycnt));
                 return $recipientGal;
             }
+            elseif ($querycnt > 1 && $maxAmbiguousRecipients == 1) {
+                $rowsToQuery = $querycnt;
+            }
             // get the certificate every time because caching the certificate is less expensive than opening addressbook entry again
-            $abentries = mapi_table_queryrows($table, array(PR_ENTRYID, PR_DISPLAY_NAME, PR_EMS_AB_TAGGED_X509_CERT, PR_OBJECT_TYPE), 0, $rowsToQuery);
+            $abentries = mapi_table_queryrows($table, array(PR_ENTRYID, PR_DISPLAY_NAME, PR_EMS_AB_TAGGED_X509_CERT, PR_OBJECT_TYPE, PR_SMTP_ADDRESS), 0, $rowsToQuery);
             for ($i = 0, $nrEntries = count($abentries); $i < $nrEntries; $i++) {
+                if (strcasecmp($abentries[$i][PR_SMTP_ADDRESS], $to) !== 0 && $maxAmbiguousRecipients == 1) {
+                    ZLog::Write(LOGLEVEL_INFO, sprintf("Kopano->resolveRecipientGAL(): maxAmbiguousRecipients is 1 and found non-matching user (to '%s' found: '%s')", $to, $abentries[$i][PR_SMTP_ADDRESS]));
+                    continue;
+                }
                 if ($abentries[$i][PR_OBJECT_TYPE] == MAPI_DISTLIST) {
                     // dist lists must be expanded into their members
-                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("'%s' is a dist list. Expand it to members.", $to));
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("Kopano->resolveRecipientGAL(): '%s' is a dist list. Expand it to members.", $to));
                     $distList = mapi_ab_openentry($addrbook, $abentries[$i][PR_ENTRYID]);
                     $distListContent = mapi_folder_getcontentstable($distList);
                     $distListMembers = mapi_table_queryallrows($distListContent, array(PR_ENTRYID, PR_DISPLAY_NAME, PR_EMS_AB_TAGGED_X509_CERT));
                     for ($j = 0, $nrDistListMembers = mapi_table_getrowcount($distListContent); $j < $nrDistListMembers; $j++) {
-                        ZLog::Write(LOGLEVEL_WBXML, sprintf("distlist's '%s' member", $to, $distListMembers[$j][PR_DISPLAY_NAME]));
+                        ZLog::Write(LOGLEVEL_WBXML, sprintf("Kopano->resolveRecipientGAL(): distlist's '%s' member", $to, $distListMembers[$j][PR_DISPLAY_NAME]));
                         $recipientGal[] = $this->createResolveRecipient(SYNC_RESOLVERECIPIENTS_TYPE_GAL, $to, $distListMembers[$j], $nrDistListMembers);
                     }
                 }
                 elseif ($abentries[$i][PR_OBJECT_TYPE] == MAPI_MAILUSER) {
-                    $recipientGal[] = $this->createResolveRecipient(SYNC_RESOLVERECIPIENTS_TYPE_GAL, $to, $abentries[$i]);
+                    $recipientGal[] = $this->createResolveRecipient(SYNC_RESOLVERECIPIENTS_TYPE_GAL, $abentries[$i][PR_SMTP_ADDRESS], $abentries[$i]);
                 }
             }
 
-            ZLog::Write(LOGLEVEL_WBXML, "Found a recipient in GAL");
+            ZLog::Write(LOGLEVEL_WBXML, "Kopano->resolveRecipientGAL(): Found a recipient in GAL");
             return $recipientGal;
         }
         else {
-            ZLog::Write(LOGLEVEL_WARN, sprintf("No recipient found for: '%s' in GAL", $to));
+            ZLog::Write(LOGLEVEL_WARN, sprintf("Kopano->resolveRecipientGAL(): No recipient found for: '%s' in GAL", $to));
             return SYNC_RESOLVERECIPSSTATUS_RESPONSE_UNRESOLVEDRECIP;
         }
         return false;

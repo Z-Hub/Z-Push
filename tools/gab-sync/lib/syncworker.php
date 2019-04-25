@@ -104,7 +104,30 @@ abstract class SyncWorker {
             return;
         }
 
-        $this->Log(sprintf("Starting %sGAB sync to store '%s' %s on id '%s'", (!$doWrite?"simulated ":""), HIDDEN_FOLDERSTORE, ($gabId?"of '".$gabName."'":""), $folderid));
+        $this->Log(sprintf("Starting %sGAB sync to store '%s' %s on id '%s'", (!$doWrite?"simulated ":""), HIDDEN_FOLDERSTORE, ($gabId?"of '".$gabName."' (".$gabId.")":""), $folderid));
+        if (GAB_SYNC_TYPES != GAB_SYNC_ALL) {
+            $ignored = '';
+            if (! (GAB_SYNC_TYPES & GAB_SYNC_USER)) {
+                $ignored .= 'users, ';
+            }
+            if (! (GAB_SYNC_TYPES & GAB_SYNC_CONTACT)) {
+                $ignored .= 'contacts, ';
+            }
+            if (! (GAB_SYNC_TYPES & GAB_SYNC_GROUP)) {
+                $ignored .= 'groups, ';
+            }
+            if (! (GAB_SYNC_TYPES & GAB_SYNC_ROOM)) {
+                $ignored .= 'rooms, ';
+            }
+            if (! (GAB_SYNC_TYPES & GAB_SYNC_EQUIPMENT)) {
+                $ignored .= 'equipments, ';
+            }
+
+            if (strrpos($ignored, ', ') == strlen($ignored) - 2) {
+                $ignored = substr($ignored, 0, -2);
+            }
+            $this->Log(sprintf("GAB sync will ignore %s.", $ignored));
+        }
 
         // remove all messages that do not match the current $chunkType
         if ($doWrite)
@@ -164,6 +187,18 @@ abstract class SyncWorker {
             }
         }
 
+        // remove empty chunks
+        if ($doWrite) {
+            $chunks = array_keys($chunks);
+            if (count($chunks) < AMOUNT_OF_CHUNKS) {
+                $emptyChunks = array_diff(range(0, AMOUNT_OF_CHUNKS - 1), $chunks);
+                foreach ($emptyChunks as $emptyChunk) {
+                    $chunkName = $this->chunkType . "/". $emptyChunk;
+                    $this->setChunkData($folderid, $chunkName, 0, null, null, $gabId, $gabName);
+                }
+            }
+        }
+
         // Calc the ideal amount of chunks (round up to 5)
         //   by size: we want to have chunks with arount 500 KB of data in it
         //   by entries: max 10 entries per chunk
@@ -173,7 +208,7 @@ abstract class SyncWorker {
         $l  = sprintf("\nSync:\n\tItems in GAB:\t\t\t%d\n\tTotal data size: \t\t%d B\n\n", count($gab), $bytes);
         $l .= sprintf("\tAvg. of items per chunk: \t%g\n\tMin. of items per chunk: \t%d\n\tMax. of items per chunk: \t%d\n\n", ($entries/count($chunks)), $minEntries, $maxEntries);
         $l .= sprintf("\tAvg. of size per chunk: \t%d B\n\tMin. of size per chunk: \t%d B\n\tMax. of size per chunk: \t%d B\n\n", ($bytes/count($chunks)), $minSize, $maxSize);
-        $l .= sprintf("\tConfigured amout of chunks:\t%d\n\tIdeal amount by entries: \t%d\n\tIdeal amount by size: \t\t%d", AMOUNT_OF_CHUNKS, $idealByEntries, $idealBySize);
+        $l .= sprintf("\tConfigured amount of chunks:\t%d\n\tIdeal amount by entries: \t%d\n\tIdeal amount by size: \t\t%d", AMOUNT_OF_CHUNKS, $idealByEntries, $idealBySize);
         $this->Log($l);
     }
 

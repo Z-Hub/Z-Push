@@ -147,6 +147,7 @@ Z-Push for Kopano meta package
 %package -n %name-kopano-gabsync
 Summary:    GAB sync for Kopano
 Group:      Productivity/Networking/Email/Utilities
+Requires:   %name-backend-kopano = %version
 %if 0%{?fedora_version} || 0%{?centos_version} || 0%{?rhel_version}
 Requires:   php-mapi-webapp
 %else
@@ -159,7 +160,7 @@ Synchronizes a Kopano global address book
 %package -n %name-kopano-gab2contacts
 Summary:    GAB sync into a contacts folder for Kopano
 Group:      Productivity/Networking/Email/Utilities
-Requires:   %name-common = %version
+Requires:   %name-backend-kopano = %version
 %if 0%{?fedora_version} || 0%{?centos_version} || 0%{?rhel_version}
 Requires:   php-mapi-webapp
 %else
@@ -228,7 +229,7 @@ Requires:   %name-common = %version
 Requires:   rh-php56-php-mysqlnd
 Requires:   rh-php56-php-pdo
 %else
-Requires:   php-mysql
+Requires:   php-mysqlnd
 Requires:   php-pdo
 %endif
 
@@ -325,8 +326,13 @@ ln -s "%zpush_dir/z-push-top.php" "$b/%_bindir/z-push-top";
 mkdir -p "$b/%_localstatedir/lib/z-push";
 mkdir -p "$b/%_localstatedir/log/z-push";
 mkdir -p "$b/%_sysconfdir/logrotate.d";
+%if "%_repository" == "RHEL_6_PHP_56"
+install -Dpm 644 config/z-push-rhel6.lr \
+    "$b/%_sysconfdir/logrotate.d/z-push.lr"
+%else
 install -Dpm 644 config/z-push-rhel.lr \
     "$b/%_sysconfdir/logrotate.d/z-push.lr"
+%endif
 
 # CALDAV
 mv "$bdir/caldav/config.php" "$cdir/caldav.conf.php";
@@ -357,6 +363,7 @@ mkdir -p "$b/%zpush_dir/tools"
 cp -a tools/gab-sync "$b/%zpush_dir/tools/"
 mv "$b/%zpush_dir/tools/gab-sync/config.php" "$cdir/gabsync.conf.php";
 ln -s "%_sysconfdir/z-push/gabsync.conf.php" "$b/%zpush_dir/tools/gab-sync/config.php";
+sed -i -s "s/PATH_TO_ZPUSH', '\.\.\/\.\.\/src\/')/PATH_TO_ZPUSH', '\/usr\/share\/z-push\/')/" "$b/%zpush_dir/tools/gab-sync/gab-sync.php"
 mkdir -p "$b/%_bindir"
 ln -s "%zpush_dir/tools/gab-sync/gab-sync.php" "$b/%_bindir/z-push-gabsync";
 
@@ -396,7 +403,10 @@ install -Dpm 644 config/apache2/z-push-autodiscover.conf \
 
 # NGINX
 mkdir -p "$b/%_sysconfdir/nginx/sites-available/";
-install -Dpm 644 config/nginx/z-push.conf "$b/%_sysconfdir/nginx/sites-available/z-push.conf"
+mkdir -p "$b/%_sysconfdir/nginx/snippets/";
+install -Dpm 644 config/nginx/z-push.conf "$b/%_sysconfdir/nginx/sites-available/z-push.conf";
+install -Dpm 644 config/nginx/z-push-autodiscover.conf "$b/%_sysconfdir/nginx/snippets/z-push-autodiscover.conf";
+install -Dpm 644 config/nginx/z-push-php.conf "$b/%_sysconfdir/nginx/snippets/z-push-php.conf";
 
 # MANPAGES
 mkdir -p "$b/%_mandir/man1"
@@ -610,6 +620,9 @@ service nginx reload || true
 %files -n %name-config-nginx
 %dir %_sysconfdir/nginx
 %dir %_sysconfdir/nginx/sites-available
+%dir %_sysconfdir/nginx/snippets
 %config(noreplace) %attr(0640,nginx,z-push) %_sysconfdir/nginx/sites-available/z-push.conf
+%config(noreplace) %attr(0640,nginx,z-push) %_sysconfdir/nginx/snippets/z-push-autodiscover.conf
+%config(noreplace) %attr(0640,nginx,z-push) %_sysconfdir/nginx/snippets/z-push-php.conf
 
 %changelog

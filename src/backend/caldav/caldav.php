@@ -349,6 +349,7 @@ class BackendCalDAV extends BackendDiff {
      * @return array
      */
     public function CreateUpdateCalendar($data, $url = false, $etag = "*") {
+//TODO: Ensure the timezone is proper
         if ($url === false) {
             $url = sprintf("%s%s/%s-%s.ics", $this->_caldav_path, CALDAV_PERSONAL, gmdate("Ymd\THis\Z"), hash("md5", microtime()));
             $etag = "*";
@@ -824,6 +825,16 @@ class BackendCalDAV extends BackendDiff {
                 case "X-MOZ-LASTACK":
                 case "X-LIC-ERROR":
                 case "RECURRENCE-ID":
+                case "X-MICROSOFT-CDO-ALLDAYEVENT":
+                case "X-MICROSOFT-CDO-BUSYSTATUS":
+                case "X-MICROSOFT-DISALLOW-COUNTER":
+                case "X-MICROSOFT-CDO-OWNER-CRITICAL-CHANGE":
+                case "X-MICROSOFT-CDO-ATTENDEE-CRITICAL-CHANGE":
+                case "X-MICROSOFT-CDO-APPT-SEQUENCE":
+                case "X-MICROSOFT-CDO-OWNERAPPTID":
+                case "X-ZARAFA-REC-PATTERN":
+                case "X-MOZ-SNOOZE-TIME":
+                case "X-MOZ-SEND-INVITATIONS":
                     break;
                 default:
                     ZLog::Write(LOGLEVEL_WARN, sprintf("BackendCalDAV->_ParseVEventToSyncObject(): '%s' is not yet supported.", $value->name));
@@ -833,7 +844,6 @@ class BackendCalDAV extends BackendDiff {
         if ($message->meetingstatus > 0) {
             // No organizer was set for the meeting, assume it is the user
             if (!isset($message->organizeremail)) {
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->_ParseVEventToSyncObject(): No organizeremail defined, using user details"));
                 $userDetails = ZPush::GetBackend()->GetCurrentUsername();
                 $message->organizeremail = $userDetails['emailaddress'];
                 $message->organizername = $userDetails['fullname'];
@@ -1567,9 +1577,262 @@ class BackendCalDAV extends BackendDiff {
      * @throws Exception
      */
     private function _GetTimezoneString($timezone, $with_names = true) {
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->_GetTimezoneString(): using '%s' timezone", $timezone));
-        $tz = TimezoneUtil::GetFullTZFromTZName($timezone);
-        $blob = TimezoneUtil::GetSyncBlobFromTZ($tz);
-        return base64_encode($blob);
+        // UTC needs special handling
+        if ($timezone == "UTC")
+            return base64_encode(pack('la64vvvvvvvvla64vvvvvvvvl', 0, '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', 0, 0, 0, 0, 0, 0, 0, 0, 0));
+        try {
+            //Generate a timezone string (PHP 5.3 needed for this)
+            $timezone = new DateTimeZone($timezone);
+            $trans = $timezone->getTransitions(date('U',strtotime(date('Y-01-01'))), date('U',strtotime(date('Y-12-31'))));
+            $stdTime = null;
+            $dstTime = null;
+            if (count($trans) < 1) {
+                throw new Exception();
+            }
+            if (count($trans) < 3) {
+                $stdBias = $trans[count($trans)-1]['offset'] / -60;
+                $stdName = $trans[count($trans)-1]['abbr'];
+                $stdMonth = 0;
+                $stdDay = 0;
+                $stdWeek = 0;
+                $stdHour = 0;
+                $stdMinute = 0;
+                $dstName = "";
+                $dstMonth = 0;
+                $dstDay = 0;
+                $dstWeek = 0;
+                $dstHour = 0;
+                $dstMinute = 0;
+                $dstBias = -60;
+            }
+            else {
+                if ($trans[1]['isdst'] == 1) {
+                    $dstTime = $trans[1];
+                    $stdTime = $trans[2];
+                }
+                else {
+                    $dstTime = $trans[2];
+                    $stdTime = $trans[1];
+                }
+                $stdTimeO = new DateTime($stdTime['time']);
+                $stdFirst = new DateTime(sprintf("first sun of %s %s", $stdTimeO->format('F'), $stdTimeO->format('Y')), timezone_open("UTC"));
+                $stdBias = $stdTime['offset'] / -60;
+                $stdName = $stdTime['abbr'];
+                $stdYear = 0;
+                $stdMonth = $stdTimeO->format('n');
+                $stdWeek = floor(($stdTimeO->format("j")-$stdFirst->format("j"))/7)+1;
+                $stdDay = $stdTimeO->format('w');
+                $stdHour = $stdTimeO->format('H');
+                $stdMinute = $stdTimeO->format('i');
+                $stdTimeO->add(new DateInterval('P7D'));
+                if ($stdTimeO->format('n') != $stdMonth) {
+                    $stdWeek = 5;
+                }
+                $dstTimeO = new DateTime($dstTime['time']);
+                $dstFirst = new DateTime(sprintf("first sun of %s %s", $dstTimeO->format('F'), $dstTimeO->format('Y')), timezone_open("UTC"));
+                $dstName = $dstTime['abbr'];
+                $dstYear = 0;
+                $dstMonth = $dstTimeO->format('n');
+                $dstWeek = floor(($dstTimeO->format("j")-$dstFirst->format("j"))/7)+1;
+                $dstDay = $dstTimeO->format('w');
+                $dstHour = $dstTimeO->format('H');
+                $dstMinute = $dstTimeO->format('i');
+                $dstTimeO->add(new DateInterval('P7D'));
+                if ($dstTimeO->format('n') != $dstMonth) {
+                    $dstWeek = 5;
+                }
+                $dstBias = ($dstTime['offset'] - $stdTime['offset']) / -60;
+            }
+            if ($with_names) {
+                return base64_encode(pack('la64vvvvvvvvla64vvvvvvvvl', $stdBias, $stdName, 0, $stdMonth, $stdDay, $stdWeek, $stdHour, $stdMinute, 0, 0, 0, $dstName, 0, $dstMonth, $dstDay, $dstWeek, $dstHour, $dstMinute, 0, 0, $dstBias));
+            }
+            else {
+                return base64_encode(pack('la64vvvvvvvvla64vvvvvvvvl', $stdBias, '', 0, $stdMonth, $stdDay, $stdWeek, $stdHour, $stdMinute, 0, 0, 0, '', 0, $dstMonth, $dstDay, $dstWeek, $dstHour, $dstMinute, 0, 0, $dstBias));
+            }
+        }
+        catch (Exception $e) {
+            // If invalid timezone is given, we return UTC
+            return base64_encode(pack('la64vvvvvvvvla64vvvvvvvvl', 0, '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', 0, 0, 0, 0, 0, 0, 0, 0, 0));
+        }
+        return base64_encode(pack('la64vvvvvvvvla64vvvvvvvvl', 0, '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', 0, 0, 0, 0, 0, 0, 0, 0, 0));
     }
+
+    private static $knownMSTZS = array(
+        "-780/-60/0/0/0/0/0/0/0/0"=>"Pacific/Enderbury"
+        ,"-720/-60/4/1/0/3/9/5/0/2"=>"Pacific/Auckland"
+        ,"-660/-60/0/0/0/0/0/0/0/0"=>"Antarctica/Casey"
+        ,"-600/-60/4/1/0/3/10/1/0/2"=>"Australia/Melbourne"
+        ,"-600/-60/0/0/0/0/0/0/0/0"=>"Australia/Brisbane"
+        ,"-570/-60/4/1/0/3/10/1/0/2"=>"Australia/Adelaide"
+        ,"-570/-60/0/0/0/0/0/0/0/0"=>"Australia/Darwin"
+        ,"-540/-60/0/0/0/0/0/0/0/0"=>"Asia/Chita"
+        ,"-480/-60/0/0/0/0/0/0/0/0"=>"Asia/Brunei"
+        ,"-420/-60/0/0/0/0/0/0/0/0"=>"Antarctica/Davis"
+        ,"-390/-60/0/0/0/0/0/0/0/0"=>"Asia/Yangon"
+        ,"-360/-60/0/0/0/0/0/0/0/0"=>"Antarctica/Vostok"
+        ,"-345/-60/0/0/0/0/0/0/0/0"=>"Asia/Kathmandu"
+        ,"-330/-60/0/0/0/0/0/0/0/0"=>"Asia/Colombo"
+        ,"-300/-60/0/0/0/0/0/0/0/0"=>"Antarctica/Mawson"
+        ,"-270/-60/0/0/0/0/0/0/0/0"=>"Asia/Kabul"
+        ,"-210/-60/9/3/4/22/3/3/3/22"=>"Asia/Tehran"
+        ,"-180/-60/0/0/0/0/0/0/0/0"=>"Africa/Addis_Ababa"
+        ,"-120/-60/10/5/0/4/3/5/0/3"=>"Europe/Helsinki"
+        ,"-120/-60/0/0/0/0/0/0/0/0"=>"Africa/Blantyre"
+        ,"-60/-60/10/5/0/3/3/5/0/2"=>"Europe/Berlin"
+        ,"-60/-60/10/4/0/3/3/5/0/2"=>"Europe/Berlin"
+        ,"-60/-60/0/0/0/0/0/0/0/0"=>"Africa/Algiers"
+        ,"0/-60/10/5/0/2/3/5/0/1"=>"Europe/Dublin"
+        ,"0/-60/10/4/0/2/3/5/0/1"=>"Europe/Dublin"
+        ,"0/-60/0/0/0/0/0/0/0/0"=>"Africa/Abidjan"
+        ,"60/-60/0/0/0/0/0/0/0/0"=>"Atlantic/Cape_Verde"
+        ,"180/-60/2/4/6/23/10/3/6/23"=>"America/Sao_Paulo"
+        ,"180/-60/10/5/6/23/3/4/6/22"=>"America/Godthab"
+        ,"180/-60/0/0/0/0/0/0/0/0"=>"America/Araguaina"
+        ,"240/-60/11/1/0/2/3/2/0/2"=>"America/Barbados"
+        ,"240/-60/0/0/0/0/0/0/0/0"=>"America/Anguilla"
+        ,"270/-60/0/0/0/0/0/0/0/0"=>"America/Caracas"
+        ,"300/-60/11/1/0/2/3/2/0/2"=>"America/New_York"
+        ,"300/-60/0/0/0/0/0/0/0/0"=>"America/Atikokan"
+        ,"360/-60/11/1/0/2/3/2/0/2"=>"America/Chicago"
+        ,"360/-60/0/0/0/0/0/0/0/0"=>"America/Belize"
+        ,"420/-60/10/5/0/2/4/1/0/2"=>"America/Chihuahua"
+        ,"420/-60/11/1/0/2/3/2/0/2"=>"America/Denver"
+        ,"420/-60/0/0/0/0/0/0/0/0"=>"America/Creston"
+        ,"480/-60/11/1/0/2/3/2/0/2"=>"America/Los_Angeles"
+        ,"540/-60/11/1/0/2/3/2/0/2"=>"America/Anchorage"
+        ,"600/-60/0/0/0/0/0/0/0/0"=>"Pacific/Honolulu"
+    );
+
+    /**
+     * Given the MS timezone find a matching tzid, for the year the event starts in.
+     * @param string $mstz
+     * @param string $eventstart
+     * @return string
+     */
+    public static function tzidFromMSTZ($mstz, $eventstart){
+        // 1. Check known MS time zones
+        $mstz_parts = unpack("lbias/Z64tzname/vdstendyear/vdstendmonth/vdstendday/vdstendweek/vdstendhour/"
+                                    ."vdstendminute/vdstendsecond/vdstendmillis/lstdbias/Z64tznamedst/vdststartyear/"
+                                    ."vdststartmonth/vdststartday/vdststartweek/vdststarthour/vdststartminute/"
+                                    ."vdststartsecond/vdststartmillis/ldstbias", base64_decode($mstz));
+
+        $mstz = $mstz_parts['bias']
+                    ."/".$mstz_parts['dstbias']
+                    ."/".$mstz_parts['dstendmonth']
+                    ."/".$mstz_parts['dstendweek']
+                    ."/".$mstz_parts['dstendday']
+                    ."/".$mstz_parts['dstendhour']
+                    ."/".$mstz_parts['dststartmonth']
+                    ."/".$mstz_parts['dststartweek']
+                    ."/".$mstz_parts['dststartday']
+                    ."/".$mstz_parts['dststarthour'];
+        if (isset(self::$knownMSTZS[$mstz])) {
+            $tzid = self::$knownMSTZS[$mstz];
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->tzidFromMSTZ(): Found tzid in known list: '%s'.", $tzid));
+            return $tzid;
+        }
+
+        // 2. Loop all time zones to find a match on offset and transition date
+        $year = date("Y", $eventstart);
+        $offset_std = -($mstz_parts["bias"] * 60);
+        $offset_dst = -(($mstz_parts["bias"] + $mstz_parts["dstbias"]) * 60);
+        $dststart_timestamp = self::timestampFromMSTZ($mstz_parts, "dststart", $mstz_parts["bias"], $year);
+        $dstend_timestamp = self::timestampFromMSTZ($mstz_parts, "dstend", $mstz_parts["bias"] + $mstz_parts["dstbias"], $year);
+
+        $tzids = DateTimeZone::listIdentifiers();
+        foreach ($tzids as $tzid) {
+            $timezone = new DateTimeZone($tzid);
+            $transitions = $timezone->getTransitions(date("U", strtotime($year."0101T000000Z")), date("U", strtotime($year."1231T235959Z")));
+
+            $tno = count($transitions);
+            if ($tno == 1 && $dststart_timestamp == 0) {
+                if ($transitions[0]['offset'] == $offset_std) {
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->tzidFromMSTZ(): Found tzid: '%s'.", $tzid));
+                    ZLog::Write(LOGLEVEL_WARN, sprintf("BackendCalDAV->tzidFromMSTZ(): Add tzid to knownMSTZS array for better performance: '%s'.", ',"'.$mstz.'"=>"'.$tzid.'"'));
+                    return $tzid;
+                }
+            }
+            else if (($tno == 3 || $tno == 5) && $dststart_timestamp != 0) {
+                if ($dststart_timestamp < $dstend_timestamp) {
+                    if(
+                        $transitions[1]['isdst'] == 1 &&
+                        $transitions[1]['ts'] == $dststart_timestamp &&
+                        $transitions[1]['offset'] == $offset_dst &&
+                        $transitions[2]['isdst'] == 0 &&
+                        $transitions[2]['ts'] == $dstend_timestamp &&
+                        $transitions[2]['offset'] == $offset_std)
+                    {
+                        ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->tzidFromMSTZ(): Found tzid: '%s'.", $tzid));
+                        ZLog::Write(LOGLEVEL_WARN, sprintf("BackendCalDAV->tzidFromMSTZ(): Add tzid to knownMSTZS array for better performance: '%s'.", ',"'.$mstz.'"=>"'.$tzid.'"'));
+                        return $tzid;
+                    }
+                }
+                else {
+                    if (
+                        $transitions[1]['isdst'] == 0 &&
+                        $transitions[1]['ts'] == $dstend_timestamp &&
+                        $transitions[1]['offset'] == $offset_std &&
+                        $transitions[2]['isdst'] == 1 &&
+                        $transitions[2]['ts'] == $dststart_timestamp &&
+                        $transitions[2]['offset'] == $offset_dst)
+                    {
+                        ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->tzidFromMSTZ(): Found tzid: '%s'.", $tzid));
+                        ZLog::Write(LOGLEVEL_WARN, sprintf("BackendCalDAV->tzidFromMSTZ(): Add tzid to knownMSTZS array for better performance: '%s'.", ',"'.$mstz.'"=>"'.$tzid.'"'));
+                        return $tzid;
+                    }
+                }
+            }
+        }
+
+        // 3. Give up, use Zulu
+        ZLog::Write(LOGLEVEL_WARN, sprintf("BackendCalDAV->tzidFromMSTZ(): Failed to find tzid, defaulting to UTC. MS time zone: '%s'.", join('/', $mstz_parts)));
+        return null;
+    }
+
+    /*
+     * Calculate a unix timestamp for DST or STD start times in the MS time zone.
+     * @param array $mstz_parts
+     * @param string $prefix
+     * @param integer $bias
+     * @param string $year
+     * @return integer
+     */
+    private static function timestampFromMSTZ($mstz_parts, $prefix, $bias, $year){
+        if($mstz_parts[$prefix."month"] == 0){return 0;} // If month is empty, there is no transition
+
+        $month = $mstz_parts[$prefix."month"];
+        $weeks = array('', 'first', 'second', 'third', 'fourth', 'last');
+        $week = $weeks[$mstz_parts[$prefix."week"]];
+        $days = array('Sunday', 'Monday', 'Tuesday', 'Wednesday','Thursday','Friday', 'Saturday');
+        $day = $days[$mstz_parts[$prefix."day"]];
+
+        $second = $mstz_parts[$prefix."hour"] * 3600 + $mstz_parts[$prefix."minute"] * 60 + $mstz_parts[$prefix."second"] + $bias * 60;
+
+        return date("U", strtotime("$week $day of $year-$month Z") + $second);
+    }
+
+    /*
+     * Calculate a DAV datetime field with timezone
+     * @param int $timestamp
+     * @param string $tzid
+     * @return string
+     */
+    private static function DAVDateTimeInTimezone($timestamp, $tzid) {
+        $dt = new DateTime('@'.$timestamp);
+        $dt->setTimeZone(new DateTimeZone($tzid));
+        return $tzid == 'Z' ? $dt->format('Ymd\THis\Z') : $dt->format('Ymd\THis');
+    }
+
+    /**
+     * Convert the offset provided by php to what ical uses in VTIMEZONE.
+     * @param integer $phpoffset
+     * @return string
+     */
+    private static function phpOffsetToIcalOffset($phpoffset) {
+        $prefix = $phpoffset < 0 ? "-" : "+";
+        $offset = abs($phpoffset);
+        $hours = floor($offset / 3600);
+        return sprintf("$prefix%'.02d%'.02d", $hours, ($offset - ($hours * 3600)) / 60);
+    }
+
 }

@@ -26,13 +26,15 @@
 
 // Path to the Z-Push directory relative to the gab2contacts script.
 // The path set by default is as required for a GIT checkout.
+// It is also possible to use absolute path to z-push installation, e.g.
+// /usr/share/z-push/
 define('PATH_TO_ZPUSH', '../../src/');
 
 /************************************************
  * MAIN
  */
     define('BASE_PATH_CLI',  dirname(__FILE__) ."/");
-    set_include_path(get_include_path() . PATH_SEPARATOR . BASE_PATH_CLI . PATH_SEPARATOR . PATH_TO_ZPUSH);
+    set_include_path(get_include_path() . PATH_SEPARATOR . BASE_PATH_CLI . PATH_TO_ZPUSH . PATH_SEPARATOR . PATH_TO_ZPUSH);
     include_once("vendor/autoload.php");
 
     if (!defined('CONTACT_CONFIG')) define('CONTACT_CONFIG', 'config.php');

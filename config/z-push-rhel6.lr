@@ -3,5 +3,4 @@
 	create 664 root z-push
 	compress
 	rotate 4
-	su root z-push
 }

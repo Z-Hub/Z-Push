@@ -4,13 +4,10 @@ export DH_VERBOSE=1
 
 #include /usr/share/quilt/quilt.make
 
-# Since only Ubuntu 16.04 requires php-mbstring we detect that here
-ifeq ($(shell dpkg-vendor --derives-from Ubuntu && echo yes),yes)
-		ifeq ($(shell grep -q Xenial /etc/os-release && echo yes),yes)
-				SUBSTVARS = -Vdist:Depends="php-mbstring"
-		endif
+# Ubuntu 16.04 and newer Debian releases have a dedicated package for mbstring
+ifeq ($(shell grep -Eq 'Xenial|stretch|bionic' /etc/os-release && echo yes),yes)
+	SUBSTVARS = -Vdist:Depends="php-mbstring"
 endif
-
 
 DEB_VERSION := $(shell dpkg-parsechangelog | egrep '^Version:' | cut -f 2 -d ' ')
 
@@ -24,6 +21,9 @@ override_dh_install:
 	mv src/* .
 	# set version number
 	sed -s "s/ZPUSHVERSION/${DEB_VERSION}/" build/version.php.in > version.php
+
+	# fix z-push directory in gab-sync script
+	sed -i -s "s/PATH_TO_ZPUSH', '\.\.\/\.\.\/src\/')/PATH_TO_ZPUSH', '\/usr\/share\/z-push\/')/" tools/gab-sync/gab-sync.php
 
 	# fix z-push directory in gab2contacts script
 	sed -i -s "s/PATH_TO_ZPUSH', '\.\.\/\.\.\/src\/')/PATH_TO_ZPUSH', '\/usr\/share\/z-push\/')/" tools/gab2contacts/gab2contacts.php
