@@ -349,7 +349,6 @@ class BackendCalDAV extends BackendDiff {
      * @return array
      */
     public function CreateUpdateCalendar($data, $url = false, $etag = "*") {
-//TODO: Ensure the timezone is proper
         if ($url === false) {
             $url = sprintf("%s%s/%s-%s.ics", $this->_caldav_path, CALDAV_PERSONAL, gmdate("Ymd\THis\Z"), hash("md5", microtime()));
             $etag = "*";
@@ -532,8 +531,8 @@ class BackendCalDAV extends BackendDiff {
 
 
     /**
-     * Convert a Sabre VEvent to ActiveSync format
-     * @param sabre_vevent $data
+     * Convert a iCAL VEvent to ActiveSync format
+     * @param ical_vevent $data
      * @param ContentParameters $contentparameters
      * @return SyncAppointment
      */
@@ -572,7 +571,7 @@ class BackendCalDAV extends BackendDiff {
 
     /**
      * Parse 1 VEvent
-     * @param sabre_vevent $event
+     * @param Sabre/VEvent $vevent
      * @param SyncAppointment(Exception) $message
      * @param int $truncsize
      */
@@ -748,16 +747,16 @@ class BackendCalDAV extends BackendDiff {
                     if (isset($value['ROLE'])) {
                         switch($value['ROLE']){
                             case "CHAIR":
-                                $attendee->attendeestatus = 1;
+                                $attendee->attendeerole = 3;
                                 break;
                             case "REQ-PARTICIPANT":
-                                $attendee->attendeestatus = 1;
+                                $attendee->attendeerole = 0;
                                 break;
                             case "OPT-PARTICIPANT":
-                                $attendee->attendeestatus = 2;
+                                $attendee->attendeerole = 1;
                                 break;
                             case "NON-PARTICIPANT":
-                                $attendee->attendeestatus = 3;
+                                $attendee->attendeerole = 2;
                                 break;
                         }
                     }
@@ -973,16 +972,49 @@ class BackendCalDAV extends BackendDiff {
         $vcal = new Sabre\VObject\Component\VCalendar;
         $vcal->PRODID = "-//z-push-contrib//NONSGML Z-Push-contrib Calendar//EN";
 
+        $tzid = 'UTC';
+        if (isset($data->timezone) && isset($data->starttime)) {
+            $tzid = $this->tzidFromMSTZ($data->timezone, $data->starttime);
+            //Add VTIMEZONE
+            $year = date("Y", $data->starttime);
+
+            $vtimezone = $vcal->createComponent('VTIMEZONE');
+            $vtimezone->TZID = $tzid;
+            $timezone = new DateTimeZone($tzid);
+            $transitions = $timezone->getTransitions(date("U", strtotime($year."0101T000000Z")), date("U", strtotime($year."1231T235959Z")));
+
+            $offset_from = self::phpOffsetToIcalOffset($transitions[0]['offset']);
+            for ($i=0; $i<count($transitions); $i++) {
+                $offset_to = self::phpOffsetToIcalOffset($transitions[$i]['offset']);
+                if ($i == 0) {
+                        $offset_from = $offset_to;
+                    if (count($transitions) > 1) {
+                        continue;
+                    }
+                }
+                $vtransition = $vcal->createComponent($transitions[$i]['isdst'] == 1 ? "DAYLIGHT" : "STANDARD");
+
+                $vtransition->TZOFFSETFROM = $offset_from;
+                $vtransition->TZOFFSETTO = $offset_to;
+                $offset_from = $offset_to;
+
+                $vtransition->TZNAME = $transitions[$i]['abbr'];
+                $vtransition->DTSTART = date("Ymd\THis", $transitions[$i]['ts']);
+                $vtimezone->add($vtransition);
+            }
+            $vcal->add($vtimezone);
+        }
+
         switch ($folderid[0]){
             case "C":
-                $vevent = $this->_ParseASEventToVEvent($vcal, $data);
+                $vevent = $this->_ParseASEventToVEvent($vcal, $data, $tzid);
                 $vevent->UID = $id;
                 $exceptions = array();
                 if (isset($data->exceptions) && is_array($data->exceptions)) {
                     foreach ($data->exceptions as $ex) {
                         if (isset($ex->deleted) && $ex->deleted == 1) {
                             if ($data->alldayevent == 1) {
-                                $exdate = $this->_GetDateFromUTC("Ymd", $ex->exceptionstarttime, $data->timezone);
+                                $exdate = $this->_GetDateFromUTC("Ymd", $ex->exceptionstarttime, $tzid);
                             }
                             else {
                                 $exdate = gmdate("Ymd\THis\Z", $ex->exceptionstarttime);
@@ -996,10 +1028,10 @@ class BackendCalDAV extends BackendDiff {
                             continue;
                         }
 
-                        $exception = $this->_ParseASEventToVEvent($vcal, $ex);
+                        $exception = $this->_ParseASEventToVEvent($vcal, $ex, $tzid);
                         $exception->UID = $id;
                         if ($data->alldayevent == 1) {
-                            $exception->add('RECURRENCE-ID', $this->_GetDateFromUTC("Ymd", $ex->exceptionstarttime, $data->timezone), array("VALUE" => "DATE"));
+                            $exception->add('RECURRENCE-ID', $this->_GetDateFromUTC("Ymd", $ex->exceptionstarttime, $tzid), array("VALUE" => "DATE"));
                         }
                         else {
                             $exception->add('RECURRENCE-ID', gmdate("Ymd\THis\Z", $ex->exceptionstarttime));
@@ -1026,10 +1058,12 @@ class BackendCalDAV extends BackendDiff {
 
     /**
      * Generate a VEVENT from a SyncAppointment(Exception).
+     * @param Sabre/VCalendar $vcal
      * @param string $data
+     * @param string $tzid
      * @return VEVENT
      */
-    private function _ParseASEventToVEvent($vcal, $data) {
+    private function _ParseASEventToVEvent($vcal, $data, $tzid) {
         $vevent = $vcal->createComponent('VEVENT');
 
         if (isset($data->dtstamp)) {
@@ -1045,31 +1079,28 @@ class BackendCalDAV extends BackendDiff {
         else {
             $vevent->{'X-MICROSOFT-CDO-ALLDAYEVENT'} = 'FALSE';
         }
-        if (isset($data->timezone)) {
-            $tzid = $this->_GetTimezoneFromString($data->timezone);
-        }
         if (isset($data->starttime)) {
             if ($data->alldayevent == 1) {
-                $vevent->DTSTART = $this->_GetDateFromUTC("Ymd", $data->starttime, $data->timezone);
+                $vevent->DTSTART = $this->_GetDateFromUTC("Ymd", $data->starttime, $tzid);
                 $vevent->DTSTART['VALUE'] = 'DATE';
             }
             else {
                 $vevent->DTSTART = gmdate("Ymd\THis\Z", $data->starttime);
-                if (isset($tzid)) {
-                    $vevent->DTSTART['TZID'] = $tzid;
-                }
+            }
+            if ($tzid != "UTC") {
+                $vevent->DTSTART['TZID'] = $tzid;
             }
         }
         if (isset($data->endtime)) {
             if ($data->alldayevent == 1) {
-                $vevent->DTEND = $this->_GetDateFromUTC("Ymd", $data->endtime, $data->timezone);
+                $vevent->DTEND = $this->_GetDateFromUTC("Ymd", $data->endtime, $tzid);
                 $vevent->DTEND['VALUE'] = 'DATE';
             }
             else {
                 $vevent->DTEND = gmdate("Ymd\THis\Z", $data->endtime);
-                if (isset($tzid)) {
-                    $vevent->DTEND['TZID'] = $tzid;
-                }
+            }
+            if ($tzid != "UTC") {
+                $vevent->DTEND['TZID'] = $tzid;
             }
         }
         if (isset($data->subject)) {
@@ -1197,16 +1228,19 @@ class BackendCalDAV extends BackendDiff {
                                 break;
                         }
                     }
-                    if (isset($att->attendeetype) && $att->attendeetype > 0) {
-                        switch ($att->attendeetype) {
-                            case 1: // Required
+                    if (isset($att->attendeerole)) {
+                        switch ($att->attendeerole) {
+                            case 0:
                                 $params['ROLE'] = "REQ-PARTICIPANT";
                                 break;
-                            case 2: // Optional
+                            case 1:
                                 $params['ROLE'] = "OPT-PARTICIPANT";
                                 break;
-                            case 3: // Resource
+                            case 2:
                                 $params['ROLE'] = "NON-PARTICIPANT";
+                                break;
+                            case 3:
+                                $params['ROLE'] = "CHAIR";
                                 break;
                         }
                     }
@@ -1332,7 +1366,7 @@ class BackendCalDAV extends BackendDiff {
      * @param string $data
      * @param ContentParameters $contentparameters
      */
-    private function _ParseVTodoToAS($data, $contentparameters) { //TODO
+    private function _ParseVTodoToAS($data, $contentparameters) {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->_ParseVTodoToAS(): Parsing VTodo"));
         $truncsize = Utils::GetTruncSize($contentparameters->GetTruncation());
 
@@ -1348,11 +1382,11 @@ class BackendCalDAV extends BackendDiff {
 
     /**
      * Parse 1 VEvent
-     * @param sabre_vtodo $vtodo
+     * @param Sabre/VTodo $vtodo
      * @param SyncAppointment(Exception) $message
      * @param int $truncsize
      */
-    private function _ParseVTodoToSyncObject($vtodo, $message, $truncsize) { //TODO
+    private function _ParseVTodoToSyncObject($vtodo, $message, $truncsize) {
         //Default
         $message->reminderset = 0;
         $message->importance = 1;
@@ -1386,7 +1420,7 @@ class BackendCalDAV extends BackendDiff {
                     break;
 
                 case "PRIORITY":
-                    $priority = $property->Value(); //TODO: how get intval from sabre vcal
+                    $priority = (int)$value;
                     if ($priority <= 3)
                         $message->importance = 0;
                     if ($priority <= 6)
@@ -1546,28 +1580,10 @@ class BackendCalDAV extends BackendDiff {
         return $vtodo;
     }
 
-    private function _GetDateFromUTC($format, $date, $tz_str) {
-        $timezone = $this->_GetTimezoneFromString($tz_str);
+    private function _GetDateFromUTC($format, $date, $tzid) {
         $dt = date_create('@' . $date);
-        date_timezone_set($dt, timezone_open($timezone));
+        date_timezone_set($dt, timezone_open($tzid));
         return date_format($dt, $format);
-    }
-
-    //This returns a timezone that matches the timezonestring.
-    //We can't be sure this is the one you chose, as multiple timezones have same timezonestring
-    private function _GetTimezoneFromString($tz_string) {
-        //Get a list of all timezones
-        $identifiers = DateTimeZone::listIdentifiers();
-        //Try the default timezone first
-        array_unshift($identifiers, date_default_timezone_get());
-        foreach ($identifiers as $tz) {
-            $str = $this->_GetTimezoneString($tz, false);
-            if ($str == $tz_string) {
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->_GetTimezoneFromString(): Found timezone: '%s'.", $tz));
-                return $tz;
-            }
-        }
-        return date_default_timezone_get();
     }
 
     /**
@@ -1784,7 +1800,7 @@ class BackendCalDAV extends BackendDiff {
             }
         }
 
-        // 3. Give up, use Zulu
+        // 3. Give up, use UTC
         ZLog::Write(LOGLEVEL_WARN, sprintf("BackendCalDAV->tzidFromMSTZ(): Failed to find tzid, defaulting to UTC. MS time zone: '%s'.", join('/', $mstz_parts)));
         return null;
     }
