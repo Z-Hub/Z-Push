@@ -746,17 +746,16 @@ class BackendCalDAV extends BackendDiff {
                     }
                     if (isset($value['ROLE'])) {
                         switch($value['ROLE']){
-                            case "CHAIR":
-                                $attendee->attendeerole = 3;
-                                break;
-                            case "REQ-PARTICIPANT":
-                                $attendee->attendeerole = 0;
-                                break;
                             case "OPT-PARTICIPANT":
-                                $attendee->attendeerole = 1;
+                                $attendee->attendeetype = 2; // Optional
                                 break;
                             case "NON-PARTICIPANT":
-                                $attendee->attendeerole = 2;
+                                $attendee->attendeetype = 3; // Resource
+                                break;
+                            case "CHAIR":
+                            case "REQ-PARTICIPANT":
+                            default:
+                                $attendee->attendeetype = 1; // Required
                                 break;
                         }
                     }
@@ -1156,7 +1155,7 @@ class BackendCalDAV extends BackendDiff {
             $vevent->add($valarm);
         }
         if (isset($data->rtf)) {
-            $rtfparser = new rtf();
+            $rtfparser = new z_RTF();
             $rtfparser->loadrtf(base64_decode($data->rtf));
             $rtfparser->output("ascii");
             $rtfparser->parse();
@@ -1228,19 +1227,16 @@ class BackendCalDAV extends BackendDiff {
                                 break;
                         }
                     }
-                    if (isset($att->attendeerole)) {
-                        switch ($att->attendeerole) {
-                            case 0:
+                    if (isset($att->attendeetype)) {
+                        switch ($att->attendeetype) {
+                            case 1: // Required
                                 $params['ROLE'] = "REQ-PARTICIPANT";
                                 break;
-                            case 1:
+                            case 2: // Optional
                                 $params['ROLE'] = "OPT-PARTICIPANT";
                                 break;
-                            case 2:
+                            case 3: // Resource
                                 $params['ROLE'] = "NON-PARTICIPANT";
-                                break;
-                            case 3:
-                                $params['ROLE'] = "CHAIR";
                                 break;
                         }
                     }
@@ -1507,7 +1503,7 @@ class BackendCalDAV extends BackendDiff {
             $vtodo->SUMMARY = $data->subject;
         }
         if (isset($data->rtf)) {
-            $rtfparser = new rtf();
+            $rtfparser = new z_RTF();
             $rtfparser->loadrtf(base64_decode($data->rtf));
             $rtfparser->output("ascii");
             $rtfparser->parse();
