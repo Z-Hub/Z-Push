@@ -323,6 +323,14 @@ class ZPush {
             throw new FatalMisconfigurationException("The configuration parameter 'FILE_STATE_WRITE_ATTEMPTS' and 'FILE_STATE_WRITE_SLEEP' were deprecated in favor of 'FILE_STATE_ATTEMPTS' and 'FILE_STATE_SLEEP'. Please update your configuration.");
         }
 
+        //check retry loop settings when writing file state machine data to disk
+        if ((defined('FILE_STATE_WRITE_ATTEMPTS')) && (!is_int(FILE_STATE_WRITE_ATTEMPTS) || FILE_STATE_WRITE_ATTEMPTS < 1)) {
+            throw new FatalMisconfigurationException("The FILE_STATE_WRITE_ATTEMPTS value must be a number higher than 0.");
+        }
+        if ((defined('FILE_STATE_WRITE_SLEEP')) && (!is_int(FILE_STATE_WRITE_SLEEP) || FILE_STATE_WRITE_SLEEP < 1)) {
+            throw new FatalMisconfigurationException("The FILE_STATE_WRITE_SLEEP value must be a number higher than 0.");
+        }        
+
         return true;
     }
 
