@@ -48,6 +48,7 @@ class DeviceManager {
     const FLD_FLAGS_SENDASOWNER = 1;
     const FLD_FLAGS_TRACKSHARENAME = 2;
     const FLD_FLAGS_CALENDARREMINDERS = 4;
+    const FLD_FLAGS_NOREADONLYNOTIFY = 8;
 
     private $device;
     private $deviceHash;
@@ -555,7 +556,7 @@ class DeviceManager {
      * @access public
      * @return boolean|string
      */
-    public function GetAdditionalUserSyncFolderStore($folderid) {
+    public function GetAdditionalUserSyncFolder($folderid) {
         // is this the KOE GAB folder?
         if ($folderid && $folderid === $this->GetKoeGabBackendFolderId()) {
             return KOE_GAB_STORE;
@@ -563,7 +564,7 @@ class DeviceManager {
 
         $f = $this->device->GetAdditionalFolder($folderid);
         if ($f) {
-            return $f['store'];
+            return $f;
         }
 
         return false;
@@ -645,8 +646,17 @@ class DeviceManager {
         $this->setLatestFolder($folderid);
 
         // detect if this is a loop condition
-        if ($this->loopdetection->Detect($folderid, $uuid, $statecounter, $items, $queuedmessages))
-            $items = ($items == 0) ? 0: 1+($this->loopdetection->IgnoreNextMessage(false)?1:0) ;
+        $loop = $this->loopdetection->Detect($folderid, $uuid, $statecounter, $items, $queuedmessages);
+        if ($loop !== false) {
+            if ($loop === true) {
+                $items = ($items == 0) ? 0: 1+($this->loopdetection->IgnoreNextMessage(false)?1:0) ;
+            }
+            else {
+                // we got a new suggested window size
+                $items = $loop;
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("Mobile loop pre stage detected! Forcing smaller window size of %d before entering loop detection mode", $items));
+            }
+        }
 
         if ($items >= 0 && $items <= 2)
             ZLog::Write(LOGLEVEL_WARN, sprintf("Mobile loop detected! Messages sent to the mobile will be restricted to %d items in order to identify the conflict", $items));
@@ -964,6 +974,26 @@ class DeviceManager {
         }
 
         return true;
+    }
+
+    /**
+     * Indicates if a folder is synchronizing by the saved status.
+     *
+     * @param string     $folderid          folder id
+     *
+     * @access public
+     * @return boolean
+     */
+    public function HasFolderSyncStatus($folderid) {
+        $currentStatus = $this->device->GetFolderSyncStatus($folderid);
+
+        // status available ?
+        $hasStatus = isset($currentStatus[ASDevice::FOLDERSYNCSTATUS]);
+        if ($hasStatus) {
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("HasFolderSyncStatus(): saved folder status for %s: %s", $folderid, $currentStatus[ASDevice::FOLDERSYNCSTATUS]));
+        }
+
+        return $hasStatus;
     }
 
     /**

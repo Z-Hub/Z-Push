@@ -1701,7 +1701,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
 
                 if (is_calendar($part)) {
                     ZLog::Write(LOGLEVEL_DEBUG, "BackendIMAP->MeetingResponse - text/calendar part found, trying to reply");
-                    $body_part = reply_meeting_calendar($part, $response, GetUserDetails($this->username)['emailaddress']);
+                    $body_part = reply_meeting_calendar($part, $response, $this->GetUserDetails($this->username)['emailaddress']);
                 }
             }
             unset($mparts);
@@ -1984,8 +1984,8 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
      */
     private function getSearchRestriction($cpo) {
         $searchText = $cpo->GetSearchFreeText();
-        $searchGreater = strftime("%Y-%m-%d", strtotime($cpo->GetSearchValueGreater()));
-        $searchLess = strftime("%Y-%m-%d", strtotime($cpo->GetSearchValueLess()));
+        $searchGreater = $cpo->GetSearchValueGreater() ? strftime("%Y-%m-%d", strtotime($cpo->GetSearchValueGreater())) : '';
+        $searchLess = $cpo->GetSearchValueLess() ? strftime("%Y-%m-%d", strtotime($cpo->GetSearchValueLess())) : '';
 
         $filter = '';
         if ($searchGreater != '') {

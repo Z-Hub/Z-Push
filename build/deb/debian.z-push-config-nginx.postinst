@@ -22,7 +22,7 @@ set_perms() {
 case "$1" in
     configure|reconfigure)
         # Get nginx user and its default group
-        USER=`grep user /etc/nginx/nginx.conf | awk '{gsub(";", ""); print $2}'`
+        USER=`egrep "^(\s)*user" /etc/nginx/nginx.conf | awk '{gsub(";", ""); print $2}'`
         GROUP=`id -gn $USER`
         # Set permissions
         set_perms $USER $GROUP 700 /var/lib/z-push

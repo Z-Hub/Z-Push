@@ -356,6 +356,9 @@
  *                          When replying in this folder, automatically do Send-As
  *                      DeviceManager::FLD_FLAGS_CALENDARREMINDERS
  *                          If set, Outlook shows reminders for these shares with KOE
+ *                      DeviceManager::FLD_FLAGS_NOREADONLYNOTIFY
+ *                          If set, Z-Push won't send notification emails for changes
+ *                          if the folder is read-only
  *
  *  Additional notes:
  *  - on Kopano systems use backend/kopano/listfolders.php script to get a list

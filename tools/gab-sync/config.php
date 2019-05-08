@@ -52,7 +52,7 @@ define('UNIQUEID', 'account');
 
 define('SERVER', 'default:');
 
-define('USERNAME', '');
+define('USERNAME', 'SYSTEM');
 define('PASSWORD', '');
 define('CERTIFICATE', null);
 define('CERTIFICATE_PASSWORD', null);
@@ -65,3 +65,22 @@ define('HIDDEN_FOLDERSTORE', 'SYSTEM');
 
 /// Do not change (unless you know exactly what you do)
 define('HIDDEN_FOLDERNAME', 'Z-Push-KOE-GAB');
+
+// Types of the objects to sync to GAB.
+define('GAB_SYNC_USER', 1);
+define('GAB_SYNC_CONTACT', 2);
+define('GAB_SYNC_GROUP', 4);
+define('GAB_SYNC_ROOM', 8);
+define('GAB_SYNC_EQUIPMENT', 16);
+
+define('GAB_SYNC_ALL', GAB_SYNC_USER | GAB_SYNC_CONTACT | GAB_SYNC_GROUP | GAB_SYNC_ROOM | GAB_SYNC_EQUIPMENT);
+
+// Set which items from GAB should be synced.
+// Default value is GAB_SYNC_ALL which syncs all items.
+// In order to sync only some specific types combine them with "|", e.g.
+// to sync only users and groups use:
+// define('GAB_SYNC_TYPES', GAB_SYNC_USER | GAB_SYNC_CONTACT);
+// In order to exclude specific types combine "& ~TYPE", e.g.
+// to sync all types except rooms and equipments use:
+// define('GAB_SYNC_TYPES', GAB_SYNC_ALL & ~GAB_SYNC_ROOM & ~GAB_SYNC_EQUIPMENT);
+define('GAB_SYNC_TYPES', GAB_SYNC_ALL);
