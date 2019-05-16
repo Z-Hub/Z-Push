@@ -393,7 +393,10 @@ class Kopano extends SyncWorker {
 
             $a = new GABEntry();
             $a->type = GABEntry::CONTACT;
-            $a->memberOf = $this->getMemberOf($groupsUsers, $entry[PR_ACCOUNT]);
+            if (strtoupper($entry[PR_DISPLAY_NAME]) != "EVERYONE") {
+                // Avoid loop because all other entries are members of Everyone group
+                $a->memberOf = $this->getMemberOf($groupsUsers, $entry[PR_ACCOUNT]);
+            }
 
             // the company name is 'Everyone'
             if ($gabId != null && $entry[PR_DISPLAY_NAME] == $gabName) {
