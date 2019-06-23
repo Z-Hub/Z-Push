@@ -798,18 +798,16 @@ class BackendCalDAV extends BackendDiff {
             }
         }
 
-        if ($message->meetingstatus > 0) {
-            // No organizer was set for the meeting, assume it is the user
-            if (!isset($message->organizeremail)) {
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->_ParseVEventToSyncObject(): No organizeremail defined, using user details"));
-                $userDetails = ZPush::GetBackend()->GetCurrentUsername();
-                $message->organizeremail = $userDetails['emailaddress'];
-                $message->organizername = $userDetails['fullname'];
-            }
-            // Ensure the organizer name is set
-            if (!isset($message->organizername)) {
-                $message->organizername = Utils::GetLocalPartFromEmail($message->organizeremail);
-            }
+        // No organizer was set for the meeting, assume it is the user
+        if (!isset($message->organizeremail)) {
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->_ParseVEventToSyncObject(): No organizeremail defined, using user details"));
+            $userDetails = ZPush::GetBackend()->GetCurrentUsername();
+            $message->organizeremail = $userDetails['emailaddress'];
+            $message->organizername = $userDetails['fullname'];
+        }
+        // Ensure the organizer name is set
+        if (!isset($message->organizername)) {
+            $message->organizername = Utils::GetLocalPartFromEmail($message->organizeremail);
         }
 
         $valarm = current($event->GetComponents("VALARM"));
