@@ -714,7 +714,8 @@ class DeviceManager {
      * @access public
      * @return int
      */
-    public function GetFilterType($folderid) {
+    public function GetFilterType($folderid, $backendFolderId) {
+        global $specialSyncFilter;
         // either globally configured SYNC_FILTERTIME_MAX or ALL (no limit)
         $maxAllowed = (defined('SYNC_FILTERTIME_MAX') && SYNC_FILTERTIME_MAX > SYNC_FILTERTYPE_ALL) ? SYNC_FILTERTIME_MAX : SYNC_FILTERTYPE_ALL;
 
@@ -724,6 +725,44 @@ class DeviceManager {
         // ALL has a value of 0, all limitations have higher integer values, see SYNC_FILTERTYPE_ALL definition
         if ($maxDevice !== false && $maxDevice > SYNC_FILTERTYPE_ALL && ($maxAllowed == SYNC_FILTERTYPE_ALL || $maxDevice < $maxAllowed)) {
             $maxAllowed = $maxDevice;
+        }
+
+        if (is_array($specialSyncFilter)) {
+            $store = ZPush::GetAdditionalSyncFolderStore($backendFolderId);
+            // the store is only available when this is a shared folder (but might also be statically configured)
+            if ($store) {
+                $origin = Utils::GetFolderOriginFromId($folderid);
+                // do not limit when the owner or impersonated user is synching!
+                if ($origin == DeviceManager::FLD_ORIGIN_USER || $origin == DeviceManager::FLD_ORIGIN_IMPERSONATED){
+                    ZLog::Write(LOGLEVEL_DEBUG, "Not checking for specific sync limit at this is the owner/impersonted user.");
+                }
+                else {
+                    $spKey = false;
+                    $spFilter = false;
+                    // 1. step: check if there is a general limitation for the store
+                    if (array_key_exists($store, $specialSyncFilter)) {
+                        $spFilter = $specialSyncFilter[$store];
+                        ZLog::Write(LOGLEVEL_DEBUG, sprintf("Limit sync due to configured limitation on the store: '%s': %s",$store, $spFilter));
+                    }
+
+                    // 2. step: check if there is a limitation for the hashed ID (for shared/configured stores)
+                    $spKey= $store .'/'. $folderid;
+                    if (array_key_exists($spKey, $specialSyncFilter)) {
+                        $spFilter = $specialSyncFilter[$spKey];
+                        ZLog::Write(LOGLEVEL_DEBUG, sprintf("Limit sync due to configured limitation on the folder: '%s': %s", $spKey, $spFilter));
+                    }
+
+                    // 3. step: check if there is a limitation for the backendId (limitation includes the owner of the folder/store)
+                    $spKey= $store .'/'. $backendFolderId;
+                    if (array_key_exists($spKey, $specialSyncFilter)) {
+                        $spFilter = $specialSyncFilter[$spKey];
+                        ZLog::Write(LOGLEVEL_DEBUG, sprintf("Limit sync due to configured limitation on the folder: '%s': %s", $spKey, $spFilter));
+                    }
+                    if ($spFilter) {
+                        $maxAllowed = $spFilter;
+                    }
+                }
+            }
         }
 
         return $maxAllowed;
