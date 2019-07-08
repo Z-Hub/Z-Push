@@ -733,8 +733,8 @@ class DeviceManager {
             if ($store) {
                 $origin = Utils::GetFolderOriginFromId($folderid);
                 // do not limit when the owner or impersonated user is synching!
-                if ($origin == DeviceManager::FLD_ORIGIN_USER || $origin == DeviceManager::FLD_ORIGIN_IMPERSONATED){
-                    ZLog::Write(LOGLEVEL_DEBUG, "Not checking for specific sync limit at this is the owner/impersonted user.");
+                if ($origin == DeviceManager::FLD_ORIGIN_USER || $origin == DeviceManager::FLD_ORIGIN_IMPERSONATED) {
+                    ZLog::Write(LOGLEVEL_DEBUG, "Not checking for specific sync limit as this is the owner/impersonated user.");
                 }
                 else {
                     $spKey = false;
@@ -752,7 +752,7 @@ class DeviceManager {
                         ZLog::Write(LOGLEVEL_DEBUG, sprintf("Limit sync due to configured limitation on the folder: '%s': %s", $spKey, $spFilter));
                     }
 
-                    // 3. step: check if there is a limitation for the backendId (limitation includes the owner of the folder/store)
+                    // 3. step: check if there is a limitation for the backendId
                     $spKey= $store .'/'. $backendFolderId;
                     if (array_key_exists($spKey, $specialSyncFilter)) {
                         $spFilter = $specialSyncFilter[$spKey];
