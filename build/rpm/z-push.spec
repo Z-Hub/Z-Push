@@ -409,8 +409,8 @@ install -Dpm 644 config/nginx/z-push-autodiscover.conf "$b/%_sysconfdir/nginx/sn
 install -Dpm 644 config/nginx/z-push-php.conf "$b/%_sysconfdir/nginx/snippets/z-push-php.conf";
 
 # MANPAGES
-mkdir -p "$b/%_mandir/man1"
-cp man/*.1 "$b/%_mandir/man1"
+mkdir -p "$b/%_mandir/man8"
+cp man/*.8 "$b/%_mandir/man8"
 
 %pre -n %name-common
 %_bindir/getent group z-push > /dev/null || %_sbindir/groupadd -r z-push
@@ -483,8 +483,8 @@ service nginx reload || true
 %_sbindir/z-push-admin
 %_sbindir/z-push-top
 
-%_mandir/man1/z-push-admin.1*
-%_mandir/man1/z-push-top.1*
+%_mandir/man8/z-push-admin.8*
+%_mandir/man8/z-push-top.8*
 
 # CALDAV
 %files -n %name-backend-caldav
@@ -548,7 +548,7 @@ service nginx reload || true
 %dir %_sysconfdir/z-push
 %config(noreplace) %attr(0640,root,z-push) %_sysconfdir/z-push/gabsync.conf.php
 %_sbindir/z-push-gabsync
-%_mandir/man1/z-push-gabsync.1*
+%_mandir/man8/z-push-gabsync.8*
 
 %files -n %name-kopano-gab2contacts
 %defattr(-, root, root)
@@ -558,7 +558,7 @@ service nginx reload || true
 %dir %_sysconfdir/z-push
 %config(noreplace) %attr(0640,root,z-push) %_sysconfdir/z-push/gab2contacts.conf.php
 %_sbindir/z-push-gab2contacts
-%_mandir/man1/z-push-gab2contacts.1*
+%_mandir/man8/z-push-gab2contacts.8*
 
 %files -n %name-kopano
 
