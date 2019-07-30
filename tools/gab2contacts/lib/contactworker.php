@@ -104,10 +104,10 @@ abstract class ContactWorker {
      *
      * @param string  $msg          the message
      *
-     * @access protected
+     * @access public
      * @return void
      */
-    protected function Log($msg) {
+    public function Log($msg) {
         echo $msg . PHP_EOL;
     }
 
@@ -116,10 +116,10 @@ abstract class ContactWorker {
      *
      * @param string  $msg          the message
      *
-     * @access protected
+     * @access public
      * @return void
      */
-    protected function Terminate($msg) {
+    public function Terminate($msg) {
         fwrite(STDERR, $msg);
         echo PHP_EOL.PHP_EOL;
         exit(1);
