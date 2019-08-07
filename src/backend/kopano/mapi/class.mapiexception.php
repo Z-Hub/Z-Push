@@ -51,7 +51,7 @@
                 case MAPI_E_NO_RECIPIENTS:
                     return _("There are no recipients in the message.");
                 case MAPI_E_NOT_FOUND:
-                    return _(,"Can not find object.");
+                    return _("Can not find object.");
                 case MAPI_E_NOT_ENOUGH_MEMORY:
                     return _("Operation failed: Server does not have enough memory.");
                 case MAPI_E_INTERFACE_NOT_SUPPORTED:

@@ -37,7 +37,7 @@ define('PATH_TO_ZPUSH', '../../src/');
     set_include_path(get_include_path() . PATH_SEPARATOR . BASE_PATH_CLI . PATH_TO_ZPUSH . PATH_SEPARATOR . PATH_TO_ZPUSH);
     include_once("vendor/autoload.php");
 
-    if (!defined('CONTACT_CONFIG')) define('CONTACT_CONFIG', 'config.php');
+    if (!defined('CONTACT_CONFIG')) define('CONTACT_CONFIG', BASE_PATH_CLI.'config.php');
     include_once(CONTACT_CONFIG);
 
     try {
