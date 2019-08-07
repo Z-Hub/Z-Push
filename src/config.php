@@ -79,7 +79,7 @@
  *  IpcSharedMemoryProvider - default. Requires z-push-ipc-sharedmemory package.
  *  IpcMemcachedProvider    - requires z-push-ipc-memcached package. It is necessary to set up
  *                            memcached server before (it won't be installed by z-push-ipc-memcached).
- *  IpcWincacheProvider     - for windows systems. See https://jira.z-hub.io/browse/ZP-1332.
+ *  IpcWincacheProvider     - for windows systems.
  */
     define('IPC_PROVIDER', '');
 
