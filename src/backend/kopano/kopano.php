@@ -2650,7 +2650,7 @@ class BackendKopano implements IBackend, ISearchProvider {
             elseif (Request::IsOutlook() && $outlookDisabled) {
                 throw new FatalException("User is disabled for Outlook usage with Z-Push.");
             }
-            elseif (!Request::IsOutlook() && $mobileDisabled) {
+            elseif (!Request::IsOutlook() && $mobileDisabled && Request::GetDeviceType() !== "webservice" && Request::GetDeviceType() !== false) {
                 throw new FatalException("User is disabled for mobile device usage with Z-Push.");
             }
         }
