@@ -216,3 +216,6 @@ define('IMAP_MEETING_USE_CALDAV', false);
 // methods and you will be unable to log in. Uncomment the following line to disable that authentication method.
 // Multiple methods can be specified as a comma-separated string.
 // define('IMAP_DISABLE_AUTHENTICATOR', 'GSSAPI');
+
+// Specify Which Charset the IMAP Search is going to use, Default is 'UTF-8' but you could use 'US-ASCII'
+define('IMAP_SEARCH_CHARSET', 'UTF-8');
