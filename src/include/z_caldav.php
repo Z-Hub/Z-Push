@@ -961,12 +961,6 @@ EOFILTER;
         if (!empty($relative_url)) {
             $this->SetCalendar($relative_url);
         }
-
-	if ( !true ) {
-		$getmodified = '<D:getlastmodified/>';
-	} else {
-		$getmodified = '';
-	}
         $hasToken = !$initial && isset($this->synctoken[$this->calendar_url]);
         if ($support_dav_sync) {
             $token = ($hasToken ? $this->synctoken[$this->calendar_url] : "");
@@ -979,7 +973,7 @@ EOFILTER;
     <D:sync-level>1</D:sync-level>
     <D:prop>
         <D:getetag/>
-        $getmodified
+        <D:getlastmodified/>
     </D:prop>
 </D:sync-collection>
 EOXML;
@@ -990,7 +984,7 @@ EOXML;
 <C:calendar-query xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
   <D:prop>
     <D:getetag/>
-    $getmodified
+    <D:getlastmodified/>
   </D:prop>
   <C:filter>
     <C:comp-filter name="VCALENDAR" />
