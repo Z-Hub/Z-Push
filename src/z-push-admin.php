@@ -87,6 +87,7 @@ class ZPushAdminCLI {
     const COMMAND_LISTSTORESHARES = 15;
     const COMMAND_LISTFOLDERSHARES = 16;
     const COMMAND_LISTFOLDERS = 17;
+    const COMMAND_LISTDETAILS = 18;
 
     const TYPE_OPTION_EMAIL = "email";
     const TYPE_OPTION_CALENDAR = "calendar";
@@ -127,6 +128,7 @@ class ZPushAdminCLI {
                 "\tlist -u USER\t\t\t\t Lists all devices of user USER.\n" .
                 "\tlist -d DEVICE\t\t\t\t Lists all users of device DEVICE.\n" .
                 "\tlastsync\t\t\t\t Lists all devices and synchronized users and the last synchronization time.\n" .
+                "\tlistdetails\t\t\t\t Lists all synchronized devices-users and their details in a tab separated list.\n" .
                 "\twipe -u USER\t\t\t\t Remote wipes all devices of user USER.\n" .
                 "\twipe -d DEVICE\t\t\t\t Remote wipes device DEVICE.\n" .
                 "\twipe -u USER -d DEVICE\t\t\t Remote wipes device DEVICE of user USER.\n" .
@@ -314,6 +316,11 @@ class ZPushAdminCLI {
                 self::$command = self::COMMAND_SHOWLASTSYNC;
                 break;
 
+            // list details
+            case "listdetails":
+                self::$command = self::COMMAND_LISTDETAILS;
+                break;
+
             // remove wipe device
             case "wipe":
                 if (self::$user === false && self::$device === false)
@@ -475,7 +482,11 @@ class ZPushAdminCLI {
 
             case self::COMMAND_SHOWLASTSYNC:
                 self::CommandShowLastSync();
-                break;
+                break;   
+
+            case self::COMMAND_LISTDETAILS:
+                self::CommandListDetails();
+                break;               
 
             case self::COMMAND_WIPEDEVICE:
                 if (self::$device)
@@ -625,6 +636,125 @@ class ZPushAdminCLI {
                 echo str_pad($deviceId, 36) . str_pad($user, 30) . " " . str_pad($lastsync, 33) . $hasShortFolderIds . "\n";
             }
         }
+    }
+
+    /**
+     * Command "Lists all synchronized devices-users and their details in a tab separated list"
+     * 
+     * Prints the device id of/and connected users:
+     * - Device id
+     * - Synchronized users
+     * - Last sync time
+     * - deviceType
+     * - deviceModel
+     * - deviceOS
+     * - ASVersion
+     * - KoeVersion
+     * - Total folders
+     * - Synchronized folders
+     * - Not synchronized folders
+     * - Shared/impersonated folders
+     * - Ignored messages
+     * - KOE inactive            
+     *
+     * @return
+     * @access public
+     */
+    static public function CommandListDetails() {
+
+        $devicelist = ZPushAdmin::ListDevices();
+        if (empty($devicelist))
+            echo "\tno devices found\n";
+        else {
+            echo "All synchronized devices\n\n";
+            echo "Device id"."\t".
+            "Synchronized user"."\t".
+            "Last sync time"."\t". 
+            "deviceType"."\t". 
+            "UserAgent"."\t". 
+            "deviceModel"."\t".
+            "deviceOS"."\t".
+            "ASVersion"."\t".
+            "KoeVersion"."\t".
+            "Total folders"."\t".
+            "Synchronized folders"."\t".
+            "Not synchronized folders"."\t".
+            "Shared/impersonated folders"."\t".
+            "Ignored messages"."\t".
+            "KOE inactive"."\t".
+            "\n";
+            echo "-------------------------------------------------------------------------------------------------------------------------------------------------------------------\n";
+        }
+        $now = time();
+        foreach ($devicelist as $deviceId) {
+            $users = ZPushAdmin::ListUsers($deviceId);
+            foreach ($users as $usr) {
+                $device = ZPushAdmin::GetDeviceDetails($deviceId, $usr);
+                $daysOld = floor(($now - $device->GetLastSyncTime()) / 86400);
+                if (self::$daysold > $daysOld) {
+                    continue;
+                }
+                $lastsync = $device->GetLastSyncTime() ? strftime("%Y-%m-%d %H:%M", $device->GetLastSyncTime()) . ' (' . str_pad($daysOld, 3, ' ', STR_PAD_LEFT) . ' days ago)' : "never";
+                $data = self::ListDeviceFolders($deviceId, $usr);
+                echo $deviceId."\t".
+                $usr."\t".
+                $lastsync."\t". 
+                ($device->GetDeviceType() !== ASDevice::UNDEFINED ? $device->GetDeviceType() : "unknown")."\t".
+                ($device->GetDeviceUserAgent()!== ASDevice::UNDEFINED ? $device->GetDeviceUserAgent() : "unknown")."\t".
+                $device->GetDeviceModel()."\t".
+                $device->GetDeviceOS()."\t".
+                ($device->GetASVersion() ? $device->GetASVersion() : "unknown")."\t".
+                $device->GetKoeVersion()."\t".
+                $data[0]."\t".
+                $data[1]."\t".
+                $data[2]."\t".
+                $data[3]."\t".
+                count($device->ignoredmessages)."\t".
+                (($device->GetKoeLastAccess() && $device->GetKoeLastAccess() + 25260 < $device->GetLastSyncTime()) ? "KOE inactive":"")."\r\n";
+            }
+        }
+    }
+
+    /** 
+     * Returns an array with the folders stats of a device id:
+     * - Total folders
+     * - Synchronized folders
+     * - Not synchronized folders
+     * - Shared/impersonated folders
+     *
+     * @return
+     * @access private
+     */
+    static private function ListDeviceFolders($deviceId, $user) {
+
+        $device = ZPushAdmin::GetDeviceDetails($deviceId, $user, true);
+        if (! $device instanceof ASDevice) {
+            printf("Folder details failed: %s\n", ZLog::GetLastMessage(LOGLEVEL_ERROR));
+            return false;
+        }
+        $folders = $device->GetAllFolderIds();
+        $synchedFolders = 0;
+        $notSynchedFolders = 0;
+        $sharedFolders = 0;
+        $hc = $device->GetHierarchyCache();
+        foreach ($folders as $folderid) {
+            if ($device->GetFolderUUID($folderid)) {
+                $synchedFolders++;
+                $notSynced = '';
+            }
+            else {
+                $notSynchedFolders++;
+                $notSynced = "\t"."NOT SYNCHED";
+            }
+            $folder = $hc->GetFolder($folderid);
+            $name = $folder ? $folder->displayname : "unknown";
+            if (strcmp($name, 'unknown') == 0) {
+            }
+            if (Utils::GetFolderOriginFromId($folderid) != DeviceManager::FLD_ORIGIN_USER) {
+                $sharedFolders++;
+            }
+        }
+        return array(count($folders), $synchedFolders, $notSynchedFolders, $sharedFolders);
     }
 
     /**
