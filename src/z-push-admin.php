@@ -119,7 +119,7 @@ class ZPushAdminCLI {
      */
     static public function UsageInstructions() {
         return  "Usage:\n\tz-push-admin.php -a ACTION [options]\n\n" .
-                "Parameters:\n\t-a list/lastsync/wipe/remove/resync/clearloop/fixstates/addshared/removeshared/listshares\n\t[-u] username\n\t[-d] deviceid\n" .
+                "Parameters:\n\t-a list/lastsync/listdetails/wipe/remove/resync/clearloop/fixstates/addshared/removeshared/listshares\n\t[-u] username\n\t[-d] deviceid\n" .
                 "\t[-t] type\tthe following types are available: '".self::TYPE_OPTION_EMAIL."', '".self::TYPE_OPTION_CALENDAR."', '".self::TYPE_OPTION_CONTACT."', '".self::TYPE_OPTION_TASK."', '".self::TYPE_OPTION_NOTE."', '".self::TYPE_OPTION_HIERARCHY."' of '".self::TYPE_OPTION_GAB."' (for KOE) or a folder id.\n" .
                 "\t[--shared|-s]\tshow detailed information about shared folders of a user in list.\n".
                 "\t[--days-old] n\tshow or remove profiles older than n days with lastsync or remove. n must be a positive integer.\n\n".
@@ -482,11 +482,11 @@ class ZPushAdminCLI {
 
             case self::COMMAND_SHOWLASTSYNC:
                 self::CommandShowLastSync();
-                break;   
+                break;
 
             case self::COMMAND_LISTDETAILS:
                 self::CommandListDetails();
-                break;               
+                break;
 
             case self::COMMAND_WIPEDEVICE:
                 if (self::$device)
@@ -640,7 +640,7 @@ class ZPushAdminCLI {
 
     /**
      * Command "Lists all synchronized devices-users and their details in a tab separated list"
-     * 
+     *
      * Prints the device id of/and connected users:
      * - Device id
      * - Synchronized users
@@ -655,7 +655,7 @@ class ZPushAdminCLI {
      * - Not synchronized folders
      * - Shared/impersonated folders
      * - Ignored messages
-     * - KOE inactive            
+     * - KOE inactive
      *
      * @return
      * @access public
@@ -666,24 +666,23 @@ class ZPushAdminCLI {
         if (empty($devicelist))
             echo "\tno devices found\n";
         else {
-            echo "All synchronized devices\n\n";
-            echo "Device id"."\t".
-            "Synchronized user"."\t".
-            "Last sync time"."\t". 
-            "deviceType"."\t". 
-            "UserAgent"."\t". 
-            "deviceModel"."\t".
-            "deviceOS"."\t".
-            "ASVersion"."\t".
-            "KoeVersion"."\t".
-            "Total folders"."\t".
-            "Synchronized folders"."\t".
-            "Not synchronized folders"."\t".
-            "Shared/impersonated folders"."\t".
-            "Ignored messages"."\t".
-            "KOE inactive"."\t".
-            "\n";
-            echo "-------------------------------------------------------------------------------------------------------------------------------------------------------------------\n";
+            echo "All synchronized devices\n\n",
+            "Device id\t",
+            "Synchronized user\t",
+            "Last sync time\t",
+            "deviceType\t",
+            "UserAgent\t",
+            "deviceModel\t",
+            "deviceOS\t",
+            "ASVersion\t",
+            "KoeVersion\t",
+            "Total folders\t",
+            "Synchronized folders\t",
+            "Not synchronized folders\t",
+            "Shared/impersonated folders\t",
+            "Ignored messages\t",
+            "KOE inactive\t\n",
+            str_repeat('-', 163), "\n";
         }
         $now = time();
         foreach ($devicelist as $deviceId) {
@@ -696,26 +695,26 @@ class ZPushAdminCLI {
                 }
                 $lastsync = $device->GetLastSyncTime() ? strftime("%Y-%m-%d %H:%M", $device->GetLastSyncTime()) . ' (' . str_pad($daysOld, 3, ' ', STR_PAD_LEFT) . ' days ago)' : "never";
                 $data = self::ListDeviceFolders($deviceId, $usr);
-                echo $deviceId."\t".
-                $usr."\t".
-                $lastsync."\t". 
-                ($device->GetDeviceType() !== ASDevice::UNDEFINED ? $device->GetDeviceType() : "unknown")."\t".
-                ($device->GetDeviceUserAgent()!== ASDevice::UNDEFINED ? $device->GetDeviceUserAgent() : "unknown")."\t".
-                $device->GetDeviceModel()."\t".
-                $device->GetDeviceOS()."\t".
-                ($device->GetASVersion() ? $device->GetASVersion() : "unknown")."\t".
-                $device->GetKoeVersion()."\t".
-                $data[0]."\t".
-                $data[1]."\t".
-                $data[2]."\t".
-                $data[3]."\t".
-                count($device->ignoredmessages)."\t".
-                (($device->GetKoeLastAccess() && $device->GetKoeLastAccess() + 25260 < $device->GetLastSyncTime()) ? "KOE inactive":"")."\r\n";
+                echo $deviceId, "\t",
+                $usr, "\t",
+                $lastsync, "\t",
+                ($device->GetDeviceType() !== ASDevice::UNDEFINED ? $device->GetDeviceType() : "unknown"), "\t",
+                ($device->GetDeviceUserAgent()!== ASDevice::UNDEFINED ? $device->GetDeviceUserAgent() : "unknown"), "\t",
+                $device->GetDeviceModel(), "\t",
+                $device->GetDeviceOS(), "\t",
+                ($device->GetASVersion() ? $device->GetASVersion() : "unknown"), "\t",
+                $device->GetKoeVersion(), "\t",
+                $data[0], "\t",
+                $data[1], "\t",
+                $data[2], "\t",
+                $data[3], "\t",
+                count($device->ignoredmessages), "\t",
+                (($device->GetKoeLastAccess() && $device->GetKoeLastAccess() + 25260 < $device->GetLastSyncTime()) ? "KOE inactive":""), "\n";
             }
         }
     }
 
-    /** 
+    /**
      * Returns an array with the folders stats of a device id:
      * - Total folders
      * - Synchronized folders
