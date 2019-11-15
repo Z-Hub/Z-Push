@@ -739,16 +739,12 @@ class ZPushAdminCLI {
         foreach ($folders as $folderid) {
             if ($device->GetFolderUUID($folderid)) {
                 $synchedFolders++;
-                $notSynced = '';
             }
             else {
                 $notSynchedFolders++;
-                $notSynced = "\t"."NOT SYNCHED";
             }
             $folder = $hc->GetFolder($folderid);
             $name = $folder ? $folder->displayname : "unknown";
-            if (strcmp($name, 'unknown') == 0) {
-            }
             if (Utils::GetFolderOriginFromId($folderid) != DeviceManager::FLD_ORIGIN_USER) {
                 $sharedFolders++;
             }
