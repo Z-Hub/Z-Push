@@ -34,7 +34,6 @@ class FileStateMachine implements IStateMachine {
     private $userfilename;
     private $settingsfilename;
     private $statefiles; // List of the state files. Used by z-push-admin and scripts.
-    private $globalstatefiles; // List of all z-push devices data files. Used by z-push-admin and scripts.
     private $devicedatafiles; // List of the device data files. Used by z-push-admin and scripts.
     private $pattern; // State pattern for glob()
 
@@ -65,9 +64,8 @@ class FileStateMachine implements IStateMachine {
         Utils::FixFileOwner($this->userfilename);
 
         $this->statefiles = array();
-        $this->globalstatefiles = array();
         $this->devicedatafiles = array();
-        $this->pattern = '';
+        $this->pattern = STATE_DIR.'*/*/*';
     }
 
     /**
@@ -503,31 +501,15 @@ class FileStateMachine implements IStateMachine {
      * @return array
      */
     protected function getStateFiles($pattern = null) {
-        if ($pattern === null) {
-            $pattern = STATE_DIR.'*/*/*'; 
-            if (empty($this->globalstatefiles)){
-                // read all states
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("FileStateMachine->getStateFiles() globalstatefiles '%d'", sizeof($this->globalstatefiles)));
-                $this->globalstatefiles = glob($pattern, GLOB_NOSORT);
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("FileStateMachine->getStateFiles() reading global state files of '%s'", $pattern));
-            }
-            else{
-                //states already loaded
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("FileStateMachine->getStateFiles() using global state files of '%s'", $pattern));
-            }
-            return $this->globalstatefiles;
-
-        }else{
-            if ($pattern != $this->pattern){
-                $this->statefiles = glob($pattern, GLOB_NOSORT);
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("FileStateMachine->getStateFiles() reading state files of '%s'", $pattern));
-                $this->pattern = $pattern;
-            }
-            else{
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("FileStateMachine->getStateFiles() using state files of '%s'", $pattern));
+        if ($pattern === null || $pattern === $this->pattern) {
+            if (empty($this->statefiles)) {
+                $this->statefiles = glob($this->pattern, GLOB_NOSORT);
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("FileStateMachine->getStateFiles() read all state files '%d'", sizeof($this->statefiles)));
             }
             return $this->statefiles;
         }
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("FileStateMachine->getStateFiles() reading state files of '%s'", $pattern));
+        return glob($pattern, GLOB_NOSORT);
     }
 
     /**
