@@ -906,6 +906,43 @@ class BackendKopano implements IBackend, ISearchProvider {
         if(!$mapimessage)
             throw new StatusException(sprintf("BackendKopano->MeetingResponse('%s','%s', '%s'): Error, unable to open request message for response 0x%X", $requestid, $folderid, $response, mapi_last_hresult()), SYNC_MEETRESPSTATUS_INVALIDMEETREQ);
 
+        // ios sends calendar item in MeetingResponse
+        // @see https://jira.z-hub.io/browse/ZP-1524
+        $folderClass = ZPush::GetDeviceManager()->GetFolderClassFromCacheByID($fid);
+        // find the corresponding meeting request
+        if ($folderClass != 'Email') {
+            $props = MAPIMapping::GetMeetingRequestProperties();
+            $props = getPropIdsFromStrings($this->store, $props);
+
+            $messageprops = mapi_getprops($mapimessage, array($props["goidtag"]));
+            $goid = $messageprops[$props["goidtag"]];
+
+            $mapiprovider = new MAPIProvider($this->session, $this->store);
+            $inboxprops = $mapiprovider->GetInboxProps();
+            $folder = mapi_msgstore_openentry($this->store, $inboxprops[PR_ENTRYID]);
+
+            // Find the item by restricting all items to the correct ID
+            $restrict = array(RES_AND, array(
+                array(RES_PROPERTY,
+                    array(
+                        RELOP => RELOP_EQ,
+                        ULPROPTAG => $props["goidtag"],
+                        VALUE => $goid
+                    )
+                )
+            ));
+
+            $inboxcontents = mapi_folder_getcontentstable($folder);
+
+            $rows = mapi_table_queryallrows($inboxcontents, array(PR_ENTRYID), $restrict);
+            if (empty($rows)) {
+                throw new StatusException(sprintf("BackendKopano->MeetingResponse('%s','%s', '%s'): Error, meeting request not found in the inbox", $requestid, $folderid, $response), SYNC_MEETRESPSTATUS_INVALIDMEETREQ);
+            }
+            ZLog::Write(LOGLEVEL_DEBUG, "BackendKopano->MeetingResponse found meeting request in the inbox");
+            $mapimessage = mapi_msgstore_openentry($this->store, $rows[0][PR_ENTRYID]);
+            $reqentryid = $rows[0][PR_ENTRYID];
+        }
+
         $meetingrequest = new Meetingrequest($this->store, $mapimessage, $this->session);
 
         if(!$meetingrequest->isMeetingRequest())
@@ -915,14 +952,26 @@ class BackendKopano implements IBackend, ISearchProvider {
             throw new StatusException(sprintf("BackendKopano->MeetingResponse('%s','%s', '%s'): Error, attempt to response to meeting request that we organized", $requestid, $folderid, $response), SYNC_MEETRESPSTATUS_INVALIDMEETREQ);
 
         // Process the meeting response. We don't have to send the actual meeting response
-        // e-mail, because the device will send it itself.
+        // e-mail, because the device will send it itself. This seems not to be the case
+        // anymore for the ios devices since at least version 12.4. Z-Push will send the
+        // accepted email in such a case.
+        // @see https://jira.z-hub.io/browse/ZP-1524
+        $sendresponse = false;
+        $deviceType = strtolower(Request::GetDeviceType());
+        if ($deviceType == 'iphone' || $deviceType == 'ipad' || $deviceType == 'ipod') {
+            $matches = array();
+            if (preg_match("/^Apple-.*?\/(\d{4})\./", Request::GetUserAgent(), $matches) && isset($matches[1]) && $matches[1] >= 1607) {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendKopano->MeetingResponse: iOS device %s->%s", Request::GetDeviceType(), Request::GetUserAgent()));
+                $sendresponse = true;
+            }
+        }
         switch($response) {
             case 1:     // accept
             default:
-                $entryid = $meetingrequest->doAccept(false, false, false, false, false, false, true); // last true is the $userAction
+                $entryid = $meetingrequest->doAccept(false, $sendresponse, false, false, false, false, true); // last true is the $userAction
                 break;
             case 2:        // tentative
-                $entryid = $meetingrequest->doAccept(true, false, false, false, false, false, true); // last true is the $userAction
+                $entryid = $meetingrequest->doAccept(true, $sendresponse, false, false, false, false, true); // last true is the $userAction
                 break;
             case 3:        // decline
                 $meetingrequest->doDecline(false);
@@ -950,11 +999,13 @@ class BackendKopano implements IBackend, ISearchProvider {
         if ($requestid == $calendarid) {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendKopano->MeetingResponse('%s','%s', '%s'): returned calender id is the same as the requestid - re-searching", $requestid, $folderid, $response));
 
-            $props = MAPIMapping::GetMeetingRequestProperties();
-            $props = getPropIdsFromStrings($this->store, $props);
+            if (empty($props)) {
+                $props = MAPIMapping::GetMeetingRequestProperties();
+                $props = getPropIdsFromStrings($this->store, $props);
 
-            $messageprops = mapi_getprops($mapimessage, Array($props["goidtag"]));
-            $goid = $messageprops[$props["goidtag"]];
+                $messageprops = mapi_getprops($mapimessage, Array($props["goidtag"]));
+                $goid = $messageprops[$props["goidtag"]];
+            }
 
             $items = $meetingrequest->findCalendarItems($goid);
 
@@ -971,8 +1022,10 @@ class BackendKopano implements IBackend, ISearchProvider {
         }
 
         // delete meeting request from Inbox
-        $folderentryid = mapi_msgstore_entryidfromsourcekey($this->store, hex2bin($folderid));
-        $folder = mapi_msgstore_openentry($this->store, $folderentryid);
+        if ($folderClass == 'Email') {
+            $folderentryid = mapi_msgstore_entryidfromsourcekey($this->store, hex2bin($folderid));
+            $folder = mapi_msgstore_openentry($this->store, $folderentryid);
+        }
         mapi_folder_deletemessages($folder, array($reqentryid), 0);
 
         $prefix = '';
@@ -2650,7 +2703,7 @@ class BackendKopano implements IBackend, ISearchProvider {
             elseif (Request::IsOutlook() && $outlookDisabled) {
                 throw new FatalException("User is disabled for Outlook usage with Z-Push.");
             }
-            elseif (!Request::IsOutlook() && $mobileDisabled) {
+            elseif (!Request::IsOutlook() && $mobileDisabled && Request::GetDeviceType() !== "webservice" && Request::GetDeviceType() !== false) {
                 throw new FatalException("User is disabled for mobile device usage with Z-Push.");
             }
         }
