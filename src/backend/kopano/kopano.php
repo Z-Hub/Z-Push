@@ -2707,6 +2707,9 @@ class BackendKopano implements IBackend, ISearchProvider {
         if (isset($enabledFeatures[PR_EC_DISABLED_FEATURES]) && is_array($enabledFeatures[PR_EC_DISABLED_FEATURES])) {
             $mobileDisabled = in_array(self::MOBILE_ENABLED, $enabledFeatures[PR_EC_DISABLED_FEATURES]);
             $outlookDisabled = in_array(self::OUTLOOK_ENABLED, $enabledFeatures[PR_EC_DISABLED_FEATURES]);
+            $deviceId = Request::GetDeviceID();
+            // Checks for deviceId present in zarafaDisabledFeatures LDAP array attribute. Check is performed case insensitive.
+            $deviceIdDisabled = ( ($deviceId !==null) && in_array($deviceId, array_map('strtolower', $enabledFeatures[PR_EC_DISABLED_FEATURES])) )? true : false;
             if ($mobileDisabled && $outlookDisabled) {
                 throw new FatalException("User is disabled for Z-Push.");
             }
@@ -2715,6 +2718,9 @@ class BackendKopano implements IBackend, ISearchProvider {
             }
             elseif (!Request::IsOutlook() && $mobileDisabled && Request::GetDeviceType() !== "webservice" && Request::GetDeviceType() !== false) {
                 throw new FatalException("User is disabled for mobile device usage with Z-Push.");
+            }
+            elseif ($deviceIdDisabled) {
+                throw new FatalException(sprintf("User has deviceId %s disabled for usage with Z-Push.", $deviceId));
             }
         }
         return true;
