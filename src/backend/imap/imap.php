@@ -83,6 +83,10 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             ZLog::Write(LOGLEVEL_INFO, sprintf("BackendIMAP(): The following authentication methods are disabled: %s", IMAP_DISABLE_AUTHENTICATOR));
             $this->imapParams = array("DISABLE_AUTHENTICATOR" => array_map('trim' ,explode(',', IMAP_DISABLE_AUTHENTICATOR)));
         }
+        if (!defined('IMAP_SEARCH_CHARSET')) {
+            ZLog::Write(LOGLEVEL_INFO, "BackendIMAP(): Using UTF-8 as Default Charset for Searches");
+            define('IMAP_SEARCH_CHARSET', 'UTF-8');
+        }
     }
 
     /**----------------------------------------------------------------------------------------------------------
@@ -1906,7 +1910,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
                         $imapSubFolder = str_replace($this->server, "", $subFolder);
                         $subFolderId = $this->getFolderIdFromImapId($imapSubFolder);
                         if ($subFolderId !== false) { // only search found folders
-                            $subList = @imap_search($this->mbox, $filter, SE_UID, "UTF-8");
+                            $subList = @imap_search($this->mbox, $filter, SE_UID, IMAP_SEARCH_CHARSET);
                             if ($subList !== false) {
                                 $numMessages += count($subList);
                                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->GetMailboxSearchResults: SubSearch in %s : %s ocurrences", $imapSubFolder, count($subList)));
@@ -1919,7 +1923,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
         }
         else { // Search in folder
             if (@imap_reopen($this->mbox, $this->server . $imapId)) {
-                $subList = @imap_search($this->mbox, $filter, SE_UID, "UTF-8");
+                $subList = @imap_search($this->mbox, $filter, SE_UID, IMAP_SEARCH_CHARSET);
                 if ($subList !== false) {
                     $numMessages += count($subList);
                     ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->GetMailboxSearchResults: Search in %s : %s ocurrences", $imapId, count($subList)));
