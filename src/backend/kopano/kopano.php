@@ -1727,7 +1727,17 @@ class BackendKopano implements IBackend, ISearchProvider {
         $foldercount = mapi_table_getrowcount($hierarchy);
 
         $storeProps = mapi_getprops($this->store, array(PR_MESSAGE_SIZE_EXTENDED));
-        $storesize = isset($storeProps[PR_MESSAGE_SIZE_EXTENDED]) ? $storeProps[PR_MESSAGE_SIZE_EXTENDED] : 0;
+
+        // Disable the sending of the storesize parameter to KOE.
+        // In case this parameter is greater than 0 then KOE will reduce the synched data window basing on thresholds and 
+        // displays a dialog message.
+        if (defined('DISABLE_KOE_STORESIZE_LIMIT') && DISABLE_KOE_STORESIZE_LIMIT === true) {
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->GetUserStoreInfo(): KOE storesize limit handling is DISABLED."));
+            $storesize = 0;
+        }
+        else {
+            $storesize = isset($storeProps[PR_MESSAGE_SIZE_EXTENDED]) ? $storeProps[PR_MESSAGE_SIZE_EXTENDED] : 0;
+        }
 
         $userDetails = $this->GetUserDetails($this->impersonateUser ?: $this->mainUser);
         $userStoreInfo->SetData($foldercount, $storesize, $userDetails['fullname'], $userDetails['emailaddress']);
