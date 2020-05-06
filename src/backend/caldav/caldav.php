@@ -219,10 +219,10 @@ class BackendCalDAV extends BackendDiff {
 
         $path = $this->_caldav_path . substr($folderid, 1) . "/";
         if ($folderid[0] == "C") {
-            $msgs = $this->_caldav->GetEvents($begin, $finish, $path);
+            $msgs = $this->_caldav->GetEventsList($begin, $finish, $path);
         }
         else {
-            $msgs = $this->_caldav->GetTodos($begin, $finish, false, false, $path);
+            $msgs = $this->_caldav->GetTodosList($begin, $finish, false, false, $path);
         }
 
         $messages = array();
@@ -240,8 +240,16 @@ class BackendCalDAV extends BackendDiff {
      */
     public function GetMessage($folderid, $id, $contentparameters) {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->GetMessage('%s','%s')", $folderid,  $id));
-        $data = $this->_collection[$id]['data'];
-
+        $path = $this->_caldav_path . substr($folderid, 1) . "/";
+        $href = $path . $id;
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->GetMessage Querying server for message with href '%s' in folder '%s'", $href, $path));
+        $messages = $this->_caldav->CalendarMultiget( array( $href ), $path );
+        if (!isset($messages[$href]) || $messages[$href] == '') {
+            //we don't have any ical information, return false so that the diff backend raises an exception
+            return false;
+        }
+        $data = $messages[ $href ];
+        unset ($messages, $href);
         if ($folderid[0] == "C") {
             return $this->_ParseVEventToAS($data, $contentparameters);
         }
@@ -267,9 +275,12 @@ class BackendCalDAV extends BackendDiff {
         }
         else {
             $path = $this->_caldav_path . substr($folderid, 1) . "/";
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->StatMessage Data doesn't exist for this item, querying caldav server for uid '%s' in folder '%s'", substr($id, 0, strlen($id)-4), $path));
             $e = $this->_caldav->GetEntryByUid(substr($id, 0, strlen($id)-4), $path, $type);
-            if ($e == null && count($e) <= 0)
+            if ($e == null && count($e) <= 0) {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->StatMessage No item on server with uid '%s' in folder '%s'", substr($id, 0, strlen($id)-4), $path));
                 return;
+            }
             $data = $e[0];
         }
         $message = array();
@@ -1829,4 +1840,4 @@ class BackendCalDAV extends BackendDiff {
         return sprintf("$prefix%'.02d%'.02d", $hours, ($offset - ($hours * 3600)) / 60);
     }
 
-}
+};
