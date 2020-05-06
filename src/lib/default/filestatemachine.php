@@ -501,14 +501,15 @@ class FileStateMachine implements IStateMachine {
      * @return array
      */
     protected function getStateFiles($pattern = null) {
-        if ($pattern === null) {
-            $pattern = STATE_DIR.'*/*/*';
+        if ($pattern === null || $pattern === $this->pattern) {
+            if (empty($this->statefiles)) {
+                $this->statefiles = glob($this->pattern, GLOB_NOSORT);
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("FileStateMachine->getStateFiles() read all state files '%d'", sizeof($this->statefiles)));
+            }
+            return $this->statefiles;
         }
-        if (empty($this->statefiles) || $pattern != $this->pattern) {
-            $this->statefiles = glob($pattern, GLOB_NOSORT);
-            $this->pattern = $pattern;
-        }
-        return $this->statefiles;
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("FileStateMachine->getStateFiles() reading state files of '%s'", $pattern));
+        return glob($pattern, GLOB_NOSORT);
     }
 
     /**
