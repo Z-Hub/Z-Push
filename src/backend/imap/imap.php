@@ -1366,7 +1366,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
 
                                 $attachment = new SyncBaseAttachment();
 
-                                $attachment->estimatedDataSize = isset($part->d_parameters['size']) ? $part->d_parameters['size'] : isset($part->body) ? strlen($part->body) : 0;
+                                $attachment->estimatedDataSize = isset($part->d_parameters['size']) ? $part->d_parameters['size'] : (isset($part->body) ? strlen($part->body) : 0);
 
                                 $attachment->displayname = $attname;
                                 $attachment->filereference = $folderid . ":" . $id . ":" . $i;
@@ -1405,7 +1405,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
 
                                 $attachment = new SyncAttachment();
 
-                                $attachment->attsize = isset($part->d_parameters['size']) ? $part->d_parameters['size'] : isset($part->body) ? strlen($part->body) : 0;
+                                $attachment->attsize = isset($part->d_parameters['size']) ? $part->d_parameters['size'] : (isset($part->body) ? strlen($part->body) : 0);
 
                                 $attachment->displayname = $attname;
                                 $attachment->attname = $folderid . ":" . $id . ":" . $i;
