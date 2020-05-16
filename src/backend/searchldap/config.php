@@ -56,4 +56,4 @@ $ldap_field_map = array(
                 );
 
 // Fallback to displayname if firstname and lastname not set
-define("LDAP_SEARCH_NAME_FALLBACK", true);
+define("LDAP_SEARCH_NAME_FALLBACK", false);
