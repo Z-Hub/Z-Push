@@ -38,7 +38,14 @@ class BackendLDAP extends BackendDiff {
     public function Logon($username, $domain, $password) {
         $this->user = $username;
         $user_dn = str_replace('%u', $username, LDAP_USER_DN);
-        $this->ldap_link = ldap_connect(LDAP_SERVER, LDAP_SERVER_PORT);
+        // connect to LDAP
+        if (defined('LDAP_SERVER_URI')) {
+          $this->ldap_link = ldap_connect(LDAP_SERVER_URI);
+        }
+        else {
+          ZLog::Write(LOGLEVEL_WARN, sprintf("BackendLDAP(): Use LDAP_SERVER_URI in your configuration, because ldap_connect(host, port) is deprecated."));
+          $this->ldap_link = ldap_connect(LDAP_SERVER, LDAP_SERVER_PORT);
+        }
         ldap_set_option($this->ldap_link, LDAP_OPT_PROTOCOL_VERSION, 3);
         if (ldap_bind($this->ldap_link, $user_dn, $password)) {
             ZLog::Write(LOGLEVEL_INFO, sprintf("BackendLDAP->Logon(): User '%s' is authenticated on LDAP", $username));
