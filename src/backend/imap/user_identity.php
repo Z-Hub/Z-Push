@@ -131,7 +131,13 @@ function getIdentityFromLdap($username, $domain, $identity, $encode = true) {
 
     $ldap_conn = null;
     try {
-        $ldap_conn = ldap_connect(IMAP_FROM_LDAP_SERVER, IMAP_FROM_LDAP_SERVER_PORT);
+        if (defined('IMAP_FROM_LDAP_SERVER_URI')) {
+            $ldap_conn = ldap_connect(IMAP_FROM_LDAP_SERVER_URI);
+        }
+      	else {
+            ZLog::Write(LOGLEVEL_WARN, sprintf("BackendIMAP(): Use IMAP_FROM_LDAP_SERVER_URI in your configuration, because ldap_connect(host, port) is deprecated."));
+            $ldap_conn = ldap_connect(IMAP_FROM_LDAP_SERVER, IMAP_FROM_LDAP_SERVER_PORT);
+        }
         if ($ldap_conn) {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->getIdentityFromLdap() - Connected to LDAP"));
             ldap_set_option($ldap_conn, LDAP_OPT_PROTOCOL_VERSION, 3);
