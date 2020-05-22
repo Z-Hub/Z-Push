@@ -44,7 +44,13 @@ class BackendSearchLDAP implements ISearchProvider {
             throw new StatusException("BackendSearchLDAP(): php-ldap is not installed. Search aborted.", SYNC_SEARCHSTATUS_STORE_SERVERERROR, null, LOGLEVEL_FATAL);
 
         // connect to LDAP
-        $this->connection = @ldap_connect(LDAP_HOST, LDAP_PORT);
+        if (defined('LDAP_SERVER_URI')) {
+          $this->connection = @ldap_connect(LDAP_SERVER_URI);
+        }
+        else {
+          ZLog::Write(LOGLEVEL_WARN, sprintf("BackendSearchLDAP(): Use LDAP_SERVER_URI in your configuration, because ldap_connect(host, port) is deprecated."));
+          $this->connection = @ldap_connect(LDAP_HOST, LDAP_PORT);
+        }
         @ldap_set_option($this->connection, LDAP_OPT_PROTOCOL_VERSION, 3);
 
         // Authenticate
