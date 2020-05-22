@@ -150,8 +150,7 @@ define('IMAP_FROM_SQL_FULLNAME', '#first_name #last_name');
 // QUERY: query to execute
 // FIELDS: columns in the query
 // FROM: string that will be the from, replacing the field names with the values
-define('IMAP_FROM_LDAP_SERVER', 'localhost');
-define('IMAP_FROM_LDAP_SERVER_PORT', '389');
+define('IMAP_FROM_LDAP_SERVER_URI', 'ldap://127.0.0.1/');
 define('IMAP_FROM_LDAP_USER', 'cn=zpush,ou=servers,dc=zpush,dc=org');
 define('IMAP_FROM_LDAP_PASSWORD', 'password');
 define('IMAP_FROM_LDAP_BASE', 'dc=zpush,dc=org');
