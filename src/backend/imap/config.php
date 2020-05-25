@@ -143,14 +143,13 @@ define('IMAP_FROM_SQL_EMAIL', '#mail_address');
 define('IMAP_FROM_SQL_FROM', '#first_name #last_name <#mail_address>');
 define('IMAP_FROM_SQL_FULLNAME', '#first_name #last_name');
 
-// SERVER: ldap server
-// SERVER_PORT: ldap port
+// SERVER_URI: ldap server
 // USER: dn to use for connecting
 // PASSWORD: password
 // QUERY: query to execute
 // FIELDS: columns in the query
 // FROM: string that will be the from, replacing the field names with the values
-define('IMAP_FROM_LDAP_SERVER_URI', 'ldap://127.0.0.1/');
+define('IMAP_FROM_LDAP_SERVER_URI', 'ldap://127.0.0.1:389/');
 define('IMAP_FROM_LDAP_USER', 'cn=zpush,ou=servers,dc=zpush,dc=org');
 define('IMAP_FROM_LDAP_PASSWORD', 'password');
 define('IMAP_FROM_LDAP_BASE', 'dc=zpush,dc=org');
