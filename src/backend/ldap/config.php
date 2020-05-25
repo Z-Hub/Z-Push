@@ -28,7 +28,7 @@
 // **********************
 
 // LDAP server uri
-define("LDAP_SERVER_URI", "ldap://127.0.0.1/");
+define("LDAP_SERVER_URI", "ldap://127.0.0.1:389/");
 
 // LDAP USER DN
 define('LDAP_USER_DN', 'uid=%u,ou=mailaccount,dc=phppush,dc=com');
