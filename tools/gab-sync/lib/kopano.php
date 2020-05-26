@@ -356,6 +356,7 @@ class Kopano extends SyncWorker {
                                                             PR_HOME_TELEPHONE_NUMBER,
                                                             PR_TITLE, PR_COMPANY_NAME,
                                                             PR_OFFICE_LOCATION,
+                                                            PR_DEPARTMENT_NAME,
                                                             PR_BEEPER_TELEPHONE_NUMBER,
                                                             PR_PRIMARY_FAX_NUMBER,
                                                             PR_ORGANIZATIONAL_ID_NUMBER,
@@ -459,6 +460,7 @@ class Kopano extends SyncWorker {
             if (isset($entry[PR_TITLE]))                                $a->title                           = $entry[PR_TITLE];
             if (isset($entry[PR_COMPANY_NAME]))                         $a->companyName                     = $entry[PR_COMPANY_NAME];
             if (isset($entry[PR_OFFICE_LOCATION]))                      $a->officeLocation                  = $entry[PR_OFFICE_LOCATION];
+            if (isset($entry[PR_DEPARTMENT_NAME]))                      $a->department                      = $entry[PR_DEPARTMENT_NAME];
             if (isset($entry[PR_BUSINESS_TELEPHONE_NUMBER]))            $a->businessTelephoneNumber         = $entry[PR_BUSINESS_TELEPHONE_NUMBER];
             if (isset($entry[PR_MOBILE_TELEPHONE_NUMBER]))              $a->mobileTelephoneNumber           = $entry[PR_MOBILE_TELEPHONE_NUMBER];
             if (isset($entry[PR_HOME_TELEPHONE_NUMBER]))                $a->homeTelephoneNumber             = $entry[PR_HOME_TELEPHONE_NUMBER];

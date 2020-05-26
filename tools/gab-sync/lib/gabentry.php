@@ -43,6 +43,7 @@ class GABEntry {
     public $title;                          // PR_TITLE                                 title
     public $companyName;                    // PR_COMPANY_NAME
     public $officeLocation;                 // PR_OFFICE_LOCATION                       physicalDeliveryOfficeName
+    public $department;                     // PR_DEPARTMENT_NAME                       departmentNumber
     public $businessTelephoneNumber;        // PR_BUSINESS_TELEPHONE_NUMBER
     public $mobileTelephoneNumber;          // PR_MOBILE_TELEPHONE_NUMBER               mobile
     public $homeTelephoneNumber;            // PR_HOME_TELEPHONE_NUMBER                 Telephone
