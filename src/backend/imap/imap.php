@@ -1082,8 +1082,16 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             }
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->GetMessage(): getBodyPreferenceBestMatch: %d", $bpReturnType));
 
+            // Detect Apple iOS devices
+            $isAppleIosDevice = false;
+            $deviceType = strtolower(Request::GetDeviceType());
+            if ($deviceType == 'iphone' || $deviceType == 'ipad' || $deviceType == 'ipod') {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->GetMessage():: iOS device %s->%s detected", Request::GetDeviceType(), Request::GetUserAgent()));
+                $isAppleIosDevice = true;
+            }
+          
             // Prefered format is MIME -OR- message is SMIME -OR- the device supports MIME (iPhone) and doesn't really understand HTML
-            if ($bpReturnType == SYNC_BODYPREFERENCE_MIME || $is_smime || in_array(SYNC_BODYPREFERENCE_MIME, $bodypreference)) {
+            if ($bpReturnType == SYNC_BODYPREFERENCE_MIME || ($bpReturnType == SYNC_BODYPREFERENCE_HTML && $isAppleIosDevice) || $is_smime || in_array(SYNC_BODYPREFERENCE_MIME, $bodypreference)) {
                 $bpReturnType = SYNC_BODYPREFERENCE_MIME;
             }
 
