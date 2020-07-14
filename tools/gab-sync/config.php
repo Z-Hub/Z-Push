@@ -84,3 +84,6 @@ define('GAB_SYNC_ALL', GAB_SYNC_USER | GAB_SYNC_CONTACT | GAB_SYNC_GROUP | GAB_S
 // to sync all types except rooms and equipments use:
 // define('GAB_SYNC_TYPES', GAB_SYNC_ALL & ~GAB_SYNC_ROOM & ~GAB_SYNC_EQUIPMENT);
 define('GAB_SYNC_TYPES', GAB_SYNC_ALL);
+
+// Whether to hide the group Everyone in the synced GAB.
+define('GAB_SYNC_HIDE_EVERYONE', false);

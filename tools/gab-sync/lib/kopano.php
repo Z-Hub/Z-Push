@@ -390,6 +390,11 @@ class Kopano extends SyncWorker {
                     continue;
                 }
             }
+            // ignore group Everyone if GAB_SYNC_HIDE_EVERYONE is true
+            if (GAB_SYNC_HIDE_EVERYONE && strtoupper($entry[PR_DISPLAY_NAME]) == "EVERYONE") {
+                $this->Log("Kopano->GetGAB(): Ignoring group Everyone.");
+                continue;
+            }
 
             $a = new GABEntry();
             $a->type = GABEntry::CONTACT;
@@ -873,6 +878,7 @@ class Kopano extends SyncWorker {
         foreach ($groupsUsers as $group => $userDetails) {
             if (in_array($user, $userDetails)) {
                 $groups[] = $group;
+
                 continue;
             }
         }
