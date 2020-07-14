@@ -365,6 +365,7 @@ class Kopano extends SyncWorker {
                                                             PR_BUSINESS_ADDRESS_POSTAL_CODE,
                                                             PR_BUSINESS_ADDRESS_POST_OFFICE_BOX,
                                                             PR_BUSINESS_ADDRESS_STATE_OR_PROVINCE,
+                                                            PR_BUSINESS_ADDRESS_STREET,
                                                             PR_INITIALS,
                                                             PR_LANGUAGE,
                                                             PR_EMS_AB_THUMBNAIL_PHOTO,
@@ -472,6 +473,7 @@ class Kopano extends SyncWorker {
             if (isset($entry[PR_BUSINESS_ADDRESS_POSTAL_CODE]))         $a->businessAddressPostalCode       = $entry[PR_BUSINESS_ADDRESS_POSTAL_CODE];
             if (isset($entry[PR_BUSINESS_ADDRESS_POST_OFFICE_BOX]))     $a->businessAddressPostOfficeBox    = $entry[PR_BUSINESS_ADDRESS_POST_OFFICE_BOX];
             if (isset($entry[PR_BUSINESS_ADDRESS_STATE_OR_PROVINCE]))   $a->businessAddressStateOrProvince  = $entry[PR_BUSINESS_ADDRESS_STATE_OR_PROVINCE];
+            if (isset($entry[PR_BUSINESS_ADDRESS_STREET]))              $a->businessAddressStreet           = $entry[PR_BUSINESS_ADDRESS_STREET];
             if (isset($entry[PR_INITIALS]))                             $a->initials                        = $entry[PR_INITIALS];
             if (isset($entry[PR_LANGUAGE]))                             $a->language                        = $entry[PR_LANGUAGE];
             if (isset($entry[PR_EMS_AB_THUMBNAIL_PHOTO]))               $a->thumbnailPhoto                  = base64_encode($entry[PR_EMS_AB_THUMBNAIL_PHOTO]);
