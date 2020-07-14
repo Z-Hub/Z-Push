@@ -104,6 +104,7 @@ class ZPushAdminCLI {
     static private $errormessage;
     static private $daysold = false;
     static private $shared = false;
+    static private $devicedriven = false;
     static private $foldername = false;
     static private $store = false;
     static private $folderid = false;
@@ -122,7 +123,8 @@ class ZPushAdminCLI {
                 "Parameters:\n\t-a list/lastsync/listdetails/wipe/remove/resync/clearloop/fixstates/addshared/removeshared/listshares\n\t[-u] username\n\t[-d] deviceid\n" .
                 "\t[-t] type\tthe following types are available: '".self::TYPE_OPTION_EMAIL."', '".self::TYPE_OPTION_CALENDAR."', '".self::TYPE_OPTION_CONTACT."', '".self::TYPE_OPTION_TASK."', '".self::TYPE_OPTION_NOTE."', '".self::TYPE_OPTION_HIERARCHY."' of '".self::TYPE_OPTION_GAB."' (for KOE) or a folder id.\n" .
                 "\t[--shared|-s]\tshow detailed information about shared folders of a user in list.\n".
-                "\t[--days-old] n\tshow or remove profiles older than n days with lastsync or remove. n must be a positive integer.\n\n".
+                "\t[--days-old] n\tshow or remove profiles older than n days with lastsync or remove. n must be a positive integer.\n".
+                "\t[--devicedriven]\texecute the fixstates device driven. Recommended for specific enviroments with high traffic.\n\n".
                 "Actions:\n" .
                 "\tlist\t\t\t\t\t Lists all devices and synchronized users.\n" .
                 "\tlist -u USER\t\t\t\t Lists all devices of user USER.\n" .
@@ -195,7 +197,7 @@ class ZPushAdminCLI {
         if (self::$errormessage)
             return;
 
-        $options = getopt("u:d:a:t:sn:o:f:g::h", array('user:', 'device:', 'action:', 'type:', 'days-old:', 'days-ago:', 'shared', 'foldername:', 'store', 'folderid:', 'flags::', 'help'));
+        $options = getopt("u:d:a:t:sn:o:f:g::h", array('user:', 'device:', 'action:', 'type:', 'days-old:', 'days-ago:', 'shared', 'foldername:', 'store', 'folderid:', 'flags::', 'devicedriven', 'help'));
 
         // get 'user'
         if (isset($options['u']) && !empty($options['u']))
@@ -237,6 +239,14 @@ class ZPushAdminCLI {
 
         if (isset($options['s']) || isset($options['shared'])) {
             self::$shared = true;
+        }
+
+        if (isset($options['devicedriven'])) {
+            if (self::$user){
+                self::$errormessage = "--devicedriven doesn't accept the user -u parameter.\n";
+                return;
+            }
+            self::$devicedriven = true;
         }
 
         // get 'foldername'
@@ -1206,44 +1216,131 @@ class ZPushAdminCLI {
     /**
      * Fixes the states for potential issues.
      *
-     * @param string    $username
+     * @param string    $username       the user
      *
      * @return
      * @access private
      */
     static private function CommandFixStates($username=false) {
         echo "Validating and fixing states (this can take some time):\n";
+        if(!self::$devicedriven){
 
-        echo "\t".date('H:i:s')." Checking username casings: ";
-        if ($stat = ZPushAdmin::FixStatesDifferentUsernameCases($username))
-            printf("Processed: %d - Converted: %d - Removed: %d\n", $stat[0], $stat[1], $stat[2]);
-        else
-            echo ZLog::GetLastMessage(LOGLEVEL_ERROR) . "\n";
+            echo "\t".date('H:i:s')." Checking username casings: ";
+            if ($stat = ZPushAdmin::FixStatesDifferentUsernameCases($username))
+                printf("Processed: %d - Converted: %d - Removed: %d\n", $stat[0], $stat[1], $stat[2]);
+            else
+                echo ZLog::GetLastMessage(LOGLEVEL_ERROR) . "\n";
 
-        // fixes ZP-339
-        echo "\t".date('H:i:s')." Checking available devicedata & user linking: ";
-        if ($stat = ZPushAdmin::FixStatesDeviceToUserLinking($username))
-            printf("Processed: %d - Fixed: %d\n", $stat[0], $stat[1]);
-        else
-            echo ZLog::GetLastMessage(LOGLEVEL_ERROR) . "\n";
+            // fixes ZP-339
+            echo "\t".date('H:i:s')." Checking available devicedata & user linking: ";
+            if ($stat = ZPushAdmin::FixStatesDeviceToUserLinking($username))
+                printf("Processed: %d - Fixed: %d\n", $stat[0], $stat[1]);
+            else
+                echo ZLog::GetLastMessage(LOGLEVEL_ERROR) . "\n";
 
-        echo "\t".date('H:i:s')." Checking for unreferenced (obsolete) state files: ";
-        if (($stat = ZPushAdmin::FixStatesUserToStatesLinking($username)) !== false)
-            printf("Processed: %d - Deleted: %d\n",  $stat[0], $stat[1]);
-        else
-            echo ZLog::GetLastMessage(LOGLEVEL_ERROR) . "\n";
+            echo "\t".date('H:i:s')." Checking for unreferenced (obsolete) state files: ";
+            if (($stat = ZPushAdmin::FixStatesUserToStatesLinking($username)) !== false)
+                printf("Processed: %d - Deleted: %d\n",  $stat[0], $stat[1]);
+            else
+                echo ZLog::GetLastMessage(LOGLEVEL_ERROR) . "\n";
 
-        echo "\t".date('H:i:s')." Checking for hierarchy folder data state: ";
-        if (($stat = ZPushAdmin::FixStatesHierarchyFolderData($username)) !== false)
-            printf("Devices: %d - Processed: %d - Fixed: %d - Device+User without hierarchy: %d\n",  $stat[0], $stat[1], $stat[2], $stat[3]);
-        else
-            echo ZLog::GetLastMessage(LOGLEVEL_ERROR) . "\n";
+            echo "\t".date('H:i:s')." Checking for hierarchy folder data state: ";
+            if (($stat = ZPushAdmin::FixStatesHierarchyFolderData($username)) !== false)
+                printf("Devices: %d - Processed: %d - Fixed: %d - Device+User without hierarchy: %d\n",  $stat[0], $stat[1], $stat[2], $stat[3]);
+            else
+                echo ZLog::GetLastMessage(LOGLEVEL_ERROR) . "\n";
 
-        echo "\t".date('H:i:s')." Checking flags of shared folders: ";
-        if (($stat = ZPushAdmin::FixStatesAdditionalFolders($username)) !== false)
-            printf("Devices: %d - Devices with additional folders: %d - Fixed: %d\n",  $stat[0], $stat[1], $stat[2]);
-        else
-            echo ZLog::GetLastMessage(LOGLEVEL_ERROR) . "\n";
+            echo "\t".date('H:i:s')." Checking flags of shared folders: ";
+            if (($stat = ZPushAdmin::FixStatesAdditionalFolders($username)) !== false)
+                printf("Devices: %d - Devices with additional folders: %d - Fixed: %d\n",  $stat[0], $stat[1], $stat[2]);
+            else
+                echo ZLog::GetLastMessage(LOGLEVEL_ERROR) . "\n";
+        } else{
+            //used for recording the total process time
+            $fsStartTime= new DateTime("now");
+            //load devices list
+            $devices = ZPushAdmin::GetAllDevices();
+            $devicesCount = count($devices);
+            echo "Found ".$devicesCount." devices\r\n";
+            $processedDevices = 0;
+            //structure for hold stats
+            $stats = array(
+                // Results of ZPushAdmin::FixStatesDifferentUsernameCases
+                array( "processed" => 0, "converted" => 0, "removed" => 0 ),
+                // Results of ZPushAdmin::FixStatesDeviceToUserLinking
+                array( "processed" => 0, "fixed" => 0 ),
+                // Results of ZPushAdmin::FixStatesUserToStatesLinking
+                array( "processed" => 0, "deleted" => 0 ),
+                // Results of ZPushAdmin::FixStatesHierarchyFolderData
+                array( "devices" => 0, "processed" => 0, "fixed" => 0, "noHierarchy" =>0 ),
+                // Results of ZPushAdmin::FixStatesAdditionalFolders
+                array( "devices" => 0, "devicesWithAddFolders" => 0, "fixed" => 0)
+            );
+
+            // loop every device
+            foreach ($devices as $devid) {
+                $processedDevices++;
+                if (defined('LOGFIXSTATES') && LOGFIXSTATES === true) {
+                    echo "\tProcessing ".$processedDevices."/".$devicesCount." devices: ".$devid."\r\n";
+                    ZLog::Write(LOGLEVEL_INFO, sprintf("FixStatesDeviceDriven(): Processing %d of %d . Device %s", $processedDevices , $devicesCount, $devid));
+                }
+
+                if ($stat = ZPushAdmin::FixStatesDifferentUsernameCases(false,$devid)){
+                    $stats[0]["processed"] += $stat[0];
+                    $stats[0]["converted"] += $stat[1];
+                    $stats[0]["removed"] += $stat[2];
+                }
+                else
+                    echo ZLog::GetLastMessage(LOGLEVEL_ERROR) . "\n";
+
+                // fixes ZP-339
+                if ($stat = ZPushAdmin::FixStatesDeviceToUserLinking(false,$devid)){
+                    $stats[1]["processed"] += $stat[0];
+                    $stats[1]["fixed"] += $stat[1];
+                }
+                else
+                    echo ZLog::GetLastMessage(LOGLEVEL_ERROR) . "\n";
+
+                if (($stat = ZPushAdmin::FixStatesUserToStatesLinking(false,$devid)) !== false){
+                    $stats[2]["processed"] += $stat[0];
+                    $stats[2]["deleted"] += $stat[1];
+                }
+                else
+                    echo ZLog::GetLastMessage(LOGLEVEL_ERROR) . "\n";
+
+                if (($stat = ZPushAdmin::FixStatesHierarchyFolderData(false,$devid)) !== false){
+                    $stats[3]["devices"] += $stat[0];
+                    $stats[3]["processed"] += $stat[1];
+                    $stats[3]["fixed"] += $stat[2];
+                    $stats[3]["noHierarchy"] += $stat[3];
+                }
+                else
+                    echo ZLog::GetLastMessage(LOGLEVEL_ERROR) . "\n";
+
+                if (($stat = ZPushAdmin::FixStatesAdditionalFolders(false,$devid)) !== false){
+                    $stats[4]["devices"] += $stat[0];
+                    $stats[4]["devicesWithAddFolders"] += $stat[1];
+                    $stats[4]["fixed"] += $stat[2];
+                }
+                else
+                    echo ZLog::GetLastMessage(LOGLEVEL_ERROR) . "\n";
+            }
+            //used for recording the total process time
+            $fsEndTime = new DateTime("now");
+            $timeInterval = date_diff($fsStartTime, $fsEndTime)->format('%H:%I:%S');
+            echo "Total process time: ".$timeInterval."\n"."\n";
+            ZLog::Write(LOGLEVEL_INFO, sprintf("FixStatesDeviceDriven(): Finished. Total process time: ".$timeInterval));
+            printf("Check username casings. Processed: %d - Converted: %d - Removed: %d\n",
+                $stats[0]["processed"], $stats[0]["converted"], $stats[0]["removed"] );
+            printf("Check available devicedata & user linking. Processed: %d - Fixed: %d\n",
+                $stats[1]["processed"], $stats[1]["fixed"] );
+            printf("Check for unreferenced (obsolete) state files. Processed: %d - Deleted: %d\n",
+                $stats[2]["processed"], $stats[2]["deleted"] );
+            printf("Check for hierarchy folder data state. Devices: %d - Processed: %d - Fixed: %d - Device+User without hierarchy: %d\n",
+                $stats[3]["devices"], $stats[3]["processed"], $stats[3]["fixed"], $stats[3]["noHierarchy"] );
+            printf("Check flags of shared folders. Devices: %d - Devices with additional folders: %d - Fixed: %d\n",
+                $stats[4]["devices"], $stats[4]["devicesWithAddFolders"], $stats[4]["fixed"] );
+        }
     }
 
     /**
