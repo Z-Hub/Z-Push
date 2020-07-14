@@ -54,3 +54,6 @@ $ldap_field_map = array(
                     SYNC_GAL_MOBILEPHONE    => 'mobile',
                     SYNC_GAL_EMAILADDRESS   => 'mail',
                 );
+
+// Fallback to displayname if firstname and lastname not set
+define("LDAP_SEARCH_NAME_FALLBACK", false);

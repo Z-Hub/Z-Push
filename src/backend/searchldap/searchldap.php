@@ -135,6 +135,10 @@ class BackendSearchLDAP implements ISearchProvider {
                             $items[$rc][$key] = $searchresult[$i][$value];
                     }
                 }
+                // fallback to displayname if firstname and lastname not set
+                if (LDAP_SEARCH_NAME_FALLBACK && (!isset($items[$rc][SYNC_GAL_LASTNAME]) && !isset($items[$rc][SYNC_GAL_FIRSTNAME])) && isset($items[$rc][SYNC_GAL_DISPLAYNAME])) {
+                    $items[$rc][SYNC_GAL_LASTNAME] = $items[$rc][SYNC_GAL_DISPLAYNAME];
+                }
                 $rc++;
             }
 
