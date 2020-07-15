@@ -691,6 +691,8 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
              throw new StatusException("BackendIMAP->ChangesSink(): HierarchySync required.", SyncCollections::HIERARCHY_CHANGED);
         }
 
+        $flaggedMessages = array();
+
         // only check once to reduce pressure in the IMAP server
         foreach ($this->sinkfolders as $i => $imapid) {
             $this->imap_reopen_folder($imapid);
@@ -698,12 +700,18 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             // courier-imap only clears the status cache after checking
             @imap_check($this->mbox);
 
+            // get count of recent, unseen and overall messages
             $status = @imap_status($this->mbox, $this->server . $imapid, SA_ALL);
+
+            // get count of flagged messages (ZP-1561)
+            $flaggedMessages = @imap_search($this->mbox, 'FLAGGED');
+            $flaggedMessages = (is_array($flaggedMessages) && $flaggedMessages !== false) ? count($flaggedMessages) : 0;
+
             if (!$status) {
                 ZLog::Write(LOGLEVEL_WARN, sprintf("ChangesSink: could not stat folder '%s': %s ", $this->getFolderIdFromImapId($imapid), imap_last_error()));
             }
             else {
-                $newstate = "M:". $status->messages ."-R:". $status->recent ."-U:". $status->unseen;
+                $newstate = "M:". $status->messages ."-R:". $status->recent ."-U:". $status->unseen ."-F:". $flaggedMessages;
 
                 if (! isset($this->sinkstates[$imapid]) ) {
                     $this->sinkstates[$imapid] = $newstate;
