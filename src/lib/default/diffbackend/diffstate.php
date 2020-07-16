@@ -164,7 +164,7 @@ class DiffState implements IChanges {
                 $old_item =& $old[$id];
 
                 // Both messages are still available, compare flags and mod
-                if(isset($old_item["flags"]) && isset($item["flags"]) && $old_item["flags"] != $item["flags"]) {
+                if(isset($old_item["flags"], $item["flags"]) && $old_item["flags"] != $item["flags"]) {
                     // Flags changed
                     $change["type"] = "flags";
                     $change["flags"] = $item["flags"];
@@ -172,14 +172,14 @@ class DiffState implements IChanges {
                 }
 
                 // @see https://jira.z-hub.io/browse/ZP-1561
-                if(isset($old_item["star"]) && isset($item["star"]) && $old_item["star"] != $item["star"]) {
+                if(isset($old_item["star"], $item["star"]) && $old_item["star"] != $item["star"]) {
                     // 'flagged' aka 'FollowUp' aka 'starred' changed
                     $change["type"] = "change";
                     $changes[] = $change;
                 }
 
                 // @see https://jira.z-hub.io/browse/ZP-955
-                if (isset($old_item['mod']) && isset($item['mod'])) {
+                if (isset($old_item['mod'], $item['mod'])) {
                     if ($old_item['mod'] != $item['mod']) {
                         $change["type"] = "change";
                         $changes[] = $change;
