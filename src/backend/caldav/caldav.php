@@ -750,7 +750,10 @@ class BackendCalDAV extends BackendDiff {
                 case "DESCRIPTION":
                     if (Request::GetProtocolVersion() >= 12.0) {
                         $message->asbody = new SyncBaseBody();
+
+                        // the DESCRIPTION component is specified to be plain text (RFC5545), for HTML use X-ALT-DESC
                         $data = str_replace("\n","\r\n", str_replace("\r","",Utils::ConvertHtmlToText($property->Value())));
+
                         // truncate body, if requested
                         if (strlen($data) > $truncsize) {
                             $message->asbody->truncated = 1;
@@ -762,6 +765,9 @@ class BackendCalDAV extends BackendDiff {
                         $message->asbody->data = StringStreamWrapper::Open($data);
                         $message->asbody->estimatedDataSize = strlen($data);
                         unset($data);
+
+                        // set body type accordingly
+                        $message->asbody->type = SYNC_BODYPREFERENCE_PLAIN;
                         $message->nativebodytype = SYNC_BODYPREFERENCE_PLAIN;
                     }
                     else {
