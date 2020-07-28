@@ -13,9 +13,9 @@ Conflicts: d-push, z-push
 Replaces: d-push, z-push
 Description: open source implementation of the ActiveSync protocol
  Z-Push is an implementation of the ActiveSync protocol which is used
- 'over-the-air' for multi platform ActiveSync devices, including Windows 
- Phone, Apple iPhone and iPad, Android, Blackberry 10 devices and 
- MS Outlook 2013 and later. With Z-Push any groupware can be connected 
+ 'over-the-air' for multi platform ActiveSync devices, including Windows
+ Phone, Apple iPhone and iPad, Android, Blackberry 10 devices and
+ MS Outlook 2013 and later. With Z-Push any groupware can be connected
  and synchronized with these devices.
 
 Package: z-push-backend-caldav
@@ -98,7 +98,7 @@ Description: Z-Push mysql state backend
 
 Package: z-push-autodiscover
 Architecture: all
-Depends: ${misc:Depends}, z-push-common (= ${binary:Version}), z-push-backend-caldav | z-push-backend-carddav | z-push-backend-combined | z-push-backend-imap | z-push-backend-ldap | z-push-backend-kopano
+Depends: ${misc:Depends}, z-push-common (= ${binary:Version}), z-push-backend-caldav | z-push-backend-carddav | z-push-backend-combined | z-push-backend-imap | z-push-backend-ldap | z-push-backend-kopano, php-xml
 Description: Z-Push autodiscover
  Autodiscover for Z-Push backends
 
