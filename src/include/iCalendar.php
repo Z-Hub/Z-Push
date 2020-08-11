@@ -130,27 +130,80 @@ class iCalProp {
         //printf("%s\n", $ical->Render());
     unset($this->rendered);
 
-    $unescaped = preg_replace( '{\\\\[nN]}', "\n", $propstring);
+    // Unescape newlines
+    $unescaped = preg_replace('{\\\\[nN]}', "\n", $propstring);
 
-    // Split into two parts on : which is not preceded by a \
-    list( $start, $values) = preg_split( '{(?<!\\\\):}', $unescaped, 2);
-    $this->content = preg_replace( "/\\\\([,;:\"\\\\])/", '$1', $values);
+    /*
+     * Split propname with params from propvalue. Searches for the first unquoted COLON.
+     *
+     * RFC5545 3.2
+     *
+     * Property parameter values that contain the COLON, SEMICOLON, or COMMA
+     * character separators MUST be specified as quoted-string text values.
+     * Property parameter values MUST NOT contain the DQUOTE character.
+     */
+    $split = $this->SplitQuoted($unescaped, ':', 2);
+    if (count($split) != 2) {
+      // Bad things happended...
+//      dbg_error_log('ERROR', "iCalendar::ParseFrom(): Couldn't parse property from string: `%s`, skipping", $unescaped);
+      return;
+    }
+    list($prop, $value) = $split;
 
-    // Split on ; which is not preceded by a \
-    $parameters = preg_split( '{(?<!\\\\);}', $start);
+    // Unescape ESCAPED-CHAR
+    $this->content = preg_replace( "/\\\\([,;:\"\\\\])/", '$1', $value);
 
-    $parameters = explode(';',$start);
-    $this->name = array_shift( $parameters );
+    // Split property name and parameters
+    $parameters = $this->SplitQuoted($prop, ';');
+    $this->name = array_shift($parameters);
     $this->parameters = array();
-    foreach( $parameters AS $k => $v ) {
-      $pos = strpos($v,'=');
-      $name = substr( $v, 0, $pos);
-      $value = substr( $v, $pos + 1);
-      $this->parameters[$name] = $value;
+    foreach ($parameters AS $k => $v) {
+      $pos = strpos($v, '=');
+      $name = substr($v, 0, $pos);
+      $value = substr($v, $pos + 1);
+      $this->parameters[$name] = preg_replace('/^"(.+)"$/', '$1', $value); // Removes DQUOTE on demand
     }
 //    dbg_error_log('iCalendar', " iCalProp::ParseFrom found '%s' = '%s' with %d parameters", $this->name, substr($this->content,0,200), count($this->parameters) );
   }
 
+  /**
+   * Splits quoted strings
+   *
+   * @param string $str The string
+   * @param string $sep The delimeter character
+   * @param integer $limit Limit number of results, rest of string in last element
+   * @return array
+   */
+  function SplitQuoted($str, $sep = ',', $limit = 0) {
+    $result = array();
+    $cursor = 0;
+    $inquote = false;
+    $num = 0;
+    for($i = 0, $len = strlen($str); $i < $len; ++$i) {
+      $ch = $str[$i];
+      if ($ch == '"') {
+        $inquote = !$inquote;
+      }
+      if (!$inquote && $ch == $sep) {
+        //var_dump("Found sep `$sep` - Splitting from $cursor to $i from $len.");
+        // If we reached the maximal number of splits, we cut till the end and stop here.
+        ++$num;
+        if ($limit > 0 && $num == $limit) {
+          $result[] = substr($str, $cursor);
+          break;
+        }
+        $result[] = substr($str, $cursor, $i - $cursor);
+        $cursor = $i + 1;
+      }
+      // Add rest of string on end reached
+      if ($i + 1 == $len) {
+        //var_dump("Reached end - Splitting from $cursor to $len.");
+        $result[] = substr($str, $cursor);
+      }
+    }
+
+    return $result;
+  }
 
   /**
    * Get/Set name property
