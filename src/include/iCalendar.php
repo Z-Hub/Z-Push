@@ -756,7 +756,7 @@ class iCalComponent {
   * @return boolean true if we found 'em, false if we didn't.
   */
   function IsOrganizer( $email ) {
-    if ( !preg_match( '#^mailto:#', $email ) ) $email = 'mailto:$email';
+    if ( !preg_match( '#^mailto:#', $email ) ) $email = 'mailto:'.$email;
     $props = $this->GetPropertiesByPath('!VTIMEZONE/ORGANIZER');
     foreach( $props AS $k => $prop ) {
       if ( $prop->Value() == $email ) return true;
@@ -772,7 +772,7 @@ class iCalComponent {
   * @return boolean true if we found 'em, false if we didn't.
   */
   function IsAttendee( $email ) {
-    if ( !preg_match( '#^mailto:#', $email ) ) $email = 'mailto:$email';
+    if ( !preg_match( '#^mailto:#', $email ) ) $email = 'mailto:'.$email;
     if ( $this->IsOrganizer($email) ) return true; /** an organizer is an attendee, as far as we're concerned */
     $props = $this->GetPropertiesByPath('!VTIMEZONE/ATTENDEE');
     foreach( $props AS $k => $prop ) {
