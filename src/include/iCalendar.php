@@ -1,51 +1,5 @@
 <?php
-/**
-* A Class for handling iCalendar data.
-*
-* When parsed the underlying structure is roughly as follows:
-*
-*   iCalendar( array(iCalComponent), array(iCalProp) )
-*
-* each iCalComponent is similarly structured:
-*
-*   iCalComponent( array(iCalComponent), array(iCalProp) )
-*
-* Once parsed, $ical->component will point to the wrapping VCALENDAR component of
-* the iCalendar.  This will be fine for simple iCalendar usage as sampled below,
-* but more complex iCalendar such as a VEVENT with RRULE which has repeat overrides
-* will need quite a bit more thought to process correctly.
-*
-* @example
-* To create a new iCalendar from several data values:
-*   $ical = new iCalendar( array('DTSTART' => $dtstart, 'SUMMARY' => $summary, 'DURATION' => $duration ) );
-*
-* @example
-* To render it as an iCalendar string:
-*   echo $ical->Render();
-*
-* @example
-* To render just the VEVENTs in the iCalendar with a restricted list of properties:
-*   echo $ical->Render( false, 'VEVENT', array( 'DTSTART', 'DURATION', 'DTEND', 'RRULE', 'SUMMARY') );
-*
-* @example
-* To parse an existing iCalendar string for manipulation:
-*   $ical = new iCalendar( array('icalendar' => $icalendar_text ) );
-*
-* @example
-* To clear any 'VALARM' components in an iCalendar object
-*   $ical->component->ClearComponents('VALARM');
-*
-* @example
-* To replace any 'RRULE' property in an iCalendar object
-*   $ical->component->SetProperties( 'RRULE', $rrule_definition );
-*
-* @package awl
-* @subpackage iCalendar
-* @author Andrew McMillan <andrew@mcmillan.net.nz>
-* @copyright Catalyst IT Ltd, Morphoss Ltd <http://www.morphoss.com/>
-* @license   http://gnu.org/copyleft/gpl.html GNU GPL v2 or later
-*
-*/
+
 require_once('XMLElement.php');
 /* Commented out, only needed by deprecated functions
 require_once('AwlQuery.php');
@@ -55,7 +9,12 @@ require_once('AwlQuery.php');
 * A Class for representing properties within an iCalendar
 *
 * @package awl
+* @subpackage iCalProp
+* @author Andrew McMillan <andrew@mcmillan.net.nz>
+* @copyright Catalyst IT Ltd, Morphoss Ltd <http://www.morphoss.com/>
+* @license   http://gnu.org/copyleft/gpl.html GNU GPL v2 or later
 */
+
 class iCalProp {
   /**#@+
    * @access private
@@ -367,7 +326,12 @@ class iCalProp {
 * A Class for representing components within an iCalendar
 *
 * @package awl
+* @subpackage iCalComponent
+* @author Andrew McMillan <andrew@mcmillan.net.nz>
+* @copyright Catalyst IT Ltd, Morphoss Ltd <http://www.morphoss.com/>
+* @license   http://gnu.org/copyleft/gpl.html GNU GPL v2 or later
 */
+
 class iCalComponent {
   /**#@+
    * @access private
