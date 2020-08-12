@@ -1,10 +1,5 @@
 <?php
 
-require_once('XMLElement.php');
-/* Commented out, only needed by deprecated functions
-require_once('AwlQuery.php');
-*/
-
 /**
 * A Class for representing properties within an iCalendar
 *
