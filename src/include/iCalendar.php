@@ -856,10 +856,10 @@ class iCalComponent {
       $v->MaskProperties($keep, $component_list);
     }
 
-    if ( !isset($component_list) || in_array($this->GetType(),$component_list) ) {
-      foreach( $this->components AS $k => $v ) {
-        if ( ! in_array( $v->GetType(), $keep ) ) {
-          unset($this->components[$k]);
+    if ( !isset($component_list) || in_array($this->GetType(), $component_list) ) {
+      foreach( $this->properties AS $k => $v ) {
+        if ( ! in_array( $v->name, $keep ) ) {
+          unset($this->properties[$k]);
           if ( isset($this->rendered) ) unset($this->rendered);
         }
       }
@@ -876,8 +876,12 @@ class iCalComponent {
     $confidential = clone($this);
     $keep_properties = array( 'DTSTAMP', 'DTSTART', 'RRULE', 'DURATION', 'DTEND', 'DUE', 'UID', 'CLASS', 'TRANSP', 'CREATED', 'LAST-MODIFIED' );
     $resource_components = array( 'VEVENT', 'VTODO', 'VJOURNAL' );
-    $confidential->MaskComponents(array( 'VTIMEZONE', 'VEVENT', 'VTODO', 'VJOURNAL' ));
+    $confidential->MaskComponents(array( 'VTIMEZONE', 'STANDARD', 'DAYLIGHT', 'VEVENT', 'VTODO', 'VJOURNAL' ));
     $confidential->MaskProperties($keep_properties, $resource_components );
+
+    if ( isset($confidential->rendered) )
+      unset($confidential->rendered); // we need to re-render the whole object
+
     if ( in_array( $confidential->GetType(), $resource_components ) ) {
       $confidential->AddProperty( 'SUMMARY', translate('Busy') );
     }
