@@ -172,8 +172,14 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
                                             Utils::PrintAsString(($sm->saveinsent)), Utils::PrintAsString(isset($sm->replacemime))));
 
         // by splitting the message in several lines we can easily grep later
-        foreach(preg_split("/((\r)?\n)/", $sm->mime) as $rfc822line)
-            ZLog::Write(LOGLEVEL_WBXML, "RFC822: ". $rfc822line);
+        if(ZLog::IsWbxmlDebugEnabled()) {
+            $startpos = 0;
+            while($endpos = strpos($sm->mime, "\n", $startpos)) {
+                ZLog::Write(LOGLEVEL_WBXML, "RFC822: " . trim(substr($sm->mime, $startpos, ($endpos - $startpos))));
+                $startpos = ++$endpos;
+            }
+            ZLog::Write(LOGLEVEL_WBXML, "RFC822: " . trim(substr($sm->mime, $startpos)));
+        }
 
         $sourceMessage = $sourceMail = false;
         // If we have a reference to a source message and we are not replacing mime (since we wouldn't use it)
