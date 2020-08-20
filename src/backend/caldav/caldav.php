@@ -755,16 +755,16 @@ class BackendCalDAV extends BackendDiff {
                         if ($attendeeStatus) {
                             switch ($attendeeStatus) {
                                 case "TENTATIVE":
-                                    $attendee->attendeestatus = 2;
+                                    $attendee->attendeestatus = "2";
                                     break;
                                 case "ACCEPTED":
-                                    $attendee->attendeestatus = 3;
+                                    $attendee->attendeestatus = "3";
                                     break;
                                 case "DECLINED":
-                                    $attendee->attendeestatus = 4;
+                                    $attendee->attendeestatus = "4";
                                     break;
                                 case "NEEDS-ACTION":
-                                    $attendee->attendeestatus = 5;
+                                    $attendee->attendeestatus = "5";
                                     break;
                             }
                         }
@@ -774,13 +774,13 @@ class BackendCalDAV extends BackendDiff {
                         if ($attendeeType) {
                             switch ($attendeeType) {
                                 case "REQ-PARTICIPANT":
-                                    $attendee->attendeetype = 1;
+                                    $attendee->attendeetype = "1";
                                     break;
                                 case "OPT-PARTICIPANT":
-                                    $attendee->attendeetype = 2;
+                                    $attendee->attendeetype = "2";
                                     break;
                                 case "NON-PARTICIPANT":
-                                    $attendee->attendeetype = 3;
+                                    $attendee->attendeetype = "3";
                                     break;
                                 case "CHAIR":
                                     break;
@@ -1250,12 +1250,29 @@ class BackendCalDAV extends BackendDiff {
                 $vevent->AddProperty("ORGANIZER", sprintf("MAILTO:%s", $userDetails['emailaddress']), array("CN" => $userDetails['fullname']));
             }
             if (isset($data->attendees) && is_array($data->attendees)) {
-                foreach ($data->attendees as $att) {
-                    if (isset($att->name)) {
-                        $vevent->AddProperty("ATTENDEE", sprintf("MAILTO:%s", $att->email), array("CN" => $att->name));
+                foreach ($data->attendees as $attendee) {
+                    $attendeeParameters = array();
+                    if (isset($attendee->name)) {
+                        $attendeeParameters += array("CN" => $attendee->name);
+                    }
+                    if (isset($attendee->attendeetype)) {
+                        switch($attendee->attendeetype) {
+                            case "1":
+                                $attendeeParameters += array("ROLE" => "REQ-PARTICIPANT");
+                                break;
+                            case "2":
+                                $attendeeParameters += array("ROLE" => "OPT-PARTICIPANT");
+                                break;
+                            case "3":
+                                $attendeeParameters += array("ROLE" => "NON-PARTICIPANT");
+                                break;
+                        }
+                    }
+                    if (!empty($attendeeParameters)) {
+                        $vevent->AddProperty("ATTENDEE", sprintf("MAILTO:%s", $attendee->email), $attendeeParameters);
                     }
                     else {
-                        $vevent->AddProperty("ATTENDEE", sprintf("MAILTO:%s", $att->email));
+                        $vevent->AddProperty("ATTENDEE", sprintf("MAILTO:%s", $attendee->email));
                     }
                 }
             }
