@@ -733,12 +733,58 @@ class BackendCalDAV extends BackendDiff {
 
                 case "ATTENDEE":
                     $attendee = new SyncAttendee();
-                    $att_email = str_ireplace("MAILTO:", "", $property->Value());
-                    $attendee->email = $att_email;
-                    $att_cn = $property->GetParameterValue("CN");
-                    if ($att_cn) {
-                        $attendee->name = $att_cn;
+
+                    $attendeeEMail = str_ireplace("MAILTO:", "", $property->Value());
+                    if ($attendeeEMail) {
+                        $attendee->email = $attendeeEMail;
                     }
+
+                    $attendee->email = $attendeeEMail;
+
+                    $attendeeName = $property->GetParameterValue("CN");
+                    if ($attendeeName) {
+                        $attendee->name = $attendeeName;
+                    }
+
+                    if (Request::GetProtocolVersion() >= 12.0) {
+                        // attendeestatus: 0 = response unknown, 2 = tentative, 3 = accept, 4 = decline, 5 = not responded
+                        $attendeeStatus = $property->GetParameterValue("PARTSTAT");
+                        if ($attendeeStatus) {
+                            switch ($attendeeStatus) {
+                                case "TENTATIVE":
+                                    $attendee->attendeestatus = 2;
+                                    break;
+                                case "ACCEPTED":
+                                    $attendee->attendeestatus = 3;
+                                    break;
+                                case "DECLINED":
+                                    $attendee->attendeestatus = 4;
+                                    break;
+                                case "NEEDS-ACTION":
+                                    $attendee->attendeestatus = 5;
+                                    break;
+                            }
+                        }
+
+                        // attendeetype: 1 = required, 2 = optional, 3 = resource
+                        $attendeeType = $property->GetParameterValue("ROLE");
+                        if ($attendeeType) {
+                            switch ($attendeeType) {
+                                case "REQ-PARTICIPANT":
+                                    $attendee->attendeetype = 1;
+                                    break;
+                                case "OPT-PARTICIPANT":
+                                    $attendee->attendeetype = 2;
+                                    break;
+                                case "NON-PARTICIPANT":
+                                    $attendee->attendeetype = 3;
+                                    break;
+                                case "CHAIR":
+                                    break;
+                            }
+                        }
+                    }
+
                     if (isset($message->attendees) && is_array($message->attendees)) {
                         $message->attendees[] = $attendee;
                     }
