@@ -742,8 +742,6 @@ class BackendCalDAV extends BackendDiff {
                         $attendee->email = $attendeeEMail;
                     }
 
-                    $attendee->email = $attendeeEMail;
-
                     $attendeeName = $property->GetParameterValue("CN");
                     if ($attendeeName) {
                         $attendee->name = $attendeeName;
