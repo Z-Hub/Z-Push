@@ -871,7 +871,13 @@ class BackendCalDAV extends BackendDiff {
             }
         }
 
-        if ($message->meetingstatus > 0) {
+        if (!isset($message->meetingstatus)) {
+            // meeting with no attendee is an appointment
+            if (!isset($message->attendees)) {
+                $message->meetingstatus = 0;
+            }
+        }
+        elseif ($message->meetingstatus > 0) {
             // No organizer was set for the meeting, assume it is the user
             if (!isset($message->organizeremail)) {
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->_ParseVEventToSyncObject(): No organizeremail defined, using user details"));
