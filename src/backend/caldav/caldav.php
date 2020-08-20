@@ -630,11 +630,14 @@ class BackendCalDAV extends BackendDiff {
                     break;
 
                 case "ORGANIZER":
-                    $org_mail = str_ireplace("MAILTO:", "", $property->Value());
-                    $message->organizeremail = $org_mail;
-                    $org_cn = $property->GetParameterValue("CN");
-                    if ($org_cn) {
-                        $message->organizername = $org_cn;
+                    $organizerEMail = str_ireplace("MAILTO:", "", $property->Value());
+                    if ($organizerEMail) {
+                        $message->organizeremail = $organizerEMail;
+                    }
+
+                    $organizerName = $property->GetParameterValue("CN");
+                    if ($organizerName) {
+                        $message->organizername = $organizerName;
                     }
                     break;
 
