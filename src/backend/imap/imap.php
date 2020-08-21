@@ -352,27 +352,23 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
         unset($sourceMessage);
 
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->SendMail(): Final mail to send:"));
+
         if(ZLog::IsWbxmlDebugEnabled()) {
-			foreach ($finalHeaders as $k => $v)
-				ZLog::Write(LOGLEVEL_WBXML, sprintf("%s: %s", $k, $v));
-            $startpos = 0;
-            $logWbxmlBody = "";
-			while ($startpos < 10240) {
-                if ($endpos = strpos($finalBody, "\n", $startpos)) {
-                    $logWbxmlBody .= "Body: " . trim(substr($finalBody, $startpos, ($endpos - $startpos))) . PHP_EOL;
-                    $startpos = ++$endpos;
-                }
-                else {
-                    if (strlen(trim(substr($finalbody, $startpos))) > 0) {
-                        $logWbxmlBody .= "Body: " . trim(substr($finalBody, $startpos)) . PHP_EOL;
-                    }
-                    break;
-                }
+            $logWbxmlHeaders = "";
+            foreach ($finalHeaders as $k => $v) {
+                $logWbxmlHeaders .= $k . ": " . $v . PHP_EOL;
             }
-		    ZLog::Write(LOGLEVEL_WBXML, $logWbxmlBody);
+            ZLog::Write(LOGLEVEL_WBXML, $logWbxmlHeaders, false);
+            unset($logWbxmlHeaders);
+
+            $logWbxmlBody = "";
+            foreach (preg_split("/((\r)?\n)/", $finalBody) as $bodyline) {
+                $logWbxmlBody .= "Body: " . $bodyline . PHP_EOL;
+            }
+            ZLog::Write(LOGLEVEL_WBXML, $logWbxmlBody, false);
             unset($logWbxmlBody);
-		}
-		
+        }
+
         $send = $this->sendMessage($fromaddr, $toaddr, $finalHeaders, $finalBody);
 
         if ($send) {
