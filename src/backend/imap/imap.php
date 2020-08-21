@@ -173,12 +173,25 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
 
         // by splitting the message in several lines we can easily grep later
         if(ZLog::IsWbxmlDebugEnabled()) {
+            $logWbxmlMime = "";
             $startpos = 0;
-            while($endpos = strpos($sm->mime, "\n", $startpos)) {
-                ZLog::Write(LOGLEVEL_WBXML, "RFC822: " . trim(substr($sm->mime, $startpos, ($endpos - $startpos))));
-                $startpos = ++$endpos;
+
+            // limit log to about 10 KB and use ZLog:Write() truncation
+            while ($startpos < 10240) {
+                if ($endpos = strpos($sm->mime, "\n", $startpos)) {
+                    $logWbxmlMime .= "RFC822: " . trim(substr($sm->mime, $startpos, ($endpos - $startpos))) . PHP_EOL;
+                    $startpos = ++$endpos;
+                }
+                else {
+                    if (strlen(trim(substr($sm->mime, $startpos))) > 0) {
+                        $logWbxmlMime .= "RFC822: " . trim(substr($sm->mime, $startpos)) . PHP_EOL;
+                    }
+                    break;
+                }
             }
-            ZLog::Write(LOGLEVEL_WBXML, "RFC822: " . trim(substr($sm->mime, $startpos)));
+
+            ZLog::Write(LOGLEVEL_WBXML, $logWbxmlMime);
+            unset($logWbxmlMime);
         }
 
         $sourceMessage = $sourceMail = false;
