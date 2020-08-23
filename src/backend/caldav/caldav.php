@@ -689,6 +689,7 @@ class BackendCalDAV extends BackendDiff {
                     }
                     break;
 
+                case "X-MICROSOFT-CDO-BUSYSTATUS":
                 case "X-MICROSOFT-CDO-INTENDEDSTATUS":
                     switch ($property->Value()) {
                         case "FREE":
