@@ -854,6 +854,19 @@ class BackendCalDAV extends BackendDiff {
                     $message->exceptions[] = $exception;
                     break;
 
+                case "X-MICROSOFT-DISALLOW-COUNTER":
+                    if (Request::GetProtocolVersion() >= 14.0) {
+                        switch ($property->Value()) {
+                            case "TRUE":
+                                $message->disallownewtimeproposal = true;
+                                break;
+                            case "FALSE":
+                                $message->disallownewtimeproposal = false;
+                                break;
+                        }
+                    }
+                    break;
+
                 //We can ignore the following
                 case "PRIORITY":
                 case "SEQUENCE":
@@ -1242,6 +1255,12 @@ class BackendCalDAV extends BackendDiff {
                         $vevent->AddProperty("X-MICROSOFT-CDO-INTENDEDSTATUS", "WORKINGELSEWHERE");
                         break;
                 }
+            }
+            if (isset($data->disallownewtimeproposal) && $data->disallownewtimeproposal == true) {
+                $vevent->AddProperty("X-MICROSOFT-DISALLOW-COUNTER", "TRUE");
+            }
+            else {
+                $vevent->AddProperty("X-MICROSOFT-DISALLOW-COUNTER", "FALSE");
             }
             switch ($data->meetingstatus) {
                 case "1":
