@@ -1305,6 +1305,25 @@ class BackendCalDAV extends BackendDiff {
                                 break;
                         }
                     }
+                    if (isset($attendee->attendeestatus)) {
+                        switch($attendee->attendeestatus) {
+                            case "0":
+                                $attendeeParameters += array("PARTSTAT" => "NEEDS-ACTION");
+                                break;
+                            case "2":
+                                $attendeeParameters += array("PARTSTAT" => "TENTATIVE");
+                                break;
+                            case "3":
+                                $attendeeParameters += array("PARTSTAT" => "ACCEPTED");
+                                break;
+                            case "4":
+                                $attendeeParameters += array("PARTSTAT" => "DECLINED");
+                                break;
+                            case "5":
+                                $attendeeParameters += array("PARTSTAT" => "NEEDS-ACTION");
+                                break;
+                        }
+                    }
                     if (!empty($attendeeParameters)) {
                         $vevent->AddProperty("ATTENDEE", sprintf("MAILTO:%s", $attendee->email), $attendeeParameters);
                     }
