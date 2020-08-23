@@ -1222,7 +1222,7 @@ class BackendCalDAV extends BackendDiff {
                     $vevent->AddProperty("X-MICROSOFT-CDO-BUSYSTATUS", "BUSY");
                     break;
                 case "3": //Out of office
-                    $vevent->AddProperty("TRANSP", "TRANSPARENT");
+                    $vevent->AddProperty("TRANSP", "OPAQUE");
                     $vevent->AddProperty("X-MICROSOFT-CDO-BUSYSTATUS", "OOF");
                     break;
                 case "4": //Working elsewhere (not yet in Android) but not defined in [MS-OXCICAL]
@@ -1247,7 +1247,7 @@ class BackendCalDAV extends BackendDiff {
                         $vevent->AddProperty("X-MICROSOFT-CDO-INTENDEDSTATUS", "BUSY");
                         break;
                     case "3": //Out of office
-                        $vevent->AddProperty("TRANSP", "TRANSPARENT");
+                        $vevent->AddProperty("TRANSP", "OPAQUE");
                         $vevent->AddProperty("X-MICROSOFT-CDO-INTENDEDSTATUS", "OOF");
                         break;
                     case "4": //Working elsewhere (not yet in Android) but not defined in [MS-OXCICAL]
@@ -1265,11 +1265,9 @@ class BackendCalDAV extends BackendDiff {
             switch ($data->meetingstatus) {
                 case "1":
                     $vevent->AddProperty("STATUS", "TENTATIVE");
-                    $vevent->AddProperty("X-MICROSOFT-DISALLOW-COUNTER", "FALSE");
                     break;
                 case "3":
                     $vevent->AddProperty("STATUS", "CONFIRMED");
-                    $vevent->AddProperty("X-MICROSOFT-DISALLOW-COUNTER", "FALSE");
                     break;
                 case "5":
                 case "7":
