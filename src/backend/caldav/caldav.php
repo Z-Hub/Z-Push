@@ -1508,7 +1508,14 @@ class BackendCalDAV extends BackendDiff {
 
                 case "CATEGORIES":
                     $categories = explode(",", $property->Value());
-                    $message->categories = $categories;
+                    if (!isset($message->categories)) {
+                        $message->categories = $categories;
+                    }
+                    else {
+                        foreach($categories as $category) {
+                            $message->categories[] = $category;
+                        }
+                    }
                     break;
             }
         }
