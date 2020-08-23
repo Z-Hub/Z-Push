@@ -1273,6 +1273,7 @@ class BackendCalDAV extends BackendDiff {
                 case "7":
                     $vevent->AddProperty("STATUS", "CANCELLED");
                     $vevent->AddProperty("X-MICROSOFT-DISALLOW-COUNTER", "TRUE");
+                    break;
             }
             if (isset($data->organizeremail) && isset($data->organizername)) {
                 $vevent->AddProperty("ORGANIZER", sprintf("MAILTO:%s", $data->organizeremail), array("CN" => $data->organizername));
