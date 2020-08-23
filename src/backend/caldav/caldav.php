@@ -1530,12 +1530,18 @@ class BackendCalDAV extends BackendDiff {
 
                 case "PRIORITY":
                     $priority = $property->Value();
-                    if ($priority <= 3)
-                        $message->importance = "0";
-                    if ($priority <= 6)
+                    // MS-ASTASK: 0 = low, 1 = normal (default), 2 = high
+                    // RFC5545: 0 = undefined, 1-4 = high, 5 = normal, 6-9 = low
+                    //  or 0 = undefined, 1-3 = high, 4-6 = normal, 7-9 = low
+                    if ($priority == 0 || $priority == 5) {
                         $message->importance = "1";
-                    if ($priority > 6)
+                    }
+                    elseif ($priority > 0 && $priority < 5) {
                         $message->importance = "2";
+                    }
+                    elseif ($priority > 5 && $priority <= 9) {
+                        $message->importance = "0";
+                    }
                     break;
 
                 case "RRULE":
@@ -1645,15 +1651,20 @@ class BackendCalDAV extends BackendDiff {
             $vtodo->AddProperty("DUE", gmdate("Ymd\THis\Z", $data->utcduedate));
         }
         if (isset($data->importance)) {
-            if ($data->importance == "1") {
-                $vtodo->AddProperty("PRIORITY", 6);
+            switch ($data->importance) {
+                case "0":
+                    $vtodo->AddProperty("PRIORITY", 9);
+                    break;
+                case "1":
+                    $vtodo->AddProperty("PRIORITY", 5);
+                    break;
+                case "2":
+                    $vtodo->AddProperty("PRIORITY", 1);
+                    break;
             }
-            elseif ($data->importance == "2") {
-                $vtodo->AddProperty("PRIORITY", 9);
-            }
-            else {
-                $vtodo->AddProperty("PRIORITY", 1);
-            }
+        }
+        else {
+            $vtodo->AddProperty("PRIORITY", 0);
         }
         if (isset($data->recurrence)) {
             $vtodo->AddProperty("RRULE", $this->_GenerateRecurrence($data->recurrence, false));
