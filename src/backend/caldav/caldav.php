@@ -1178,30 +1178,6 @@ class BackendCalDAV extends BackendDiff {
                     break;
             }
         }
-        if (isset($data->busystatus)) {
-            switch ($data->busystatus) {
-                case "0": //Free
-                    $vevent->AddProperty("TRANSP", "TRANSPARENT");
-                    $vevent->AddProperty("X-MICROSOFT-CDO-INTENDEDSTATUS", "FREE");
-                    break;
-                case "1": //Tentative
-                    $vevent->AddProperty("TRANSP", "OPAQUE");
-                    $vevent->AddProperty("X-MICROSOFT-CDO-INTENDEDSTATUS", "TENTATIVE");
-                    break;
-                case "2": //Busy
-                    $vevent->AddProperty("TRANSP", "OPAQUE");
-                    $vevent->AddProperty("X-MICROSOFT-CDO-INTENDEDSTATUS", "BUSY");
-                    break;
-                case "3": //Out of office
-                    $vevent->AddProperty("TRANSP", "TRANSPARENT");
-                    $vevent->AddProperty("X-MICROSOFT-CDO-INTENDEDSTATUS", "OOF");
-                    break;
-                case "4": //Working elsewhere (not yet in Android)
-                    $vevent->AddProperty("TRANSP", "TRANSPARENT");
-                    $vevent->AddProperty("X-MICROSOFT-CDO-INTENDEDSTATUS", "WORKINGELSEWHERE");
-                    break;
-            }
-        }
         if (isset($data->reminder)) {
             $valarm = new iCalComponent();
             $valarm->SetType("VALARM");
@@ -1217,24 +1193,68 @@ class BackendCalDAV extends BackendDiff {
             $rtfparser->parse();
             $vevent->AddProperty("DESCRIPTION", $rtfparser->out);
         }
-        if (isset($data->meetingstatus) && $data->meetingstatus > 0) {
+        if (isset($data->busystatus) && ((isset($data->meetingstatus) && $data->meetingstatus == 0) || !isset($data->meetingstatus))) {
+            switch ($data->busystatus) {
+                case "0": //Free
+                    $vevent->AddProperty("TRANSP", "TRANSPARENT");
+                    $vevent->AddProperty("X-MICROSOFT-CDO-BUSYSTATUS", "FREE");
+                    break;
+                case "1": //Tentative
+                    $vevent->AddProperty("TRANSP", "OPAQUE");
+                    $vevent->AddProperty("X-MICROSOFT-CDO-BUSYSTATUS", "TENTATIVE");
+                    break;
+                case "2": //Busy
+                    $vevent->AddProperty("TRANSP", "OPAQUE");
+                    $vevent->AddProperty("X-MICROSOFT-CDO-BUSYSTATUS", "BUSY");
+                    break;
+                case "3": //Out of office
+                    $vevent->AddProperty("TRANSP", "TRANSPARENT");
+                    $vevent->AddProperty("X-MICROSOFT-CDO-BUSYSTATUS", "OOF");
+                    break;
+                case "4": //Working elsewhere (not yet in Android) but not defined in [MS-OXCICAL]
+                    $vevent->AddProperty("TRANSP", "TRANSPARENT");
+                    $vevent->AddProperty("X-MICROSOFT-CDO-BUSYSTATUS", "WORKINGELSEWHERE");
+                    break;
+            }
+        }
+        elseif (isset($data->meetingstatus) && $data->meetingstatus > 0) {
+            if (isset($data->busystatus)) {
+                switch ($data->busystatus) {
+                    case "0": //Free
+                        $vevent->AddProperty("TRANSP", "TRANSPARENT");
+                        $vevent->AddProperty("X-MICROSOFT-CDO-INTENDEDSTATUS", "FREE");
+                        break;
+                    case "1": //Tentative
+                        $vevent->AddProperty("TRANSP", "OPAQUE");
+                        $vevent->AddProperty("X-MICROSOFT-CDO-INTENDEDSTATUS", "TENTATIVE");
+                        break;
+                    case "2": //Busy
+                        $vevent->AddProperty("TRANSP", "OPAQUE");
+                        $vevent->AddProperty("X-MICROSOFT-CDO-INTENDEDSTATUS", "BUSY");
+                        break;
+                    case "3": //Out of office
+                        $vevent->AddProperty("TRANSP", "TRANSPARENT");
+                        $vevent->AddProperty("X-MICROSOFT-CDO-INTENDEDSTATUS", "OOF");
+                        break;
+                    case "4": //Working elsewhere (not yet in Android) but not defined in [MS-OXCICAL]
+                        $vevent->AddProperty("TRANSP", "TRANSPARENT");
+                        $vevent->AddProperty("X-MICROSOFT-CDO-INTENDEDSTATUS", "WORKINGELSEWHERE");
+                        break;
+                }
+            }
             switch ($data->meetingstatus) {
                 case "1":
                     $vevent->AddProperty("STATUS", "TENTATIVE");
-                    $vevent->AddProperty("X-MICROSOFT-CDO-BUSYSTATUS", "TENTATIVE");
                     $vevent->AddProperty("X-MICROSOFT-DISALLOW-COUNTER", "FALSE");
                     break;
                 case "3":
                     $vevent->AddProperty("STATUS", "CONFIRMED");
-                    $vevent->AddProperty("X-MICROSOFT-CDO-BUSYSTATUS", "CONFIRMED");
                     $vevent->AddProperty("X-MICROSOFT-DISALLOW-COUNTER", "FALSE");
                     break;
                 case "5":
                 case "7":
                     $vevent->AddProperty("STATUS", "CANCELLED");
-                    $vevent->AddProperty("X-MICROSOFT-CDO-BUSYSTATUS", "CANCELLED");
                     $vevent->AddProperty("X-MICROSOFT-DISALLOW-COUNTER", "TRUE");
-                    break;
             }
             if (isset($data->organizeremail) && isset($data->organizername)) {
                 $vevent->AddProperty("ORGANIZER", sprintf("MAILTO:%s", $data->organizeremail), array("CN" => $data->organizername));
