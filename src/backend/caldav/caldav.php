@@ -607,9 +607,6 @@ class BackendCalDAV extends BackendDiff {
      * @param int $truncsize
      */
     private function _ParseVEventToSyncObject($event, $message, $truncsize) {
-        //Defaults
-        $message->busystatus = "2";
-
         $properties = $event->GetProperties();
         foreach ($properties as $property) {
             switch ($property->Name()) {
@@ -881,6 +878,11 @@ class BackendCalDAV extends BackendDiff {
                 default:
                     ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->_ParseVEventToSyncObject(): '%s' is not yet supported.", $property->Name()));
             }
+        }
+
+        // default busystatus
+        if (!isset($message->busystatus)) {
+            $message->busystatus = "2";
         }
 
         if (!isset($message->meetingstatus)) {
