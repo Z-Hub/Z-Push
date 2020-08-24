@@ -1729,7 +1729,7 @@ class BackendKopano implements IBackend, ISearchProvider {
         $storeProps = mapi_getprops($this->store, array(PR_MESSAGE_SIZE_EXTENDED));
 
         // Disable the sending of the storesize parameter to KOE.
-        // In case this parameter is greater than 0 then KOE will reduce the synched data window basing on thresholds and 
+        // In case this parameter is greater than 0 then KOE will reduce the synched data window basing on thresholds and
         // displays a dialog message.
         if (defined('DISABLE_KOE_STORESIZE_LIMIT') && DISABLE_KOE_STORESIZE_LIMIT === true) {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->GetUserStoreInfo(): KOE storesize limit handling is DISABLED."));
@@ -2634,7 +2634,8 @@ class BackendKopano implements IBackend, ISearchProvider {
                             $endSlot--;
                         }
 
-                        for ($i = $startSlot; $i <= $endSlot; $i++) {
+                        // the endslot may be higher than the requested timeslots, in such case ignore free-busy unnecessary slots
+                        for ($i = $startSlot, $l = (($endSlot > $timeslots) ? ($timeslots - 1) : $endSlot); $i <= $l; $i++) {
                             // only set the new slot's free busy status if it's higher than the current one
                             if ($blockItem['status'] > $mergedFreeBusy[$i]) {
                                 $mergedFreeBusy[$i] = $blockItem['status'];
