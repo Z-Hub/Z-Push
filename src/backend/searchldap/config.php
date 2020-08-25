@@ -24,9 +24,8 @@
 * Consult LICENSE file for details
 ************************************************/
 
-// LDAP host and port
-define("LDAP_HOST", "ldap://127.0.0.1/");
-define("LDAP_PORT", "389");
+// LDAP server uri
+define("LDAP_SERVER_URI", "ldap://127.0.0.1:389/");
 
 // Set USER and PASSWORD if not using anonymous bind
 define("ANONYMOUS_BIND", true);

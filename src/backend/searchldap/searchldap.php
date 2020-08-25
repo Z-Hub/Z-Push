@@ -40,12 +40,19 @@ class BackendSearchLDAP implements ISearchProvider {
      * @throws StatusException
      */
     public function __construct() {
-        if (!function_exists("ldap_connect"))
+        if (!function_exists("ldap_connect")) {
             throw new StatusException("BackendSearchLDAP(): php-ldap is not installed. Search aborted.", SYNC_SEARCHSTATUS_STORE_SERVERERROR, null, LOGLEVEL_FATAL);
+        }
 
-        // connect to LDAP
-        $this->connection = @ldap_connect(LDAP_HOST, LDAP_PORT);
-        @ldap_set_option($this->connection, LDAP_OPT_PROTOCOL_VERSION, 3);
+        // Connect
+        if (defined('LDAP_SERVER_URI')) {
+            $this->connection = @ldap_connect(LDAP_SERVER_URI);
+            @ldap_set_option($this->connection, LDAP_OPT_PROTOCOL_VERSION, 3);
+        }
+        else {
+            $this->connection = false;
+            throw new StatusException("BackendSearchLDAP(): No LDAP server URI defined! Search aborted.", SYNC_SEARCHSTATUS_STORE_CONNECTIONFAILED, null, LOGLEVEL_ERROR);
+        }
 
         // Authenticate
         if (constant('ANONYMOUS_BIND') === true) {
