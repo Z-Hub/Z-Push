@@ -200,7 +200,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
 
                 // If it's a forward, we mark the original message as forwarded
                 if ($sm->forwardflag) {
-                    if (!@imap_setflag_full($this->mbox, $sm->source->itemid, "\\Forwarded", ST_UID)) {
+                    if (!@imap_setflag_full($this->mbox, $sm->source->itemid, "\$Forwarded", ST_UID)) {
                         ZLog::Write(LOGLEVEL_WARN, sprintf("BackendIMAP->SendMail(): Unable to mark the message as Forwarded"));
                     }
                 }
