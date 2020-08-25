@@ -586,8 +586,11 @@ class MAPIProvider {
 
         if(isset($messageprops[PR_SOURCE_KEY]))
             $sourcekey = $messageprops[PR_SOURCE_KEY];
-        else
-            return false;
+        else {
+            $mbe = new SyncObjectBrokenException("The message doesn't have a sourcekey");
+            $mbe->SetSyncObject($message);
+            throw $mbe;
+        }
 
         //set the body according to contentparameters and supported AS version
         $this->setMessageBody($mapimessage, $contentparameters, $message);
