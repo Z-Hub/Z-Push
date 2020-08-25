@@ -33,13 +33,14 @@ Requires:   rh-php56-php-soap
 Requires:   rh-php56-php-mbstring
 Requires:   rh-php56-php-process
 %else
-Requires:   php >= 5.4.0
 Requires:   php-soap
 Requires:   php-mbstring
 %if 0%{?suse_version}
+Requires:   php >= 5.4.0
 Requires:   php-posix
 Requires(pre): shadow
 %else
+Requires:   php(language) >= 5.4
 Requires:   php-process
 %endif
 %endif
