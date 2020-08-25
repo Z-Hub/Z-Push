@@ -481,7 +481,8 @@ class Kopano extends SyncWorker {
             if (isset($entry[PR_BUSINESS_ADDRESS_STREET]))              $a->businessAddressStreet           = $entry[PR_BUSINESS_ADDRESS_STREET];
             if (isset($entry[PR_INITIALS]))                             $a->initials                        = $entry[PR_INITIALS];
             if (isset($entry[PR_LANGUAGE]))                             $a->language                        = $entry[PR_LANGUAGE];
-            if (isset($entry[PR_EMS_AB_THUMBNAIL_PHOTO]))               $a->thumbnailPhoto                  = base64_encode($entry[PR_EMS_AB_THUMBNAIL_PHOTO]);
+            if (isset($entry[PR_EMS_AB_THUMBNAIL_PHOTO]) &&
+                strlen($entry[PR_EMS_AB_THUMBNAIL_PHOTO]) < 49152)      $a->thumbnailPhoto                  = base64_encode($entry[PR_EMS_AB_THUMBNAIL_PHOTO]);
 
             $data[] = $a;
         }
