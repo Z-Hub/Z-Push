@@ -266,8 +266,9 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
         // if it's a S/MIME message or has VCALENDAR objects I don't do anything with it
         if (is_smime($message) || has_calendar_object($message)) {
             $mobj = new Mail_mimeDecode($sm->mime);
-            $parts =  $mobj->getSendArray();
+            $parts = $mobj->getSendArray();
             unset($mobj);
+
             if ($parts === false) {
                 throw new StatusException(sprintf("BackendIMAP->SendMail(): Could not getSendArray for SMIME messages"), SYNC_COMMONSTATUS_MAILSUBMISSIONFAILED);
             }
@@ -539,7 +540,9 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
         }
 
         $mobj = new Mail_mimeDecode($mail);
+        unset($mail);
         $message = $mobj->decode(array('decode_headers' => 'utf-8', 'decode_bodies' => true, 'include_bodies' => true, 'rfc_822bodies' => true, 'charset' => 'utf-8'));
+        unset($mobj);
 
         if (!isset($message->parts)) {
             throw new StatusException(sprintf("BackendIMAP->GetAttachmentData('%s'): Error, message without parts. Requesting part key: '%d'", $attname, $part), SYNC_ITEMOPERATIONSSTATUS_INVALIDATT);
@@ -560,10 +563,6 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
 
         if (!isset($mparts[$part]->body))
             throw new StatusException(sprintf("BackendIMAP->GetAttachmentData('%s'): Error, requested part key can not be found: '%d'", $attname, $part), SYNC_ITEMOPERATIONSSTATUS_INVALIDATT);
-
-        // unset mimedecoder & mail
-        unset($mobj);
-        unset($mail);
 
         $attachment = new SyncItemOperationsAttachment();
         /* BEGIN fmbiete's contribution r1528, ZP-320 */
@@ -1098,6 +1097,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
 
             $mobj = new Mail_mimeDecode($mail);
             $message = $mobj->decode(array('decode_headers' => 'utf-8', 'decode_bodies' => true, 'include_bodies' => true, 'rfc_822bodies' => true, 'charset' => 'utf-8'));
+            unset($mobj);
 
             Utils::CheckAndFixEncodingInHeaders($mail, $message);
 
@@ -1460,7 +1460,6 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             }
 
             unset($message);
-            unset($mobj);
             unset($mail);
 
             return $output;
