@@ -172,8 +172,27 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
                                             Utils::PrintAsString(($sm->saveinsent)), Utils::PrintAsString(isset($sm->replacemime))));
 
         // by splitting the message in several lines we can easily grep later
-        foreach(preg_split("/((\r)?\n)/", $sm->mime) as $rfc822line)
-            ZLog::Write(LOGLEVEL_WBXML, "RFC822: ". $rfc822line);
+        if(ZLog::IsWbxmlDebugEnabled()) {
+            $logWbxmlMime = "";
+            $startpos = 0;
+
+            // limit log to about 10 KB and use ZLog:Write() truncation
+            while ($startpos < 10240) {
+                if ($endpos = strpos($sm->mime, "\n", $startpos)) {
+                    $logWbxmlMime .= "RFC822: " . trim(substr($sm->mime, $startpos, ($endpos - $startpos))) . PHP_EOL;
+                    $startpos = ++$endpos;
+                }
+                else {
+                    if (strlen(trim(substr($sm->mime, $startpos))) > 0) {
+                        $logWbxmlMime .= "RFC822: " . trim(substr($sm->mime, $startpos)) . PHP_EOL;
+                    }
+                    break;
+                }
+            }
+
+            ZLog::Write(LOGLEVEL_WBXML, $logWbxmlMime);
+            unset($logWbxmlMime);
+        }
 
         $sourceMessage = $sourceMail = false;
         // If we have a reference to a source message and we are not replacing mime (since we wouldn't use it)
@@ -247,8 +266,9 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
         // if it's a S/MIME message or has VCALENDAR objects I don't do anything with it
         if (is_smime($message) || has_calendar_object($message)) {
             $mobj = new Mail_mimeDecode($sm->mime);
-            $parts =  $mobj->getSendArray();
+            $parts = $mobj->getSendArray();
             unset($mobj);
+
             if ($parts === false) {
                 throw new StatusException(sprintf("BackendIMAP->SendMail(): Could not getSendArray for SMIME messages"), SYNC_COMMONSTATUS_MAILSUBMISSIONFAILED);
             }
@@ -333,10 +353,22 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
         unset($sourceMessage);
 
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->SendMail(): Final mail to send:"));
-        foreach ($finalHeaders as $k => $v)
-            ZLog::Write(LOGLEVEL_WBXML, sprintf("%s: %s", $k, $v));
-        foreach (preg_split("/((\r)?\n)/", $finalBody) as $bodyline)
-            ZLog::Write(LOGLEVEL_WBXML, sprintf("Body: %s", $bodyline));
+
+        if(ZLog::IsWbxmlDebugEnabled()) {
+            $logWbxmlHeaders = "";
+            foreach ($finalHeaders as $k => $v) {
+                $logWbxmlHeaders .= $k . ": " . $v . PHP_EOL;
+            }
+            ZLog::Write(LOGLEVEL_WBXML, $logWbxmlHeaders, false);
+            unset($logWbxmlHeaders);
+
+            $logWbxmlBody = "";
+            foreach (preg_split("/((\r)?\n)/", $finalBody) as $bodyline) {
+                $logWbxmlBody .= "Body: " . $bodyline . PHP_EOL;
+            }
+            ZLog::Write(LOGLEVEL_WBXML, $logWbxmlBody, false);
+            unset($logWbxmlBody);
+        }
 
         $send = $this->sendMessage($fromaddr, $toaddr, $finalHeaders, $finalBody);
 
@@ -508,7 +540,9 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
         }
 
         $mobj = new Mail_mimeDecode($mail);
+        unset($mail);
         $message = $mobj->decode(array('decode_headers' => 'utf-8', 'decode_bodies' => true, 'include_bodies' => true, 'rfc_822bodies' => true, 'charset' => 'utf-8'));
+        unset($mobj);
 
         if (!isset($message->parts)) {
             throw new StatusException(sprintf("BackendIMAP->GetAttachmentData('%s'): Error, message without parts. Requesting part key: '%d'", $attname, $part), SYNC_ITEMOPERATIONSSTATUS_INVALIDATT);
@@ -529,10 +563,6 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
 
         if (!isset($mparts[$part]->body))
             throw new StatusException(sprintf("BackendIMAP->GetAttachmentData('%s'): Error, requested part key can not be found: '%d'", $attname, $part), SYNC_ITEMOPERATIONSSTATUS_INVALIDATT);
-
-        // unset mimedecoder & mail
-        unset($mobj);
-        unset($mail);
 
         $attachment = new SyncItemOperationsAttachment();
         /* BEGIN fmbiete's contribution r1528, ZP-320 */
@@ -1075,6 +1105,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
 
             $mobj = new Mail_mimeDecode($mail);
             $message = $mobj->decode(array('decode_headers' => 'utf-8', 'decode_bodies' => true, 'include_bodies' => true, 'rfc_822bodies' => true, 'charset' => 'utf-8'));
+            unset($mobj);
 
             Utils::CheckAndFixEncodingInHeaders($mail, $message);
 
@@ -1437,7 +1468,6 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             }
 
             unset($message);
-            unset($mobj);
             unset($mail);
 
             return $output;
