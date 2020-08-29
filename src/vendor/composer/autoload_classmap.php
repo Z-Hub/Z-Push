@@ -197,7 +197,6 @@ return array(
     'carddav_backend' => $baseDir . '/include/z_carddav.php',
     'iCalComponent' => $baseDir . '/include/iCalendar.php',
     'iCalProp' => $baseDir . '/include/iCalendar.php',
-    'iCalendar' => $baseDir . '/include/iCalendar.php',
     'rtf' => $baseDir . '/include/rtfclass.php',
     'rtfState' => $baseDir . '/include/rtfclass.php',
     'z_RTF' => $baseDir . '/include/z_RTF.php',
