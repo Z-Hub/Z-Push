@@ -112,7 +112,7 @@
  *  LOGAUTHFAIL is logged to the LOGBACKEND.
  */
     define('LOGBACKEND', 'filelog');
-    define('LOGLEVEL', LOGLEVEL_WBXML);
+    define('LOGLEVEL', LOGLEVEL_INFO);
     define('LOGAUTHFAIL', false);
 
     // To save e.g. WBXML data only for selected users, add the usernames to the array
