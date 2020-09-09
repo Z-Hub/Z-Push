@@ -99,7 +99,7 @@ class iCalProp {
     $split = $this->SplitQuoted($unescaped, ':', 2);
     if (count($split) != 2) {
       // Bad things happended...
-//      dbg_error_log('ERROR', "iCalendar::ParseFrom(): Couldn't parse property from string: `%s`, skipping", $unescaped);
+      ZLog::Write(LOGLEVEL_DEBUG, sprintf("iCalendar->ParseFrom(): Couldn't parse property from string: '%s', skipping", $unescaped));
       return;
     }
     list($prop, $value) = $split;
@@ -117,7 +117,7 @@ class iCalProp {
       $value = substr($v, $pos + 1);
       $this->parameters[$name] = preg_replace('/^"(.+)"$/', '$1', $value); // Removes DQUOTE on demand
     }
-//    dbg_error_log('iCalendar', " iCalProp::ParseFrom found '%s' = '%s' with %d parameters", $this->name, substr($this->content,0,200), count($this->parameters) );
+    ZLog::Write(LOGLEVEL_DEBUG, sprintf("iCalendar->ParseFrom(): found '%s' = '%s' with %d parameters", $this->name, substr($this->content,0,200), count($this->parameters)));
   }
 
   /**
@@ -170,7 +170,7 @@ class iCalProp {
     if ( $newname != null ) {
       $this->name = $newname;
       if ( isset($this->rendered) ) unset($this->rendered);
-//      dbg_error_log('iCalendar', " iCalProp::Name(%s)", $this->name );
+      ZLog::Write(LOGLEVEL_DEBUG, sprintf("iCalProp->Name(%s)", $this->name));
     }
     return $this->name;
   }
@@ -405,7 +405,7 @@ class iCalComponent {
     foreach( $this->properties AS $k => $v ) {
       $also = $v->GetParameterValue($parameter_name);
       if ( isset($also) && $also != "" ) {
-//        dbg_error_log( 'iCalendar', "::CollectParameterValues(%s) : Found '%s'", $parameter_name, $also);
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("iCalendar->CollectParameterValues(%s): Found '%s'", $parameter_name, $also));
         $values[$also] = 1;
       }
     }
@@ -443,7 +443,7 @@ class iCalComponent {
       }
       if ( preg_match('/^\s*$/', $line ) ) continue;
       $line = rtrim( $line, "\r\n" );
-//      dbg_error_log( 'iCalendar',  "::ParseFrom: Parsing line: $line");
+      ZLog::Write(LOGLEVEL_DEBUG, sprintf("iCalendar->ParseFrom(): Parsing line: '%s'", $line));
 
       if ( $type === false ) {
         if ( preg_match( '/^BEGIN:(.+)$/', $line, $matches ) ) {
@@ -451,20 +451,20 @@ class iCalComponent {
           $type = $matches[1];
           $finish = "END:$type";
           $this->type = $type;
-          dbg_error_log( 'iCalendar', "::ParseFrom: Start component of type '%s'", $type);
+          ZLog::Write(LOGLEVEL_DEBUG, sprintf("iCalendar->ParseFrom(): Start component of type '%s'", $type));
         }
         else {
-          dbg_error_log( 'iCalendar', "::ParseFrom: Ignoring crap before start of component: $line");
+          ZLog::Write(LOGLEVEL_DEBUG, sprintf("iCalendar->ParseFrom(): Ignoring crap before start of component: '%s'", $line));
           // unset($lines[$k]);  // The content has crap before the start
           if ( $line != "" ) $this->rendered = null;
         }
       }
       else if ( $type == null ) {
-        dbg_error_log( 'iCalendar', "::ParseFrom: Ignoring crap after end of component");
+        ZLog::Write(LOGLEVEL_DEBUG, "iCalendar->ParseFrom(): Ignoring crap after end of component.");
         if ( $line != "" ) $this->rendered = null;
       }
       else if ( $line == $finish ) {
-        dbg_error_log( 'iCalendar', "::ParseFrom: End of component");
+        ZLog::Write(LOGLEVEL_DEBUG, "iCalendar->ParseFrom(): End of component.");
         $type = null;  // We have reached the end of our component
       }
       else {
@@ -473,22 +473,23 @@ class iCalComponent {
           $subtype = $matches[1];
           $subfinish = "END:$subtype";
           $subcomponent = $line . "\r\n";
-          dbg_error_log( 'iCalendar', "::ParseFrom: Found a subcomponent '%s'", $subtype);
+          ZLog::Write(LOGLEVEL_DEBUG, sprintf("iCalendar->ParseFrom(): Found a subcomponent '%s'", $subtype));
         }
         else if ( $subtype ) {
           // We are inside a sub-component
           $subcomponent .= $this->WrapComponent($line);
           if ( $line == $subfinish ) {
-            dbg_error_log( 'iCalendar', "::ParseFrom: End of subcomponent '%s'", $subtype);
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("iCalendar->ParseFrom(): End of subcomponent '%s'", $subtype));
             // We have found the end of a sub-component
             $this->components[] = new iCalComponent($subcomponent);
             $subtype = false;
           }
-//          else
-//            dbg_error_log( 'iCalendar', "::ParseFrom: Inside a subcomponent '%s'", $subtype );
+          else {
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("iCalendar->ParseFrom(): Inside a subcomponent '%s'", $subtype));
+          }
         }
         else {
-//          dbg_error_log( 'iCalendar', "::ParseFrom: Parse property of component");
+          ZLog::Write(LOGLEVEL_DEBUG, "iCalendar->ParseFrom(): Parse property of component.");
           // It must be a normal property line within a component.
           $this->properties[] = new iCalProp($line);
         }
@@ -686,7 +687,7 @@ class iCalComponent {
       $new_prop->Name($new_property);
       $new_prop->Value($value);
       if ( $parameters != null ) $new_prop->Parameters($parameters);
-      dbg_error_log('iCalendar'," Adding new property '%s'", $new_prop->Render() );
+      ZLog::Write(LOGLEVEL_DEBUG, sprintf("iCalendar->AddProperty(): Adding new property '%s'", $new_prop->Render()));
       $this->properties[] = $new_prop;
     }
     else if ( gettype($new_property) ) {
@@ -927,14 +928,14 @@ class iCalComponent {
   */
   function GetPropertiesByPath( $path ) {
     $properties = array();
-    dbg_error_log( 'iCalendar', "GetPropertiesByPath: Querying within '%s' for path '%s'", $this->type, $path );
+    ZLog::Write(LOGLEVEL_DEBUG, sprintf("iCalendar->GetPropertiesByPath(): Querying within '%s' for path '%s'", $this->type, $path));
     if ( !preg_match( '#(/?)(!?)([^/]+)(/?.*)$#', $path, $matches ) ) return $properties;
 
     $adrift = ($matches[1] == '');
     $normal = ($matches[2] == '');
     $ourtest = $matches[3];
     $therest = $matches[4];
-    dbg_error_log( 'iCalendar', "GetPropertiesByPath: Matches: %s -- %s -- %s -- %s\n", $matches[1], $matches[2], $matches[3], $matches[4] );
+    ZLog::Write(LOGLEVEL_DEBUG, sprintf("iCalendar->GetPropertiesByPath(): Matches: %s -- %s -- %s -- %s", $matches[1], $matches[2], $matches[3], $matches[4]));
     if ( $ourtest == '*' || (($ourtest == $this->type) === $normal) && $therest != '' ) {
       if ( preg_match( '#^/(!?)([^/]+)$#', $therest, $matches ) ) {
         $normmatch = ($matches[1] =='');
@@ -963,7 +964,7 @@ class iCalComponent {
         $properties = array_merge( $properties, $v->GetPropertiesByPath($path) );
       }
     }
-    dbg_error_log('iCalendar', "GetPropertiesByPath: Found %d within '%s' for path '%s'\n", count($properties), $this->type, $path );
+    ZLog::Write(LOGLEVEL_DEBUG, sprintf("iCalendar->GetPropertiesByPath(): Found %d within '%s' for path '%s'", count($properties), $this->type, $path));
     return $properties;
   }
 
