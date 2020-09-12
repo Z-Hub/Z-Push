@@ -825,15 +825,13 @@ class Mail_mimeDecode
                     break;
             }
             if (is_string($this->_decode_headers) && $charset != $this->_decode_headers) {
-                $conv = @iconv($charset, $this->_decode_headers, $text);
-                $text = ($conv === false) ? $text : $conv;
+                $text = @iconv($charset, $this->_decode_headers . '//IGNORE', $text);
             }
             $input = str_replace($encoded, $text, $input);
         }
 
         if ($default_charset  && is_string($this->_decode_headers) && $charset != $this->_decode_headers) {
-            $conv = @iconv($charset, $this->_decode_headers, $input); // TODO: shouldn't this be $default_charset ?
-            $input = ($conv === false) ? $input : $conv;
+            $input = @iconv($charset, $this->_decode_headers . '//IGNORE', $input); // TODO: shouldn't this be "$default_charset"?
         }
 
         return $input;
@@ -862,8 +860,7 @@ class Mail_mimeDecode
                 break;
         }
         if ($detectCharset && strtolower($charset) != $this->_charset) {
-            $conv = @iconv($charset, $this->_charset, $input);
-            $input = ($conv === false) ? $input : $conv;
+            $input = @iconv($charset, $this->_charset . '//IGNORE', $input);
         }
 
         return $input;
