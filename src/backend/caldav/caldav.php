@@ -915,12 +915,15 @@ class BackendCalDAV extends BackendDiff {
                         $trigger = date_create("@" . TimezoneUtil::MakeUTCDate($property->Value()));
                         $begin = date_create("@" . $message->starttime);
                         $interval = date_diff($begin, $trigger);
-                        $message->reminder = $interval->format("%i") + $interval->format("%h") * 60 + $interval->format("%a") * 60 * 24;
+                        $message->reminder = $interval->format("%i") + $interval->format("%h") * 60 + intval($interval->format("%a")) * 60 * 24;
                     }
                     elseif (!array_key_exists("VALUE", $parameters) || $parameters["VALUE"] == "DURATION") {
-                        $val = str_replace("-", "", $property->Value());
-                        $interval = new DateInterval($val);
-                        $message->reminder = $interval->format("%i") + $interval->format("%h") * 60 + $interval->format("%a") * 60 * 24;
+                        $val = $property->Value();
+                        // only use negative values, because reminder = minutes before calendar item start
+                        if ($val[0] == '-') {
+                            $interval = new DateInterval(substr($val, 1));
+                            $message->reminder = $interval->format("%i") + $interval->format("%h") * 60 + $interval->format("%d") * 60 * 24;
+                        }
                     }
                 }
             }
