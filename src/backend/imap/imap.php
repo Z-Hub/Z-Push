@@ -1328,7 +1328,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             // Language Code Page ID: http://msdn.microsoft.com/en-us/library/windows/desktop/dd317756%28v=vs.85%29.aspx
             $output->internetcpid = INTERNET_CPID_UTF8;
             if (Request::GetProtocolVersion() >= 12.0) {
-                $output->contentclass = "urn:content-classes:message";
+                $output->contentclass = DEFAULT_EMAIL_CONTENTCLASS;
 
                 $output->flag = new SyncMailFlags();
                 if (isset($stat["star"]) && $stat["star"]) {
@@ -1345,13 +1345,13 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
 
                     //flagstatus 0: unknown, 1: replied, 2: replied-to-all, 3: forwarded
                     if (isset($stat["answered"]) && $stat["answered"]) {
-                        $output->lastverbexecuted = 1;
+                        $output->lastverbexecuted = SYNC_MAIL_LASTVERB_REPLYSENDER;
                     }
                     elseif (isset($stat["forwarded"]) && $stat["forwarded"]) {
-                        $output->lastverbexecuted = 3;
+                        $output->lastverbexecuted = SYNC_MAIL_LASTVERB_FORWARD;
                     }
                     else {
-                        $output->lastverbexecuted = 0;
+                        $output->lastverbexecuted = SYNC_MAIL_LASTVERB_UNKNOWN;
                     }
                 }
             }
