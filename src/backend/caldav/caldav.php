@@ -28,6 +28,7 @@
 // config file
 require_once("backend/caldav/config.php");
 
+include 'Sabre/VObject/includes.php';
 
 class BackendCalDAV extends BackendDiff {
     /**
