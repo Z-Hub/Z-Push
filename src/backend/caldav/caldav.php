@@ -28,7 +28,6 @@
 // config file
 require_once("backend/caldav/config.php");
 
-include 'Sabre/VObject/includes.php';
 
 class BackendCalDAV extends BackendDiff {
     /**
@@ -221,10 +220,10 @@ class BackendCalDAV extends BackendDiff {
 
         $path = $this->_caldav_path . substr($folderid, 1) . "/";
         if ($folderid[0] == "C") {
-            $msgs = $this->_caldav->GetEvents($begin, $finish, $path);
+            $msgs = $this->_caldav->GetEventsList($begin, $finish, $path);
         }
         else {
-            $msgs = $this->_caldav->GetTodos($begin, $finish, false, false, $path);
+            $msgs = $this->_caldav->GetTodosList($begin, $finish, false, false, $path);
         }
 
         $messages = array();
@@ -242,8 +241,16 @@ class BackendCalDAV extends BackendDiff {
      */
     public function GetMessage($folderid, $id, $contentparameters) {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->GetMessage('%s','%s')", $folderid,  $id));
-        $data = $this->_collection[$id]['data'];
-
+        $path = $this->_caldav_path . substr($folderid, 1) . "/";
+        $href = $path . $id;
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->GetMessage Querying server for message with href '%s' in folder '%s'", $href, $path));
+        $messages = $this->_caldav->CalendarMultiget( array( $href ), $path );
+        if (!isset($messages[$href]) || $messages[$href] == '') {
+            //we don't have any ical information, return false so that the diff backend raises an exception
+            return false;
+        }
+        $data = $messages[ $href ];
+        unset ($messages, $href);
         if ($folderid[0] == "C") {
             return $this->_ParseVEventToAS($data, $contentparameters);
         }
@@ -269,9 +276,12 @@ class BackendCalDAV extends BackendDiff {
         }
         else {
             $path = $this->_caldav_path . substr($folderid, 1) . "/";
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->StatMessage Data doesn't exist for this item, querying caldav server for uid '%s' in folder '%s'", substr($id, 0, strlen($id)-4), $path));
             $e = $this->_caldav->GetEntryByUid(substr($id, 0, strlen($id)-4), $path, $type);
-            if ($e == null && count($e) <= 0)
+            if ($e == null && count($e) <= 0) {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->StatMessage No item on server with uid '%s' in folder '%s'", substr($id, 0, strlen($id)-4), $path));
                 return;
+            }
             $data = $e[0];
         }
         $message = array();
@@ -542,27 +552,35 @@ class BackendCalDAV extends BackendDiff {
         $truncsize = Utils::GetTruncSize($contentparameters->GetTruncation());
         $message = new SyncAppointment();
 
-        $vcal = sabre\vobject\reader::read($data, sabre\vobject\reader::OPTION_FORGIVING);
-        ZLog::Write(LOGLEVEL_DEBUG, "VObject vcal: ".print_r($vcal->serialize(), 1));
-
-        $tzid = $vcal->VEVENT->DTSTART->getDateTime()->getTimezone()->getName();
-        $message->timezone = $this->_GetTimezoneString($tzid);
+        $vcal = Sabre\VObject\Reader::read($data, sabre\vobject\reader::OPTION_FORGIVING);
+        ZLog::Write(LOGLEVEL_WBXML, "VObject vcal: ".print_r($vcal->serialize(), 1));
 
         foreach ($vcal->VEVENT as $vevent) {
             if (isset($vevent->{'RECURRENCE-ID'})) {
-                $exception = new SyncAppointmentException();
-                $exception->exceptionstarttime = $vevent->{'RECURRENCE-ID'}->getDateTime()->getTimestamp();
-                $exception->timezone = $message->timezone;
-                $exception->deleted = 0;
-                $exception = $this->_ParseVEventToSyncObject($vevent, $exception, $truncsize);
-                unset($exception->recurrence);
-                if (!isset($message->exceptions)) {
-                    $message->exceptions = array();
+                try {
+                    $exceptionstarttime = $vevent->{'RECURRENCE-ID'}->getDateTime()->getTimestamp();
+                    $exception = new SyncAppointmentException();
+                    $exception->exceptionstarttime = $exceptionstarttime;
+                    $exception->deleted = 0;
+                    $exception = $this->_ParseVEventToSyncObject($vevent, $exception, $truncsize);
+                    unset($exception->recurrence);
+                    if (!isset($message->exceptions)) {
+                        $message->exceptions = array();
+                    }
+                    $message->exceptions[] = $exception;
                 }
-                $message->exceptions[] = $exception;
+                catch (Exception $e) {
+                    ZLog::Write(LOGLEVEL_ERROR, sprintf("BackendCalDAV->_ParseVEventToSyncObject(): Exception during processing RECURRENCE-ID: '%s'", $e->getMessage()));
+                }
             }
             else {
                 $message = $this->_ParseVEventToSyncObject($vevent, $message, $truncsize);
+            }
+        }
+        // Loop exceptions and set timezone
+        if (isset($message->exceptions)) {
+            foreach ($message->exceptions as $exception) {
+                $exception->timezone = $message->timezone;
             }
         }
 
@@ -580,11 +598,19 @@ class BackendCalDAV extends BackendDiff {
         $message->busystatus = 2;
         $message->meetingstatus = 0;
         $message->alldayevent = 0;
+        $tzid = defined('TIMEZONE') && strlen(TIMEZONE) > 1 ? TIMEZONE : date_default_timezone_get();
 
-        foreach ($vevent->children as $value) {
+        foreach ($vevent->children() as $value) {
             switch ($value->name) {
                 case "DTSTART":
                     $message->starttime = $value->getDateTime()->getTimestamp();
+                    if (isset($value['TZID'])) {
+                        $tzid = (string)$value['TZID'];
+                    }
+                    else {
+                        $timezone = new DateTimeZone($tzid);
+                        $message->starttime = $message->starttime - $timezone->getOffset($value->getDateTime());
+                    }
                     if (strlen((string)$value) == 8) {
                         $message->alldayevent = 1;
                     }
@@ -592,6 +618,10 @@ class BackendCalDAV extends BackendDiff {
 
                 case "DTEND":
                     $message->endtime = $value->getDateTime()->getTimestamp();
+                    if (!isset($value['TZID'])) {
+                        $timezone = new DateTimeZone($tzid);
+                        $message->endtime = $message->endtime - $timezone->getOffset($value->getDateTime());
+                    }
                     if (strlen((string)$value) == 8) {
                         $message->alldayevent = 1;
                     }
@@ -623,7 +653,9 @@ class BackendCalDAV extends BackendDiff {
                 case "DESCRIPTION":
                     if (Request::GetProtocolVersion() >= 12.0) {
                         $message->asbody = new SyncBaseBody();
+                        // the DESCRIPTION component is specified to be plain text (RFC5545), for HTML use X-ALT-DESC
                         $data = str_replace("\n","\r\n", str_replace("\r","",Utils::ConvertHtmlToText((string)$value)));
+                        
                         // truncate body, if requested
                         if (strlen($data) > $truncsize) {
                             $message->asbody->truncated = 1;
@@ -635,6 +667,8 @@ class BackendCalDAV extends BackendDiff {
                         $message->asbody->data = StringStreamWrapper::Open($data);
                         $message->asbody->estimatedDataSize = strlen($data);
                         unset($data);
+                        // set body type accordingly
+                        $message->asbody->type = SYNC_BODYPREFERENCE_PLAIN;
                         $message->nativebodytype = SYNC_BODYPREFERENCE_PLAIN;
                     }
                     else {
@@ -717,7 +751,10 @@ class BackendCalDAV extends BackendDiff {
                     $org_mail = str_ireplace("MAILTO:", "", (string)$value);
                     $message->organizeremail = $org_mail;
                     if (isset($value['CN'])) {
-                        $message->organizername = $value['CN'];
+                        $message->organizername = (string)$value['CN'];
+                    }
+                    else {
+                        $message->organizername = "";
                     }
                     break;
 
@@ -726,7 +763,10 @@ class BackendCalDAV extends BackendDiff {
                     $att_email = str_ireplace("MAILTO:", "", (string)$value);
                     $attendee->email = $att_email;
                     if (isset($value['CN'])) {
-                        $attendee->name = $value['CN'];
+                        $attendee->name = (string)$value['CN'];
+                    }
+                    else {
+                        $attendee->name = "";
                     }
                     if (isset($value['PARTSTAT'])) {
                         switch($value['PARTSTAT']){
@@ -777,13 +817,19 @@ class BackendCalDAV extends BackendDiff {
                     break;
 
                 case "EXDATE":
-                    $exception = new SyncAppointmentException();
-                    $exception->deleted = 1;
-                    $exception->exceptionstarttime = $value->getDateTime()->getTimestamp();
-                    if (!isset($message->exceptions)) {
-                        $message->exceptions = array();
+                    try {
+                        $exceptionstarttime = $value->getDateTime()->getTimestamp();
+                        $exception = new SyncAppointmentException();
+                        $exception->deleted = 1;
+                        $exception->exceptionstarttime = $exceptionstarttime;
+                        if (!isset($message->exceptions)) {
+                            $message->exceptions = array();
+                        }
+                        $message->exceptions[] = $exception;
                     }
-                    $message->exceptions[] = $exception;
+                    catch (Exception $e) {
+                        ZLog::Write(LOGLEVEL_ERROR, sprintf("BackendCalDAV->_ParseVEventToSyncObject(): Exception during processing EXDATE: '%s'", $e->getMessage()));
+                    }
                     break;
 
                 case "UID":
@@ -791,24 +837,43 @@ class BackendCalDAV extends BackendDiff {
                     break;
 
                 case "LAST-MODIFIED":
-                    $message->dtstamp = $value->getDateTime()->getTimestamp();
+                    try {
+                        $message->dtstamp = $value->getDateTime()->getTimestamp();
+                    }
+                    catch (Exception $e) {
+                        ZLog::Write(LOGLEVEL_ERROR, sprintf("BackendCalDAV->_ParseVEventToSyncObject(): Exception during processing LAST-MODIFIED: '%s'", $e->getMessage()));
+                    }
                     break;
 
                 case "VALARM":
-                    foreach($value->children as $valarm_child){
-                        if($valarm_child->name == "TRIGGER"){
-                            if(isset($valarm_child->parameters['VALUE'])){
-                                // the specific date and time is specified
+                    foreach($value->children() as $valarm_child) {
+                        if($valarm_child->name == "TRIGGER") {
+                            if(isset($valarm_child->parameters['VALUE']) && $valarm_child->parameters['VALUE'] == 'DATE-TIME') {
+                                // the trigger is absolute
                                 $begin = date_create("@" . $vevent->DTSTART->getDateTime()->getTimestamp());
+                                if (!$begin) {
+                                    ZLog::Write(LOGLEVEL_ERROR, "BackendCalDAV->_ParseVEventToSyncObject(): Error during processing DTSTART for VALARM");
+                                    break;
+                                }
                                 $trigger = date_create("@" . TimezoneUtil::MakeUTCDate((string)$valarm_child));
+                                if (!$trigger) {
+                                    ZLog::Write(LOGLEVEL_ERROR, "BackendCalDAV->_ParseVEventToSyncObject(): Error during processing TRIGGER for VALARM");
+                                    break;
+                                }
                                 $interval = date_diff($begin, $trigger);
                                 $message->reminder = $interval->format("%i") + $interval->format("%h") * 60 + $interval->format("%a") * 60 * 24;
-                            }else{
+                            }
+                            else {
                                 // the trigger is relative
                                 // ICAL allows the trigger to be relative to something other than the start, AS does not support this
                                 $val = str_replace("-", "", (string)$valarm_child);
-                                $interval = new DateInterval($val);
-                                $message->reminder = $interval->format("%i") + $interval->format("%h") * 60 + $interval->format("%a") * 60 * 24;
+                                try{
+                                    $interval = new DateInterval($val); // Crash here
+                                }catch(Exception $e){
+                                    ZLog::Write(LOGLEVEL_ERROR, sprintf("BackendCalDAV->_ParseVEventToSyncObject(): Exception during processing VALARM TRIGGER: '%s'", $e->getMessage()));
+                                    break;
+                                }
+                                $message->reminder = intval($interval->format("%i")) + intval($interval->format("%h")) * 60 + intval($interval->format("%a")) * 60 * 24;
                             }
                         }
                     }
@@ -851,6 +916,8 @@ class BackendCalDAV extends BackendDiff {
                 $message->organizername = Utils::GetLocalPartFromEmail($message->organizeremail);
             }
         }
+
+        $message->timezone = $this->_GetTimezoneString($tzid);
         return $message;
     }
 
@@ -971,38 +1038,41 @@ class BackendCalDAV extends BackendDiff {
         $vcal = new Sabre\VObject\Component\VCalendar;
         $vcal->PRODID = "-//z-push-contrib//NONSGML Z-Push-contrib Calendar//EN";
 
-        $tzid = 'UTC';
+        $tzid = defined('TIMEZONE') && strlen(TIMEZONE) > 1 ? TIMEZONE : 'UTC';
         if (isset($data->timezone) && isset($data->starttime)) {
-            $tzid = $this->tzidFromMSTZ($data->timezone, $data->starttime);
-            //Add VTIMEZONE
-            $year = date("Y", $data->starttime);
-
-            $vtimezone = $vcal->createComponent('VTIMEZONE');
-            $vtimezone->TZID = $tzid;
-            $timezone = new DateTimeZone($tzid);
-            $transitions = $timezone->getTransitions(date("U", strtotime($year."0101T000000Z")), date("U", strtotime($year."1231T235959Z")));
-
-            $offset_from = self::phpOffsetToIcalOffset($transitions[0]['offset']);
-            for ($i=0; $i<count($transitions); $i++) {
-                $offset_to = self::phpOffsetToIcalOffset($transitions[$i]['offset']);
-                if ($i == 0) {
-                        $offset_from = $offset_to;
-                    if (count($transitions) > 1) {
-                        continue;
-                    }
-                }
-                $vtransition = $vcal->createComponent($transitions[$i]['isdst'] == 1 ? "DAYLIGHT" : "STANDARD");
-
-                $vtransition->TZOFFSETFROM = $offset_from;
-                $vtransition->TZOFFSETTO = $offset_to;
-                $offset_from = $offset_to;
-
-                $vtransition->TZNAME = $transitions[$i]['abbr'];
-                $vtransition->DTSTART = date("Ymd\THis", $transitions[$i]['ts']);
-                $vtimezone->add($vtransition);
+            $tzid_tmp = $this->tzidFromMSTZ($data->timezone, $data->starttime);
+            if($data->alldayevent != 1 || $tzid_tmp != 'UTC') {
+                $tzid = $tzid_tmp;
             }
-            $vcal->add($vtimezone);
         }
+        //Add VTIMEZONE
+        $year = date("Y", $data->starttime);
+
+        $vtimezone = $vcal->createComponent('VTIMEZONE');
+        $vtimezone->TZID = $tzid;
+        $timezone = new DateTimeZone($tzid);
+        $transitions = $timezone->getTransitions(date("U", strtotime($year."0101T000000Z")), date("U", strtotime($year."1231T235959Z")));
+
+        $offset_from = self::phpOffsetToIcalOffset($transitions[0]['offset']);
+        for ($i=0; $i<count($transitions); $i++) {
+            $offset_to = self::phpOffsetToIcalOffset($transitions[$i]['offset']);
+            if ($i == 0) {
+                $offset_from = $offset_to;
+                if (count($transitions) > 1) {
+                   continue;
+                }
+            }
+            $vtransition = $vcal->createComponent($transitions[$i]['isdst'] == 1 ? "DAYLIGHT" : "STANDARD");
+
+            $vtransition->TZOFFSETFROM = $offset_from;
+            $vtransition->TZOFFSETTO = $offset_to;
+            $offset_from = $offset_to;
+
+            $vtransition->TZNAME = $transitions[$i]['abbr'];
+            $vtransition->DTSTART = date("Ymd\THis", $transitions[$i]['ts']);
+            $vtimezone->add($vtransition);
+        }
+        $vcal->add($vtimezone);
 
         switch ($folderid[0]){
             case "C":
@@ -1154,7 +1224,7 @@ class BackendCalDAV extends BackendDiff {
             $valarm->add('TRIGGER', "-PT".$data->reminder."M", ['RELATED' => "START"]);
             $vevent->add($valarm);
         }
-        if (isset($data->rtf)) {
+        if (isset($data->rtf) && strlen($data->rtf) > 0) {
             $rtfparser = new z_RTF();
             $rtfparser->loadrtf(base64_decode($data->rtf));
             $rtfparser->output("ascii");
@@ -1388,7 +1458,7 @@ class BackendCalDAV extends BackendDiff {
         $message->importance = 1;
         $message->complete = 0;
 
-        foreach ($vtodo->children as $value) {
+        foreach ($vtodo->children() as $value) {
             switch ($value->name) {
                 case "SUMMARY":
                     $message->subject = (string)$value;
@@ -1457,9 +1527,9 @@ class BackendCalDAV extends BackendDiff {
                     break;
 
                 case "VALARM":
-                    foreach ($value->children as $valarm_child) {
+                    foreach ($value->children() as $valarm_child) {
                         if ($valarm_child->name == "TRIGGER") {
-                            if (isset($valarm_child->parameters['VALUE'])) {
+                            if (isset($valarm_child->parameters['VALUE']) && $valarm_child->parameters['VALUE'] == 'DATE-TIME') {
                                 // the specific date and time is specified
                                 $begin = date_create("@" . $vtodo->DTSTART->getDateTime()->getTimestamp());
                                 $trigger = date_create("@" . TimezoneUtil::MakeUTCDate((string)$valarm_child));
@@ -1486,6 +1556,7 @@ class BackendCalDAV extends BackendDiff {
 
     /**
      * Generate a VTODO from a SyncAppointment(Exception)
+     * @param Sabre\VCalendar $vcal
      * @param string $data
      * @return VTODO
      */
@@ -1626,7 +1697,8 @@ class BackendCalDAV extends BackendDiff {
                     $dstTime = $trans[2];
                     $stdTime = $trans[1];
                 }
-                $stdTimeO = new DateTime($stdTime['time']);
+                $stdTimeO = new DateTime($stdTime['time'], timezone_open("UTC"));
+                $stdTimeO->add(new DateInterval('PT'.$dstTime['offset'].'S'));
                 $stdFirst = new DateTime(sprintf("first sun of %s %s", $stdTimeO->format('F'), $stdTimeO->format('Y')), timezone_open("UTC"));
                 $stdBias = $stdTime['offset'] / -60;
                 $stdName = $stdTime['abbr'];
@@ -1640,7 +1712,8 @@ class BackendCalDAV extends BackendDiff {
                 if ($stdTimeO->format('n') != $stdMonth) {
                     $stdWeek = 5;
                 }
-                $dstTimeO = new DateTime($dstTime['time']);
+                $dstTimeO = new DateTime($dstTime['time'], timezone_open("UTC"));
+                $dstTimeO->add(new DateInterval('PT'.$stdTime['offset'].'S'));
                 $dstFirst = new DateTime(sprintf("first sun of %s %s", $dstTimeO->format('F'), $dstTimeO->format('Y')), timezone_open("UTC"));
                 $dstName = $dstTime['abbr'];
                 $dstYear = 0;
@@ -1670,7 +1743,8 @@ class BackendCalDAV extends BackendDiff {
     }
 
     private static $knownMSTZS = array(
-        "-780/-60/0/0/0/0/0/0/0/0"=>"Pacific/Enderbury"
+        "0/0/0/0/0/0/0/0/0/0"=>"UTC"
+        ,"-780/-60/0/0/0/0/0/0/0/0"=>"Pacific/Enderbury"
         ,"-720/-60/4/1/0/3/9/5/0/2"=>"Pacific/Auckland"
         ,"-660/-60/0/0/0/0/0/0/0/0"=>"Antarctica/Casey"
         ,"-600/-60/4/1/0/3/10/1/0/2"=>"Australia/Melbourne"
@@ -1728,6 +1802,7 @@ class BackendCalDAV extends BackendDiff {
                                     ."vdststartmonth/vdststartday/vdststartweek/vdststarthour/vdststartminute/"
                                     ."vdststartsecond/vdststartmillis/ldstbias", base64_decode($mstz));
 
+
         $mstz = $mstz_parts['bias']
                     ."/".$mstz_parts['dstbias']
                     ."/".$mstz_parts['dstendmonth']
@@ -1760,7 +1835,7 @@ class BackendCalDAV extends BackendDiff {
             if ($tno == 1 && $dststart_timestamp == 0) {
                 if ($transitions[0]['offset'] == $offset_std) {
                     ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->tzidFromMSTZ(): Found tzid: '%s'.", $tzid));
-                    ZLog::Write(LOGLEVEL_WARN, sprintf("BackendCalDAV->tzidFromMSTZ(): Add tzid to knownMSTZS array for better performance: '%s'.", ',"'.$mstz.'"=>"'.$tzid.'"'));
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->tzidFromMSTZ(): Add tzid to knownMSTZS array for better performance: '%s'.", ',"'.$mstz.'"=>"'.$tzid.'"'));
                     return $tzid;
                 }
             }
@@ -1775,7 +1850,7 @@ class BackendCalDAV extends BackendDiff {
                         $transitions[2]['offset'] == $offset_std)
                     {
                         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->tzidFromMSTZ(): Found tzid: '%s'.", $tzid));
-                        ZLog::Write(LOGLEVEL_WARN, sprintf("BackendCalDAV->tzidFromMSTZ(): Add tzid to knownMSTZS array for better performance: '%s'.", ',"'.$mstz.'"=>"'.$tzid.'"'));
+                        ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->tzidFromMSTZ(): Add tzid to knownMSTZS array for better performance: '%s'.", ',"'.$mstz.'"=>"'.$tzid.'"'));
                         return $tzid;
                     }
                 }
@@ -1789,7 +1864,7 @@ class BackendCalDAV extends BackendDiff {
                         $transitions[2]['offset'] == $offset_dst)
                     {
                         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->tzidFromMSTZ(): Found tzid: '%s'.", $tzid));
-                        ZLog::Write(LOGLEVEL_WARN, sprintf("BackendCalDAV->tzidFromMSTZ(): Add tzid to knownMSTZS array for better performance: '%s'.", ',"'.$mstz.'"=>"'.$tzid.'"'));
+                        ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->tzidFromMSTZ(): Add tzid to knownMSTZS array for better performance: '%s'.", ',"'.$mstz.'"=>"'.$tzid.'"'));
                         return $tzid;
                     }
                 }
