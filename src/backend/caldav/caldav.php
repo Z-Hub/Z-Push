@@ -654,9 +654,10 @@ class BackendCalDAV extends BackendDiff {
                 case "DESCRIPTION":
                     if (Request::GetProtocolVersion() >= 12.0) {
                         $message->asbody = new SyncBaseBody();
+
                         // the DESCRIPTION component is specified to be plain text (RFC5545), for HTML use X-ALT-DESC
                         $data = str_replace("\n","\r\n", str_replace("\r","",Utils::ConvertHtmlToText((string)$value)));
-                        
+
                         // truncate body, if requested
                         if (strlen($data) > $truncsize) {
                             $message->asbody->truncated = 1;
@@ -668,6 +669,7 @@ class BackendCalDAV extends BackendDiff {
                         $message->asbody->data = StringStreamWrapper::Open($data);
                         $message->asbody->estimatedDataSize = strlen($data);
                         unset($data);
+
                         // set body type accordingly
                         $message->asbody->type = SYNC_BODYPREFERENCE_PLAIN;
                         $message->nativebodytype = SYNC_BODYPREFERENCE_PLAIN;
@@ -678,13 +680,16 @@ class BackendCalDAV extends BackendDiff {
                         if(strlen($body) > $truncsize) {
                             $body = Utils::Utf8_truncate($body, $truncsize);
                             $message->bodytruncated = 1;
-                        }
-                        else {
+                        } else {
                             $message->bodytruncated = 0;
                         }
                         $body = str_replace("\n","\r\n", str_replace("\r","",$body));
                         $message->body = $body;
                     }
+                    break;
+
+                case "RRULE":
+                    $message->recurrence = $this->_ParseRecurrence((string)$value, "vevent");
                     break;
 
                 case "CLASS":
@@ -806,10 +811,6 @@ class BackendCalDAV extends BackendDiff {
                     else {
                         $message->attendees = array($attendee);
                     }
-                    break;
-
-                case "RRULE":
-                    $message->recurrence = $this->_ParseRecurrence((string)$value, "vevent");
                     break;
 
                 case "CATEGORIES":
@@ -1923,4 +1924,4 @@ class BackendCalDAV extends BackendDiff {
         return sprintf("$prefix%'.02d%'.02d", $hours, ($offset - ($hours * 3600)) / 60);
     }
 
-}
+};

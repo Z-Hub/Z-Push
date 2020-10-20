@@ -226,14 +226,14 @@ abstract class SyncWorker {
 
         // gets a list of GABs
         $gabs = $this->getGABs();
+        // default case, no multi-GABs, just go default
+        $gabId = null;
+        $gabName = 'default';
 
         if (empty($gabs)) {
-            if($targetGab) {
+            if ($targetGab) {
                 $this->Terminate("Multiple GABs not found, target should not be set. Aborting.");
             }
-            // default case, no multi-GABs, just go default
-            $gabId = null;
-            $gabName = 'default';
         }
         else {
             foreach($gabs as $testGabName => $testGabId) {

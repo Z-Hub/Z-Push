@@ -906,6 +906,43 @@ class BackendKopano implements IBackend, ISearchProvider {
         if(!$mapimessage)
             throw new StatusException(sprintf("BackendKopano->MeetingResponse('%s','%s', '%s'): Error, unable to open request message for response 0x%X", $requestid, $folderid, $response, mapi_last_hresult()), SYNC_MEETRESPSTATUS_INVALIDMEETREQ);
 
+        // ios sends calendar item in MeetingResponse
+        // @see https://jira.z-hub.io/browse/ZP-1524
+        $folderClass = ZPush::GetDeviceManager()->GetFolderClassFromCacheByID($fid);
+        // find the corresponding meeting request
+        if ($folderClass != 'Email') {
+            $props = MAPIMapping::GetMeetingRequestProperties();
+            $props = getPropIdsFromStrings($this->store, $props);
+
+            $messageprops = mapi_getprops($mapimessage, array($props["goidtag"]));
+            $goid = $messageprops[$props["goidtag"]];
+
+            $mapiprovider = new MAPIProvider($this->session, $this->store);
+            $inboxprops = $mapiprovider->GetInboxProps();
+            $folder = mapi_msgstore_openentry($this->store, $inboxprops[PR_ENTRYID]);
+
+            // Find the item by restricting all items to the correct ID
+            $restrict = array(RES_AND, array(
+                array(RES_PROPERTY,
+                    array(
+                        RELOP => RELOP_EQ,
+                        ULPROPTAG => $props["goidtag"],
+                        VALUE => $goid
+                    )
+                )
+            ));
+
+            $inboxcontents = mapi_folder_getcontentstable($folder);
+
+            $rows = mapi_table_queryallrows($inboxcontents, array(PR_ENTRYID), $restrict);
+            if (empty($rows)) {
+                throw new StatusException(sprintf("BackendKopano->MeetingResponse('%s','%s', '%s'): Error, meeting request not found in the inbox", $requestid, $folderid, $response), SYNC_MEETRESPSTATUS_INVALIDMEETREQ);
+            }
+            ZLog::Write(LOGLEVEL_DEBUG, "BackendKopano->MeetingResponse found meeting request in the inbox");
+            $mapimessage = mapi_msgstore_openentry($this->store, $rows[0][PR_ENTRYID]);
+            $reqentryid = $rows[0][PR_ENTRYID];
+        }
+
         $meetingrequest = new Meetingrequest($this->store, $mapimessage, $this->session);
 
         if(!$meetingrequest->isMeetingRequest())
@@ -915,14 +952,26 @@ class BackendKopano implements IBackend, ISearchProvider {
             throw new StatusException(sprintf("BackendKopano->MeetingResponse('%s','%s', '%s'): Error, attempt to response to meeting request that we organized", $requestid, $folderid, $response), SYNC_MEETRESPSTATUS_INVALIDMEETREQ);
 
         // Process the meeting response. We don't have to send the actual meeting response
-        // e-mail, because the device will send it itself.
+        // e-mail, because the device will send it itself. This seems not to be the case
+        // anymore for the ios devices since at least version 12.4. Z-Push will send the
+        // accepted email in such a case.
+        // @see https://jira.z-hub.io/browse/ZP-1524
+        $sendresponse = false;
+        $deviceType = strtolower(Request::GetDeviceType());
+        if ($deviceType == 'iphone' || $deviceType == 'ipad' || $deviceType == 'ipod') {
+            $matches = array();
+            if (preg_match("/^Apple-.*?\/(\d{4})\./", Request::GetUserAgent(), $matches) && isset($matches[1]) && $matches[1] >= 1607) {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendKopano->MeetingResponse: iOS device %s->%s", Request::GetDeviceType(), Request::GetUserAgent()));
+                $sendresponse = true;
+            }
+        }
         switch($response) {
             case 1:     // accept
             default:
-                $entryid = $meetingrequest->doAccept(false, false, false, false, false, false, true); // last true is the $userAction
+                $entryid = $meetingrequest->doAccept(false, $sendresponse, false, false, false, false, true); // last true is the $userAction
                 break;
             case 2:        // tentative
-                $entryid = $meetingrequest->doAccept(true, false, false, false, false, false, true); // last true is the $userAction
+                $entryid = $meetingrequest->doAccept(true, $sendresponse, false, false, false, false, true); // last true is the $userAction
                 break;
             case 3:        // decline
                 $meetingrequest->doDecline(false);
@@ -950,11 +999,13 @@ class BackendKopano implements IBackend, ISearchProvider {
         if ($requestid == $calendarid) {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendKopano->MeetingResponse('%s','%s', '%s'): returned calender id is the same as the requestid - re-searching", $requestid, $folderid, $response));
 
-            $props = MAPIMapping::GetMeetingRequestProperties();
-            $props = getPropIdsFromStrings($this->store, $props);
+            if (empty($props)) {
+                $props = MAPIMapping::GetMeetingRequestProperties();
+                $props = getPropIdsFromStrings($this->store, $props);
 
-            $messageprops = mapi_getprops($mapimessage, Array($props["goidtag"]));
-            $goid = $messageprops[$props["goidtag"]];
+                $messageprops = mapi_getprops($mapimessage, Array($props["goidtag"]));
+                $goid = $messageprops[$props["goidtag"]];
+            }
 
             $items = $meetingrequest->findCalendarItems($goid);
 
@@ -971,8 +1022,10 @@ class BackendKopano implements IBackend, ISearchProvider {
         }
 
         // delete meeting request from Inbox
-        $folderentryid = mapi_msgstore_entryidfromsourcekey($this->store, hex2bin($folderid));
-        $folder = mapi_msgstore_openentry($this->store, $folderentryid);
+        if ($folderClass == 'Email') {
+            $folderentryid = mapi_msgstore_entryidfromsourcekey($this->store, hex2bin($folderid));
+            $folder = mapi_msgstore_openentry($this->store, $folderentryid);
+        }
         mapi_folder_deletemessages($folder, array($reqentryid), 0);
 
         $prefix = '';
@@ -1149,7 +1202,8 @@ class BackendKopano implements IBackend, ISearchProvider {
                 $response->to = $to;
                 $response->status = SYNC_RESOLVERECIPSSTATUS_SUCCESS;
 
-                $recipient = $this->resolveRecipient($to, $maxAmbiguousRecipients);
+                // do not expand distlists here
+                $recipient = $this->resolveRecipient($to, $maxAmbiguousRecipients, false);
                 if (is_array($recipient) && !empty($recipient)) {
                     $response->recipientcount = 0;
                     foreach ($recipient as $entry) {
@@ -1674,7 +1728,17 @@ class BackendKopano implements IBackend, ISearchProvider {
         $foldercount = mapi_table_getrowcount($hierarchy);
 
         $storeProps = mapi_getprops($this->store, array(PR_MESSAGE_SIZE_EXTENDED));
-        $storesize = isset($storeProps[PR_MESSAGE_SIZE_EXTENDED]) ? $storeProps[PR_MESSAGE_SIZE_EXTENDED] : 0;
+
+        // Disable the sending of the storesize parameter to KOE.
+        // In case this parameter is greater than 0 then KOE will reduce the synched data window basing on thresholds and
+        // displays a dialog message.
+        if (defined('DISABLE_KOE_STORESIZE_LIMIT') && DISABLE_KOE_STORESIZE_LIMIT === true) {
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("KopanoBackend->GetUserStoreInfo(): KOE storesize limit handling is DISABLED."));
+            $storesize = 0;
+        }
+        else {
+            $storesize = isset($storeProps[PR_MESSAGE_SIZE_EXTENDED]) ? $storeProps[PR_MESSAGE_SIZE_EXTENDED] : 0;
+        }
 
         $userDetails = $this->GetUserDetails($this->impersonateUser ?: $this->mainUser);
         $userStoreInfo->SetData($foldercount, $storesize, $userDetails['fullname'], $userDetails['emailaddress']);
@@ -2235,11 +2299,12 @@ class BackendKopano implements IBackend, ISearchProvider {
      *
      * @param string $to
      * @param int $maxAmbiguousRecipients
+     * @param boolean $expandDistlist
      *
      * @return SyncResolveRecipient|boolean
      */
-    private function resolveRecipient($to, $maxAmbiguousRecipients) {
-        $recipient = $this->resolveRecipientGAL($to, $maxAmbiguousRecipients);
+    private function resolveRecipient($to, $maxAmbiguousRecipients, $expandDistlist = true) {
+        $recipient = $this->resolveRecipientGAL($to, $maxAmbiguousRecipients, $expandDistlist);
 
         if ($recipient !== false) {
             return $recipient;
@@ -2259,9 +2324,10 @@ class BackendKopano implements IBackend, ISearchProvider {
      *
      * @param string $to
      * @param int $maxAmbiguousRecipients
+     * @param boolean $expandDistlist
      * @return array|boolean
      */
-    private function resolveRecipientGAL($to, $maxAmbiguousRecipients) {
+    private function resolveRecipientGAL($to, $maxAmbiguousRecipients, $expandDistlist = true) {
         ZLog::Write(LOGLEVEL_WBXML, sprintf("Kopano->resolveRecipientGAL(): Resolving recipient '%s' in GAL", $to));
         $addrbook = $this->getAddressbook();
         // FIXME: create a function to get the adressbook contentstable
@@ -2302,14 +2368,20 @@ class BackendKopano implements IBackend, ISearchProvider {
                     continue;
                 }
                 if ($abentries[$i][PR_OBJECT_TYPE] == MAPI_DISTLIST) {
-                    // dist lists must be expanded into their members
-                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("Kopano->resolveRecipientGAL(): '%s' is a dist list. Expand it to members.", $to));
-                    $distList = mapi_ab_openentry($addrbook, $abentries[$i][PR_ENTRYID]);
-                    $distListContent = mapi_folder_getcontentstable($distList);
-                    $distListMembers = mapi_table_queryallrows($distListContent, array(PR_ENTRYID, PR_DISPLAY_NAME, PR_EMS_AB_TAGGED_X509_CERT));
-                    for ($j = 0, $nrDistListMembers = mapi_table_getrowcount($distListContent); $j < $nrDistListMembers; $j++) {
-                        ZLog::Write(LOGLEVEL_WBXML, sprintf("Kopano->resolveRecipientGAL(): distlist's '%s' member", $to, $distListMembers[$j][PR_DISPLAY_NAME]));
-                        $recipientGal[] = $this->createResolveRecipient(SYNC_RESOLVERECIPIENTS_TYPE_GAL, $to, $distListMembers[$j], $nrDistListMembers);
+                    // check whether to expand dist list
+                    if ($expandDistlist) {
+                        ZLog::Write(LOGLEVEL_DEBUG, sprintf("Kopano->resolveRecipientGAL(): '%s' is a dist list. Expand it to members.", $to));
+                        $distList = mapi_ab_openentry($addrbook, $abentries[$i][PR_ENTRYID]);
+                        $distListContent = mapi_folder_getcontentstable($distList);
+                        $distListMembers = mapi_table_queryallrows($distListContent, array(PR_ENTRYID, PR_DISPLAY_NAME, PR_EMS_AB_TAGGED_X509_CERT));
+                        for ($j = 0, $nrDistListMembers = mapi_table_getrowcount($distListContent); $j < $nrDistListMembers; $j++) {
+                            ZLog::Write(LOGLEVEL_WBXML, sprintf("Kopano->resolveRecipientGAL(): distlist's '%s' member", $to, $distListMembers[$j][PR_DISPLAY_NAME]));
+                            $recipientGal[] = $this->createResolveRecipient(SYNC_RESOLVERECIPIENTS_TYPE_GAL, $to, $distListMembers[$j], $nrDistListMembers);
+                        }
+                    }
+                    else {
+                        ZLog::Write(LOGLEVEL_DEBUG, sprintf("Kopano->resolveRecipientGAL(): '%s' is a dist list, but return it as is.", $to));
+                        $recipientGal[] = $this->createResolveRecipient(SYNC_RESOLVERECIPIENTS_TYPE_GAL, $abentries[$i][PR_SMTP_ADDRESS], $abentries[$i]);
                     }
                 }
                 elseif ($abentries[$i][PR_OBJECT_TYPE] == MAPI_MAILUSER) {
@@ -2571,7 +2643,8 @@ class BackendKopano implements IBackend, ISearchProvider {
                             $endSlot--;
                         }
 
-                        for ($i = $startSlot; $i <= $endSlot; $i++) {
+                        // the endslot may be higher than the requested timeslots, in such case ignore free-busy unnecessary slots
+                        for ($i = $startSlot, $l = (($endSlot > $timeslots) ? ($timeslots - 1) : $endSlot); $i <= $l; $i++) {
                             // only set the new slot's free busy status if it's higher than the current one
                             if ($blockItem['status'] > $mergedFreeBusy[$i]) {
                                 $mergedFreeBusy[$i] = $blockItem['status'];
@@ -2644,14 +2717,20 @@ class BackendKopano implements IBackend, ISearchProvider {
         if (isset($enabledFeatures[PR_EC_DISABLED_FEATURES]) && is_array($enabledFeatures[PR_EC_DISABLED_FEATURES])) {
             $mobileDisabled = in_array(self::MOBILE_ENABLED, $enabledFeatures[PR_EC_DISABLED_FEATURES]);
             $outlookDisabled = in_array(self::OUTLOOK_ENABLED, $enabledFeatures[PR_EC_DISABLED_FEATURES]);
+            $deviceId = Request::GetDeviceID();
+            // Checks for deviceId present in zarafaDisabledFeatures LDAP array attribute. Check is performed case insensitive.
+            $deviceIdDisabled = ( ($deviceId !==null) && in_array($deviceId, array_map('strtolower', $enabledFeatures[PR_EC_DISABLED_FEATURES])) )? true : false;
             if ($mobileDisabled && $outlookDisabled) {
                 throw new FatalException("User is disabled for Z-Push.");
             }
             elseif (Request::IsOutlook() && $outlookDisabled) {
                 throw new FatalException("User is disabled for Outlook usage with Z-Push.");
             }
-            elseif (!Request::IsOutlook() && $mobileDisabled) {
+            elseif (!Request::IsOutlook() && $mobileDisabled && Request::GetDeviceType() !== "webservice" && Request::GetDeviceType() !== false) {
                 throw new FatalException("User is disabled for mobile device usage with Z-Push.");
+            }
+            elseif ($deviceIdDisabled) {
+                throw new FatalException(sprintf("User has deviceId %s disabled for usage with Z-Push.", $deviceId));
             }
         }
         return true;

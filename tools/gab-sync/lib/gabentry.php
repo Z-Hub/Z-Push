@@ -43,6 +43,7 @@ class GABEntry {
     public $title;                          // PR_TITLE                                 title
     public $companyName;                    // PR_COMPANY_NAME
     public $officeLocation;                 // PR_OFFICE_LOCATION                       physicalDeliveryOfficeName
+    public $department;                     // PR_DEPARTMENT_NAME                       departmentNumber
     public $businessTelephoneNumber;        // PR_BUSINESS_TELEPHONE_NUMBER
     public $mobileTelephoneNumber;          // PR_MOBILE_TELEPHONE_NUMBER               mobile
     public $homeTelephoneNumber;            // PR_HOME_TELEPHONE_NUMBER                 Telephone
@@ -54,6 +55,7 @@ class GABEntry {
     public $businessAddressPostalCode;      // PR_BUSINESS_ADDRESS_POSTAL_CODE          postalCode
     public $businessAddressPostOfficeBox;   // PR_BUSINESS_ADDRESS_POST_OFFICE_BOX      postBoxOffice
     public $businessAddressStateOrProvince; // PR_BUSINESS_ADDRESS_STATE_OR_PROVINCE    st
+    public $businessAddressStreet;          // PR_BUSINESS_ADDRESS_STREET               street
     public $initials;                       // PR_INITIALS                              initials
     public $language;                       // PR_LANGUAGE                              preferredLanguage
     public $thumbnailPhoto;                 // PR_EMS_AB_THUMBNAIL_PHOTO                jpegPhoto

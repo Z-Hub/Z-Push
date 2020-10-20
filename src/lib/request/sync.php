@@ -418,7 +418,7 @@ class Sync extends RequestProcessor {
                     }
 
                     // limit items to be synchronized to the mobiles if configured
-                    $maxAllowed = self::$deviceManager->GetFilterType($spa->GetFolderId());
+                    $maxAllowed = self::$deviceManager->GetFilterType($spa->GetFolderId(), $spa->GetBackendFolderId());
                     if ($maxAllowed > SYNC_FILTERTYPE_ALL &&
                         (!$spa->HasFilterType() || $spa->GetFilterType() == SYNC_FILTERTYPE_ALL || $spa->GetFilterType() > $maxAllowed)) {
                             ZLog::Write(LOGLEVEL_DEBUG, sprintf("HandleSync(): FilterType applied globally or specifically, using value: %s", $maxAllowed));

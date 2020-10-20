@@ -5,14 +5,10 @@
 
 case "$1" in
     configure)
-        /usr/sbin/z-push-admin -a fixstates-upgrade
-        if [ $? -ne 0 ]; then
-            YELLOW='\033[0;33m'
-            NC='\033[0m' # No Color
-            echo -e "${YELLOW}When upgrading from an earlier version you need to run 'z-push-admin -a fixstates'.\n
-It seems the execution on setup has failed (see error above). Please fix the issue and run the command manually.\n
+        YELLOW='\033[0;33m'
+        NC='\033[0m' # No Color
+        echo -e "${YELLOW}When upgrading from Z-Push 2.0, 2.1 or 2.2 you need to run 'z-push-admin -a fixstates'.\n
 More information at https://wiki.z-hub.io/x/R4Ea${NC}\n"
-        fi
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)

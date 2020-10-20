@@ -586,8 +586,11 @@ class MAPIProvider {
 
         if(isset($messageprops[PR_SOURCE_KEY]))
             $sourcekey = $messageprops[PR_SOURCE_KEY];
-        else
-            return false;
+        else {
+            $mbe = new SyncObjectBrokenException("The message doesn't have a sourcekey");
+            $mbe->SetSyncObject($message);
+            throw $mbe;
+        }
 
         //set the body according to contentparameters and supported AS version
         $this->setMessageBody($mapimessage, $contentparameters, $message);
@@ -1022,7 +1025,7 @@ class MAPIProvider {
      */
     public function GetFolderType($entryid, $class = false) {
         $storeprops = $this->GetStoreProps();
-        $inboxprops = $this->getInboxProps();
+        $inboxprops = $this->GetInboxProps();
 
         if($entryid == $storeprops[PR_IPM_WASTEBASKET_ENTRYID])
             return SYNC_FOLDER_TYPE_WASTEBASKET;
@@ -1509,7 +1512,7 @@ class MAPIProvider {
             $org[PR_EMAIL_ADDRESS] = isset($representingprops[$appointmentprops["sentrepresentingemail"]]) ? $representingprops[$appointmentprops["sentrepresentingemail"]] : $props[$appointmentprops["sentrepresentingemail"]];
             $org[PR_SEARCH_KEY] = isset($representingprops[$appointmentprops["sentrepresentinsrchk"]]) ? $representingprops[$appointmentprops["sentrepresentinsrchk"]] : $props[$appointmentprops["sentrepresentinsrchk"]];
             $org[PR_RECIPIENT_FLAGS] = recipOrganizer | recipSendable;
-            $org[PR_RECIPIENT_TYPE] = MAPI_TO; // TODO: shouldn't that be MAPI_ORIG ?
+            $org[PR_RECIPIENT_TYPE] = MAPI_ORIG;
 
             array_push($recips, $org);
 
@@ -1518,6 +1521,7 @@ class MAPIProvider {
             foreach($appointment->attendees as $attendee) {
                 $recip = array();
                 $recip[PR_EMAIL_ADDRESS] = u2w($attendee->email);
+                $recip[PR_SMTP_ADDRESS] = u2w($attendee->email);
 
                 // lookup information in GAB if possible so we have up-to-date name for given address
                 $userinfo = array( array( PR_DISPLAY_NAME => $recip[PR_EMAIL_ADDRESS] ) );
@@ -2826,12 +2830,12 @@ class MAPIProvider {
     /**
      * Gets the required inbox properties.
      *
-     * @access private
+     * @access public
      * @return array
      */
-    private function getInboxProps() {
+    public function GetInboxProps() {
         if (!isset($this->inboxProps) || empty($this->inboxProps)) {
-            ZLog::Write(LOGLEVEL_DEBUG, "MAPIProvider->getInboxProps(): Getting inbox properties.");
+            ZLog::Write(LOGLEVEL_DEBUG, "MAPIProvider->GetInboxProps(): Getting inbox properties.");
             $this->inboxProps = array();
             $inbox = mapi_msgstore_getreceivefolder($this->store);
             if ($inbox) {

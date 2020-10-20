@@ -33,13 +33,14 @@ Requires:   rh-php56-php-soap
 Requires:   rh-php56-php-mbstring
 Requires:   rh-php56-php-process
 %else
-Requires:   php >= 5.4.0
 Requires:   php-soap
 Requires:   php-mbstring
 %if 0%{?suse_version}
+Requires:   php >= 5.4.0
 Requires:   php-posix
 Requires(pre): shadow
 %else
+Requires:   php(language) >= 5.4
 Requires:   php-process
 %endif
 %endif
@@ -320,9 +321,9 @@ ln -s "%_sysconfdir/z-push/z-push.conf.php" "$b/%zpush_dir/config.php";
 mv "$b/%zpush_dir/policies.ini" "$cdir/policies.ini";
 ln -s "%_sysconfdir/z-push/policies.ini" "$b/%zpush_dir/policies.ini";
 
-mkdir -p "$b/%_bindir"
-ln -s "%zpush_dir/z-push-admin.php" "$b/%_bindir/z-push-admin";
-ln -s "%zpush_dir/z-push-top.php" "$b/%_bindir/z-push-top";
+mkdir -p "$b/%_sbindir"
+ln -s "%zpush_dir/z-push-admin.php" "$b/%_sbindir/z-push-admin";
+ln -s "%zpush_dir/z-push-top.php" "$b/%_sbindir/z-push-top";
 
 mkdir -p "$b/%_localstatedir/lib/z-push";
 mkdir -p "$b/%_localstatedir/log/z-push";
@@ -365,8 +366,8 @@ cp -a tools/gab-sync "$b/%zpush_dir/tools/"
 mv "$b/%zpush_dir/tools/gab-sync/config.php" "$cdir/gabsync.conf.php";
 ln -s "%_sysconfdir/z-push/gabsync.conf.php" "$b/%zpush_dir/tools/gab-sync/config.php";
 sed -i -s "s/PATH_TO_ZPUSH', '\.\.\/\.\.\/src\/')/PATH_TO_ZPUSH', '\/usr\/share\/z-push\/')/" "$b/%zpush_dir/tools/gab-sync/gab-sync.php"
-mkdir -p "$b/%_bindir"
-ln -s "%zpush_dir/tools/gab-sync/gab-sync.php" "$b/%_bindir/z-push-gabsync";
+mkdir -p "$b/%_sbindir"
+ln -s "%zpush_dir/tools/gab-sync/gab-sync.php" "$b/%_sbindir/z-push-gabsync";
 
 # GAB2CONTACTS
 mkdir -p "$b/%zpush_dir/tools"
@@ -374,8 +375,8 @@ cp -a tools/gab2contacts "$b/%zpush_dir/tools/"
 mv "$b/%zpush_dir/tools/gab2contacts/config.php" "$cdir/gab2contacts.conf.php";
 ln -s "%_sysconfdir/z-push/gab2contacts.conf.php" "$b/%zpush_dir/tools/gab2contacts/config.php";
 sed -i -s "s/PATH_TO_ZPUSH', '\.\.\/\.\.\/src\/')/PATH_TO_ZPUSH', '\/usr\/share\/z-push\/')/" "$b/%zpush_dir/tools/gab2contacts/gab2contacts.php"
-mkdir -p "$b/%_bindir"
-ln -s "%zpush_dir/tools/gab2contacts/gab2contacts.php" "$b/%_bindir/z-push-gab2contacts";
+mkdir -p "$b/%_sbindir"
+ln -s "%zpush_dir/tools/gab2contacts/gab2contacts.php" "$b/%_sbindir/z-push-gab2contacts";
 
 # MEMCACHED
 mv "$bdir/ipcmemcached/config.php" "$cdir/memcached.conf.php";
@@ -410,8 +411,8 @@ install -Dpm 644 config/nginx/z-push-autodiscover.conf "$b/%_sysconfdir/nginx/sn
 install -Dpm 644 config/nginx/z-push-php.conf "$b/%_sysconfdir/nginx/snippets/z-push-php.conf";
 
 # MANPAGES
-mkdir -p "$b/%_mandir/man1"
-cp man/*.1 "$b/%_mandir/man1"
+mkdir -p "$b/%_mandir/man8"
+cp man/*.8 "$b/%_mandir/man8"
 
 %pre -n %name-common
 %_bindir/getent group z-push > /dev/null || %_sbindir/groupadd -r z-push
@@ -481,11 +482,11 @@ service nginx reload || true
 %attr(770,root,z-push) %dir %_localstatedir/lib/z-push
 %attr(770,root,z-push) %dir %_localstatedir/log/z-push
 
-%_bindir/z-push-admin
-%_bindir/z-push-top
+%_sbindir/z-push-admin
+%_sbindir/z-push-top
 
-%_mandir/man1/z-push-admin.1*
-%_mandir/man1/z-push-top.1*
+%_mandir/man8/z-push-admin.8*
+%_mandir/man8/z-push-top.8*
 
 # CALDAV
 %files -n %name-backend-caldav
@@ -548,8 +549,8 @@ service nginx reload || true
 %zpush_dir/tools/gab-sync/
 %dir %_sysconfdir/z-push
 %config(noreplace) %attr(0640,root,z-push) %_sysconfdir/z-push/gabsync.conf.php
-%_bindir/z-push-gabsync
-%_mandir/man1/z-push-gabsync.1*
+%_sbindir/z-push-gabsync
+%_mandir/man8/z-push-gabsync.8*
 
 %files -n %name-kopano-gab2contacts
 %defattr(-, root, root)
@@ -558,8 +559,8 @@ service nginx reload || true
 %zpush_dir/tools/gab2contacts/
 %dir %_sysconfdir/z-push
 %config(noreplace) %attr(0640,root,z-push) %_sysconfdir/z-push/gab2contacts.conf.php
-%_bindir/z-push-gab2contacts
-%_mandir/man1/z-push-gab2contacts.1*
+%_sbindir/z-push-gab2contacts
+%_mandir/man8/z-push-gab2contacts.8*
 
 %files -n %name-kopano
 
