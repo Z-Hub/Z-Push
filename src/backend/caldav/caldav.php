@@ -601,29 +601,29 @@ class BackendCalDAV extends BackendDiff {
         $message->alldayevent = 0;
         $tzid = defined('TIMEZONE') && strlen(TIMEZONE) > 1 ? TIMEZONE : date_default_timezone_get();
 
-        foreach ($vevent->children() as $value) {
-            switch ($value->name) {
+        foreach ($vevent->children() as $property) {
+            switch ($property->name) {
                 case "DTSTART":
-                    $message->starttime = $value->getDateTime()->getTimestamp();
-                    if (isset($value['TZID'])) {
-                        $tzid = (string)$value['TZID'];
+                    $message->starttime = $property->getDateTime()->getTimestamp();
+                    if (isset($property['TZID'])) {
+                        $tzid = $property->getDateTime()->getTimezone()->getName();
                     }
                     else {
                         $timezone = new DateTimeZone($tzid);
-                        $message->starttime = $message->starttime - $timezone->getOffset($value->getDateTime());
+                        $message->starttime = $message->starttime - $timezone->getOffset($property->getDateTime());
                     }
-                    if (strlen((string)$value) == 8) {
+                    if (strlen((string)$property) == 8) {
                         $message->alldayevent = 1;
                     }
                     break;
 
                 case "DTEND":
-                    $message->endtime = $value->getDateTime()->getTimestamp();
-                    if (!isset($value['TZID'])) {
+                    $message->endtime = $property->getDateTime()->getTimestamp();
+                    if (!isset($property['TZID'])) {
                         $timezone = new DateTimeZone($tzid);
-                        $message->endtime = $message->endtime - $timezone->getOffset($value->getDateTime());
+                        $message->endtime = $message->endtime - $timezone->getOffset($property->getDateTime());
                     }
-                    if (strlen((string)$value) == 8) {
+                    if (strlen((string)$property) == 8) {
                         $message->alldayevent = 1;
                     }
                     break;
@@ -631,24 +631,24 @@ class BackendCalDAV extends BackendDiff {
                 case "DURATION":
                     if (!isset($message->endtime)) {
                         $start = date_create("@" . $message->starttime);
-                        $val = str_replace("+", "", (string)$value);
+                        $val = str_replace("+", "", (string)$property);
                         $interval = new DateInterval($val);
                         $message->endtime = date_timestamp_get(date_add($start, $interval));
                     }
                     break;
 
                 case "X-MICROSOFT-CDO-ALLDAYEVENT":
-                    if ((string)$value == "TRUE") {
+                    if ((string)$property == "TRUE") {
                         $message->alldayevent = 1;
                     }
                     break;
 
                 case "SUMMARY":
-                    $message->subject = (string)$value;
+                    $message->subject = (string)$property;
                     break;
 
                 case "LOCATION":
-                    $message->location = (string)$value;
+                    $message->location = (string)$property;
                     break;
 
                 case "DESCRIPTION":
@@ -656,7 +656,7 @@ class BackendCalDAV extends BackendDiff {
                         $message->asbody = new SyncBaseBody();
 
                         // the DESCRIPTION component is specified to be plain text (RFC5545), for HTML use X-ALT-DESC
-                        $data = str_replace("\n","\r\n", str_replace("\r","",Utils::ConvertHtmlToText((string)$value)));
+                        $data = str_replace("\n","\r\n", str_replace("\r","",Utils::ConvertHtmlToText((string)$property)));
 
                         // truncate body, if requested
                         if (strlen($data) > $truncsize) {
@@ -689,11 +689,11 @@ class BackendCalDAV extends BackendDiff {
                     break;
 
                 case "RRULE":
-                    $message->recurrence = $this->_ParseRecurrence((string)$value, "vevent");
+                    $message->recurrence = $this->_ParseRecurrence((string)$property, "vevent");
                     break;
 
                 case "CLASS":
-                    switch ((string)$value) {
+                    switch ((string)$property) {
                         case "PUBLIC":
                             $message->sensitivity = 0;
                             break;
@@ -708,7 +708,7 @@ class BackendCalDAV extends BackendDiff {
 
                 case "TRANSP":
                     if(!isset($message->busystatus)){
-                        switch ((string)$value) {
+                        switch ((string)$property) {
                             case "TRANSPARENT":
                                 $message->busystatus = 0;
                                 break;
@@ -720,7 +720,7 @@ class BackendCalDAV extends BackendDiff {
                     break;
 
                 case "X-MICROSOFT-CDO-INTENDEDSTATUS":
-                    switch ((string)$value) {
+                    switch ((string)$property) {
                         case "FREE":
                             $message->busystatus = 0;
                             break;
@@ -740,7 +740,7 @@ class BackendCalDAV extends BackendDiff {
                     break;
 
                 case "STATUS":
-                    switch ((string)$value) {
+                    switch ((string)$property) {
                         case "TENTATIVE":
                             $message->meetingstatus = 3; // Meeting received
                             break;
@@ -754,10 +754,10 @@ class BackendCalDAV extends BackendDiff {
                     break;
 
                 case "ORGANIZER":
-                    $org_mail = str_ireplace("MAILTO:", "", (string)$value);
+                    $org_mail = str_ireplace("MAILTO:", "", (string)$property);
                     $message->organizeremail = $org_mail;
-                    if (isset($value['CN'])) {
-                        $message->organizername = (string)$value['CN'];
+                    if (isset($property['CN'])) {
+                        $message->organizername = (string)$property['CN'];
                     }
                     else {
                         $message->organizername = "";
@@ -766,16 +766,16 @@ class BackendCalDAV extends BackendDiff {
 
                 case "ATTENDEE":
                     $attendee = new SyncAttendee();
-                    $att_email = str_ireplace("MAILTO:", "", (string)$value);
+                    $att_email = str_ireplace("MAILTO:", "", (string)$property);
                     $attendee->email = $att_email;
-                    if (isset($value['CN'])) {
-                        $attendee->name = (string)$value['CN'];
+                    if (isset($property['CN'])) {
+                        $attendee->name = (string)$property['CN'];
                     }
                     else {
                         $attendee->name = "";
                     }
-                    if (isset($value['PARTSTAT'])) {
-                        switch($value['PARTSTAT']){
+                    if (isset($property['PARTSTAT'])) {
+                        switch($property['PARTSTAT']){
                             case "TENTATIVE":
                                 $attendee->attendeestatus = 2;
                                 break;
@@ -790,8 +790,8 @@ class BackendCalDAV extends BackendDiff {
                                 break;
                         }
                     }
-                    if (isset($value['ROLE'])) {
-                        switch($value['ROLE']){
+                    if (isset($property['ROLE'])) {
+                        switch($property['ROLE']){
                             case "OPT-PARTICIPANT":
                                 $attendee->attendeetype = 2; // Optional
                                 break;
@@ -814,13 +814,13 @@ class BackendCalDAV extends BackendDiff {
                     break;
 
                 case "CATEGORIES":
-                    $categories = explode(",", (string)$value);
+                    $categories = explode(",", (string)$property);
                     $message->categories = $categories;
                     break;
 
                 case "EXDATE":
                     try {
-                        $exceptionstarttime = $value->getDateTime()->getTimestamp();
+                        $exceptionstarttime = $property->getDateTime()->getTimestamp();
                         $exception = new SyncAppointmentException();
                         $exception->deleted = 1;
                         $exception->exceptionstarttime = $exceptionstarttime;
@@ -835,12 +835,12 @@ class BackendCalDAV extends BackendDiff {
                     break;
 
                 case "UID":
-                    $message->uid = (string)$value;
+                    $message->uid = (string)$property;
                     break;
 
                 case "LAST-MODIFIED":
                     try {
-                        $message->dtstamp = $value->getDateTime()->getTimestamp();
+                        $message->dtstamp = $property->getDateTime()->getTimestamp();
                     }
                     catch (Exception $e) {
                         ZLog::Write(LOGLEVEL_ERROR, sprintf("BackendCalDAV->_ParseVEventToSyncObject(): Exception during processing LAST-MODIFIED: '%s'", $e->getMessage()));
@@ -848,7 +848,7 @@ class BackendCalDAV extends BackendDiff {
                     break;
 
                 case "VALARM":
-                    foreach($value->children() as $valarm_child) {
+                    foreach($property->children() as $valarm_child) {
                         if($valarm_child->name == "TRIGGER") {
                             if(isset($valarm_child->parameters['VALUE']) && $valarm_child->parameters['VALUE'] == 'DATE-TIME') {
                                 // the trigger is absolute
@@ -890,7 +890,6 @@ class BackendCalDAV extends BackendDiff {
                 case "X-MOZ-LASTACK":
                 case "X-LIC-ERROR":
                 case "RECURRENCE-ID":
-                case "X-MICROSOFT-CDO-ALLDAYEVENT":
                 case "X-MICROSOFT-CDO-BUSYSTATUS":
                 case "X-MICROSOFT-DISALLOW-COUNTER":
                 case "X-MICROSOFT-CDO-OWNER-CRITICAL-CHANGE":
@@ -902,7 +901,7 @@ class BackendCalDAV extends BackendDiff {
                 case "X-MOZ-SEND-INVITATIONS":
                     break;
                 default:
-                    ZLog::Write(LOGLEVEL_WARN, sprintf("BackendCalDAV->_ParseVEventToSyncObject(): '%s' is not yet supported.", $value->name));
+                    ZLog::Write(LOGLEVEL_WARN, sprintf("BackendCalDAV->_ParseVEventToSyncObject(): '%s' is not yet supported.", $property->name));
             }
         }
 
@@ -1150,29 +1149,36 @@ class BackendCalDAV extends BackendDiff {
         else {
             $vevent->{'X-MICROSOFT-CDO-ALLDAYEVENT'} = 'FALSE';
         }
-        if (isset($data->starttime)) {
-            if ($data->alldayevent == 1) {
-                $vevent->DTSTART = $this->_GetDateFromUTC("Ymd", $data->starttime, $tzid);
-                $vevent->DTSTART['VALUE'] = 'DATE';
+        if (!isset($data->starttime)) {
+            if (isset($data->endtime)) {
+                $data->starttime = $data->endtime - 1800;
             }
             else {
-                $vevent->DTSTART = gmdate("Ymd\THis\Z", $data->starttime);
-            }
-            if ($tzid != "UTC") {
-                $vevent->DTSTART['TZID'] = $tzid;
+                $data->starttime = time();
             }
         }
-        if (isset($data->endtime)) {
-            if ($data->alldayevent == 1) {
-                $vevent->DTEND = $this->_GetDateFromUTC("Ymd", $data->endtime, $tzid);
-                $vevent->DTEND['VALUE'] = 'DATE';
-            }
-            else {
-                $vevent->DTEND = gmdate("Ymd\THis\Z", $data->endtime);
-            }
-            if ($tzid != "UTC") {
-                $vevent->DTEND['TZID'] = $tzid;
-            }
+        if (!isset($data->endtime)) {
+            $data->endtime = $data->starttime + 1800;
+        }
+        if ($data->alldayevent == 1) {
+            $vevent->DTSTART = $this->_GetDateFromUTC("Ymd", $data->starttime, $tzid);
+            $vevent->DTSTART['VALUE'] = 'DATE';
+        }
+        else {
+            $vevent->DTSTART = gmdate("Ymd\THis\Z", $data->starttime);
+        }
+        if ($tzid != "UTC") {
+            $vevent->DTSTART['TZID'] = $tzid;
+        }
+        if ($data->alldayevent == 1) {
+            $vevent->DTEND = $this->_GetDateFromUTC("Ymd", $data->endtime, $tzid);
+            $vevent->DTEND['VALUE'] = 'DATE';
+        }
+        else {
+            $vevent->DTEND = gmdate("Ymd\THis\Z", $data->endtime);
+        }
+        if ($tzid != "UTC") {
+            $vevent->DTEND['TZID'] = $tzid;
         }
         if (isset($data->subject)) {
             $vevent->SUMMARY = $data->subject;
@@ -1460,14 +1466,14 @@ class BackendCalDAV extends BackendDiff {
         $message->importance = 1;
         $message->complete = 0;
 
-        foreach ($vtodo->children() as $value) {
-            switch ($value->name) {
+        foreach ($vtodo->children() as $property) {
+            switch ($property->name) {
                 case "SUMMARY":
-                    $message->subject = (string)$value;
+                    $message->subject = (string)$property;
                     break;
 
                 case "STATUS":
-                    switch ((string)$value) {
+                    switch ((string)$property) {
                         case "NEEDS-ACTION":
                         case "IN-PROCESS":
                             $message->complete = 0;
@@ -1480,15 +1486,15 @@ class BackendCalDAV extends BackendDiff {
                     break;
 
                 case "COMPLETED":
-                    $message->datecompleted = $value->getDateTime()->getTimestamp();
+                    $message->datecompleted = $property->getDateTime()->getTimestamp();
                     break;
 
                 case "DUE":
-                    $message->utcduedate = $value->getDateTime()->getTimestamp();
+                    $message->utcduedate = $property->getDateTime()->getTimestamp();
                     break;
 
                 case "PRIORITY":
-                    $priority = (int)$value;
+                    $priority = (int)$property;
                     if ($priority <= 3)
                         $message->importance = 0;
                     if ($priority <= 6)
@@ -1498,11 +1504,11 @@ class BackendCalDAV extends BackendDiff {
                     break;
 
                 case "RRULE":
-                    $message->recurrence = $this->_ParseRecurrence((string)$value, "vtodo");
+                    $message->recurrence = $this->_ParseRecurrence((string)$property, "vtodo");
                     break;
 
                 case "CLASS":
-                    switch ((string)$value) {
+                    switch ((string)$property) {
                         case "PUBLIC":
                             $message->sensitivity = 0;
                             break;
@@ -1516,20 +1522,20 @@ class BackendCalDAV extends BackendDiff {
                     break;
 
                 case "DTSTART":
-                    $message->utcstartdate = $value->getDateTime()->getTimestamp();
+                    $message->utcstartdate = $property->getDateTime()->getTimestamp();
                     break;
 
                 case "SUMMARY":
-                    $message->subject = (string)$value;
+                    $message->subject = (string)$property;
                     break;
 
                 case "CATEGORIES":
-                    $categories = explode(",", (string)$value);
+                    $categories = explode(",", (string)$property);
                     $message->categories = $categories;
                     break;
 
                 case "VALARM":
-                    foreach ($value->children() as $valarm_child) {
+                    foreach ($property->children() as $valarm_child) {
                         if ($valarm_child->name == "TRIGGER") {
                             if (isset($valarm_child->parameters['VALUE']) && $valarm_child->parameters['VALUE'] == 'DATE-TIME') {
                                 // the specific date and time is specified
