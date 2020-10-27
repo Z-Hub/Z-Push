@@ -83,6 +83,10 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             ZLog::Write(LOGLEVEL_INFO, sprintf("BackendIMAP(): The following authentication methods are disabled: %s", IMAP_DISABLE_AUTHENTICATOR));
             $this->imapParams = array("DISABLE_AUTHENTICATOR" => array_map('trim' ,explode(',', IMAP_DISABLE_AUTHENTICATOR)));
         }
+        if (!defined('IMAP_SEARCH_CHARSET')) {
+            ZLog::Write(LOGLEVEL_INFO, "BackendIMAP(): Using UTF-8 as Default Charset for Searches");
+            define('IMAP_SEARCH_CHARSET', 'UTF-8');
+        }
     }
 
     /**----------------------------------------------------------------------------------------------------------
@@ -168,8 +172,27 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
                                             Utils::PrintAsString(($sm->saveinsent)), Utils::PrintAsString(isset($sm->replacemime))));
 
         // by splitting the message in several lines we can easily grep later
-        foreach(preg_split("/((\r)?\n)/", $sm->mime) as $rfc822line)
-            ZLog::Write(LOGLEVEL_WBXML, "RFC822: ". $rfc822line);
+        if(ZLog::IsWbxmlDebugEnabled()) {
+            $logWbxmlMime = "";
+            $startpos = 0;
+
+            // limit log to about 10 KB and use ZLog:Write() truncation
+            while ($startpos < 10240) {
+                if ($endpos = strpos($sm->mime, "\n", $startpos)) {
+                    $logWbxmlMime .= "RFC822: " . trim(substr($sm->mime, $startpos, ($endpos - $startpos))) . PHP_EOL;
+                    $startpos = ++$endpos;
+                }
+                else {
+                    if (strlen(trim(substr($sm->mime, $startpos))) > 0) {
+                        $logWbxmlMime .= "RFC822: " . trim(substr($sm->mime, $startpos)) . PHP_EOL;
+                    }
+                    break;
+                }
+            }
+
+            ZLog::Write(LOGLEVEL_WBXML, $logWbxmlMime);
+            unset($logWbxmlMime);
+        }
 
         $sourceMessage = $sourceMail = false;
         // If we have a reference to a source message and we are not replacing mime (since we wouldn't use it)
@@ -196,7 +219,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
 
                 // If it's a forward, we mark the original message as forwarded
                 if ($sm->forwardflag) {
-                    if (!@imap_setflag_full($this->mbox, $sm->source->itemid, "\\Forwarded", ST_UID)) {
+                    if (!@imap_setflag_full($this->mbox, $sm->source->itemid, "\$Forwarded", ST_UID)) {
                         ZLog::Write(LOGLEVEL_WARN, sprintf("BackendIMAP->SendMail(): Unable to mark the message as Forwarded"));
                     }
                 }
@@ -243,8 +266,9 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
         // if it's a S/MIME message or has VCALENDAR objects I don't do anything with it
         if (is_smime($message) || has_calendar_object($message)) {
             $mobj = new Mail_mimeDecode($sm->mime);
-            $parts =  $mobj->getSendArray();
+            $parts = $mobj->getSendArray();
             unset($mobj);
+
             if ($parts === false) {
                 throw new StatusException(sprintf("BackendIMAP->SendMail(): Could not getSendArray for SMIME messages"), SYNC_COMMONSTATUS_MAILSUBMISSIONFAILED);
             }
@@ -329,10 +353,22 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
         unset($sourceMessage);
 
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->SendMail(): Final mail to send:"));
-        foreach ($finalHeaders as $k => $v)
-            ZLog::Write(LOGLEVEL_WBXML, sprintf("%s: %s", $k, $v));
-        foreach (preg_split("/((\r)?\n)/", $finalBody) as $bodyline)
-            ZLog::Write(LOGLEVEL_WBXML, sprintf("Body: %s", $bodyline));
+
+        if(ZLog::IsWbxmlDebugEnabled()) {
+            $logWbxmlHeaders = "";
+            foreach ($finalHeaders as $k => $v) {
+                $logWbxmlHeaders .= $k . ": " . $v . PHP_EOL;
+            }
+            ZLog::Write(LOGLEVEL_WBXML, $logWbxmlHeaders, false);
+            unset($logWbxmlHeaders);
+
+            $logWbxmlBody = "";
+            foreach (preg_split("/((\r)?\n)/", $finalBody) as $bodyline) {
+                $logWbxmlBody .= "Body: " . $bodyline . PHP_EOL;
+            }
+            ZLog::Write(LOGLEVEL_WBXML, $logWbxmlBody, false);
+            unset($logWbxmlBody);
+        }
 
         $send = $this->sendMessage($fromaddr, $toaddr, $finalHeaders, $finalBody);
 
@@ -504,7 +540,9 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
         }
 
         $mobj = new Mail_mimeDecode($mail);
+        unset($mail);
         $message = $mobj->decode(array('decode_headers' => 'utf-8', 'decode_bodies' => true, 'include_bodies' => true, 'rfc_822bodies' => true, 'charset' => 'utf-8'));
+        unset($mobj);
 
         if (!isset($message->parts)) {
             throw new StatusException(sprintf("BackendIMAP->GetAttachmentData('%s'): Error, message without parts. Requesting part key: '%d'", $attname, $part), SYNC_ITEMOPERATIONSSTATUS_INVALIDATT);
@@ -525,10 +563,6 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
 
         if (!isset($mparts[$part]->body))
             throw new StatusException(sprintf("BackendIMAP->GetAttachmentData('%s'): Error, requested part key can not be found: '%d'", $attname, $part), SYNC_ITEMOPERATIONSSTATUS_INVALIDATT);
-
-        // unset mimedecoder & mail
-        unset($mobj);
-        unset($mail);
 
         $attachment = new SyncItemOperationsAttachment();
         /* BEGIN fmbiete's contribution r1528, ZP-320 */
@@ -687,6 +721,8 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
              throw new StatusException("BackendIMAP->ChangesSink(): HierarchySync required.", SyncCollections::HIERARCHY_CHANGED);
         }
 
+        $flaggedMessages = array();
+
         // only check once to reduce pressure in the IMAP server
         foreach ($this->sinkfolders as $i => $imapid) {
             $this->imap_reopen_folder($imapid);
@@ -694,12 +730,18 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             // courier-imap only clears the status cache after checking
             @imap_check($this->mbox);
 
+            // get count of recent, unseen and overall messages
             $status = @imap_status($this->mbox, $this->server . $imapid, SA_ALL);
+
+            // get count of flagged messages (ZP-1561)
+            $flaggedMessages = @imap_search($this->mbox, 'FLAGGED');
+            $flaggedMessages = (is_array($flaggedMessages) && $flaggedMessages !== false) ? count($flaggedMessages) : 0;
+
             if (!$status) {
                 ZLog::Write(LOGLEVEL_WARN, sprintf("ChangesSink: could not stat folder '%s': %s ", $this->getFolderIdFromImapId($imapid), imap_last_error()));
             }
             else {
-                $newstate = "M:". $status->messages ."-R:". $status->recent ."-U:". $status->unseen;
+                $newstate = "M:". $status->messages ."-R:". $status->recent ."-U:". $status->unseen ."-F:". $flaggedMessages;
 
                 if (! isset($this->sinkstates[$imapid]) ) {
                     $this->sinkstates[$imapid] = $newstate;
@@ -1063,6 +1105,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
 
             $mobj = new Mail_mimeDecode($mail);
             $message = $mobj->decode(array('decode_headers' => 'utf-8', 'decode_bodies' => true, 'include_bodies' => true, 'rfc_822bodies' => true, 'charset' => 'utf-8'));
+            unset($mobj);
 
             Utils::CheckAndFixEncodingInHeaders($mail, $message);
 
@@ -1078,8 +1121,16 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             }
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->GetMessage(): getBodyPreferenceBestMatch: %d", $bpReturnType));
 
+            // Detect Apple iOS devices
+            $isAppleIosDevice = false;
+            $deviceType = strtolower(Request::GetDeviceType());
+            if ($deviceType == 'iphone' || $deviceType == 'ipad' || $deviceType == 'ipod') {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->GetMessage():: iOS device %s->%s detected", Request::GetDeviceType(), Request::GetUserAgent()));
+                $isAppleIosDevice = true;
+            }
+          
             // Prefered format is MIME -OR- message is SMIME -OR- the device supports MIME (iPhone) and doesn't really understand HTML
-            if ($bpReturnType == SYNC_BODYPREFERENCE_MIME || $is_smime || in_array(SYNC_BODYPREFERENCE_MIME, $bodypreference)) {
+            if ($bpReturnType == SYNC_BODYPREFERENCE_MIME || ($bpReturnType == SYNC_BODYPREFERENCE_HTML && $isAppleIosDevice) || $is_smime || in_array(SYNC_BODYPREFERENCE_MIME, $bodypreference)) {
                 $bpReturnType = SYNC_BODYPREFERENCE_MIME;
             }
 
@@ -1362,7 +1413,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
 
                                 $attachment = new SyncBaseAttachment();
 
-                                $attachment->estimatedDataSize = isset($part->d_parameters['size']) ? $part->d_parameters['size'] : isset($part->body) ? strlen($part->body) : 0;
+                                $attachment->estimatedDataSize = isset($part->d_parameters['size']) ? $part->d_parameters['size'] : (isset($part->body) ? strlen($part->body) : 0);
 
                                 $attachment->displayname = $attname;
                                 $attachment->filereference = $folderid . ":" . $id . ":" . $i;
@@ -1401,7 +1452,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
 
                                 $attachment = new SyncAttachment();
 
-                                $attachment->attsize = isset($part->d_parameters['size']) ? $part->d_parameters['size'] : isset($part->body) ? strlen($part->body) : 0;
+                                $attachment->attsize = isset($part->d_parameters['size']) ? $part->d_parameters['size'] : (isset($part->body) ? strlen($part->body) : 0);
 
                                 $attachment->displayname = $attname;
                                 $attachment->attname = $folderid . ":" . $id . ":" . $i;
@@ -1417,7 +1468,6 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             }
 
             unset($message);
-            unset($mobj);
             unset($mail);
 
             return $output;
@@ -1906,7 +1956,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
                         $imapSubFolder = str_replace($this->server, "", $subFolder);
                         $subFolderId = $this->getFolderIdFromImapId($imapSubFolder);
                         if ($subFolderId !== false) { // only search found folders
-                            $subList = @imap_search($this->mbox, $filter, SE_UID, "UTF-8");
+                            $subList = @imap_search($this->mbox, $filter, SE_UID, IMAP_SEARCH_CHARSET);
                             if ($subList !== false) {
                                 $numMessages += count($subList);
                                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->GetMailboxSearchResults: SubSearch in %s : %s ocurrences", $imapSubFolder, count($subList)));
@@ -1919,7 +1969,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
         }
         else { // Search in folder
             if (@imap_reopen($this->mbox, $this->server . $imapId)) {
-                $subList = @imap_search($this->mbox, $filter, SE_UID, "UTF-8");
+                $subList = @imap_search($this->mbox, $filter, SE_UID, IMAP_SEARCH_CHARSET);
                 if ($subList !== false) {
                     $numMessages += count($subList);
                     ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->GetMailboxSearchResults: Search in %s : %s ocurrences", $imapId, count($subList)));

@@ -356,6 +356,7 @@ class Kopano extends SyncWorker {
                                                             PR_HOME_TELEPHONE_NUMBER,
                                                             PR_TITLE, PR_COMPANY_NAME,
                                                             PR_OFFICE_LOCATION,
+                                                            PR_DEPARTMENT_NAME,
                                                             PR_BEEPER_TELEPHONE_NUMBER,
                                                             PR_PRIMARY_FAX_NUMBER,
                                                             PR_ORGANIZATIONAL_ID_NUMBER,
@@ -364,6 +365,7 @@ class Kopano extends SyncWorker {
                                                             PR_BUSINESS_ADDRESS_POSTAL_CODE,
                                                             PR_BUSINESS_ADDRESS_POST_OFFICE_BOX,
                                                             PR_BUSINESS_ADDRESS_STATE_OR_PROVINCE,
+                                                            PR_BUSINESS_ADDRESS_STREET,
                                                             PR_INITIALS,
                                                             PR_LANGUAGE,
                                                             PR_EMS_AB_THUMBNAIL_PHOTO,
@@ -389,6 +391,11 @@ class Kopano extends SyncWorker {
                 if (! (GAB_SYNC_TYPES & GAB_SYNC_USER)) {
                     continue;
                 }
+            }
+            // ignore group Everyone if GAB_SYNC_HIDE_EVERYONE is true
+            if (GAB_SYNC_HIDE_EVERYONE && strtoupper($entry[PR_DISPLAY_NAME]) == "EVERYONE") {
+                $this->Log("Kopano->GetGAB(): Ignoring group Everyone.");
+                continue;
             }
 
             $a = new GABEntry();
@@ -459,6 +466,7 @@ class Kopano extends SyncWorker {
             if (isset($entry[PR_TITLE]))                                $a->title                           = $entry[PR_TITLE];
             if (isset($entry[PR_COMPANY_NAME]))                         $a->companyName                     = $entry[PR_COMPANY_NAME];
             if (isset($entry[PR_OFFICE_LOCATION]))                      $a->officeLocation                  = $entry[PR_OFFICE_LOCATION];
+            if (isset($entry[PR_DEPARTMENT_NAME]))                      $a->department                      = $entry[PR_DEPARTMENT_NAME];
             if (isset($entry[PR_BUSINESS_TELEPHONE_NUMBER]))            $a->businessTelephoneNumber         = $entry[PR_BUSINESS_TELEPHONE_NUMBER];
             if (isset($entry[PR_MOBILE_TELEPHONE_NUMBER]))              $a->mobileTelephoneNumber           = $entry[PR_MOBILE_TELEPHONE_NUMBER];
             if (isset($entry[PR_HOME_TELEPHONE_NUMBER]))                $a->homeTelephoneNumber             = $entry[PR_HOME_TELEPHONE_NUMBER];
@@ -470,9 +478,11 @@ class Kopano extends SyncWorker {
             if (isset($entry[PR_BUSINESS_ADDRESS_POSTAL_CODE]))         $a->businessAddressPostalCode       = $entry[PR_BUSINESS_ADDRESS_POSTAL_CODE];
             if (isset($entry[PR_BUSINESS_ADDRESS_POST_OFFICE_BOX]))     $a->businessAddressPostOfficeBox    = $entry[PR_BUSINESS_ADDRESS_POST_OFFICE_BOX];
             if (isset($entry[PR_BUSINESS_ADDRESS_STATE_OR_PROVINCE]))   $a->businessAddressStateOrProvince  = $entry[PR_BUSINESS_ADDRESS_STATE_OR_PROVINCE];
+            if (isset($entry[PR_BUSINESS_ADDRESS_STREET]))              $a->businessAddressStreet           = $entry[PR_BUSINESS_ADDRESS_STREET];
             if (isset($entry[PR_INITIALS]))                             $a->initials                        = $entry[PR_INITIALS];
             if (isset($entry[PR_LANGUAGE]))                             $a->language                        = $entry[PR_LANGUAGE];
-            if (isset($entry[PR_EMS_AB_THUMBNAIL_PHOTO]))               $a->thumbnailPhoto                  = base64_encode($entry[PR_EMS_AB_THUMBNAIL_PHOTO]);
+            if (isset($entry[PR_EMS_AB_THUMBNAIL_PHOTO]) &&
+                strlen($entry[PR_EMS_AB_THUMBNAIL_PHOTO]) < 49152)      $a->thumbnailPhoto                  = base64_encode($entry[PR_EMS_AB_THUMBNAIL_PHOTO]);
 
             $data[] = $a;
         }
@@ -873,6 +883,7 @@ class Kopano extends SyncWorker {
         foreach ($groupsUsers as $group => $userDetails) {
             if (in_array($user, $userDetails)) {
                 $groups[] = $group;
+
                 continue;
             }
         }
