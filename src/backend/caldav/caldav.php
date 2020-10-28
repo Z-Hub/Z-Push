@@ -950,7 +950,7 @@ class BackendCalDAV extends BackendDiff {
                     break;
 
                 case "UNTIL":
-                    $recurrence->until = TimezoneUtil::MakeUTCDate($rule[1]);
+                    $recurrence->until = strtotime($rule[1]);
                     break;
 
                 case "COUNT":
@@ -1185,7 +1185,7 @@ class BackendCalDAV extends BackendDiff {
             $vevent->LOCATION = $data->location;
         }
         if (isset($data->recurrence)) {
-            $vevent->RRULE = $this->_GenerateRecurrence($data->recurrence);
+            $vevent->RRULE = $this->_GenerateRecurrence($data->recurrence, $data->alldayevent);
         }
         if (isset($data->sensitivity)) {
             switch ($data->sensitivity) {
@@ -1330,7 +1330,7 @@ class BackendCalDAV extends BackendDiff {
      * Generate Recurrence
      * @param string $rec
      */
-    private function _GenerateRecurrence($rec) {
+    private function _GenerateRecurrence($rec, $alldayevent) {
         $rrule = array();
         if (isset($rec->type)) {
             $freq = "";
@@ -1351,11 +1351,16 @@ class BackendCalDAV extends BackendDiff {
             }
             $rrule[] = "FREQ=" . $freq;
         }
-        if (isset($rec->until)) {
-            $rrule[] = "UNTIL=" . gmdate("Ymd\THis\Z", $rec->until);
-        }
         if (isset($rec->occurrences)) {
             $rrule[] = "COUNT=" . $rec->occurrences;
+        }
+        if (isset($rec->until) && !isset($rec->occurrences)) {
+            if ($alldayevent == 1) {
+                $rrule[] = "UNTIL=" . gmdate("Ymd", $rec->until);
+            }
+            else {
+                $rrule[] = "UNTIL=" . gmdate("Ymd\THis\Z", $rec->until);
+            }
         }
         if (isset($rec->interval)) {
             $rrule[] = "INTERVAL=" . $rec->interval;
@@ -1622,7 +1627,7 @@ class BackendCalDAV extends BackendDiff {
             }
         }
         if (isset($data->recurrence)) {
-            $vtodo->RRULE = $this->_GenerateRecurrence($data->recurrence);
+            $vtodo->RRULE = $this->_GenerateRecurrence($data->recurrence, 0);
         }
         if ($data->reminderset && $data->remindertime) {
             $valarm = $vcal->createComponent('VALARM');
