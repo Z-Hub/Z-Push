@@ -20,7 +20,7 @@ Description: open source implementation of the ActiveSync protocol
 
 Package: z-push-backend-caldav
 Architecture: all
-Depends: ${misc:Depends}, z-push-common (= ${binary:Version}), php-curl | php5-curl, php-sabre-vobject
+Depends: ${misc:Depends}, z-push-common (= ${binary:Version}), php-curl | php5-curl, libawl-php, php-sabre-vobject
 Description: Z-Push caldav backend
  Backend for Z-Push, that adds the ability to connect to a caldav server
 
