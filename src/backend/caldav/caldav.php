@@ -1330,7 +1330,7 @@ class BackendCalDAV extends BackendDiff {
      * Generate Recurrence
      * @param string $rec
      */
-    private function _GenerateRecurrence($rec, $alldayevent) {
+    private function _GenerateRecurrence($rec, $alldayevent = 0) {
         $rrule = array();
         if (isset($rec->type)) {
             $freq = "";
@@ -1627,7 +1627,7 @@ class BackendCalDAV extends BackendDiff {
             }
         }
         if (isset($data->recurrence)) {
-            $vtodo->RRULE = $this->_GenerateRecurrence($data->recurrence, 0);
+            $vtodo->RRULE = $this->_GenerateRecurrence($data->recurrence);
         }
         if ($data->reminderset && $data->remindertime) {
             $valarm = $vcal->createComponent('VALARM');
