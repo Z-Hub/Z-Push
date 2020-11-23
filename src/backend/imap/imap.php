@@ -234,20 +234,21 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->SendMail(): We get the From and To"));
         $Mail_RFC822 = new Mail_RFC822();
 
-        $toaddr = "";
         $this->setFromHeaderValue($message->headers);
         $fromaddr = $this->parseAddr($Mail_RFC822->parseAddressList($message->headers["from"]));
 
+        $toaddr = "";
         if (isset($message->headers["to"])) {
-            $toaddr = $this->parseAddr($Mail_RFC822->parseAddressList($message->headers["to"]));
+            // don't validate atoms, headers might be UTF-8 not ASCII
+            $toaddr = $Mail_RFC822->parseAddressList($message->headers["to"], null, null, false, null);
+
+            $message->headers["to"] = Utils::CheckAndFixEncodingInHeadersOfSentMail($toaddr);
+            $toaddr = $this->parseAddr($toaddr);
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->SendMail(): To defined: %s", $toaddr));
         }
 
-        if (isset($message->headers["to"])) {
-            $message->headers["to"] = Utils::CheckAndFixEncodingInHeadersOfSentMail($Mail_RFC822->parseAddressList($message->headers["to"]));
-        }
         if (isset($message->headers["cc"])) {
-            $message->headers["cc"] = Utils::CheckAndFixEncodingInHeadersOfSentMail($Mail_RFC822->parseAddressList($message->headers["cc"]));
+            $message->headers["cc"] = Utils::CheckAndFixEncodingInHeadersOfSentMail($Mail_RFC822->parseAddressList($message->headers["cc"], null, null, false, null));
         }
 
         unset($Mail_RFC822);
@@ -1306,11 +1307,11 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             $Mail_RFC822 = new Mail_RFC822();
             $toaddr = $ccaddr = $replytoaddr = array();
             if(isset($message->headers["to"]))
-                $toaddr = $Mail_RFC822->parseAddressList($message->headers["to"]);
+                $toaddr = $Mail_RFC822->parseAddressList($message->headers["to"], null, null, false, null);
             if(isset($message->headers["cc"]))
-                $ccaddr = $Mail_RFC822->parseAddressList($message->headers["cc"]);
+                $ccaddr = $Mail_RFC822->parseAddressList($message->headers["cc"], null, null, false, null);
             if(isset($message->headers["reply-to"]))
-                $replytoaddr = $Mail_RFC822->parseAddressList($message->headers["reply-to"]);
+                $replytoaddr = $Mail_RFC822->parseAddressList($message->headers["reply-to"], null, null, false, null);
 
             $output->to = array();
             $output->cc = array();
