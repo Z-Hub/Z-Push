@@ -351,11 +351,11 @@ class BackendMaildir extends BackendDiff {
         $Mail_RFC822 = new Mail_RFC822();
         $toaddr = $ccaddr = $replytoaddr = array();
         if(isset($message->headers["to"]))
-            $toaddr = $Mail_RFC822->parseAddressList($message->headers["to"]);
+            $toaddr = $Mail_RFC822->parseAddressList($message->headers["to"], null, null, false, null);
         if(isset($message->headers["cc"]))
-            $ccaddr = $Mail_RFC822->parseAddressList($message->headers["cc"]);
+            $ccaddr = $Mail_RFC822->parseAddressList($message->headers["cc"], null, null, false, null);
         if(isset($message->headers["reply_to"]))
-            $replytoaddr = $Mail_RFC822->parseAddressList($message->headers["reply_to"]);
+            $replytoaddr = $Mail_RFC822->parseAddressList($message->headers["reply_to"], null, null, false, null);
 
         $output->to = array();
         $output->cc = array();
