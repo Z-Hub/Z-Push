@@ -116,7 +116,7 @@ class FileStateMachine implements IStateMachine {
         $filename = $this->getFullFilePath($devid, $type, $key, $counter);
 
         if(file_exists($filename)) {
-            $contents = Utils::SafeGetContents($filename, "GetState", false);
+            $contents = Utils::SafeGetContents($filename, __FUNCTION__, false);
             $bytes = strlen($contents);
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("FileStateMachine->GetState() read '%d' bytes from file: '%s'", $bytes, $filename ));
             return unserialize($contents);
@@ -205,7 +205,7 @@ class FileStateMachine implements IStateMachine {
 
         // exclusive block
         if ($mutex->Block()) {
-            $filecontents = Utils::SafeGetContents($this->userfilename, "LinkUserDevice", true);
+            $filecontents = Utils::SafeGetContents($this->userfilename, __FUNCTION__, true);
 
             if ($filecontents)
                 $users = unserialize($filecontents);
@@ -223,7 +223,7 @@ class FileStateMachine implements IStateMachine {
             }
 
             if ($changed) {
-                $bytes = Utils::SafePutContents($this->userfilename, serialize($users));
+                $bytes = Utils::SafePutContents($this->userfilename, serialize($users), true);
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("FileStateMachine->LinkUserDevice(): wrote %d bytes to users file", $bytes));
             }
             else
@@ -249,7 +249,7 @@ class FileStateMachine implements IStateMachine {
 
         // exclusive block
         if ($mutex->Block()) {
-            $filecontents = Utils::SafeGetContents($this->userfilename, "UnLinkUserDevice", true);
+            $filecontents = Utils::SafeGetContents($this->userfilename, __FUNCTION__, true);
 
             if ($filecontents)
                 $users = unserialize($filecontents);
@@ -271,7 +271,7 @@ class FileStateMachine implements IStateMachine {
             }
 
             if ($changed) {
-                $bytes = Utils::SafePutContents($this->userfilename, serialize($users));
+                $bytes = Utils::SafePutContents($this->userfilename, serialize($users), true);
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("FileStateMachine->UnLinkUserDevice(): wrote %d bytes to users file", $bytes));
             }
             else
@@ -301,7 +301,7 @@ class FileStateMachine implements IStateMachine {
             return $out;
         }
         else {
-            $filecontents = Utils::SafeGetContents($this->userfilename, "GetAllDevices", false);
+            $filecontents = Utils::SafeGetContents($this->userfilename, __FUNCTION__, false);
             if ($filecontents)
                 $users = unserialize($filecontents);
             else
@@ -323,7 +323,7 @@ class FileStateMachine implements IStateMachine {
      */
     public function GetStateVersion() {
         if (file_exists($this->settingsfilename)) {
-            $filecontents = Utils::SafeGetContents($this->settingsfilename, "GetStateVersion", false);
+            $filecontents = Utils::SafeGetContents($this->settingsfilename, __FUNCTION__, false);
             $settings = unserialize($filecontents);
             if (strtolower(gettype($settings) == "string") && strtolower($settings) == '2:1:{s:7:"version";s:1:"2";}') {
                 ZLog::Write(LOGLEVEL_INFO, "Broken state version file found. Attempt to autofix it. See https://jira.zarafa.com/browse/ZP-493 for more information.");
@@ -333,7 +333,7 @@ class FileStateMachine implements IStateMachine {
             }
         }
         else {
-            $filecontents = Utils::SafeGetContents($this->userfilename, "GetStateVersion", true);
+            $filecontents = Utils::SafeGetContents($this->userfilename, __FUNCTION__, true);
             if ($filecontents)
                 $settings = array(self::VERSION => IStateMachine::STATEVERSION_01);
             else {
@@ -355,7 +355,7 @@ class FileStateMachine implements IStateMachine {
      */
     public function SetStateVersion($version) {
         if (file_exists($this->settingsfilename)){
-            $filecontents = Utils::SafeGetContents($this->settingsfilename, "SetStateVersion", false);
+            $filecontents = Utils::SafeGetContents($this->settingsfilename, __FUNCTION__, false);
             $settings = unserialize($filecontents);
         }
         else
