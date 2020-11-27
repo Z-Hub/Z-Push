@@ -1,5 +1,9 @@
 REQUIREMENTS:
 php-curl
+libawl-php
 composer require sabre/vobject >=3 OR php-sabre-vobject
+
+INSTALL:
+Add your awl folder to the include_path variable (/etc/php.ini or similar)
 
 CalDAV server (DAViCal, Sabredav, Sogo, Owncloud...)
