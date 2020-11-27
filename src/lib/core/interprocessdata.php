@@ -82,7 +82,7 @@ abstract class InterProcessData {
             if ($this instanceof SimpleMutex) {
                 if ($this->provider_class === 'IpcMemcachedProvider') {
                     // For memcached servers pool, we force it into the first server
-                    $this->ipcProvider = new $this->provider_class($this->type, $this->allocate, get_class($this), $this->type, true);
+                    $this->ipcProvider = new $this->provider_class($this->type, 'globalmutex', get_class($this), $this->type);
                 } else {
                     $this->ipcProvider = new $this->provider_class($this->type, $this->allocate, get_class($this), $this->type);
                 }

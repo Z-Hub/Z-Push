@@ -55,13 +55,13 @@ class IpcMemcachedProvider implements IIpcProvider {
      * @param string $serverKey
      * @param boolean $globalMutex (opt)    When true, it configures a single server pool taking the first one from MEMCACHED_SERVERS.
      */
-    public function __construct($type, $allocate, $class, $serverKey, $globalMutex = false) {
+    public function __construct($type, $allocate, $class, $serverKey) {
         $this->type = $type;
         $this->typeMutex = $type . "MX";
         $this->serverKey = $serverKey;
         $this->maxWaitCycles = round(MEMCACHED_MUTEX_TIMEOUT * 1000 / MEMCACHED_BLOCK_WAIT)+1;
         $this->logWaitCycles = round($this->maxWaitCycles/5);
-        $this->globalMutex = $globalMutex;
+        $this->globalMutex = (strcmp($allocate, 'globalmutex') === 0) ? true : false;
 
         // not used, but required by function signature
         unset($allocate, $class);
@@ -88,10 +88,7 @@ class IpcMemcachedProvider implements IIpcProvider {
         if ($this->globalMutex === false) {
             $this->memcached = new Memcached(md5(MEMCACHED_SERVERS) . $this->reconnectCount++);
         } else{
-            $memcachedServersList = explode(',', MEMCACHED_SERVERS);
-            //get the first configured server
-            $singleMemcachedServer = $memcachedServersList[0];
-            $this->memcached = new Memcached(md5($singleMemcachedServer) . $this->reconnectCount++);
+            $this->memcached = new Memcached('globalmutex' . $this->reconnectCount++);
         }
         $this->memcached->setOptions(array(
             // setting a short timeout, to better kope with failed nodes
@@ -120,7 +117,9 @@ class IpcMemcachedProvider implements IIpcProvider {
                     $this->memcached->addServer($host, $port);
                 }
             } else{
-                list($host,$port) = explode(':', trim($singleMemcachedServer));
+                $memcachedServersList = explode(',', MEMCACHED_SERVERS);
+                //get the first configured server
+                list($host,$port) = explode(':', trim($memcachedServersList[0]));
                 $this->memcached->addServer($host, $port);
             }
         }
