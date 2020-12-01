@@ -1941,7 +1941,6 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
     public function GetMailboxSearchResults($cpo, $prefix = '') {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->GetMailboxSearchResults()"));
 
-        $items = false;
         $searchFolderId = $cpo->GetSearchFolderid();
         $searchRange = explode('-', $cpo->GetSearchRange());
         $filter = $this->getSearchRestriction($cpo);
@@ -1956,6 +1955,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
         // Convert searchFolderId to IMAP id
         $imapId = $this->getImapIdFromFolderId($searchFolderId);
 
+        $items = array();
         $listMessages = array();
         $numMessages = 0;
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->GetMailboxSearchResults: Filter <%s>", $filter));
@@ -1994,7 +1994,6 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             }
         }
 
-
         if ($numMessages > 0) {
             // range for the search results
             $rangestart = 0;
@@ -2006,7 +2005,6 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             }
 
             $querycnt = $numMessages;
-            $items = array();
             $querylimit = (($rangeend + 1) < $querycnt) ? ($rangeend + 1) : $querycnt + 1;
             $items['range'] = $rangestart.'-'.($querylimit - 1);
             $items['searchtotal'] = $querycnt;
@@ -2032,6 +2030,9 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             }
         }
         else {
+            $items['range'] = $cpo->GetSearchRange();
+            $items['searchtotal'] = 0;
+
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->GetMailboxSearchResults: No messages found!"));
         }
 
