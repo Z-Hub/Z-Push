@@ -171,6 +171,18 @@ class DiffState implements IChanges {
                     $changes[] = $change;
                 }
 
+                if(isset($old_item["answered"], $item["answered"]) && $old_item["answered"] != $item["answered"]) {
+                    // 'answered' changed
+                    $change["type"] = "change";
+                    $changes[] = $change;
+                }
+
+                if(isset($old_item["forwarded"], $item["forwarded"]) && $old_item["forwarded"] != $item["forwarded"]) {
+                    // 'forwarded' changed
+                    $change["type"] = "change";
+                    $changes[] = $change;
+                }
+
                 // @see https://jira.z-hub.io/browse/ZP-1561
                 if(isset($old_item["star"], $item["star"]) && $old_item["star"] != $item["star"]) {
                     // 'flagged' aka 'FollowUp' aka 'starred' changed
