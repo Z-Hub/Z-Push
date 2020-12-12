@@ -797,7 +797,7 @@ class BackendCalDAV extends BackendDiff {
                         $message->asbody = new SyncBaseBody();
 
                         // the DESCRIPTION component is specified to be plain text (RFC5545), for HTML use X-ALT-DESC
-                        $data = str_replace("\n","\r\n", str_replace("\r","",Utils::ConvertHtmlToText($property->Value())));
+                        $data = str_replace("\n", "\r\n", str_replace("\r", "", $property->Value()));
 
                         // truncate body, if requested
                         if (strlen($data) > $truncsize) {
@@ -1576,7 +1576,7 @@ class BackendCalDAV extends BackendDiff {
                         $message->asbody = new SyncBaseBody();
 
                         // the DESCRIPTION component is specified to be plain text (RFC5545), for HTML use X-ALT-DESC
-                        $data = str_replace("\n","\r\n", str_replace("\r","",Utils::ConvertHtmlToText($property->Value())));
+                        $data = str_replace("\n", "\r\n", str_replace("\r", "", $property->Value()));
 
                         // truncate body, if requested
                         if (strlen($data) > $truncsize) {
