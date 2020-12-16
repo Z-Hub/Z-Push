@@ -32,6 +32,7 @@ return array(
     'BackendStickyNote' => $baseDir . '/backend/stickynote/stickynote.php',
     'BackendVCardDir' => $baseDir . '/backend/vcarddir/vcarddir.php',
     'BackendZarafa' => $baseDir . '/backend/kopano/kopano.php',
+    'BadRequestException' => $baseDir . '/lib/exceptions/badrequestexception.php',
     'BaseException' => $baseDir . '/backend/kopano/mapi/class.baseexception.php',
     'BaseRecurrence' => $baseDir . '/backend/kopano/mapi/class.baserecurrence.php',
     'BodyPartPreference' => $baseDir . '/lib/core/bodypartpreference.php',

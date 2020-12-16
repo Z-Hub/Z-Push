@@ -222,26 +222,45 @@ class Kopano extends ContactWorker {
                 continue;
             }
 
+            $propsToDelete = array();
             // build a SyncContact for the GAB entry
             $contact = new SyncContact();
             if (isset($entry[PR_ACCOUNT]))                              $contact->accountname           = $entry[PR_ACCOUNT];
+            else $propsToDelete[] = PR_ACCOUNT;
             if (isset($entry[PR_GIVEN_NAME]))                           $contact->firstname             = $entry[PR_GIVEN_NAME];
+            else $propsToDelete[] = PR_GIVEN_NAME;
             if (isset($entry[PR_SURNAME]))                              $contact->lastname              = $entry[PR_SURNAME];
+            else $propsToDelete[] = PR_SURNAME;
             if (isset($entry[PR_OFFICE_LOCATION]))                      $contact->officelocation        = $entry[PR_OFFICE_LOCATION];
+            else $propsToDelete[] = PR_OFFICE_LOCATION;
             if (isset($entry[PR_COMPANY_NAME]))                         $contact->companyname           = $entry[PR_COMPANY_NAME];
+            else $propsToDelete[] = PR_COMPANY_NAME;
             if (isset($entry[PR_TITLE]))                                $contact->jobtitle              = $entry[PR_TITLE];
+            else $propsToDelete[] = PR_TITLE;
             if (isset($entry[PR_SMTP_ADDRESS]))                         $contact->email1address         = $entry[PR_SMTP_ADDRESS];
+            else $propsToDelete[] = PR_SMTP_ADDRESS;
             if (isset($entry[PR_BUSINESS_TELEPHONE_NUMBER]))            $contact->businessphonenumber   = $entry[PR_BUSINESS_TELEPHONE_NUMBER];
+            else $propsToDelete[] = PR_BUSINESS_TELEPHONE_NUMBER;
             if (isset($entry[PR_PRIMARY_FAX_NUMBER]))                   $contact->businessfaxnumber     = $entry[PR_PRIMARY_FAX_NUMBER];
+            else $propsToDelete[] = PR_PRIMARY_FAX_NUMBER;
             if (isset($entry[PR_POSTAL_ADDRESS]))                       $contact->businessstreet        = $entry[PR_POSTAL_ADDRESS];
+            else $propsToDelete[] = PR_POSTAL_ADDRESS;
             if (isset($entry[PR_BUSINESS_ADDRESS_POSTAL_CODE]))         $contact->businesspostalcode    = $entry[PR_BUSINESS_ADDRESS_POSTAL_CODE];
+            else $propsToDelete[] = PR_BUSINESS_ADDRESS_POSTAL_CODE;
             if (isset($entry[PR_BUSINESS_ADDRESS_STATE_OR_PROVINCE]))   $contact->businessstate         = $entry[PR_BUSINESS_ADDRESS_STATE_OR_PROVINCE];
+            else $propsToDelete[] = PR_BUSINESS_ADDRESS_STATE_OR_PROVINCE;
             if (isset($entry[PR_BUSINESS_ADDRESS_CITY]))                $contact->businesscity          = $entry[PR_BUSINESS_ADDRESS_CITY];
+            else $propsToDelete[] = PR_BUSINESS_ADDRESS_CITY;
             if (isset($entry[PR_MOBILE_TELEPHONE_NUMBER]))              $contact->mobilephonenumber     = $entry[PR_MOBILE_TELEPHONE_NUMBER];
+            else $propsToDelete[] = PR_MOBILE_TELEPHONE_NUMBER;
             if (isset($entry[PR_HOME_TELEPHONE_NUMBER]))                $contact->homephonenumber       = $entry[PR_HOME_TELEPHONE_NUMBER];
+            else $propsToDelete[] = PR_HOME_TELEPHONE_NUMBER;
             if (isset($entry[PR_BEEPER_TELEPHONE_NUMBER]))              $contact->pagernumber           = $entry[PR_BEEPER_TELEPHONE_NUMBER];
+            else $propsToDelete[] = PR_BEEPER_TELEPHONE_NUMBER;
             if (isset($entry[PR_EMS_AB_THUMBNAIL_PHOTO]))               $contact->picture               = base64_encode($entry[PR_EMS_AB_THUMBNAIL_PHOTO]);
+            else $propsToDelete[] = PR_EMS_AB_THUMBNAIL_PHOTO;
             if (isset($entry[PR_ORGANIZATIONAL_ID_NUMBER]))             $contact->customerid            = $entry[PR_ORGANIZATIONAL_ID_NUMBER];
+            else $propsToDelete[] = PR_ORGANIZATIONAL_ID_NUMBER;
 
             // check if the contact already exists in the folder
             if (isset($existingByAccount[$contact->accountname])) {
@@ -262,6 +281,9 @@ class Kopano extends ContactWorker {
             // save the hash in the message as well
             mapi_setprops($mapimessage, array($this->mapiprops['hash'] => $contact->GetHash()));
             $mapiprovider->SetMessage($mapimessage, $contact);
+            if (!empty($propsToDelete)) {
+                mapi_deleteprops($mapimessage, $propsToDelete);
+            }
             mapi_savechanges($mapimessage);
             unset($existingByAccount[$contact->accountname]);
         }

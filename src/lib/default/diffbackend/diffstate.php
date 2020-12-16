@@ -161,9 +161,9 @@ class DiffState implements IChanges {
                 $change['flags'] = SYNC_NEWMESSAGE;
                 $changes[] = $change;
             } else {
+                // Both messages are still available, compare states
                 $old_item =& $old[$id];
 
-                // Both messages are still available, compare flags and mod
                 if(isset($old_item["flags"], $item["flags"]) && $old_item["flags"] != $item["flags"]) {
                     // Flags changed
                     $change["type"] = "flags";
@@ -171,21 +171,28 @@ class DiffState implements IChanges {
                     $changes[] = $change;
                 }
 
-                // @see https://jira.z-hub.io/browse/ZP-1561
-                if(isset($old_item["star"], $item["star"]) && $old_item["star"] != $item["star"]) {
+                if(isset($old_item["answered"], $item["answered"]) && $old_item["answered"] != $item["answered"]) {
+                    // 'answered' changed
+                    $change["type"] = "change";
+                    $changes[] = $change;
+                }
+                elseif(isset($old_item["forwarded"], $item["forwarded"]) && $old_item["forwarded"] != $item["forwarded"]) {
+                    // 'forwarded' changed
+                    $change["type"] = "change";
+                    $changes[] = $change;
+                }
+                elseif(isset($old_item["star"], $item["star"]) && $old_item["star"] != $item["star"]) {
                     // 'flagged' aka 'FollowUp' aka 'starred' changed
                     $change["type"] = "change";
                     $changes[] = $change;
                 }
-
-                // @see https://jira.z-hub.io/browse/ZP-955
-                if (isset($old_item['mod'], $item['mod'])) {
-                    if ($old_item['mod'] != $item['mod']) {
-                        $change["type"] = "change";
-                        $changes[] = $change;
-                    }
+                elseif(isset($old_item['mod'], $item['mod']) && $old_item['mod'] != $item['mod']) {
+                    // message modified
+                    $change["type"] = "change";
+                    $changes[] = $change;
                 }
-                else if (isset($old_item['mod']) || isset($item['mod'])) {
+                elseif(isset($old_item['mod']) xor isset($item['mod'])) {
+                    // modified date missing
                     $change["type"] = "change";
                     $changes[] = $change;
                 }

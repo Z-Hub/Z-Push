@@ -722,6 +722,8 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
         }
 
         $flaggedMessages = array();
+        $answeredMessages = array();
+        $forwardedMessages = array();
 
         // only check once to reduce pressure in the IMAP server
         foreach ($this->sinkfolders as $i => $imapid) {
@@ -735,13 +737,21 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
 
             // get count of flagged messages (ZP-1561)
             $flaggedMessages = @imap_search($this->mbox, 'FLAGGED');
-            $flaggedMessages = (is_array($flaggedMessages) && $flaggedMessages !== false) ? count($flaggedMessages) : 0;
+            $flaggedMessages = is_array($flaggedMessages) ? count($flaggedMessages) : 0;
+
+            // search for answered messages
+            $answeredMessages = @imap_search($this->mbox, 'ANSWERED');
+            $answeredMessages = is_array($answeredMessages) ? count($answeredMessages) : 0;
+
+            // search for forwarded messages
+            $forwardedMessages = @imap_search($this->mbox, 'KEYWORD $Forwarded');
+            $forwardedMessages = is_array($forwardedMessages) ? count($forwardedMessages) : 0;
 
             if (!$status) {
                 ZLog::Write(LOGLEVEL_WARN, sprintf("ChangesSink: could not stat folder '%s': %s ", $this->getFolderIdFromImapId($imapid), imap_last_error()));
             }
             else {
-                $newstate = "M:". $status->messages ."-R:". $status->recent ."-U:". $status->unseen ."-F:". $flaggedMessages;
+                $newstate = "M:". $status->messages ."-R:". $status->recent ."-U:". $status->unseen ."-F:". $flaggedMessages ."-A:". $answeredMessages ."-W:". $forwardedMessages;
 
                 if (! isset($this->sinkstates[$imapid]) ) {
                     $this->sinkstates[$imapid] = $newstate;
@@ -1005,16 +1015,29 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
         $messages = array();
         $this->imap_reopen_folder($folderid, true);
 
-        $sequence = "1:*";
         if ($cutoffdate > 0) {
-            $search = @imap_search($this->mbox, "SINCE ". date("d-M-Y", $cutoffdate));
+            // IMAP SINCE search criteria
+            $searchCriteria = "SINCE ". date("d-M-Y", $cutoffdate);
+
+            // search messages in time range
+            $search = @imap_search($this->mbox, $searchCriteria);
             if ($search === false) {
                 ZLog::Write(LOGLEVEL_INFO, sprintf("BackendIMAP->GetMessageList('%s','%s'): 0 result for the search or error: %s", $folderid, $cutoffdate, imap_last_error()));
                 return $messages;
             }
 
             $sequence = implode(",", $search);
+
+            // search for forwarded messages in time range, because imap_fetch_overview() does not return $Forwarded flag
+            $forwardedMessages = @imap_search($this->mbox, 'KEYWORD $Forwarded ' . $searchCriteria, SE_UID);
         }
+        else {
+            $sequence = "1:*";
+
+            // search for forwarded messages
+            $forwardedMessages = @imap_search($this->mbox, 'KEYWORD $Forwarded', SE_UID);
+        }
+
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->GetMessageList(): searching with sequence '%s'", $sequence));
         $overviews = @imap_fetch_overview($this->mbox, $sequence);
 
@@ -1055,6 +1078,22 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
                 }
                 else {
                     $message["flags"] = 0;
+                }
+
+                // 'answered'
+                if (isset($overview->answered) && $overview->answered) {
+                    $message["answered"] = 1;
+                }
+                else {
+                    $message["answered"] = 0;
+                }
+
+                // 'forwarded'
+                if (is_array($forwardedMessages) && in_array($overview->uid, $forwardedMessages)) {
+                    $message["forwarded"] = 1;
+                }
+                else {
+                    $message["forwarded"] = 0;
                 }
 
                 // 'flagged' aka 'FollowUp' aka 'starred'
@@ -1289,7 +1328,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             // Language Code Page ID: http://msdn.microsoft.com/en-us/library/windows/desktop/dd317756%28v=vs.85%29.aspx
             $output->internetcpid = INTERNET_CPID_UTF8;
             if (Request::GetProtocolVersion() >= 12.0) {
-                $output->contentclass = "urn:content-classes:message";
+                $output->contentclass = DEFAULT_EMAIL_CONTENTCLASS;
 
                 $output->flag = new SyncMailFlags();
                 if (isset($stat["star"]) && $stat["star"]) {
@@ -1300,6 +1339,20 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
                 }
                 else {
                     $output->flag->flagstatus = SYNC_FLAGSTATUS_CLEAR;
+                }
+
+                if (Request::GetProtocolVersion() >= 14.0) {
+
+                    //flagstatus 0: unknown, 1: replied, 2: replied-to-all, 3: forwarded
+                    if (isset($stat["answered"]) && $stat["answered"]) {
+                        $output->lastverbexecuted = SYNC_MAIL_LASTVERB_REPLYSENDER;
+                    }
+                    elseif (isset($stat["forwarded"]) && $stat["forwarded"]) {
+                        $output->lastverbexecuted = SYNC_MAIL_LASTVERB_FORWARD;
+                    }
+                    else {
+                        $output->lastverbexecuted = SYNC_MAIL_LASTVERB_UNKNOWN;
+                    }
                 }
             }
 
@@ -1356,19 +1409,35 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
                 }
             }
 
-            // convert mime-importance to AS-importance
-            if (isset($message->headers["x-priority"])) {
-                $mimeImportance =  preg_replace("/\D+/", "", $message->headers["x-priority"]);
-                //MAIL 1 - most important, 3 - normal, 5 - lowest
-                //AS 0 - low, 1 - normal, 2 - important
-                if ($mimeImportance > 3)
-                    $output->importance = 0;
-                elseif ($mimeImportance == 3)
+            // convert mime-importance to AS-importance using RFC4021, X-Priority or default to "normal" (ZP-320)
+            //AS: 0 - low, 1 - normal, 2 - important
+            if (isset($message->headers["importance"])) {
+                //Importance: high, normal, low
+                $mimeImportance = strtolower($message->headers["importance"]);
+                if ($mimeImportance == "normal") {
                     $output->importance = 1;
-                elseif ($mimeImportance < 3)
+                }
+                elseif ($mimeImportance == "high") {
                     $output->importance = 2;
+                }
+                elseif ($mimeImportance == "low") {
+                    $output->importance = 0;
+                }
             }
-            else { /* fmbiete's contribution r1528, ZP-320 */
+            elseif (isset($message->headers["x-priority"])) {
+                //X-Priority: 1 - highest, 2 - high, 3 - normal, 4 - low, 5 - lowest
+                $mimeImportance = preg_replace("/\D+/", "", $message->headers["x-priority"]);
+                if ($mimeImportance == 3) {
+                    $output->importance = 1;
+                }
+                elseif ($mimeImportance < 3) {
+                    $output->importance = 2;
+                }
+                elseif ($mimeImportance > 3) {
+                    $output->importance = 0;
+                }
+            }
+            else {
                 $output->importance = 1;
             }
 
@@ -1500,6 +1569,9 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
         // without uid it's not a valid message
         if (empty($overview[0]->uid)) return false;
 
+        // search for the specific uid and keyword/flag, because imap_fetch_overview() does not return $Forwarded flag
+        $forwardedMessages = @imap_search($this->mbox, 'KEYWORD $Forwarded', SE_UID);
+
         $entry = array();
         if (isset($overview[0]->udate)) {
             $entry["mod"] = $overview[0]->udate;
@@ -1516,6 +1588,22 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
         }
         else {
             $entry["flags"] = 0;
+        }
+
+        // 'answered'
+        if (isset($overview[0]->answered) && $overview[0]->answered) {
+            $entry["answered"] = 1;
+        }
+        else {
+            $entry["answered"] = 0;
+        }
+
+        // 'forwarded'
+        if (is_array($forwardedMessages) && in_array($overview[0]->uid, $forwardedMessages)) {
+            $entry["forwarded"] = 1;
+        }
+        else {
+            $entry["forwarded"] = 0;
         }
 
         // 'flagged' aka 'FollowUp' aka 'starred'
@@ -1925,7 +2013,6 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
     public function GetMailboxSearchResults($cpo, $prefix = '') {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->GetMailboxSearchResults()"));
 
-        $items = false;
         $searchFolderId = $cpo->GetSearchFolderid();
         $searchRange = explode('-', $cpo->GetSearchRange());
         $filter = $this->getSearchRestriction($cpo);
@@ -1940,6 +2027,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
         // Convert searchFolderId to IMAP id
         $imapId = $this->getImapIdFromFolderId($searchFolderId);
 
+        $items = array();
         $listMessages = array();
         $numMessages = 0;
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->GetMailboxSearchResults: Filter <%s>", $filter));
@@ -1978,7 +2066,6 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             }
         }
 
-
         if ($numMessages > 0) {
             // range for the search results
             $rangestart = 0;
@@ -1990,7 +2077,6 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             }
 
             $querycnt = $numMessages;
-            $items = array();
             $querylimit = (($rangeend + 1) < $querycnt) ? ($rangeend + 1) : $querycnt + 1;
             $items['range'] = $rangestart.'-'.($querylimit - 1);
             $items['searchtotal'] = $querycnt;
@@ -2016,6 +2102,9 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             }
         }
         else {
+            $items['range'] = $cpo->GetSearchRange();
+            $items['searchtotal'] = 0;
+
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->GetMailboxSearchResults: No messages found!"));
         }
 
