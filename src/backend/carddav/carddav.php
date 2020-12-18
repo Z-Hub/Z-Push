@@ -258,7 +258,7 @@ class BackendCardDAV extends BackendDiff implements ISearchProvider {
 
             if ($vcards === false) {
                 ZLog::Write(LOGLEVEL_ERROR, sprintf("BackendCardDAV->ChangesSink - Error getting the changes"));
-                return false;
+                continue;
             }
             else {
                 $xml_vcards = new SimpleXMLElement($vcards);
