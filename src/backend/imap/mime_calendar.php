@@ -332,10 +332,54 @@ function parse_meeting_calendar($part, &$output, $is_sent_folder) {
     // Fixed values
     $output->meetingrequest->instancetype = 0;
     $output->meetingrequest->responserequested = 1;
-    $output->meetingrequest->busystatus = 2;
 
-    // TODO: reminder
-    $output->meetingrequest->reminder = "";
+    // get intended busystatus
+    $props = $ical->GetPropertiesByPath('VEVENT/X-MICROSOFT-CDO-INTENDEDSTATUS');
+    if (count($props) == 1) {
+        switch ($props[0]->Value()) {
+            case "FREE":
+                $output->meetingrequest->busystatus = "0";
+                break;
+            case "TENTATIVE":
+                $output->meetingrequest->busystatus = "1";
+                break;
+            case "BUSY":
+                $output->meetingrequest->busystatus = "2";
+                break;
+            case "OOF":
+                $output->meetingrequest->busystatus = "3";
+                break;
+        }
+    }
+    elseif (count($props = $ical->GetPropertiesByPath('VEVENT/TRANSP')) == 1) {
+        switch ($props[0]->Value()) {
+            case "TRANSPARENT":
+                $output->meetingrequest->busystatus = "0";
+                break;
+            case "OPAQUE":
+                $output->meetingrequest->busystatus = "2";
+                break;
+        }
+    }
+    else {
+        $output->meetingrequest->busystatus = 2;
+    }
+
+    // use reminder with smallest interval
+    $props = $ical->GetPropertiesByPath('VEVENT/VALARM/TRIGGER');
+    if (count($props) > 0) {
+        foreach ($props as $vAlarmTrigger) {
+            $vAlarmTriggerValue = $vAlarmTrigger->Value();
+            if ($vAlarmTriggerValue[0] == "-") {
+                $reminderSeconds = new DateInterval(substr($vAlarmTriggerValue, 1));
+                $reminderSeconds = $reminderSeconds->format("%s") + $reminderSeconds->format("%i") * 60 + $reminderSeconds->format("%h") * 3600 + $reminderSecon
+ds->format("%d") * 86400;
+                if (!isset($output->meetingrequest->reminderSeconds) || $output->meetingrequest->reminder > $reminderSeconds) {
+                    $output->meetingrequest->reminder = $reminderSeconds;
+                }
+            }
+        }
+    }
 }
 
 
