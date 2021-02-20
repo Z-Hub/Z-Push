@@ -607,6 +607,14 @@ class BackendCalDAV extends BackendDiff {
      * @param int $truncsize
      */
     private function _ParseVEventToSyncObject($event, $message, $truncsize) {
+
+        // get user details
+        $userDetails = ZPush::GetBackend()->GetCurrentUsername();
+
+        // track vevent involvement
+        $userIsAttendee = false;
+        $userIsOrganizer = false;
+
         $properties = $event->GetProperties();
         foreach ($properties as $property) {
             switch ($property->Name()) {
@@ -630,11 +638,17 @@ class BackendCalDAV extends BackendDiff {
                     $organizerEMail = str_ireplace("MAILTO:", "", $property->Value());
                     if ($organizerEMail) {
                         $message->organizeremail = $organizerEMail;
+                        if (strcasecmp($organizerEMail, $userDetails['emailaddress']) == 0) {
+                            $userIsOrganizer = true;
+                        }
                     }
 
                     $organizerName = $property->GetParameterValue("CN");
                     if ($organizerName) {
                         $message->organizername = $organizerName;
+                        if (strcasecmp($organizerName, $userDetails['fullname']) == 0) {
+                            $userIsOrganizer = true;
+                        }
                     }
                     break;
 
@@ -713,7 +727,7 @@ class BackendCalDAV extends BackendDiff {
                 //  1 = is a meeting
                 //  3 = Meeting received
                 //  5 = Meeting is canceled
-                //  7 = Meeting is canceled and received
+                //  7 = Meeting is canceled and was received
                 //  9 = as 1
                 // 11 = as 3
                 // 13 = as 5
@@ -721,13 +735,11 @@ class BackendCalDAV extends BackendDiff {
                 case "STATUS":
                     switch ($property->Value()) {
                         case "TENTATIVE":
-                            $message->meetingstatus = "3"; // was 1
-                            break;
                         case "CONFIRMED":
-                            $message->meetingstatus = "1"; // was 3
+                            $message->meetingstatus = "1";
                             break;
                         case "CANCELLED":
-                            $message->meetingstatus = "5"; // could also be 7
+                            $message->meetingstatus = "5";
                             break;
                     }
                     break;
@@ -738,11 +750,17 @@ class BackendCalDAV extends BackendDiff {
                     $attendeeEMail = str_ireplace("MAILTO:", "", $property->Value());
                     if ($attendeeEMail) {
                         $attendee->email = $attendeeEMail;
+                        if (strcasecmp($attendeeEMail, $userDetails['emailaddress']) == 0) {
+                            $userIsAttendee = true;
+                        }
                     }
 
                     $attendeeName = $property->GetParameterValue("CN");
                     if ($attendeeName) {
                         $attendee->name = $attendeeName;
+                        if (strcasecmp($attendeeName, $userDetails['fullname']) == 0) {
+                            $userIsAttendee = true;
+                        }
                     }
 
                     if (Request::GetProtocolVersion() >= 12.0) {
@@ -885,20 +903,28 @@ class BackendCalDAV extends BackendDiff {
             $message->busystatus = "2";
         }
 
-        if (!isset($message->meetingstatus)) {
-            // meeting with no attendee is an appointment
-            if (!isset($message->attendees)) {
-                $message->meetingstatus = 0;
-            }
+        // meeting without attendee is an appointment
+        if (!isset($message->attendees)) {
+            $message->meetingstatus = 0;
         }
-        elseif ($message->meetingstatus > 0) {
-            // No organizer was set for the meeting, assume it is the user
+
+        // meeting with attendee
+        if ($message->meetingstatus > 0 || !isset($message->meetingstatus)) {
+            // set meetingstatus if not already set
+            $message->meetingstatus = isset($message->meetingstatus) ? $message->meetingstatus : 1;
+
+            // check if meeting has an organizer set, otherwise fallback to current user
             if (!isset($message->organizeremail)) {
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->_ParseVEventToSyncObject(): No organizeremail defined, using user details"));
-                $userDetails = ZPush::GetBackend()->GetCurrentUsername();
                 $message->organizeremail = $userDetails['emailaddress'];
                 $message->organizername = $userDetails['fullname'];
             }
+            // check if user is not organizer but attendee to detect received meeting
+            elseif ($userIsAttendee && !$userIsOrganizer) {
+                // apply received flag
+                $message->meetingstatus |= 0x2;
+            }
+
             // Ensure the organizer name is set
             if (!isset($message->organizername)) {
                 $message->organizername = Utils::GetLocalPartFromEmail($message->organizeremail);
@@ -1267,18 +1293,19 @@ class BackendCalDAV extends BackendDiff {
             else {
                 $vevent->AddProperty("X-MICROSOFT-DISALLOW-COUNTER", "FALSE");
             }
-            switch ($data->meetingstatus) {
-                case "1":
-                    $vevent->AddProperty("STATUS", "TENTATIVE");
-                    break;
-                case "3":
-                    $vevent->AddProperty("STATUS", "CONFIRMED");
-                    break;
-                case "5":
-                case "7":
-                    $vevent->AddProperty("STATUS", "CANCELLED");
-                    $vevent->AddProperty("X-MICROSOFT-DISALLOW-COUNTER", "TRUE");
-                    break;
+            if ($data->meetingstatus == 1 || $data->meetingstatus == 3) {
+                if (isset($data->busystatus)) {
+                    if ($data->busystatus == 1) {
+                        $vevent->AddProperty("STATUS", "TENTATIVE");
+                    }
+                    elseif ($data->busystatus == 2 || $data->busystatus == 3) {
+                        $vevent->AddProperty("STATUS", "CONFIRMED");
+                    }
+                }
+            }
+            elseif ($data->meetingstatus == 5 || $data->meetingstatus == 7) {
+                $vevent->AddProperty("STATUS", "CANCELLED");
+                $vevent->AddProperty("X-MICROSOFT-DISALLOW-COUNTER", "TRUE");
             }
             if (isset($data->organizeremail) && isset($data->organizername)) {
                 $vevent->AddProperty("ORGANIZER", sprintf("MAILTO:%s", $data->organizeremail), array("CN" => $data->organizername));
