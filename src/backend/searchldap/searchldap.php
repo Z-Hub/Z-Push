@@ -102,57 +102,63 @@ class BackendSearchLDAP implements ISearchProvider {
      */
     public function GetGALSearchResults($searchquery, $searchrange, $searchpicture) {
         global $ldap_field_map;
+
+        $items = array();
+
+        // range for the search results, default symbian range end is 50, wm 99,
+        // so we'll use that of nokia
+        $rangestart = 0;
+        $rangeend = 50;
+
+        if ($searchrange != '0') {
+            $pos = strpos($searchrange, '-');
+            $rangestart = substr($searchrange, 0, $pos);
+            $rangeend = substr($searchrange, ($pos + 1));
+        }
+
+        $items['range'] = $rangestart . '-' . $rangeend;
+        $items['searchtotal'] = 0;
+
         if (isset($this->connection) && $this->connection !== false) {
             $searchfilter = str_replace("SEARCHVALUE", $searchquery, LDAP_SEARCH_FILTER);
             $result = @ldap_search($this->connection, LDAP_SEARCH_BASE, $searchfilter);
             if (!$result) {
                 ZLog::Write(LOGLEVEL_ERROR, "BackendSearchLDAP: Error in search query. Search aborted");
-                return false;
             }
+            else {
+                // get entry data as array
+                $searchresult = ldap_get_entries($this->connection, $result);
 
-            // get entry data as array
-            $searchresult = ldap_get_entries($this->connection, $result);
+                // TODO the limiting of the searchresults could be refactored into Utils as it's probably used more than once
+                $querycnt = $searchresult['count'];
+                //do not return more results as requested in range
+                $querylimit = (($rangeend + 1) < $querycnt) ? ($rangeend + 1) : $querycnt;
+                $items['range'] = $rangestart . '-' . ($querylimit-1);
+                $items['searchtotal'] = $querycnt;
 
-            // range for the search results, default symbian range end is 50, wm 99,
-            // so we'll use that of nokia
-            $rangestart = 0;
-            $rangeend = 50;
-
-            if ($searchrange != '0') {
-                $pos = strpos($searchrange, '-');
-                $rangestart = substr($searchrange, 0, $pos);
-                $rangeend = substr($searchrange, ($pos + 1));
-            }
-            $items = array();
-
-            // TODO the limiting of the searchresults could be refactored into Utils as it's probably used more than once
-            $querycnt = $searchresult['count'];
-            //do not return more results as requested in range
-            $querylimit = (($rangeend + 1) < $querycnt) ? ($rangeend + 1) : $querycnt;
-            $items['range'] = $rangestart.'-'.($querylimit-1);
-            $items['searchtotal'] = $querycnt;
-
-            $rc = 0;
-            for ($i = $rangestart; $i < $querylimit; $i++) {
-                foreach ($ldap_field_map as $key=>$value ) {
-                    if (isset($searchresult[$i][$value])) {
-                        if (is_array($searchresult[$i][$value]))
-                            $items[$rc][$key] = $searchresult[$i][$value][0];
-                        else
-                            $items[$rc][$key] = $searchresult[$i][$value];
+                $rc = 0;
+                for ($i = $rangestart; $i < $querylimit; $i++) {
+                    foreach ($ldap_field_map as $key=>$value ) {
+                        if (isset($searchresult[$i][$value])) {
+                            if (is_array($searchresult[$i][$value])) {
+                                $items[$rc][$key] = $searchresult[$i][$value][0];
+                            }
+                            else {
+                                $items[$rc][$key] = $searchresult[$i][$value];
+                            }
+                        }
                     }
-                }
-                // fallback to displayname if firstname and lastname not set
-                if (LDAP_SEARCH_NAME_FALLBACK && (!isset($items[$rc][SYNC_GAL_LASTNAME]) && !isset($items[$rc][SYNC_GAL_FIRSTNAME])) && isset($items[$rc][SYNC_GAL_DISPLAYNAME])) {
-                    $items[$rc][SYNC_GAL_LASTNAME] = $items[$rc][SYNC_GAL_DISPLAYNAME];
-                }
-                $rc++;
-            }
 
-            return $items;
+                    // fallback to displayname if firstname and lastname not set
+                    if (LDAP_SEARCH_NAME_FALLBACK && (!isset($items[$rc][SYNC_GAL_LASTNAME]) && !isset($items[$rc][SYNC_GAL_FIRSTNAME])) && isset($items[$rc][SYNC_GAL_DISPLAYNAME])) {
+                        $items[$rc][SYNC_GAL_LASTNAME] = $items[$rc][SYNC_GAL_DISPLAYNAME];
+                    }
+                    $rc++;
+                }
+            }
         }
-        else
-            return false;
+
+        return $items;
     }
 
     /**
