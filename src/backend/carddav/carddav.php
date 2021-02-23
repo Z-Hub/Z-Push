@@ -77,10 +77,10 @@ class BackendCardDAV extends BackendDiff implements ISearchProvider {
      * @return boolean
      */
     public function Logon($username, $domain, $password) {
-        $this->url = CARDDAV_PROTOCOL . '://' . CARDDAV_SERVER . ':' . CARDDAV_PORT . str_replace("%d", $domain, str_replace("%u", $username, CARDDAV_PATH));
-        $this->default_url = CARDDAV_PROTOCOL . '://' . CARDDAV_SERVER . ':' . CARDDAV_PORT . str_replace("%d", $domain, str_replace("%u", $username, CARDDAV_DEFAULT_PATH));
+        $this->url = CARDDAV_PROTOCOL . '://' . CARDDAV_SERVER . ':' . CARDDAV_PORT . str_replace("%d", $domain, str_replace("%u", $username, str_replace("%l", Utils::GetLocalPartFromEmail($username), CARDDAV_PATH)));
+        $this->default_url = CARDDAV_PROTOCOL . '://' . CARDDAV_SERVER . ':' . CARDDAV_PORT . str_replace("%d", $domain, str_replace("%u", $username, str_replace("%l", Utils::GetLocalPartFromEmail($username), CARDDAV_DEFAULT_PATH)));
         if (defined('CARDDAV_GAL_PATH')) {
-            $this->gal_url = CARDDAV_PROTOCOL . '://' . CARDDAV_SERVER . ':' . CARDDAV_PORT . str_replace("%d", $domain, str_replace("%u", $username, CARDDAV_GAL_PATH));
+            $this->gal_url = CARDDAV_PROTOCOL . '://' . CARDDAV_SERVER . ':' . CARDDAV_PORT . str_replace("%d", $domain, str_replace("%u", $username, str_replace("%l", Utils::GetLocalPartFromEmail($username), CARDDAV_GAL_PATH)));
         }
         else {
             $this->gal_url = false;
@@ -97,9 +97,7 @@ class BackendCardDAV extends BackendDiff implements ISearchProvider {
             $this->discoverAddressbooks();
         }
         else {
-            //TODO: get error message
-            $error = '';
-            ZLog::Write(LOGLEVEL_ERROR, sprintf("BackendCardDAV->Logon(): User '%s' failed to authenticate on '%s': %s", $username, $this->url, $error));
+            ZLog::Write(LOGLEVEL_ERROR, sprintf("BackendCardDAV->Logon(): User '%s' failed to authenticate on '%s'", $username, $this->url));
             $this->server = null;
         }
 
@@ -344,7 +342,7 @@ class BackendCardDAV extends BackendDiff implements ISearchProvider {
             $addressbook = new SyncFolder();
             $addressbook->serverid = $id;
             $addressbook->parentid = "0";
-            $addressbook->displayname = str_replace("%d", $this->domain, str_replace("%u", $this->username, CARDDAV_CONTACTS_FOLDER_NAME));
+            $addressbook->displayname = str_replace("%d", $this->domain, str_replace("%u", $this->username, str_replace("%l", Utils::GetLocalPartFromEmail($username), CARDDAV_CONTACTS_FOLDER_NAME)));
             $addressbook->type = SYNC_FOLDER_TYPE_CONTACT;
         }
 

@@ -42,6 +42,7 @@ define('CARDDAV_PORT', '443');
 //      http://localhost/caldav.php/test@domain.com/addresses/personal
 //      http://localhost/caldav.php/test@domain.com/addresses/work
 //      You set the CARDDAV_PATH to '/caldav.php/%u/addresses/' and personal and work will be autodiscovered
+// %l: replaced with the local part of the username
 // %u: replaced with the username
 // %d: replaced with the domain
 //   Add the trailing /
@@ -50,6 +51,7 @@ define('CARDDAV_PATH', '/caldav.php/%u/');
 
 // Server path to the default addressbook
 //  Mobile device will create new contacts here. It must be under CARDDAV_PATH
+// %l: replaced with the local part of the username
 // %u: replaced with the username
 // %d: replaced with the domain
 //   Add the trailing /
@@ -57,6 +59,7 @@ define('CARDDAV_DEFAULT_PATH', '/caldav.php/%u/addresses/');
 
 // Server path to the GAL addressbook. This addressbook is readonly and searchable by the user, but it will NOT be synced.
 // If you don't want GAL, comment it
+// %l: replaced with the local part of the username
 // %u: replaced with the username
 // %d: replaced with the domain
 //  Add the trailing /
@@ -66,6 +69,7 @@ define('CARDDAV_GAL_PATH', '/caldav.php/%d/GAL/');
 define('CARDDAV_GAL_MIN_LENGTH', 5);
 
 // Addressbook display name, the name showed in the mobile device
+// %l: replaced with the local part of the username
 // %u: replaced with the username
 // %d: replaced with the domain
 define('CARDDAV_CONTACTS_FOLDER_NAME', '%u Addressbook');
