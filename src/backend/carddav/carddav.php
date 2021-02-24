@@ -342,7 +342,7 @@ class BackendCardDAV extends BackendDiff implements ISearchProvider {
             $addressbook = new SyncFolder();
             $addressbook->serverid = $id;
             $addressbook->parentid = "0";
-            $addressbook->displayname = str_replace("%d", $this->domain, str_replace("%u", $this->username, str_replace("%l", Utils::GetLocalPartFromEmail($username), CARDDAV_CONTACTS_FOLDER_NAME)));
+            $addressbook->displayname = str_replace("%d", $this->domain, str_replace("%u", $this->username, str_replace("%l", Utils::GetLocalPartFromEmail($this->username), CARDDAV_CONTACTS_FOLDER_NAME)));
             $addressbook->type = SYNC_FOLDER_TYPE_CONTACT;
         }
 
