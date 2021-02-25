@@ -48,6 +48,8 @@ class BackendCardDAV extends BackendDiff implements ISearchProvider {
     private $contactsetag;
     private $sinkdata;
 
+    private $delimiter = "-";
+
     /**
      * Constructor
      *
@@ -438,7 +440,7 @@ class BackendCardDAV extends BackendDiff implements ISearchProvider {
             else {
                 $xml_vcards = new SimpleXMLElement($vcards);
                 foreach ($xml_vcards->element as $vcard) {
-                    $id = $addressbookId . "-" . $vcard->id->__toString();
+                    $id = $addressbookId . $this->delimiter . $vcard->id->__toString();
                     $this->contactsetag[$id] = $vcard->etag->__toString();
                     $messages[] = $this->StatMessage($folderid, $id);
                 }
@@ -573,7 +575,7 @@ class BackendCardDAV extends BackendDiff implements ISearchProvider {
 
                     $updated = $this->server->add($vcard_text);
                     if ($updated !== false) {
-                        $id = $addressbookId . "-" . $updated;
+                        $id = $addressbookId . $this->delimiter . $updated;
                     }
                 }
                 catch (Exception $ex) {
@@ -1343,9 +1345,10 @@ class BackendCardDAV extends BackendDiff implements ISearchProvider {
      * @return addressbookId
      */
     private function getAddressbookIdFromVcard($vcardId) {
-        $parts = explode("-", $vcardId);
+        $parts = explode($this->delimiter, $vcardId);
+        $addressbook = $parts[0];
 
-        return $parts[0];
+        return $addressbook;
     }
 
     /**
@@ -1355,15 +1358,8 @@ class BackendCardDAV extends BackendDiff implements ISearchProvider {
      * @return vcard id in carddav server
      */
     private function getVcardId($vcardId) {
-        $parts = explode("-", $vcardId);
-
-        $id = "";
-        for ($i = 1; $i < count($parts); $i++) {
-            if ($i > 1) {
-                $id .= "-";
-            }
-            $id .= $parts[$i];
-        }
+        $parts = explode($this->delimiter, $vcardId, 2);
+        $id = $parts[1];
 
         return $id;
     }
