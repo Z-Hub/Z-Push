@@ -490,14 +490,12 @@ class BackendCalDAV extends BackendDiff {
             if (CALDAV_SUPPORTS_SYNC) {
                 if (count($response) > 0) {
                     $changed = true;
-                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->ChangesSink - Changes detected"));
                 }
             }
             else {
                 // If the numbers of events are different, we know for sure, there are changes
                 if (count($response) != count($v)) {
                     $changed = true;
-                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->ChangesSink - Changes detected"));
                 }
                 else {
                     // If the numbers of events are equals, we compare the biggest date
@@ -516,14 +514,11 @@ class BackendCalDAV extends BackendDiff {
                             $changed = true;
                         }
                     }
-
-                    if ($changed) {
-                        ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->ChangesSink - Changes detected"));
-                    }
                 }
             }
 
             if ($changed) {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->ChangesSink - Changes detected"));
                 $notifications[] = $k;
             }
         }
