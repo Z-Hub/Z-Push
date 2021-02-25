@@ -1008,6 +1008,13 @@ If it is the first time this attendee has proposed a new date/time, increment th
                             }
                         }
 
+                        if (isset($props[$this->proptags['startdate']])) {
+                            $props[$this->proptags['commonstart']] = $props[$this->proptags['startdate']];
+                        }
+                        if (isset($props[$this->proptags['duedate']])) {
+                            $props[$this->proptags['commonend']] = $props[$this->proptags['duedate']];
+                        }
+
                         mapi_setprops($new, $proposeNewTimeProps + $props);
 
                         $reciptable = mapi_message_getrecipienttable($this->message);
@@ -3728,7 +3735,7 @@ If it is the first time this attendee has proposed a new date/time, increment th
                         if (isset($exceptionProps[$this->proptags['categories']])) {
                             $localCategories[$recurrenceItem['basedate']] = $exceptionProps[$this->proptags['categories']];
                         }
-}                   
+}
                 }
             }
         }
