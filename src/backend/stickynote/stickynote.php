@@ -309,115 +309,122 @@ class BackendStickyNote extends BackendDiff {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendStickyNote->ChangeMessage('%s','%s')", $folderid,  $id));
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendStickyNote->ChangeMessage(Message '%s')", $message));
 
-        // If we have a null ID then it's a new note; allocate an ordinal for 
-        // it. Then insert into the database and return the stat pointer for it.
-        // If we get an ID then it's an update; perform it and return stat 
-        // pointer.
-        // 
-        $_contents = stream_get_contents($message->asbody->data, 1024000);
-        if (!$id) {
-            $this->_result = pg_query($this->_dbconn, "select nextval('ordinal')");
-            if (pg_result_status($this->_result) != PGSQL_TUPLES_OK) {
-                ZLog::Write(LOGLEVEL_ERROR, sprintf("BackendStickyNote->ChangeMessage('Cannot get new sequence number for item')"));
-                return false;
-            } 
-            $id = pg_fetch_result($this->_result, 0, 0);
-            pg_free_result($this->_result);
+        if(ZPush::GetDeviceManager()->IsKoe() && KOE_CAPABILITY_NOTES && $id && !isset($message->asbody)) {
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendStickyNote->ChangeMessage(): KOE patch item update. Ignoring incoming update."));
+        }
+        else {
+            $_contents = stream_get_contents($message->asbody->data);
 
-            $this->_result = pg_query($this->_dbconn, "Begin");
-            if (pg_result_status($this->_result) != PGSQL_COMMAND_OK) {
-                ZLog::Write(LOGLEVEL_ERROR, sprintf("BackendStickyNote->ChangeMessage('Transaction start failure!')"));
+            // If we have a null ID then it's a new note; allocate an ordinal for
+            // it. Then insert into the database and return the stat pointer for it.
+            // If we get an ID then it's an update; perform it and return stat
+            // pointer.
+            //
+            $_contents = stream_get_contents($message->asbody->data, 1024000);
+            if (!$id) {
+                $this->_result = pg_query($this->_dbconn, "select nextval('ordinal')");
+                if (pg_result_status($this->_result) != PGSQL_TUPLES_OK) {
+                    ZLog::Write(LOGLEVEL_ERROR, sprintf("BackendStickyNote->ChangeMessage('Cannot get new sequence number for item')"));
+                    return false;
+                } 
+                $id = pg_fetch_result($this->_result, 0, 0);
                 pg_free_result($this->_result);
-                return false;
-            }
-            pg_free_result($this->_result);
 
-            $_params = array();
-            array_push($_params, $id, $message->subject, $_contents, $this->_user, $this->_domain);
-            $this->_result = pg_query_params($this->_dbconn, "insert into note (ordinal, subject, content, login, domain) values ($1, $2, $3, $4, $5)", $_params);
-            if (pg_result_status($this->_result) != PGSQL_COMMAND_OK) {
-                ZLog::Write(LOGLEVEL_ERROR, sprintf("BackendStickyNote->ChangeMessage('Cannot insert new item; fail!')"));
-                pg_free_result($this->_result);
-                $this->_result = pg_query($this->_dbconn, "Rollback");
-                pg_free_result($this->_result);
-                return false;
-            }
-            if (pg_affected_rows($this->_result) == 1) {
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendStickyNote->ChangeMessage('Insert of item %s (subj '%s') succeded')", $id, $message->subject));
-            } else {
-                ZLog::Write(LOGLEVEL_ERROR, sprintf("BackendStickyNote->ChangeMessage('Insert of item %s (subj '%s') failed')", $id, $message->subject));
-                pg_free_result($this->_result);
-                $this->_result = pg_query($this->_dbconn, "Rollback");
-                pg_free_result($this->_result);
-                return false;
-            }
-            unset ($_params);
-            pg_free_result($this->_result);
-            if ($message->categories) {
-                foreach ($message->categories as $_category) {
-                    $_params = array();
-                    array_push($_params, $id, $_category);
-                    $this->_result = pg_query_params($this->_dbconn, "insert into categories (ordinal, tag) values ($1, $2)", $_params);
-                    if (pg_result_status($this->_result) != PGSQL_COMMAND_OK) {
-                        ZLog::Write(LOGLEVEL_ERROR, sprintf("BackendStickyNote->ChangeMessage('Cannot insert category for item; fail!')"));
-                        pg_free_result($this->_result);
-                        $this->_result = pg_query($this->_dbconn, "Rollback");
-                        pg_free_result($this->_result);
-                        return(false);
-                    }
-                    pg_free_result($this->_result);
-                }
-                unset ($_category);
-            }
-        } else {
-            $_params = array();
-            array_push($_params, $message->subject, $_contents, $id, $this->_user, $this->_domain);
-            $this->_result = pg_query_params($this->_dbconn, "update note set subject=$1, content=$2, modified=now() where ordinal=$3 and login=$4 and domain=$5", $_params);
-            if (pg_result_status($this->_result) != PGSQL_COMMAND_OK) {
-                ZLog::Write(LOGLEVEL_ERROR, sprintf("BackendStickyNote->ChangeMessage('Update of item %s failed!')", $id));
-            }
-            if (pg_affected_rows($this->_result) == 1) {
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendStickyNote->ChangeMessage('Update of item %s (subj '%s') succeded')", $id, $message->subject));
-            } else {
-                ZLog::Write(LOGLEVEL_ERROR, sprintf("BackendStickyNote->ChangeMessage('Update of item %s (subj '%s') failed (credential mismatch)')", $id, $message->subject));
-            }
-            pg_free_result($this->_result);
-            unset ($_params);
-            if ($message->categories) {
-                $_params = array();
-                array_push($_params, $id);
-                $this->_result = pg_query_params($this->_dbconn, "delete from categories where ordinal=$1", $_params);
+                $this->_result = pg_query($this->_dbconn, "Begin");
                 if (pg_result_status($this->_result) != PGSQL_COMMAND_OK) {
-                    ZLog::Write(LOGLEVEL_ERROR, sprintf("BackendStickyNote->ChangeMessage('Cannot clear category for item; fail!')"));
+                    ZLog::Write(LOGLEVEL_ERROR, sprintf("BackendStickyNote->ChangeMessage('Transaction start failure!')"));
+                    pg_free_result($this->_result);
+                    return false;
+                }
+                pg_free_result($this->_result);
+
+                $_params = array();
+                array_push($_params, $id, $message->subject, $_contents, $this->_user, $this->_domain);
+                $this->_result = pg_query_params($this->_dbconn, "insert into note (ordinal, subject, content, login, domain) values ($1, $2, $3, $4, $5)", $_params);
+                if (pg_result_status($this->_result) != PGSQL_COMMAND_OK) {
+                    ZLog::Write(LOGLEVEL_ERROR, sprintf("BackendStickyNote->ChangeMessage('Cannot insert new item; fail!')"));
                     pg_free_result($this->_result);
                     $this->_result = pg_query($this->_dbconn, "Rollback");
                     pg_free_result($this->_result);
-                    return(false);
+                    return false;
+                }
+                if (pg_affected_rows($this->_result) == 1) {
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendStickyNote->ChangeMessage('Insert of item %s (subj '%s') succeded')", $id, $message->subject));
+                } else {
+                    ZLog::Write(LOGLEVEL_ERROR, sprintf("BackendStickyNote->ChangeMessage('Insert of item %s (subj '%s') failed')", $id, $message->subject));
+                    pg_free_result($this->_result);
+                    $this->_result = pg_query($this->_dbconn, "Rollback");
+                    pg_free_result($this->_result);
+                    return false;
                 }
                 unset ($_params);
-                foreach ($message->categories as $_category) {
+                pg_free_result($this->_result);
+                if ($message->categories) {
+                    foreach ($message->categories as $_category) {
+                        $_params = array();
+                        array_push($_params, $id, $_category);
+                        $this->_result = pg_query_params($this->_dbconn, "insert into categories (ordinal, tag) values ($1, $2)", $_params);
+                        if (pg_result_status($this->_result) != PGSQL_COMMAND_OK) {
+                            ZLog::Write(LOGLEVEL_ERROR, sprintf("BackendStickyNote->ChangeMessage('Cannot insert category for item; fail!')"));
+                            pg_free_result($this->_result);
+                            $this->_result = pg_query($this->_dbconn, "Rollback");
+                            pg_free_result($this->_result);
+                            return(false);
+                        }
+                        pg_free_result($this->_result);
+                    }
+                    unset ($_category);
+                }
+            } else {
+                $_params = array();
+                array_push($_params, $message->subject, $_contents, $id, $this->_user, $this->_domain);
+                $this->_result = pg_query_params($this->_dbconn, "update note set subject=$1, content=$2, modified=now() where ordinal=$3 and login=$4 and domain=$5", $_params);
+                if (pg_result_status($this->_result) != PGSQL_COMMAND_OK) {
+                    ZLog::Write(LOGLEVEL_ERROR, sprintf("BackendStickyNote->ChangeMessage('Update of item %s failed!')", $id));
+                }
+                if (pg_affected_rows($this->_result) == 1) {
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendStickyNote->ChangeMessage('Update of item %s (subj '%s') succeded')", $id, $message->subject));
+                } else {
+                    ZLog::Write(LOGLEVEL_ERROR, sprintf("BackendStickyNote->ChangeMessage('Update of item %s (subj '%s') failed (credential mismatch)')", $id, $message->subject));
+                }
+                pg_free_result($this->_result);
+                unset ($_params);
+                if ($message->categories) {
                     $_params = array();
-                    array_push($_params, $id, $_category);
-                    $this->_result = pg_query_params($this->_dbconn, "insert into categories (ordinal, tag) values ($1, $2)", $_params);
+                    array_push($_params, $id);
+                    $this->_result = pg_query_params($this->_dbconn, "delete from categories where ordinal=$1", $_params);
                     if (pg_result_status($this->_result) != PGSQL_COMMAND_OK) {
-                        ZLog::Write(LOGLEVEL_ERROR, sprintf("BackendStickyNote->ChangeMessage('Cannot insert category for item; fail!')"));
+                        ZLog::Write(LOGLEVEL_ERROR, sprintf("BackendStickyNote->ChangeMessage('Cannot clear category for item; fail!')"));
                         pg_free_result($this->_result);
                         $this->_result = pg_query($this->_dbconn, "Rollback");
                         pg_free_result($this->_result);
                         return(false);
                     }
-                    pg_free_result($this->_result);
+                    unset ($_params);
+                    foreach ($message->categories as $_category) {
+                        $_params = array();
+                        array_push($_params, $id, $_category);
+                        $this->_result = pg_query_params($this->_dbconn, "insert into categories (ordinal, tag) values ($1, $2)", $_params);
+                        if (pg_result_status($this->_result) != PGSQL_COMMAND_OK) {
+                            ZLog::Write(LOGLEVEL_ERROR, sprintf("BackendStickyNote->ChangeMessage('Cannot insert category for item; fail!')"));
+                            pg_free_result($this->_result);
+                            $this->_result = pg_query($this->_dbconn, "Rollback");
+                            pg_free_result($this->_result);
+                            return(false);
+                        }
+                        pg_free_result($this->_result);
+                    }
+                unset ($_category);
                 }
-            unset ($_category);
+            } 
+            $this->_result = pg_query($this->_dbconn, "COMMIT");
+            if (pg_result_status($this->_result) != PGSQL_COMMAND_OK) {
+                ZLog::Write(LOGLEVEL_ERROR, sprintf("BackendStickyNote->ChangeMessage('Transaction commit FAIL!')"));
+                pg_free_result($this->_result);
+                return false;
             }
-        } 
-        $this->_result = pg_query($this->_dbconn, "COMMIT");
-        if (pg_result_status($this->_result) != PGSQL_COMMAND_OK) {
-            ZLog::Write(LOGLEVEL_ERROR, sprintf("BackendStickyNote->ChangeMessage('Transaction commit FAIL!')"));
             pg_free_result($this->_result);
-            return false;
         }
-        pg_free_result($this->_result);
         return $this->StatMessage($folderid, $id);
     }
 
