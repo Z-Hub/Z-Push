@@ -937,40 +937,108 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
      *
      */
     public function ChangeFolder($folderid, $oldid, $displayname, $type){
+
         ZLog::Write(LOGLEVEL_INFO, sprintf("BackendIMAP->ChangeFolder('%s','%s','%s','%s')", $folderid, $oldid, $displayname, $type));
 
-        // if $id is set => rename mailbox, otherwise create
+        // get delimiter
+        $delimiter = $this->getServerDelimiter();
+        $backendCombinedConfig = BackendCombinedConfig::GetBackendCombinedConfig();
+
+        // creating and renaming has limitations with IMAP (UTF-7 IMAP, delimiter (IMAP, BackendCombined))
+        $invalidCharacters = array('!', '"', '%', '&', ';', '^', '<', '>', '|', '{', '}', '/', '\\', $delimiter, $backendCombinedConfig['delimiter']);
+        $displayname = Utils::Utf8_to_utf7imap(str_replace($invalidCharacters, "", $displayname));
+
+        // check if displayname/mailboxname is valid
+        if (strlen($displayname) == 0) {
+            throw new StatusException(sprintf("BackendIMAP->ChangeFolder('%s','%s','%s','%s'): Error, invalid mailbox name.", $folderid, $oldid, $displayname, $type), SYNC_FSSTATUS_SERVERERROR);
+        }
+
+        // get parent mailbox
+        $folderImapId = $this->getImapIdFromFolderId($folderid);
+        if ($folderImapId === false && $folderid != "0") {
+            throw new StatusException(sprintf("BackendIMAP->ChangeFolder('%s','%s','%s','%s'): Error, folder '%s' does not exist.", $folderid, $oldid, $displayname, $type, $oldid), SYNC_FSSTATUS_PARENTNOTFOUND);
+        }
+
+        // new mailbox
+        $newImapId = $folderid == "0" ? $displayname : $folderImapId . $delimiter . $displayname;
+
+        // if $id is set, rename mailbox, otherwise create
         if ($oldid) {
-            // rename doesn't work properly with IMAP
-            // the activesync client doesn't support a 'changing ID'
-            // TODO this would be solved by implementing hex ids (Mantis #459)
-            //$csts = imap_renamemailbox($this->mbox, $this->server . imap_utf7_encode(str_replace(".", $this->getServerDelimiter(), $oldid)), $newname);
-            ZLog::Write(LOGLEVEL_ERROR, "BackendIMAP->ChangeFolder() : we do not support rename for now");
-            return false;
+
+            // TODO remove identifier for BackenCombined i/xxxxxxxx
+            $oldid = substr($oldid, 2);
+
+            // get imap id for oldid
+            $oldImapId = $this->getImapIdFromFolderId($oldid);
+            if ($oldImapId === false || strlen($oldImapId) == 0) {
+                throw new StatusException(sprintf("BackendIMAP->ChangeFolder('%s','%s','%s','%s'): Error, folder '%s' does not exist.", $folderid, $oldid, $displayname, $type, $oldid), SYNC_FSSTATUS_FOLDERDOESNOTEXIST);
+            }
+
+            // check for system/default IMAP folders
+            if ($folderid == "0" && (strcasecmp($oldImapId, $this->create_name_folder(IMAP_FOLDER_INBOX)) == 0
+                                     || strcasecmp($oldImapId, $this->create_name_folder(IMAP_FOLDER_DRAFT)) == 0
+                                     || strcasecmp($oldImapId, $this->create_name_folder(IMAP_FOLDER_SENT)) == 0
+                                     || strcasecmp($oldImapId, $this->create_name_folder(IMAP_FOLDER_TRASH)) == 0
+                                     || strcasecmp($oldImapId, $this->create_name_folder(IMAP_FOLDER_SPAM)) == 0
+                                     || strcasecmp($oldImapId, $this->create_name_folder(IMAP_FOLDER_ARCHIVE)) == 0)) {
+                throw new StatusException(sprintf("BackendIMAP->ChangeFolder('%s','%s','%s','%s'): Error, changing system/default folder '%s'.", $folderid, $oldid, $displayname, $type, $oldImapId), SYNC_FSSTATUS_SYSTEMFOLDER);
+            }
+
+            // check current mailbox and open parent mailbox if necessary
+            if ($this->mboxFolder != $folderImapId) {
+                $this->imap_reopen_folder($folderImapId, true);
+            }
+
+            // check if destination mailbox already exists
+            $mailbox = @imap_getmailboxes($this->mbox, $this->server, $newImapId);
+            if (isset($mailbox[0])) {
+                throw new StatusException(sprintf("BackendIMAP->ChangeFolder('%s','%s','%s','%s'): Error, destination mailbox '%s' already exists.", $folderid, $oldid, $displayname, $type, $newImapId), SYNC_FSSTATUS_FOLDEREXISTS);
+            }
+
+            // check if source mailbox exists
+            $mailbox = @imap_getmailboxes($this->mbox, $this->server, $oldImapId);
+            if (isset($mailbox[0])) {
+                // unsubscribe mailbox
+                if (imap_unsubscribe($this->mbox, $this->server . $oldImapId)) {
+                    //rename mailbox
+                    if (imap_renamemailbox($this->mbox, $this->server . $oldImapId, $this->server . $newImapId)) {
+                        // subscribe renamed mailbox
+                        if (imap_subscribe($this->mbox, $this->server . $newImapId)) {
+                            // the activesync client doesn't support a 'changing ID' -> remap ids recursively
+                            if ($this->setNewImapIdForFolderId($newImapId, $oldid)) {
+                                ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->ChangeFolder(): Folder '%s' has been renamed to '%s'.", $oldImapId, $newImapId));
+                                return $this->StatFolder($this->getFolderIdFromImapId($newImapId));
+                            }
+                            throw new StatusException(sprintf("BackendIMAP->ChangeFolder('%s','%s','%s','%s'): Error IMAP: '%s', remapping of folder '%s' has failed.", $folderid, $oldid, $newImapId, $type, imap_last_error(), $oldImapId), SYNC_FSSTATUS_SERVERERROR);
+                        }
+                        else {
+                            throw new StatusException(sprintf("BackendIMAP->ChangeFolder('%s','%s','%s','%s'): Error IMAP: '%s', subscribing to renamed mailbox '%s' has failed.", $folderid, $oldid, $newImapId, $type, imap_last_error(), $newImapId), SYNC_FSSTATUS_SERVERERROR);
+                        }
+                    }
+                    else {
+                        throw new StatusException(sprintf("BackendIMAP->ChangeFolder('%s','%s','%s','%s'): Error IMAP: '%s', renaming of mailbox '%s' has failed.", $folderid, $oldid, $newImapId, $type, imap_last_error(), $oldImapId), SYNC_FSSTATUS_SERVERERROR);
+                    }
+                }
+                else {
+                    throw new StatusException(sprintf("BackendIMAP->ChangeFolder('%s','%s','%s','%s'): Error IMAP: '%s', unsubscribing of mailbox '%s' has failed.", $folderid, $oldid, $newImapId, $type, imap_last_error(), $oldImapId), SYNC_FSSTATUS_SERVERERROR);
+                }
+            }
+            throw new StatusException(sprintf("BackendIMAP->ChangeFolder('%s','%s','%s','%s'): Error, mailbox '%s' does not exist.", $folderid, $oldid, $displayname, $type, $oldImapId), SYNC_FSSTATUS_FOLDERDOESNOTEXIST);
         }
         else {
 
-            // build name for new mailboxBackendMaildir
-            $displayname = Utils::Utf8_to_utf7imap($displayname);
-
-            if ($folderid == "0") {
-                $newimapid = $displayname;
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->ChangeFolder() createmailbox: '%s'", $newImapId));
+            if (imap_createmailbox($this->mbox, $this->server . $newImapId)) {
+                if (imap_subscribe($this->mbox, $this->server . $newImapId)) {
+                    $newId = $this->convertImapId($newImapId);
+                    return $this->StatFolder($newId);
+                }
+                else {
+                    throw new StatusException(sprintf("BackendIMAP->ChangeFolder('%s','%s','%s','%s'): Error IMAP: '%s', cannot subscribe to mailbox '%s'.", $folderid, $oldid, $displayname, $type, imap_last_error(), $newImapId), SYNC_FSSTATUS_FOLDERDOESNOTEXIST);
+                }
             }
             else {
-                $imapid = $this->getImapIdFromFolderId($folderid);
-                $newimapid = $imapid . $this->getServerDelimiter() . $displayname;
-            }
-
-            $csts = imap_createmailbox($this->mbox, $this->server . $newimapid);
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->ChangeFolder() createmailbox: '%s'", $newimapid));
-            if ($csts) {
-                imap_subscribe($this->mbox, $this->server . $newimapid);
-                $newid = $this->convertImapId($newimapid);
-                return $this->StatFolder($newid);
-            }
-            else {
-                ZLog::Write(LOGLEVEL_WARN, "BackendIMAP->ChangeFolder() : mailbox creation failed");
-                return false;
+                throw new StatusException(sprintf("BackendIMAP->ChangeFolder('%s','%s','%s','%s'): Error IMAP: '%s', mailbox '%s' creation failed", $folderid, $oldid, $displayname, $type, imap_last_error(), $newImapId), SYNC_FSSTATUS_SERVERERROR);
             }
         }
     }
@@ -987,12 +1055,35 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
      *
      */
     public function DeleteFolder($id, $parentid){
-        $imapid = $this->getImapIdFromFolderId($id);
-        if ($imapid) {
-            return imap_deletemailbox($this->mbox, $this->server.$imapid);
-        }
+        $imapId = $this->getImapIdFromFolderId($id);
+        $parentImapId = $this->getImapIdFromFolderId($parentid);
 
-        return false;
+        $this->imap_reopen_folder($parentImapId, true);
+
+        if ($imapId) {
+            // check for system/default IMAP folders
+            if ($parentid == "0" && (strcasecmp($imapId, $this->create_name_folder(IMAP_FOLDER_INBOX)) == 0
+                                     || strcasecmp($imapId, $this->create_name_folder(IMAP_FOLDER_DRAFT)) == 0
+                                     || strcasecmp($imapId, $this->create_name_folder(IMAP_FOLDER_SENT)) == 0
+                                     || strcasecmp($imapId, $this->create_name_folder(IMAP_FOLDER_TRASH)) == 0
+                                     || strcasecmp($imapId, $this->create_name_folder(IMAP_FOLDER_SPAM)) == 0
+                                     || strcasecmp($imapId, $this->create_name_folder(IMAP_FOLDER_ARCHIVE)) == 0)) {
+                throw new StatusException(sprintf("BackendIMAP->ChangeFolder('%s','%s','%s','%s'): Error, changing system/default folder '%s'.", $folderid, $oldid, $displayname, $type, $imapId), SYNC_FSSTATUS_SYSTEMFOLDER);
+            }
+
+            if (imap_unsubscribe($this->mbox, $this->server . $imapId)) {
+                if (imap_deletemailbox($this->mbox, $this->server . $imapId)) {
+                    return true;
+                }
+                else {
+                    throw new StatusException(sprintf("BackendIMAP->DeleteFolder('%s','%s'): Error IMAP: '%s', mailbox '%s' could not be deleted.", $id, $parentid, imap_last_error(), $imapId), SYNC_FSSTATUS_SERVERERROR);
+                }
+            }
+            else {
+                throw new StatusException(sprintf("BackendIMAP->DeleteFolder('%s','%s'): Error IMAP: '%s%', mailbox '%s' could not be unsubscribed.", $id, $parentid, imap_last_error(), $imapId), SYNC_FSSTATUS_SERVERERROR);
+            }
+        }
+        throw new StatusException(sprintf("BackendIMAP->DeleteFolder('%s','%s'): Error, mailbox '%s' does not exist.", $id, $parentid, $imapId), SYNC_FSSTATUS_FOLDERDOESNOTEXIST);
     }
 
     /**
@@ -2258,6 +2349,65 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
                 return $folderid;
         }
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->getFolderIdFromImapId('%s', '%s') = %s", $imapid, Utils::PrintAsString($case_sensitive), 'not found'));
+        return false;
+    }
+
+    /**
+     * Rewrites imap ids for a given mailbox and its child mailboxes of a hex folderid
+     *
+     * @param string        $newImapId      new imapid
+     * @param string        $folderId       hex folderid which needs remapping to new imapid
+     *
+     * @access protected
+     * @return boolean      if remapping succeeded
+     */
+    protected function setNewImapIdForFolderId($newImapId, $folderId) {
+        $this->InitializePermanentStorage();
+
+        $fmFidFimap = $this->permanentStorage->fmFidFimap;
+        $fmFimapFid = $this->permanentStorage->fmFimapFid;
+        $fmFimapFidLowercase = $this->permanentStorage->fmFimapFidLowercase;
+
+        if (isset($fmFidFimap[$folderId])) {
+            $oldImapId = $fmFidFimap[$folderId];
+
+            // set new imapid for folderid
+            if (isset($fmFimapFid[$oldImapId], $fmFimapFidLowercase[strtolower($oldImapId)]) && strlen($oldImapId) > 0) {
+                $fmFidFimap[$folderId] = $newImapId;
+                $fmFimapFid[$newImapId] = $folderId;
+                $fmFimapFidLowercase[strtolower($newImapId)] = $folderId;
+                unset($fmFimapFid[$oldImapId], $fmFimapFidLowercase[strtolower($oldImapId)]);
+
+                ZLog::Write(LOGLEVEL_WARN, sprintf("BackendIMAP->setNewImapIdForFolderId(): Remapping of imapId '%s' to '%s' for folder '%s' done.", $oldImapId, $newImapId, $folderId));
+
+                // search for child imapids and rewrite these
+                foreach ($fmFidFimap as $fmFolderId => $fmImapId) {
+                    $tmpImapId = $fmFidFimap[$fmFolderId];
+
+                    if (strpos($fmImapId, $oldImapId . $this->getServerDelimiter()) === 0 && isset($fmFimapFid[$tmpImapId], $fmFimapFidLowercase[strtolower($tmpImapId)])) {
+                        $newImapId = str_replace($oldImapId, $newImapId, $fmImapId);
+                        $fmFidFimap[$fmFolderId] = $newImapId;
+                        $fmFimapFid[$newImapId] = $fmFolderId;
+                        $fmFimapFidLowercase[strtolower($newImapId)] = $fmFolderId;
+                        unset($fmFimapFid[$tmpImapId], $fmFimapFidLowercase[strtolower($tmpImapId)]);
+
+                        ZLog::Write(LOGLEVEL_WARN, sprintf("BackendIMAP->setNewImapIdForFolderId(): Remapping of child imapId '%s' to '%s' for folder '%s' done.", $tmpImapId, $newImapId, $fmFolderId));
+                    }
+                }
+
+                // writeback states
+                $this->permanentStorage->fmFidFimap = $fmFidFimap;
+                $this->permanentStorage->fmFimapFid = $fmFimapFid;
+                $this->permanentStorage->fmFimapFidLowercase = $fmFimapFidLowercase;
+
+                return true;
+            }
+            else {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->setNewImapIdForFolderId(): Remapping of imapId '%s' to '%s' for folder '%s' failed.", $oldImapId, $newImapId, $folderId));
+                return false;
+            }
+        }
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->setNewImapIdForFolderId(): Imapid for folder '%s' cannot be found, remapping failed.", $folderId));
         return false;
     }
 
