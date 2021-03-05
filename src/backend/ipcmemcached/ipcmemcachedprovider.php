@@ -59,7 +59,15 @@ class IpcMemcachedProvider implements IIpcProvider {
         $this->type = $type;
         $this->typeMutex = $type . "MX";
         $this->serverKey = $serverKey;
-        $this->maxWaitCycles = round(MEMCACHED_MUTEX_TIMEOUT * 1000 / MEMCACHED_BLOCK_WAIT)+1;
+        if (defined('MEMCACHED_MAX_WAIT_CYCLES_MULTIPLIER')) {
+            if ((!is_int(MEMCACHED_MAX_WAIT_CYCLES_MULTIPLIER) || MEMCACHED_MAX_WAIT_CYCLES_MULTIPLIER < 1)){
+                throw new FatalMisconfigurationException("IpcMemcachedProvider The MEMCACHED_MAX_WAIT_CYCLES_MULTIPLIER value must be a number higher than 0.");
+            } else {
+                $this->maxWaitCycles = round(MEMCACHED_MUTEX_TIMEOUT * 1000 * MEMCACHED_MAX_WAIT_CYCLES_MULTIPLIER / MEMCACHED_BLOCK_WAIT)+1;
+            }
+        } else {
+            $this->maxWaitCycles = round(MEMCACHED_MUTEX_TIMEOUT * 1000 / MEMCACHED_BLOCK_WAIT)+1;
+        }
         $this->logWaitCycles = round($this->maxWaitCycles/5);
         $this->globalMutex = (strcmp($allocate, 'globalmutex') === 0) ? true : false;
 
