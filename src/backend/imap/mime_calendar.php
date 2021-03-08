@@ -64,7 +64,7 @@ function delete_calendar_dav($uid) {
                     $caldav->Logoff();
                 }
                 else {
-                    ZLog::Write(LOGLEVEL_ERROR, "BackendIMAP->delete_calendar_dav(): event not found, we will end with zombie events");
+                    ZLog::Write(LOGLEVEL_WARN, "BackendIMAP->delete_calendar_dav(): event not found, we may have zombie events");
                 }
             }
             else {
@@ -202,10 +202,11 @@ function parse_meeting_calendar($part, &$output, $is_sent_folder) {
                 ZLog::Write(LOGLEVEL_DEBUG, "BackendIMAP->parse_meeting_calendar(): Event canceled, removing calendar object");
                 delete_calendar_dav($uid);
                 break;
+            case "declinecounter":
+                ZLog::Write(LOGLEVEL_DEBUG, "BackendIMAP->parse_meeting_calendar(): Declining a counter is not implemented.");
             case "counter":
                 ZLog::Write(LOGLEVEL_DEBUG, "BackendIMAP->parse_meeting_calendar(): Counter received");
                 $output->messageclass = "IPM.Schedule.Meeting.Resp.Tent";
-                $output->meetingrequest->disallownewtimeproposal = 0;
                 break;
             case "reply":
                 ZLog::Write(LOGLEVEL_DEBUG, "BackendIMAP->parse_meeting_calendar(): Reply received");
@@ -248,18 +249,24 @@ function parse_meeting_calendar($part, &$output, $is_sent_folder) {
                         }
                     }
                 }
-                $output->meetingrequest->disallownewtimeproposal = 1;
+                $output->meetingrequest->disallownewtimeproposal = "1";
                 break;
             case "request":
                 $output->messageclass = "IPM.Schedule.Meeting.Request";
-                $output->meetingrequest->disallownewtimeproposal = 0;
                 ZLog::Write(LOGLEVEL_DEBUG, "BackendIMAP->parse_meeting_calendar(): New request");
                 // New meeting, we don't create it now, because we need to confirm it first, but if we don't create it we won't see it in the calendar
                 break;
-            default:
-                ZLog::Write(LOGLEVEL_WARN, sprintf("BackendIMAP->parse_meeting_calendar() - Unknown method <%s>, please report it to the developers", strtolower($part->headers["method"])));
+            case "add":
+                 ZLog::Write(LOGLEVEL_DEBUG, "BackendIMAP->parse_meeting_calendar(): Add method is not implemented.");
                 $output->messageclass = "IPM.Appointment";
-                $output->meetingrequest->disallownewtimeproposal = 0;
+                break;
+            case "publish":
+                ZLog::Write(LOGLEVEL_DEBUG, "BackendIMAP->parse_meeting_calendar(): Publish method is not a meeting request.");
+                $output->messageclass = "IPM.Appointment";
+                break;
+            default:
+                ZLog::Write(LOGLEVEL_WARN, sprintf("BackendIMAP->parse_meeting_calendar() - Unknown method <%s>, please report it to the developers", $method));
+                $output->messageclass = "IPM.Appointment";
                 break;
         }
     }
@@ -318,7 +325,7 @@ function parse_meeting_calendar($part, &$output, $is_sent_folder) {
     }
 
     // Get $tz from first timezone
-    $props = $ical->GetPropertiesByPath("VTIMEZONE/TZID");
+    $props = $ical->GetPropertiesByPath('VTIMEZONE/TZID');
     if (count($props) > 0) {
         // TimeZones shouldn't have dots
         $tzname = str_replace(".", "", $props[0]->Value());
@@ -329,8 +336,15 @@ function parse_meeting_calendar($part, &$output, $is_sent_folder) {
     }
     $output->meetingrequest->timezone = base64_encode(TimezoneUtil::GetSyncBlobFromTZ($tz));
 
-    // Fixed values
-    $output->meetingrequest->instancetype = 0;
+    // very basic instancetype (recurrence)
+    $props = $ical->GetPropertiesByPath('VEVENT/RRULE');
+    if (count($props) == 1) {
+        $output->meetingrequest->instancetype = 1;
+    }
+    else {
+        $output->meetingrequest->instancetype = 0;
+    }
+
     $output->meetingrequest->responserequested = 1;
 
     // get intended busystatus
@@ -363,6 +377,19 @@ function parse_meeting_calendar($part, &$output, $is_sent_folder) {
     }
     else {
         $output->meetingrequest->busystatus = 2;
+    }
+
+    // is counter allowed
+    $props = $ical->GetPropertiesByPath('VEVENT/X-MICROSOFT-DISALLOW-COUNTER');
+    if (count($props) > 0) {
+        switch ($props[0]->Value()) {
+            case "TRUE":
+                $output->meetingrequest->disallownewtimeproposal = "1";
+                break;
+            case "FALSE":
+                $output->meetingrequest->disallownewtimeproposal = "0";
+                break;
+        }
     }
 
     // use reminder with smallest interval
