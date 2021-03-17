@@ -339,7 +339,7 @@ class ZPushAdmin {
             return false;
         }
 
-        if ($filtertype !== false && $filtertype < SYNC_FILTERTYPE_ALL || $filtertype > SYNC_FILTERTYPE_INCOMPLETETASKS) {
+        if ($filtertype !== SYNC_FILTERTYPE_1YEAR && ($filtertype !== false && $filtertype < SYNC_FILTERTYPE_ALL || $filtertype > SYNC_FILTERTYPE_INCOMPLETETASKS)) {
             ZLog::Write(LOGLEVEL_ERROR, sprintf("ZPushAdmin::SetDeviceOptions(): specified FilterType '%s' is out of bounds", $filtertype));
             return false;
         }

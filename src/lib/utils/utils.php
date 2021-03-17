@@ -335,6 +335,9 @@ class Utils {
             case SYNC_FILTERTYPE_6MONTHS:
                 $back = 60 * 60 * 24 * 31 * 6;
                 break;
+	    case SYNC_FILTERTYPE_1YEAR:
+		$back = 60 * 60 * 24 * 366;
+		break;
             default:
                 $back = false;
         }
