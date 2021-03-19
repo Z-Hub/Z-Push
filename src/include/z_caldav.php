@@ -834,11 +834,11 @@ EOXML;
 	* This function has been modified from the original GetEvents function; the function has been renamed to prevent regression errors
 	*/
 	function GetEventsList( $start = null, $finish = null, $relative_url = null ) {
-		$filter = "";
-		if ( isset($start) && isset($finish) ) {
+
+		if ( isset($start, $finish) ) {
 			$range = "<C:time-range start=\"$start\" end=\"$finish\"/>";
 		} else {
-			$range = '';
+			$range = "";
 		}
 
 		$filter = <<<EOFILTER
@@ -872,31 +872,20 @@ EOFILTER;
 	* 
 	* This function has been modified from the original GetTodos function; the function has been renamed to prevent regression errors
 	*/
-	function GetTodosList( $start, $finish, $completed = false, $cancelled = false, $relative_url = null ) {
+	function GetTodosList( $start = null, $finish = null, $relative_url = null ) {
 
-		if ( $start && $finish ) {
-			$time_range = <<<EOTIME
-                <C:time-range start="$start" end="$finish"/>
-EOTIME;
+		if ( isset($start, $finish) ) {
+			$range = "<C:time-range start=\"$start\" end=\"$finish\"/>";
 		} else {
-        	$time_range = "";
+        	$range = "";
     	}
-
-		// Warning!  May contain traces of double negatives...
-		$neg_cancelled = ( $cancelled === true ? "no" : "yes" );
-		$neg_completed = ( $cancelled === true ? "no" : "yes" );
 
 		$filter = <<<EOFILTER
   <C:filter>
     <C:comp-filter name="VCALENDAR">
-          <C:comp-filter name="VTODO">
-                <C:prop-filter name="STATUS">
-                        <C:text-match negate-condition="$neg_completed">COMPLETED</C:text-match>
-                </C:prop-filter>
-                <C:prop-filter name="STATUS">
-                        <C:text-match negate-condition="$neg_cancelled">CANCELLED</C:text-match>
-                </C:prop-filter>$time_range
-          </C:comp-filter>
+      <C:comp-filter name="VTODO">
+        $range
+      </C:comp-filter>
     </C:comp-filter>
   </C:filter>
 EOFILTER;
