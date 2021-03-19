@@ -341,11 +341,51 @@ class BackendCalDAV extends BackendDiff {
     }
 
     /**
-     * Move a message is not supported by CalDAV.
+     * Move a message by fetching it, trying to create a copy
+     * into another collection and deleting the original.
      * @see BackendDiff::MoveMessage()
      */
     public function MoveMessage($folderid, $id, $newfolderid, $contentParameters) {
-        return false;
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->MoveMessage('%s','%s','%s')", $folderid, $id, $newfolderid));
+
+        if ($folderid == $newfolderid) {
+            throw new StatusException(sprintf("BackendCalDAV->MoveMessage('%s','%s','%s'): Error, destination folder is source folder. Canceling the move.", $folderid, $id, $newfolderid), SYNC_MOVEITEMSSTATUS_SAMESOURCEANDDEST);
+        }
+
+        // get source message
+        $path = $this->_caldav_path . substr($folderid, 1) . "/";
+        $href = $path . $id;
+
+        $messages = $this->_caldav->CalendarMultiget( array( $href ), $path );
+        $data = $messages[$href];
+
+        if (!isset($data) || $data == '') {
+            throw new StatusException(sprintf("BackendIMAP->MoveMessage('%s','%s','%s'): Error, unable to retrieve source message.", $folderid, $id, $newfolderid), SYNC_MOVEITEMSSTATUS_INVALIDSOURCEID);
+        }
+        unset($messages, $href);
+
+        // create copy in destination folder with new id
+        $newId = sprintf("%s-%s.ics", gmdate("Ymd\THis\Z"), hash("md5", microtime()));
+        $path = sprintf("%s%s/%s", $this->_caldav_path, substr($newfolderid, 1), $newId);
+        $etag = "*";
+
+        $etag_new = $this->_caldav->DoPUTRequest($path, $data, $etag);
+        unset($data);
+
+        if ($etag_new != null) {
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->MoveMessage(): Created message copy '%s' in destination folder.", $newId));
+
+            if($this->DeleteMessage($folderid, $id, $contentParameters)) {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->MoveMessage(): Deleted source message '%s', MoveMessage() complete.", $id));
+                return $newId;
+            }
+            else {
+                throw new StatusException(sprintf("BackendCalDAV->MoveMessage('%s','%s','%s'): Error, deletion of source message failed, duplicates may exist.", $folderid, $id, $newfolderid), SYNC_MOVEITEMSSTATUS_SOURCEORDESTLOCKED);
+            }
+        }
+        else {
+            throw new StatusException(sprintf("BackendCalDAV->MoveMessage('%s','%s','%s'): Error, copy to destination folder failed.", $folderid, $id, $newfolderid), SYNC_MOVEITEMSSTATUS_CANNOTMOVE);
+        }
     }
 
     /**
