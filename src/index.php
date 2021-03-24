@@ -220,7 +220,7 @@ include_once(ZPUSH_CONFIG);
     }
 
     // save device data if the DeviceManager is available
-    if (ZPush::GetDeviceManager(false))
+    if (ZPush::GetDeviceManager(false) && Request::IsMethodPOST())
         ZPush::GetDeviceManager()->Save();
 
     // end gracefully
