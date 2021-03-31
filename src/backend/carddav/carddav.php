@@ -755,11 +755,25 @@ class BackendCardDAV extends BackendDiff implements ISearchProvider {
      */
     public function GetGALSearchResults($searchquery, $searchrange, $searchpicture) {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCardDAV->GetGALSearchResults(%s, %s)", $searchquery, $searchrange));
-        if ($this->gal_url !== false && $this->server !== false) {
-            // Don't search if the length is < 5, we are typing yet
-            if (strlen($searchquery) < CARDDAV_GAL_MIN_LENGTH) {
-                return false;
-            }
+
+        $items = array();
+
+        // range for the search results, default symbian range end is 50, wm 99,
+        // so we'll use that of nokia
+        $rangestart = 0;
+        $rangeend = 50;
+
+        if ($searchrange != '0') {
+            $pos = strpos($searchrange, '-');
+            $rangestart = substr($searchrange, 0, $pos);
+            $rangeend = substr($searchrange, ($pos + 1));
+        }
+
+        $items['range'] = $rangestart . '-' . $rangeend;
+        $items['searchtotal'] = 0;
+
+        // Don't search if the length is < 5, we are typing yet
+        if ($this->gal_url !== false && $this->server !== false && strlen($searchquery) >= CARDDAV_GAL_MIN_LENGTH) {
 
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCardDAV->GetGALSearchResults searching: %s", $this->gal_url));
             try {
@@ -772,101 +786,87 @@ class BackendCardDAV extends BackendDiff implements ISearchProvider {
                 $vcards = false;
                 ZLog::Write(LOGLEVEL_ERROR, sprintf("BackendCardDAV->GetGALSearchResults : Error in search %s", $e->getMessage()));
             }
+
             if ($vcards === false) {
                 ZLog::Write(LOGLEVEL_ERROR, "BackendCardDAV->GetGALSearchResults : Error in search query. Search aborted");
-                return false;
             }
+            else {
+                $xml_vcards = new SimpleXMLElement($vcards);
+                unset($vcards);
 
-            $xml_vcards = new SimpleXMLElement($vcards);
-            unset($vcards);
+                // TODO the limiting of the searchresults could be refactored into Utils as it's probably used more than once
+                $querycnt = $xml_vcards->count();
+                //do not return more results as requested in range
+                $querylimit = (($rangeend + 1) < $querycnt) ? ($rangeend + 1) : ($querycnt == 0 ? 1 : $querycnt);
+                $items['range'] = $rangestart.'-'.($querylimit - 1);
+                $items['searchtotal'] = $querycnt;
 
-            // range for the search results, default symbian range end is 50, wm 99,
-            // so we'll use that of nokia
-            $rangestart = 0;
-            $rangeend = 50;
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCardDAV->GetGALSearchResults : %s entries found, returning %s to %s", $querycnt, $rangestart, $querylimit));
 
-            if ($searchrange != '0') {
-                $pos = strpos($searchrange, '-');
-                $rangestart = substr($searchrange, 0, $pos);
-                $rangeend = substr($searchrange, ($pos + 1));
-            }
-            $items = array();
-
-            // TODO the limiting of the searchresults could be refactored into Utils as it's probably used more than once
-            $querycnt = $xml_vcards->count();
-            //do not return more results as requested in range
-            $querylimit = (($rangeend + 1) < $querycnt) ? ($rangeend + 1) : ($querycnt == 0 ? 1 : $querycnt);
-            $items['range'] = $rangestart.'-'.($querylimit - 1);
-            $items['searchtotal'] = $querycnt;
-
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCardDAV->GetGALSearchResults : %s entries found, returning %s to %s", $querycnt, $rangestart, $querylimit));
-
-            $i = 0;
-            $rc = 0;
-            foreach ($xml_vcards->element as $xml_vcard) {
-                if ($i >= $rangestart && $i < $querylimit) {
-                    $contact = $this->ParseFromVCard($xml_vcard->vcard->__toString());
-                    if ($contact === false) {
-                        ZLog::Write(LOGLEVEL_ERROR, sprintf("BackendCardDAV->GetGALSearchResults : error converting vCard to AS contact\n%s\n", $xml_vcard->vcard->__toString()));
+                $i = 0;
+                $rc = 0;
+                foreach ($xml_vcards->element as $xml_vcard) {
+                    if ($i >= $rangestart && $i < $querylimit) {
+                        $contact = $this->ParseFromVCard($xml_vcard->vcard->__toString());
+                        if ($contact === false) {
+                            ZLog::Write(LOGLEVEL_ERROR, sprintf("BackendCardDAV->GetGALSearchResults : error converting vCard to AS contact\n%s\n", $xml_vcard->vcard->__toString()));
+                        }
+                        else {
+                            $items[$rc][SYNC_GAL_EMAILADDRESS] = $contact->email1address;
+                            if (isset($contact->fileas)) {
+                                $items[$rc][SYNC_GAL_DISPLAYNAME] = $contact->fileas;
+                            }
+                            else if (isset($contact->firstname) || isset($contact->middlename) || isset($contact->lastname)) {
+                                $items[$rc][SYNC_GAL_DISPLAYNAME] = $contact->firstname . (isset($contact->middlename) ? " " . $contact->middlename : "") . (isset($contact->lastname) ? " " . $contact->lastname : "");
+                            }
+                            else {
+                                $items[$rc][SYNC_GAL_DISPLAYNAME] = $contact->email1address;
+                            }
+                            if (isset($contact->firstname)) {
+                                $items[$rc][SYNC_GAL_FIRSTNAME] = $contact->firstname;
+                            }
+                            else {
+                                $items[$rc][SYNC_GAL_FIRSTNAME] = "";
+                            }
+                            if (isset($contact->lastname)) {
+                                $items[$rc][SYNC_GAL_LASTNAME] = $contact->lastname;
+                            }
+                            else {
+                                $items[$rc][SYNC_GAL_LASTNAME] = "";
+                            }
+                            if (isset($contact->businessphonenumber)) {
+                                $items[$rc][SYNC_GAL_PHONE] = $contact->businessphonenumber;
+                            }
+                            if (isset($contact->homephonenumber)) {
+                                $items[$rc][SYNC_GAL_HOMEPHONE] = $contact->homephonenumber;
+                            }
+                            if (isset($contact->mobilephonenumber)) {
+                                $items[$rc][SYNC_GAL_MOBILEPHONE] = $contact->mobilephonenumber;
+                            }
+                            if (isset($contact->title)) {
+                                $items[$rc][SYNC_GAL_TITLE] = $contact->title;
+                            }
+                            if (isset($contact->companyname)) {
+                                $items[$rc][SYNC_GAL_COMPANY] = $contact->companyname;
+                            }
+                            if (isset($contact->department)) {
+                                $items[$rc][SYNC_GAL_OFFICE] = $contact->department;
+                            }
+                            if (isset($contact->nickname)) {
+                                $items[$rc][SYNC_GAL_ALIAS] = $contact->nickname;
+                            }
+                            unset($contact);
+                            $rc++;
+                        }
                     }
-                    else {
-                        $items[$rc][SYNC_GAL_EMAILADDRESS] = $contact->email1address;
-                        if (isset($contact->fileas)) {
-                            $items[$rc][SYNC_GAL_DISPLAYNAME] = $contact->fileas;
-                        }
-                        else if (isset($contact->firstname) || isset($contact->middlename) || isset($contact->lastname)) {
-                            $items[$rc][SYNC_GAL_DISPLAYNAME] = $contact->firstname . (isset($contact->middlename) ? " " . $contact->middlename : "") . (isset($contact->lastname) ? " " . $contact->lastname : "");
-                        }
-                        else {
-                            $items[$rc][SYNC_GAL_DISPLAYNAME] = $contact->email1address;
-                        }
-                        if (isset($contact->firstname)) {
-                            $items[$rc][SYNC_GAL_FIRSTNAME] = $contact->firstname;
-                        }
-                        else {
-                            $items[$rc][SYNC_GAL_FIRSTNAME] = "";
-                        }
-                        if (isset($contact->lastname)) {
-                            $items[$rc][SYNC_GAL_LASTNAME] = $contact->lastname;
-                        }
-                        else {
-                            $items[$rc][SYNC_GAL_LASTNAME] = "";
-                        }
-                        if (isset($contact->businessphonenumber)) {
-                            $items[$rc][SYNC_GAL_PHONE] = $contact->businessphonenumber;
-                        }
-                        if (isset($contact->homephonenumber)) {
-                            $items[$rc][SYNC_GAL_HOMEPHONE] = $contact->homephonenumber;
-                        }
-                        if (isset($contact->mobilephonenumber)) {
-                            $items[$rc][SYNC_GAL_MOBILEPHONE] = $contact->mobilephonenumber;
-                        }
-                        if (isset($contact->title)) {
-                            $items[$rc][SYNC_GAL_TITLE] = $contact->title;
-                        }
-                        if (isset($contact->companyname)) {
-                            $items[$rc][SYNC_GAL_COMPANY] = $contact->companyname;
-                        }
-                        if (isset($contact->department)) {
-                            $items[$rc][SYNC_GAL_OFFICE] = $contact->department;
-                        }
-                        if (isset($contact->nickname)) {
-                            $items[$rc][SYNC_GAL_ALIAS] = $contact->nickname;
-                        }
-                        unset($contact);
-                        $rc++;
-                    }
+                    $i++;
                 }
-                $i++;
+            
+                unset($xml_vcards);
             }
+        }
 
-            unset($xml_vcards);
-            return $items;
-        }
-        else {
-            unset($xml_vcards);
-            return false;
-        }
+        return $items;
     }
 
     /**
