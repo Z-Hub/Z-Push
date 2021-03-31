@@ -1348,8 +1348,8 @@ class Utils {
      * Get to or cc header in mime-header-encoded UTF-8 text.
      *
      * @access public
-     * @param $addrstruncs
-     *        $addrstruncts is a return value of
+     * @param $addrstructs
+     *        $addrstructs is a return value of
      *        Mail_RFC822->parseAddressList(). Convert this into
      *        plain text. If the phrase part is in plain UTF-8,
      *        convert this into mime-header encoded UTF-8
@@ -1358,8 +1358,8 @@ class Utils {
         mb_internal_encoding("UTF-8");
         $addrarray = array();
         // process each address
-        foreach ( $addrstructs as $struc ) {
-            $addrphrase = $struc->personal;
+        foreach ( $addrstructs as $addrstruct ) {
+            $addrphrase = $addrstruct->personal;
             if (isset($addrphrase) && strlen($addrphrase) > 0 && mb_detect_encoding($addrphrase, "UTF-8") != false && preg_match('/[^\x00-\x7F]/', $addrphrase) == 1) {
                 // phrase part is plain utf-8 text including non ascii characters
                 // convert ths into mime-header-encoded text
@@ -1367,10 +1367,10 @@ class Utils {
             }
             if ( strlen($addrphrase) > 0 ) {
                 // there is a phrase part in the address
-                $addrarray[] = $addrphrase . " " . " <" . $struc->mailbox . "@" . $struc->host . ">";
+                $addrarray[] = $addrphrase . " <" . $addrstruct->mailbox . "@" . $addrstruct->host . ">";
             } else {
                 // there is no phrase part in the address
-                $addrarray[] = $struc->mailbox . "@" . $struc->host;
+                $addrarray[] = $addrstruct->mailbox . "@" . $addrstruct->host;
             }
         }
         // combine each address into a string
