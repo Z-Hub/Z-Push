@@ -350,7 +350,7 @@ class CalDAVClient {
 		if ( $etag != null ) {
 		  $this->SetMatch( ($etag != '*'), $etag );
 		}
-		$this->DoRequest($url, "PUT", $icalendar, 'text/calendar; encoding="utf-8"');
+		$this->DoRequest($url, "PUT", $icalendar, 'text/calendar; charset="utf-8"');
 
 		$etag = null;
 		if ( preg_match( '{^ETag:\s+"([^"]*)"\s*$}im', $this->httpResponseHeaders, $matches ) ) {
