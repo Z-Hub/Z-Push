@@ -198,7 +198,7 @@ class ImportChangesCombined implements IImportChanges {
     public function ImportFolderDeletion($folder) {
         $id = $folder->serverid;
         $parent = isset($folder->parentid) ? $folder->parentid : false;
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ImportChangesCombined->ImportFolderDeletion('%s', '%s'), $id, $parent"));
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("ImportChangesCombined->ImportFolderDeletion('%s', '%s')", $id, $parent));
         $backendid = $this->backend->GetBackendId($id);
         if(!empty($this->backend->config['backends'][$backendid]['subfolder']) && $id == $backendid.$this->backend->config['delimiter'].'0') {
             ZLog::Write(LOGLEVEL_WARN, "ImportChangesCombined->ImportFolderDeletion() cannot change static folder");

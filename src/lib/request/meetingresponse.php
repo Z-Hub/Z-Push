@@ -61,6 +61,12 @@ class MeetingResponse extends RequestProcessor {
                         return false;
                 }
 
+                if(self::$decoder->getElementStartTag(SYNC_MEETINGRESPONSE_INSTANCEID)) {
+                    $req["instanceid"] = self::$decoder->getElementContent();
+                    if(!self::$decoder->getElementEndTag())
+                        return false;
+                }
+
                 $e = self::$decoder->peek();
                 if($e[EN_TYPE] == EN_TYPE_ENDTAG) {
                     self::$decoder->getElementEndTag();

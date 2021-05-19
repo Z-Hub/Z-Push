@@ -960,7 +960,7 @@ class BackendKopano implements IBackend, ISearchProvider {
         $deviceType = strtolower(Request::GetDeviceType());
         if ($deviceType == 'iphone' || $deviceType == 'ipad' || $deviceType == 'ipod') {
             $matches = array();
-            if (preg_match("/^Apple-.*?\/(\d{4})\./", Request::GetUserAgent(), $matches) && isset($matches[1]) && $matches[1] >= 1607) {
+            if (preg_match("/^Apple-.*?\/(\d{4})\./", Request::GetUserAgent(), $matches) && isset($matches[1]) && $matches[1] >= 1607 && matches[1] <= 1707) {
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendKopano->MeetingResponse: iOS device %s->%s", Request::GetDeviceType(), Request::GetUserAgent()));
                 $sendresponse = true;
             }

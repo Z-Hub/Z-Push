@@ -331,6 +331,10 @@ class ZPush {
             throw new FatalMisconfigurationException("The FILE_STATE_WRITE_SLEEP value must be a number higher than 0.");
         }
 
+        //check retry loop settings when unserializing file state machine data from disk
+        if ((defined('FILE_STATE_UNSERIALIZE_ATTEMPTS')) && (!is_int(FILE_STATE_UNSERIALIZE_ATTEMPTS) || FILE_STATE_UNSERIALIZE_ATTEMPTS < 1)) {
+            throw new FatalMisconfigurationException("The FILE_STATE_UNSERIALIZE_ATTEMPTS value must be a number higher than 0.");
+        }
         return true;
     }
 

@@ -1464,6 +1464,9 @@ class ZPushAdminCLI {
                 case SYNC_FILTERTYPE_6MONTHS:
                     $filterTypeString = "6 months back";
                     break;
+                case SYNC_FILTERTYPE_1YEAR:
+                    $filterTypeString = "1 year back";
+                    break;
                 default:
                     $filterTypeString = "unlimited";
             }
