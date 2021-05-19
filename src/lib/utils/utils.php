@@ -1409,6 +1409,7 @@ class Utils {
 
     /**
      * Tries to load the content of a file from disk with retries in case of file system returns an empty file.
+     * In case of non empty files it tries to unserialize them. 
      *
      * @param $filename
      *        $filename is the name of the file to be opened
@@ -1422,23 +1423,39 @@ class Utils {
      * @access private
      * @return string
      */
-    public static function SafeGetContents($filename, $functName, $suppressWarnings) {
+    public static function SafeGetContentsUnserialize($filename, $functName, $suppressWarnings) {
         $attempts = (defined('FILE_STATE_ATTEMPTS') ? FILE_STATE_ATTEMPTS : 3);
         $sleep_time = (defined('FILE_STATE_SLEEP') ? FILE_STATE_SLEEP : 100);
-        $i = 1;
-        while (($i <= $attempts) && (($filecontents = ($suppressWarnings ? @file_get_contents($filename) : file_get_contents($filename))) === '')) {
-            ZLog::Write(LOGLEVEL_WARN, sprintf("FileStateMachine->%s(): Failed on reading filename '%s' - attempt: %d", $functName, $filename, $i));
-            $i++;
-            usleep($sleep_time * 1000);
-        }
-        if ($i > $attempts)
-            ZLog::Write(LOGLEVEL_FATAL, sprintf("FileStateMachine->%s(): Unable to read filename '%s' after %d retries",$functName, $filename, --$i));
+        
+        $unserialize_attempts_max = (defined('FILE_STATE_UNSERIALIZE_ATTEMPTS') ? FILE_STATE_UNSERIALIZE_ATTEMPTS : 1);
+        $unserialize_attempt = 0;
+        $contents = false;
+        do {
+            $i = 1;
+            while (($i <= $attempts) && (($filecontents = ($suppressWarnings ? @file_get_contents($filename) : file_get_contents($filename))) === '')) {
+                ZLog::Write(LOGLEVEL_WARN, sprintf("FileStateMachine->%s(): Failed on reading filename '%s' - attempt: %d", $functName, $filename, $i));
+                $i++;
+                usleep($sleep_time * 1000);
+            }
+            if ($i > $attempts) {
+                ZLog::Write(LOGLEVEL_FATAL, sprintf("FileStateMachine->%s(): Unable to read filename '%s' after %d retries",$functName, $filename, --$i));
+                break;
+            } else {
+                if ($unserialize_attempt > 0) {
+                    ZLog::Write(LOGLEVEL_WARN, sprintf("FileStateMachine->%s(): Failed on unserializing filename '%s' - attempt: %d", $functName, $filename, $unserialize_attempt));
+                }
+                $unserialize_attempt ++;
+            }
+            //loop until unserialize succed or n° tries excedes
+        } while ( ($filecontents !== false) && (($contents = unserialize($filecontents)) === false) && $unserialize_attempt <= $unserialize_attempts_max);
 
-        return $filecontents;
+        if ($contents === false && $filecontents !== '' && $filecontents !== false) {
+            ZLog::Write(LOGLEVEL_FATAL, sprintf("FileStateMachine->%s():Unable to unserialize filename '%s' after %d retries", $functName, $filename, --$unserialize_attempt));
+        }
+
+        return $contents;
     }
 }
-
-
 
 // TODO Win1252/UTF8 functions are deprecated and will be removed sometime
 //if the ICS backend is loaded in CombinedBackend and Zarafa > 7
