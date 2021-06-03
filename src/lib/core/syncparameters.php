@@ -50,7 +50,7 @@ class SyncParameters extends StateObject {
                                     'referencepolicykey' => true,
                                     'pingableflag' => false,
                                     'contentclass' => false,
-                                    'deletesasmoves' => false,
+                                    'deletesasmoves' => true,
                                     'conversationmode' => false,
                                     'windowsize' => 5,
                                     'contentparameters' => array(),
