@@ -294,10 +294,10 @@ class ZPushAdminCLI {
                 self::$type !== self::TYPE_OPTION_GAB &&
                 strlen(self::$type) !== 6 &&       // like U1f38d
                 strlen(self::$type) !== 44 &&
-                strlen(self::$type) !== 48) {
+		strlen(self::$type) !== 48 &&
+                !preg_match_all("/^(f|fl)?\d{0,}[-]?\d{0,}$/",self::$type)) { // Allow for folder ids of the form 'fxn' or 'FLxn-xn' Note: UC is converted to LC -Chris_60
                     self::$errormessage = "Wrong 'type'. Possible values are: ".
-                        "'".self::TYPE_OPTION_EMAIL."', '".self::TYPE_OPTION_CALENDAR."', '".self::TYPE_OPTION_CONTACT."', '".self::TYPE_OPTION_TASK."', '".self::TYPE_OPTION_NOTE."', '".self::TYPE_OPTION_HIERARCHY."', '".self::TYPE_OPTION_GAB."' ".
-                        "or a 6, 44 or 48 byte long folder id (as hex).";
+                        "'".self::TYPE_OPTION_EMAIL."', '".self::TYPE_OPTION_CALENDAR."', '".self::TYPE_OPTION_CONTACT."', '".self::TYPE_OPTION_TASK."', '".self::TYPE_OPTION_NOTE."', '".self::TYPE_OPTION_HIERARCHY."', '".self::TYPE_OPTION_GAB."', "."a 6, 44 or 48 byte long folder id (as hex) or a folder id of the form 'fxn' or 'FLxn-xn'.";
                     return;
                 }
         }
