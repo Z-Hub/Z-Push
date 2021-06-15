@@ -1409,6 +1409,7 @@ class Utils {
 
     /**
      * Tries to load the content of a file from disk with retries in case of file system returns an empty file.
+     * If $unserialize set true, in case of non empty files it tries to unserialize them. 
      *
      * @param $filename
      *        $filename is the name of the file to be opened
@@ -1419,47 +1420,25 @@ class Utils {
      * @param $suppressWarnings
      *        $suppressWarnings boolean. True if file_get_contents function has to be called with suppress warnings enabled, False otherwise
      *
-     * @access private
-     * @return string
-     */
-    public static function SafeGetContents($filename, $functName, $suppressWarnings) {
-        $attempts = (defined('FILE_STATE_ATTEMPTS') ? FILE_STATE_ATTEMPTS : 3);
-        $sleep_time = (defined('FILE_STATE_SLEEP') ? FILE_STATE_SLEEP : 100);
-        $i = 1;
-        while (($i <= $attempts) && (($filecontents = ($suppressWarnings ? @file_get_contents($filename) : file_get_contents($filename))) === '')) {
-            ZLog::Write(LOGLEVEL_WARN, sprintf("FileStateMachine->%s(): Failed on reading filename '%s' - attempt: %d", $functName, $filename, $i));
-            $i++;
-            usleep($sleep_time * 1000);
-        }
-        if ($i > $attempts)
-            ZLog::Write(LOGLEVEL_FATAL, sprintf("FileStateMachine->%s(): Unable to read filename '%s' after %d retries",$functName, $filename, --$i));
-
-        return $filecontents;
-    }
-    /**
-     * Tries to load the content of a file from disk with retries in case of file system returns an empty file.
-     * In case of non empty files it tries to unserialize them. 
-     *
-     * @param $filename
-     *        $filename is the name of the file to be opened
-     *
-     * @param $functName
-     *        $functName is the name of the caller function. Usefull to be printed into the log file
-     *
-     * @param $suppressWarnings
-     *        $suppressWarnings boolean. True if file_get_contents function has to be called with suppress warnings enabled, False otherwise
+     * @param $unserialize
+     *        $unserialize boolean. True to return unserialized read data, false otherwise.
      *
      * @access private
      * @return string
      */
-    public static function SafeGetContentsUnserialize($filename, $functName, $suppressWarnings) {
+    public static function SafeGetContents($filename, $functName, $suppressWarnings, $unserialize = false) {
         $attempts = (defined('FILE_STATE_ATTEMPTS') ? FILE_STATE_ATTEMPTS : 3);
         $sleep_time = (defined('FILE_STATE_SLEEP') ? FILE_STATE_SLEEP : 100);
-        
         $unserialize_attempts_max = (defined('FILE_STATE_UNSERIALIZE_ATTEMPTS') ? FILE_STATE_UNSERIALIZE_ATTEMPTS : 1);
         $unserialize_attempt = 0;
         $contents = false;
         do {
+            if ($unserialize_attempt > 0) {
+                ZLog::Write(LOGLEVEL_WARN, sprintf("FileStateMachine->%s(): Failed on unserializing filename '%s' - attempt: %d", $functName, $filename, $unserialize_attempt));
+            }
+            if ($unserialize_attempt === $unserialize_attempts_max) {
+                break;
+            }
             $i = 1;
             while (($i <= $attempts) && (($filecontents = ($suppressWarnings ? @file_get_contents($filename) : file_get_contents($filename))) === '')) {
                 ZLog::Write(LOGLEVEL_WARN, sprintf("FileStateMachine->%s(): Failed on reading filename '%s' - attempt: %d", $functName, $filename, $i));
@@ -1467,19 +1446,21 @@ class Utils {
                 usleep($sleep_time * 1000);
             }
             if ($i > $attempts) {
-                ZLog::Write(LOGLEVEL_FATAL, sprintf("FileStateMachine->%s(): Unable to read filename '%s' after %d retries",$functName, $filename, --$i));
+                ZLog::Write(LOGLEVEL_FATAL, sprintf("FileStateMachine->%s(): Unable to read filename '%s' after %d attempts",$functName, $filename, --$i));
+                if ($unserialize !== true ) {
+                    return $filecontents;
+                }
                 break;
             } else {
-                if ($unserialize_attempt > 0) {
-                    ZLog::Write(LOGLEVEL_WARN, sprintf("FileStateMachine->%s(): Failed on unserializing filename '%s' - attempt: %d", $functName, $filename, $unserialize_attempt));
+                if ($unserialize !== true ) {
+                    return $filecontents;
                 }
                 $unserialize_attempt ++;
             }
-            //loop until unserialize succed or n° tries excedes
-        } while ( ($filecontents !== false) && (($contents = unserialize($filecontents)) === false) && $unserialize_attempt <= $unserialize_attempts_max);
+        } while ( ($filecontents !== false) && (($contents = unserialize($filecontents)) === false));
 
         if ($contents === false && $filecontents !== '' && $filecontents !== false) {
-            ZLog::Write(LOGLEVEL_FATAL, sprintf("FileStateMachine->%s():Unable to unserialize filename '%s' after %d retries", $functName, $filename, --$unserialize_attempt));
+            ZLog::Write(LOGLEVEL_FATAL, sprintf("FileStateMachine->%s():Unable to unserialize filename '%s' after %d attempts", $functName, $filename, $unserialize_attempt));
         }
 
         return $contents;
