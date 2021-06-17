@@ -222,7 +222,7 @@ class BackendCalDAV extends BackendDiff {
             $msgs = $this->_caldav->GetEventsList($begin, $finish, $path);
         }
         else {
-            $msgs = $this->_caldav->GetTodosList($begin, $finish, $path);
+            $msgs = $this->_caldav->GetTodosList(null, null, null, null, $path);
         }
 
         $messages = array();
