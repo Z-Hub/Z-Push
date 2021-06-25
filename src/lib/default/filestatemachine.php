@@ -116,7 +116,7 @@ class FileStateMachine implements IStateMachine {
         $filename = $this->getFullFilePath($devid, $type, $key, $counter);
 
         if(file_exists($filename)) {
-            $contents = Utils::SafeGetContentsUnserialize($filename, __FUNCTION__, false);
+            $contents = Utils::SafeGetContents($filename, __FUNCTION__, false, true);
             return $contents;
         }
         // throw an exception on all other states, but not FAILSAVE as it's most of the times not there by default
@@ -203,7 +203,7 @@ class FileStateMachine implements IStateMachine {
 
         // exclusive block
         if ($mutex->Block()) {
-            $users = Utils::SafeGetContentsUnserialize($this->userfilename, __FUNCTION__, true);
+            $users = Utils::SafeGetContents($this->userfilename, __FUNCTION__, true, true);
             if (!$users) {
                 $users = array();
             }
@@ -244,7 +244,7 @@ class FileStateMachine implements IStateMachine {
 
         // exclusive block
         if ($mutex->Block()) {
-            $users = Utils::SafeGetContentsUnserialize($this->userfilename, __FUNCTION__, true);
+            $users = Utils::SafeGetContents($this->userfilename, __FUNCTION__, true, true);
             if (!$users) {
                 $users = array();
             }
@@ -293,7 +293,7 @@ class FileStateMachine implements IStateMachine {
             return $out;
         }
         else {
-            $users = Utils::SafeGetContentsUnserialize($this->userfilename, __FUNCTION__, false);
+            $users = Utils::SafeGetContents($this->userfilename, __FUNCTION__, false, true);
             if (!$users) {
                 $users = array();
             }
@@ -313,7 +313,7 @@ class FileStateMachine implements IStateMachine {
      */
     public function GetStateVersion() {
         if (file_exists($this->settingsfilename)) {
-            $settings = Utils::SafeGetContentsUnserialize($this->settingsfilename, __FUNCTION__, false);
+            $settings = Utils::SafeGetContents($this->settingsfilename, __FUNCTION__, false, true);
             if (strtolower(gettype($settings) == "string") && strtolower($settings) == '2:1:{s:7:"version";s:1:"2";}') {
                 ZLog::Write(LOGLEVEL_INFO, "Broken state version file found. Attempt to autofix it. See https://jira.zarafa.com/browse/ZP-493 for more information.");
                 unlink($this->settingsfilename);
@@ -344,7 +344,7 @@ class FileStateMachine implements IStateMachine {
      */
     public function SetStateVersion($version) {
         if (file_exists($this->settingsfilename)){
-            $settings = Utils::SafeGetContentsUnserialize($this->settingsfilename, __FUNCTION__, false);
+            $settings = Utils::SafeGetContents($this->settingsfilename, __FUNCTION__, false, true);
         }
         else
             $settings = array(self::VERSION => IStateMachine::STATEVERSION_01);
