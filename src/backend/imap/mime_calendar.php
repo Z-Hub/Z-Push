@@ -200,7 +200,11 @@ function parse_meeting_calendar($part, &$output, $is_sent_folder) {
             case "cancel":
                 $output->messageclass = "IPM.Schedule.Meeting.Canceled";
                 ZLog::Write(LOGLEVEL_DEBUG, "BackendIMAP->parse_meeting_calendar(): Event canceled, removing calendar object");
-                delete_calendar_dav($uid);
+
+                // don't delete the recurring event on receiving cancelled exception 
+                if (count($ical->GetPropertiesByPath("VEVENT/RECURRENCE-ID")) == 0) {
+                    delete_calendar_dav($uid);
+                }
                 break;
             case "declinecounter":
                 ZLog::Write(LOGLEVEL_DEBUG, "BackendIMAP->parse_meeting_calendar(): Declining a counter is not implemented.");
