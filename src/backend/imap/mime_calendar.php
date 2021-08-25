@@ -167,6 +167,17 @@ function is_calendar($message) {
  * @param $is_sent_folder   boolean
  */
 function parse_meeting_calendar($part, &$output, $is_sent_folder) {
+    $connected = false;
+    if (defined('IMAP_MEETING_USE_CALDAV') && IMAP_MEETING_USE_CALDAV) {
+        $caldav = new BackendCalDAV();
+        if ($caldav->Logon(Request::GetAuthUser(), Request::GetAuthDomain(), Request::GetAuthPassword())) {
+            $connected = true;
+        }
+        else {
+            ZLog::Write(LOGLEVEL_ERROR, "BackendIMAP->parse_meeting_calendar(): Error connecting with BackendCalDAV");
+        }
+    }
+
     $ical = new iCalComponent();
     $ical->ParseFrom($part->body);
     ZLog::Write(LOGLEVEL_WBXML, sprintf("BackendIMAP->parse_meeting_calendar(): %s", $part->body));
@@ -201,7 +212,7 @@ function parse_meeting_calendar($part, &$output, $is_sent_folder) {
                 $output->messageclass = "IPM.Schedule.Meeting.Canceled";
                 ZLog::Write(LOGLEVEL_DEBUG, "BackendIMAP->parse_meeting_calendar(): Event canceled, removing calendar object");
 
-                // don't delete the recurring event on receiving cancelled exception 
+                // don't delete the recurring event on receiving cancelled exception
                 if (count($ical->GetPropertiesByPath("VEVENT/RECURRENCE-ID")) == 0) {
                     delete_calendar_dav($uid);
                 }
@@ -340,10 +351,17 @@ function parse_meeting_calendar($part, &$output, $is_sent_folder) {
     }
     $output->meetingrequest->timezone = base64_encode(TimezoneUtil::GetSyncBlobFromTZ($tz));
 
-    // very basic instancetype (recurrence)
-    $props = $ical->GetPropertiesByPath('VEVENT/RRULE');
-    if (count($props) == 1) {
+    // guess instancetype by checking for recurrence rules or ids
+    if (count($ical->GetPropertiesByPath('VEVENT/RRULE')) == 1) {
         $output->meetingrequest->instancetype = 1;
+    }
+    elseif (count($ical->GetPropertiesByPath('VEVENT/RECURRENCE-ID')) == 1) {
+        if ($connected && count($caldav->FindCalendar($uid)) == 1) {
+            $output->meetingrequest->instancetype = 3;
+        }
+        else {
+            $output->meetingrequest->instancetype = 2;
+        }
     }
     else {
         $output->meetingrequest->instancetype = 0;
@@ -403,13 +421,16 @@ function parse_meeting_calendar($part, &$output, $is_sent_folder) {
             $vAlarmTriggerValue = $vAlarmTrigger->Value();
             if ($vAlarmTriggerValue[0] == "-") {
                 $reminderSeconds = new DateInterval(substr($vAlarmTriggerValue, 1));
-                $reminderSeconds = $reminderSeconds->format("%s") + $reminderSeconds->format("%i") * 60 + $reminderSeconds->format("%h") * 3600 + $reminderSecon
-ds->format("%d") * 86400;
+                $reminderSeconds = $reminderSeconds->format("%s") + $reminderSeconds->format("%i") * 60 + $reminderSeconds->format("%h") * 3600 + $reminderSeconds->format("%d") * 86400;
                 if (!isset($output->meetingrequest->reminderSeconds) || $output->meetingrequest->reminder > $reminderSeconds) {
                     $output->meetingrequest->reminder = $reminderSeconds;
                 }
             }
         }
+    }
+
+    if ($connected) {
+        $caldav->Logoff();
     }
 }
 
