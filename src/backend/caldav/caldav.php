@@ -895,13 +895,16 @@ class BackendCalDAV extends BackendDiff {
                     break;
 
                 case "EXDATE":
-                    $exception = new SyncAppointmentException();
-                    $exception->deleted = "1";
-                    $exception->exceptionstarttime = TimezoneUtil::MakeUTCDate($property->Value());
+                    $exceptionDateTimes = explode(",", $property->Value());
                     if (!isset($message->exceptions)) {
                         $message->exceptions = array();
                     }
-                    $message->exceptions[] = $exception;
+                    foreach($exceptionDateTimes as $exceptionDateTime) {
+                        $exception = new SyncAppointmentException();
+                        $exception->deleted = "1";
+                        $exception->exceptionstarttime = TimezoneUtil::MakeUTCDate($exceptionDateTime);
+                        $message->exceptions[] = $exception;
+                    }
                     break;
 
                 case "X-MICROSOFT-DISALLOW-COUNTER":
