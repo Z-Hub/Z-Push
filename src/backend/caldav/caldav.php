@@ -1159,39 +1159,73 @@ class BackendCalDAV extends BackendDiff {
             $vevent->AddProperty("UID", $id);
             $ical->AddComponent($vevent);
             if (isset($data->exceptions) && is_array($data->exceptions)) {
-                foreach ($data->exceptions as $ex) {
-                    if (isset($ex->deleted) && $ex->deleted == "1") {
+                foreach ($data->exceptions as $exception) {
+                    if (isset($exception->deleted) && $exception->deleted == "1") {
                         if ($exdate = $vevent->GetPValue("EXDATE")) {
                             if ($data->alldayevent == 1) {
-                                $vevent->SetPValue("EXDATE", $exdate.",".$this->_GetDateFromUTC("Ymd", $ex->exceptionstarttime, $data->timezone), array("VALUE" => "DATE"));
+                                $vevent->SetPValue("EXDATE", $exdate.",".$this->_GetDateFromUTC("Ymd", $exception->exceptionstarttime, $data->timezone), array("VALUE" => "DATE"));
                             }
                             else {
-                                $vevent->SetPValue("EXDATE", $exdate.",".$this->DAVDateTimeInTimezone($ex->exceptionstarttime, $tzid), $tzpar);
+                                $vevent->SetPValue("EXDATE", $exdate.",".$this->DAVDateTimeInTimezone($exception->exceptionstarttime, $tzid), $tzpar);
                             }
                         }
                         else {
                             if ($data->alldayevent == 1) {
-                                $vevent->AddProperty("EXDATE", $this->_GetDateFromUTC("Ymd", $ex->exceptionstarttime, $data->timezone), array("VALUE" => "DATE"));
+                                $vevent->AddProperty("EXDATE", $this->_GetDateFromUTC("Ymd", $exception->exceptionstarttime, $data->timezone), array("VALUE" => "DATE"));
                             }
                             else {
-                                $vevent->AddProperty("EXDATE", $this->DAVDateTimeInTimezone($ex->exceptionstarttime, $tzid), $tzpar);
+                                $vevent->AddProperty("EXDATE", $this->DAVDateTimeInTimezone($exception->exceptionstarttime, $tzid), $tzpar);
                             }
                         }
                         continue;
                     }
 
-                    $exception = $this->_ParseASEventToVEvent($ex, $id, $tzid, $tzpar);
+                    // If an element is not specified in the exception element, the element inherits from the top-level element.
+                    if (isset($data->busystatus) && !isset($exception->busystatus)) {
+                        $exception->busystatus = $data->busystatus;
+                    }
+                    if (isset($data->meetingstatus) && !isset($exception->meetingstatus)) {
+                        $exception->meetingstatus = $data->meetingstatus;
+                    }
+                    if (isset($data->dtstamp) && !isset($exception->dtstamp)) {
+                        $exception->dtstamp = $data->dtstamp;
+                    }
+                    if (isset($data->starttime) && !isset($exception->starttime)) {
+                        $exception->starttime = $data->starttime;
+                    }
+                    if (isset($data->endtime) && !isset($exception->endtime)) {
+                        $exception->endtime = $data->endtime;
+                    }
+                    if (isset($data->location) && !isset($exception->location)) {
+                        $exception->location = $data->location;
+                    }
+                    if (isset($data->subject) && !isset($exception->subject)) {
+                        $exception->subject = $data->subject;
+                    }
+                    if (isset($data->sensitivity) && !isset($exception->sensitivity)) {
+                        $exception->sensitivity = $data->sensitivity;
+                    }
+                    if (isset($data->reminder) && !isset($exception->reminder)) {
+                        $exception->reminder = $data->reminder;
+                    }
+                    if (isset($data->attendees) && !isset($exception->attendees)) {
+                        $exception->attendees = $data->attendees;
+                    }
+
+                    $exceptionVEvent = $this->_ParseASEventToVEvent($exception, $id, $tzid, $tzpar);
+
                     if ($data->alldayevent == 1) {
-                        $exception->AddProperty("RECURRENCE-ID", $this->_GetDateFromUTC("Ymd", $ex->exceptionstarttime, $data->timezone), array("VALUE" => "DATE"));
+                        $exceptionVEvent->AddProperty("RECURRENCE-ID", $this->_GetDateFromUTC("Ymd", $exception->exceptionstarttime, $data->timezone), array("VALUE" => "DATE"));
                     }
                     else {
-                        $exception->AddProperty("RECURRENCE-ID", $this->DAVDateTimeInTimezone($ex->exceptionstarttime, $tzid), $tzpar);
+                        $exceptionVEvent->AddProperty("RECURRENCE-ID", $this->DAVDateTimeInTimezone($exception->exceptionstarttime, $tzid), $tzpar);
                     }
-                    $exception->AddProperty("UID", $id);
-                    $ical->AddComponent($exception);
+                    $exceptionVEvent->AddProperty("UID", $id);
+                    $ical->AddComponent($exceptionVEvent);
                 }
             }
         }
+
         if ($folderid[0] == "T") {
             $vtodo = $this->_ParseASTaskToVTodo($data, $id);
             $vtodo->AddProperty("UID", $id);
