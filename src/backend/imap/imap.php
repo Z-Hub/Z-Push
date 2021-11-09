@@ -2635,7 +2635,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
         if (is_array($toaddr)) {
             $recipients = $toaddr;
         }
-        else {
+        elseif ($toaddr !== "") {
             $recipients = array($toaddr);
         }
 
