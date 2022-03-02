@@ -125,7 +125,6 @@ class BackendCalDAV extends BackendDiff {
         $folders = array();
         $calendars = $this->_caldav->FindCalendars();
         foreach ($calendars as $val) {
-            $folder = array();
             $fpath = explode("/", $val->url, -1);
             if (is_array($fpath)) {
                 $folderid = array_pop($fpath);
@@ -756,7 +755,7 @@ class BackendCalDAV extends BackendDiff {
                 //  1 = is a meeting
                 //  3 = Meeting received
                 //  5 = Meeting is canceled
-                //  7 = Meeting is canceled and was received
+                //  7 = Meeting is canceled and received
                 //  9 = as 1
                 // 11 = as 3
                 // 13 = as 5
@@ -916,6 +915,7 @@ class BackendCalDAV extends BackendDiff {
 
                 //We can ignore the following
                 case "PRIORITY":
+                case "X-MICROSOFT-CDO-IMPORTANCE":
                 case "SEQUENCE":
                 case "CREATED":
                 case "DTSTAMP":
@@ -1444,10 +1444,10 @@ class BackendCalDAV extends BackendDiff {
             $vevent->AddProperty("CATEGORIES", implode(",", $data->categories));
         }
 
-// X-MICROSOFT-CDO-APPT-SEQUENCE:0
-// X-MICROSOFT-CDO-OWNERAPPTID:2113393086
-// X-MICROSOFT-CDO-IMPORTANCE:1
-// X-MICROSOFT-CDO-INSTTYPE:0
+        // X-MICROSOFT-CDO-APPT-SEQUENCE:0
+        // X-MICROSOFT-CDO-OWNERAPPTID:2113393086
+        // X-MICROSOFT-CDO-IMPORTANCE:1
+        // X-MICROSOFT-CDO-INSTTYPE:0
 
 
         return $vevent;
