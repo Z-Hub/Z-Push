@@ -409,7 +409,6 @@ class BackendCombined extends Backend implements ISearchProvider {
      * @access public
      * @return boolean      false if there is any problem with that folder
      */
-
      public function ChangesSinkInitialize($folderid) {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCombined->ChangesSinkInitialize('%s')", $folderid));
 
@@ -446,25 +445,17 @@ class BackendCombined extends Backend implements ISearchProvider {
         if ($this->numberChangesSink == 0) {
             ZLog::Write(LOGLEVEL_DEBUG, "BackendCombined doesn't include any Sinkable backends");
         } else {
-            $stopat = time() + $timeout - 1;
-
+            $time_each = $timeout / $this->numberChangesSink;
             foreach ($this->backends as $i => $b) {
                 if ($this->backends[$i]->HasChangesSink()) {
-                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCombined->ChangesSink - Calling in '%s'", get_class($b)));
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCombined->ChangesSink - Calling in '%s' with %d", get_class($b), $time_each));
 
-                    $notifications_backend = $this->backends[$i]->ChangesSink(1);
-                    // prepend backend delimiter
+                    $notifications_backend = $this->backends[$i]->ChangesSink($time_each);
+                    //preppend backend delimiter
                     for ($c = 0; $c < count($notifications_backend); $c++) {
                         $notifications_backend[$c] = $i . $this->config['delimiter'] . $notifications_backend[$c];
                     }
                     $notifications = array_merge($notifications, $notifications_backend);
-                }
-            }
-
-            // If nothing changed, wait until timeout
-            if (empty($notifications)) {
-                while ($stopat > time()) {
-                    sleep(1);
                 }
             }
         }
