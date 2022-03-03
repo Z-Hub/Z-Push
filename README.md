@@ -5,3 +5,6 @@ Z-Push can be easily installed using our package repositories, see the [install 
 
 # Contributing
 Please see the [Z-Push Wiki](https://kb.kopano.io/display/ZP/Development+guidelines) for contribution information.
+
+# Information about this fork
+Since the future of Z-Push is unclear (https://forum.kopano.io/topic/3908/kopano-roadmap-2021/36), the intention of this fork is to fix issues and - if possible - improve the contributed backends (IMAP, CalDAV, CardDAV, etc.).
