@@ -876,13 +876,13 @@ class BackendCalDAV extends BackendDiff {
                     break;
 
                 case "CATEGORIES":
-                    $categories = explode(",", $property->Value());
+                    $categories = explodeUnescapedDelimiter(",", $property->Value());
                     if (!isset($message->categories)) {
-                        $message->categories = $categories;
+                        $message->categories = $this->unescape($categories);
                     }
                     else {
                         foreach($categories as $category) {
-                            $message->categories[] = $category;
+                            $message->categories[] = $this->unescape($category);
                         }
                     }
                     break;
@@ -1441,7 +1441,7 @@ class BackendCalDAV extends BackendDiff {
             }
         }
         if (isset($data->categories) && is_array($data->categories)) {
-            $vevent->AddProperty("CATEGORIES", implode(",", $data->categories));
+            $vevent->AddProperty("CATEGORIES", implode(",", $this->escape($data->categories)));
         }
 
         // X-MICROSOFT-CDO-APPT-SEQUENCE:0
@@ -1702,13 +1702,13 @@ class BackendCalDAV extends BackendDiff {
                     break;
 
                 case "CATEGORIES":
-                    $categories = explode(",", $property->Value());
+                    $categories = explodeUnescapedDelimiter(",", $property->Value());
                     if (!isset($message->categories)) {
-                        $message->categories = $categories;
+                        $message->categories = $this->unescape($categories);
                     }
                     else {
                         foreach($categories as $category) {
-                            $message->categories[] = $category;
+                            $message->categories[] = $this->unescape($category);
                         }
                     }
                     break;
@@ -1836,7 +1836,7 @@ class BackendCalDAV extends BackendDiff {
             $vtodo->AddProperty("DESCRIPTION", $rtfparser->out);
         }
         if (isset($data->categories) && is_array($data->categories)) {
-            $vtodo->AddProperty("CATEGORIES", implode(",", $data->categories));
+            $vtodo->AddProperty("CATEGORIES", implode(",", $this->escape($data->categories)));
         }
 
         return $vtodo;
@@ -2128,6 +2128,76 @@ class BackendCalDAV extends BackendDiff {
         $offset = abs($phpoffset);
         $hours = floor($offset / 3600);
         return sprintf("$prefix%'.02d%'.02d", $hours, ($offset - ($hours * 3600)) / 60);
+    }
+
+    /**
+     * Escape string according to RFC5545 (3.3.11. TEXT)
+     * @param string|array  $data           string or array of strings to be escaped
+     * @access private
+     * @return string|array
+     */
+    private function escape($data) {
+        if (is_array($data)) {
+            foreach ($data as $key => $value) {
+                $data[$key] = $this->escape($value);
+            }
+            return $data;
+        }
+
+        $data = str_replace(array('\\', ';', ',', "\n", "\N", "\r"), array('\\\\', '\\;', '\\,', '\\n', '\\n'), $data);
+        return $data;
+    }
+
+    /**
+     * Un-escape string according to RFC5545 (3.3.11. TEXT)
+     * @param string        $data           string to be un-escaped
+     * @access private
+     * @return string
+     */
+    private function unescape($data) {
+        $data = str_replace(array('\\\\', '\\;', '\\,', '\\n','\\N'),array('\\', ';', ',', "\n", "\n"),$data);
+        return $data;
+    }
+
+    /**
+     * Explode string only on unescaped delimiter, this function does not regard quoted parts
+     * @param string        $delimiter      delimiter
+     * @param string        $data           string to be exploded
+     * @access private
+     * @return array
+     */
+    private function explodeUnescapedDelimiter($delimiter, $data, $escapeCharacter = '\\') {
+        $length = strlen($data);
+        $escaped = false;
+        $result = array();
+        $temp = '';
+
+        for ($position = 0; $position < $length; $position++) {
+            // use boolean switching to detect escaped delimiters
+            if ($data[$position] == $escapeCharacter) {
+                $escaped = !$escaped;
+            }
+            elseif ($escaped == false && $data[$position] == $delimiter) {
+                // only add non empty strings to result
+                if (strlen($temp) > 0) {
+                    $result[] = $temp;
+                }
+                $temp = '';
+                continue;
+            }
+            else {
+                $escaped = false;
+            }
+
+            $temp .= $data[$position];
+        }
+
+        //append last part if available
+        if (strlen($temp) > 0) {
+            $result[] = $temp;
+        }
+
+        return $result;
     }
 
 };
