@@ -876,7 +876,7 @@ class BackendCalDAV extends BackendDiff {
                     break;
 
                 case "CATEGORIES":
-                    $categories = explodeUnescapedDelimiter(",", $property->Value());
+                    $categories = $this->explodeUnescapedDelimiter(",", $property->Value());
                     if (!isset($message->categories)) {
                         $message->categories = $this->unescape($categories);
                     }
@@ -1702,7 +1702,7 @@ class BackendCalDAV extends BackendDiff {
                     break;
 
                 case "CATEGORIES":
-                    $categories = explodeUnescapedDelimiter(",", $property->Value());
+                    $categories = $this->explodeUnescapedDelimiter(",", $property->Value());
                     if (!isset($message->categories)) {
                         $message->categories = $this->unescape($categories);
                     }
