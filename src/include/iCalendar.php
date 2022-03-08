@@ -113,6 +113,7 @@ class iCalProp {
     switch( $this->name ) {
       case 'CATEGORIES':
       case 'RESOURCES':
+        $this->content = $value;
         break;
       default:
         $this->content = preg_replace( "/\\\\([,;:\"\\\\])/", '$1', $value);
