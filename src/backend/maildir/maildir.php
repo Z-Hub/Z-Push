@@ -279,7 +279,7 @@ class BackendMaildir extends BackendDiff {
             return false;
 
         while($entry = readdir($dir)) {
-            if($entry{0} == ".")
+            if($entry[0] == ".")
                 continue;
 
             $message = array();
@@ -679,7 +679,7 @@ class BackendMaildir extends BackendDiff {
         $newdir = opendir($newdirname);
 
         while($newentry = readdir($newdir)) {
-            if($newentry{0} == ".")
+            if($newentry[0] == ".")
                 continue;
 
             // link/unlink == move. This is the way to move the message according to cr.yp.to
