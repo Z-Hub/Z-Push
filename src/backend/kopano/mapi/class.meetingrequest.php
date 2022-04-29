@@ -690,9 +690,9 @@ If it is the first time this attendee has proposed a new date/time, increment th
         // instead of tentative, and accept the same as per the intended busystatus.
         $senderEntryId = isset($messageprops[PR_SENT_REPRESENTING_ENTRYID]) ? $messageprops[PR_SENT_REPRESENTING_ENTRYID] : $messageprops[PR_SENDER_ENTRYID];
         if(isset($messageprops[PR_RECEIVED_BY_ENTRYID]) && MAPIUtils::CompareEntryIds($senderEntryId, $messageprops[PR_RECEIVED_BY_ENTRYID])) {
-            $entryid = $this->accept(false, $sendresponse, $move, $proposeNewTimeProps, $body, true, $store, $calFolder, $basedate);
+            $entryid = $this->accept(false, $sendresponse, $move, $proposeNewTimeProps, $store, $calFolder, $body, true, $basedate);
         } else {
-            $entryid = $this->accept($tentative, $sendresponse, $move, $proposeNewTimeProps, $body, $userAction, $store, $calFolder, $basedate);
+            $entryid = $this->accept($tentative, $sendresponse, $move, $proposeNewTimeProps, $store, $calFolder, $body, $userAction, $basedate);
         }
 
         // if we have first time processed this meeting then set PR_PROCESSED property
@@ -707,13 +707,13 @@ If it is the first time this attendee has proposed a new date/time, increment th
         return $entryid;
     }
 
-    function accept($tentative, $sendresponse, $move, $proposeNewTimeProps = array(), $body = false, $userAction = false, $store, $calFolder, $basedate = false)
+    function accept($tentative, $sendresponse, $move, $proposeNewTimeProps, $store, $calFolder, $body = false, $userAction = false, $basedate = false)
     {
         $messageprops = mapi_getprops($this->message);
         $isDelegate = isset($messageprops[PR_RCVD_REPRESENTING_NAME]);
 
         if ($sendresponse) {
-            $this->createResponse($tentative ? olResponseTentative : olResponseAccepted, $proposeNewTimeProps, $body, $store, $basedate, $calFolder);
+            $this->createResponse($tentative ? olResponseTentative : olResponseAccepted, $proposeNewTimeProps, $store, $calFolder, $body, $basedate);
         }
 
         /**
@@ -875,7 +875,7 @@ If it is the first time this attendee has proposed a new date/time, increment th
 
                     // Main recurring item is found, so now update exception
                     if ($calendarItem) {
-                        $this->acceptException($calendarItem, $this->message, $basedate, $move, $tentative, $userAction, $store, $isDelegate);
+                        $this->acceptException($calendarItem, $this->message, $basedate, $store, $tentative, $userAction, $move, $isDelegate);
                         $calendarItemProps = mapi_getprops($calendarItem, array(PR_ENTRYID));
                         $entryid = $calendarItemProps[PR_ENTRYID];
                     }
@@ -1141,7 +1141,7 @@ If it is the first time this attendee has proposed a new date/time, increment th
         }
 
         if($sendresponse) {
-            $this->createResponse(olResponseDeclined, array(), $body, $store, $basedate, $calFolder);
+            $this->createResponse(olResponseDeclined, $store, $calFolder, $body, $basedate);
         }
 
         if ($basedate) {
@@ -1856,7 +1856,7 @@ If it is the first time this attendee has proposed a new date/time, increment th
      * @param Array $proposeNewTimeProps properties of attendee's proposal
      * @param integer $basedate date of occurrence which attendee has responded
      */
-    function createResponse($status, $proposeNewTimeProps = array(), $body = false, $store, $basedate = false, $calFolder) {
+    function createResponse($status, $store, $calFolder, $proposeNewTimeProps = array(), $body = false, $basedate = false) {
         $messageprops = mapi_getprops($this->message, Array(PR_SENT_REPRESENTING_ENTRYID,
                                                             PR_SENT_REPRESENTING_EMAIL_ADDRESS,
                                                             PR_SENT_REPRESENTING_ADDRTYPE,
@@ -2691,7 +2691,8 @@ If it is the first time this attendee has proposed a new date/time, increment th
      * @param resource $store user store
      * @param boolean $isDelegate true if delegate is processing this meeting request
      */
-    function acceptException(&$recurringItem, &$occurrenceItem, $basedate, $move = false, $tentative, $userAction = false, $store, $isDelegate = false)
+
+    function acceptException(&$recurringItem, &$occurrenceItem, $basedate, $store, $tentative, $userAction = false, $move = false, $isDelegate = false)
     {
         $recurr = new Recurrence($store, $recurringItem);
 
