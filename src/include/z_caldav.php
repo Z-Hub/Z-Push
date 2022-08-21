@@ -96,15 +96,15 @@ class CalDAVClient {
 	 */
 	private $curl = false;
 
-    private $synctoken = array();
+	private $synctoken = array();
 
 	/**
-	* Constructor, initialises the class
-	*
-	* @param string $caldav_url  The URL for the calendar server
-	* @param string $user        The name of the user logging in
-	* @param string $pass        The password for that user
-	*/
+	 * Constructor, initialises the class
+	 *
+	 * @param string $caldav_url  The URL for the calendar server
+	 * @param string $user        The name of the user logging in
+	 * @param string $pass        The password for that user
+	 */
 	function __construct( $caldav_url, $user, $pass ) {
         $this->url = $caldav_url;
 		$this->user = $user;
@@ -115,86 +115,91 @@ class CalDAVClient {
 		$parsed_url = parse_url($caldav_url);
 		if ($parsed_url === false) {
 			ZLog::Write(LOGLEVEL_ERROR, sprintf("BackendCalDAV->caldav_backend(): Couldn't parse URL: %s", $caldav_url));
-            return;
+			return;
 		}
 
 		$this->server = $parsed_url['scheme'] . '://' . $parsed_url['host'] . ':' . $parsed_url['port'];
 		$this->base_url  = $parsed_url['path'];
-		//ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->caldav_backend(): base_url '%s'", $this->base_url));
-        //$this->base_url .= !empty($parsed_url['query'])    ? '?' . $parsed_url['query']    : '';
-        //$this->base_url .= !empty($parsed_url['fragment']) ? '#' . $parsed_url['fragment'] : '';
+		ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->caldav_backend(): base_url '%s'", $this->base_url));
 
-        if (substr($this->base_url, -1) !== '/') {
+		//$this->base_url .= !empty($parsed_url['query'])    ? '?' . $parsed_url['query']    : '';
+		//$this->base_url .= !empty($parsed_url['fragment']) ? '#' . $parsed_url['fragment'] : '';
+
+		if (substr($this->base_url, -1) !== '/') {
 			$this->base_url = $this->base_url . '/';
 		}
 	}
 
+
 	/**
-     * Checks if the CalDAV server is reachable
-     *
-     * @return  boolean
-     */
-    public function CheckConnection() {
-        $result = $this->DoRequest($this->url, 'OPTIONS');
+	 * Checks if the CalDAV server is reachable
+	 *
+	 * @return  boolean
+	 */
+	public function CheckConnection() {
+		$result = $this->DoRequest($this->url, 'OPTIONS');
 
-        switch ($this->httpResponseCode) {
-            case 200:
-            case 207:
-            case 401:
-                $status = true;
-                break;
-            default:
-                $status = false;
-        }
-
-        return $status;
-    }
-
-    /**
-     * Disconnect curl connection
-     *
-     */
-    public function Disconnect() {
-        if ($this->curl !== false) {
-            curl_close($this->curl);
-            $this->curl = false;
-        }
-    }
+		switch ($this->httpResponseCode) {
+			case 200:
+			case 207:
+			case 401:
+				$status = true;
+				break;
+			default:
+				$status = false;
+			}
+		return $status;
+	}
 
 
 	/**
-	* Adds an If-Match or If-None-Match header
-	*
-	* @param bool $match to Match or Not to Match, that is the question!
-	* @param string $etag The etag to match / not match against.
-	*/
+	 * Disconnect curl connection
+	 *
+	 */
+	public function Disconnect() {
+		if ($this->curl !== false) {
+			curl_close($this->curl);
+			$this->curl = false;
+		}
+	}
+
+
+	/**
+	 * Adds an If-Match or If-None-Match header
+	 *
+	 * @param bool $match to Match or Not to Match, that is the question!
+	 * @param string $etag The etag to match / not match against.
+	 */
 	function SetMatch( $match, $etag = '*' ) {
 		$this->headers['match'] = sprintf( "%s-Match: \"%s\"", ($match ? "If" : "If-None"), trim($etag,'"'));
 	}
 
+
 	/**
-	* Add a Depth: header.  Valid values are 0, 1 or infinity
-	*
-	* @param int $depth  The depth, default to infinity
-	*/
+	 * Add a Depth: header.  Valid values are 0, 1 or infinity
+	 *
+	 * @param int $depth  The depth, default to infinity
+	 */
 	function SetDepth( $depth = '0' ) {
 		$this->headers['depth'] = 'Depth: '. ($depth == '1' ? "1" : ($depth == 'infinity' ? $depth : "0") );
 	}
 
+
 	/**
-	* Set the calendar_url we will be using for a while.
-	*
-	* @param string $url The calendar_url
-	*/
+	 * Set the calendar_url we will be using for a while.
+	 *
+	 * @param string $url The calendar_url
+	 */
 	function SetCalendar( $url ) {
 		$this->calendar_url = $url;
 	}
 
+
 	/**
-	* Split response into httpResponse and xmlResponse
-	*
-	* @param string Response from server
-	*/
+	 * Split response into httpResponse and xmlResponse
+	 *
+	 * @param string Response from server
+	 */
 	function ParseResponse( $response ) {
 		$pos = strpos($response, '<?xml');
 		if ($pos !== false) {
@@ -235,12 +240,12 @@ class CalDAVClient {
 
 
 	/**
-	* Send a request to the server
-	*
-	* @param string $url The URL to make the request to
-	*
-	* @return string The content of the response from the server
-	*/
+	 * Send a request to the server
+	 *
+	 * @param string $url The URL to make the request to
+	 *
+	 * @return string The content of the response from the server
+	 */
 	function DoRequest($url, $method, $content = null, $content_type = "text/plain") {
 		$this->curl_init();
 
@@ -289,12 +294,12 @@ class CalDAVClient {
 
 
 	/**
-	* Send an OPTIONS request to the server
-	*
-	* @param string $url The URL to make the request to
-	*
-	* @return array The allowed options
-	*/
+	 * Send an OPTIONS request to the server
+	 *
+	 * @param string $url The URL to make the request to
+	 *
+	 * @return array The allowed options
+	 */
 	function DoOptionsRequest( $url = null ) {
 		$headers = $this->DoRequest($url === null ? $this->url : $url, "OPTIONS");
 		$options_header = preg_replace( '/^.*Allow: ([a-z, ]+)\r?\n.*/is', '$1', $headers );
@@ -304,48 +309,48 @@ class CalDAVClient {
 
 
 	/**
-	* Send an XML request to the server (e.g. PROPFIND, REPORT, MKCALENDAR)
-	*
-	* @param string $method The method (PROPFIND, REPORT, etc) to use with the request
-	* @param string $xml The XML to send along with the request
-	* @param string $url The URL to make the request to
-	*
-	* @return array An array of the allowed methods
-	*/
+	 * Send an XML request to the server (e.g. PROPFIND, REPORT, MKCALENDAR)
+	 *
+	 * @param string $method The method (PROPFIND, REPORT, etc) to use with the request
+	 * @param string $xml The XML to send along with the request
+	 * @param string $url The URL to make the request to
+	 *
+	 * @return array An array of the allowed methods
+	 */
 	function DoXMLRequest( $request_method, $xml, $url = null ) {
 		return $this->DoRequest($url, $request_method, $xml, "text/xml");
 	}
 
 
 	/**
-	* Get a single item from the server.
-	*
-	* @param string $url The URL to GET
-	*/
+	 * Get a single item from the server.
+	 *
+	 * @param string $url The URL to GET
+	 */
 	function DoGETRequest( $url ) {
 		return $this->DoRequest($url, "GET");
 	}
 
 
 	/**
-	* Get the HEAD of a single item from the server.
-	*
-	* @param string $url The URL to HEAD
-	*/
+	 * Get the HEAD of a single item from the server.
+	 *
+	 * @param string $url The URL to HEAD
+	 */
 	function DoHEADRequest( $url ) {
 		return $this->DoRequest($url, "HEAD");
 	}
 
 
 	/**
-	* PUT a text/icalendar resource, returning the etag
-	*
-	* @param string $url The URL to make the request to
-	* @param string $icalendar The iCalendar resource to send to the server
-	* @param string $etag The etag of an existing resource to be overwritten, or '*' for a new resource.
-	*
-	* @return string The content of the response from the server
-	*/
+	 * PUT a text/icalendar resource, returning the etag
+	 *
+	 * @param string $url The URL to make the request to
+	 * @param string $icalendar The iCalendar resource to send to the server
+	 * @param string $etag The etag of an existing resource to be overwritten, or '*' for a new resource.
+	 *
+	 * @return string The content of the response from the server
+	 */
 	function DoPUTRequest( $url, $icalendar, $etag = null ) {
 		if ( $etag != null ) {
 		  $this->SetMatch( ($etag != '*'), $etag );
@@ -373,13 +378,13 @@ class CalDAVClient {
 
 
 	/**
-	* DELETE a text/icalendar resource
-	*
-	* @param string $url The URL to make the request to
-	* @param string $etag The etag of an existing resource to be deleted, or '*' for any resource at that URL.
-	*
-	* @return int The HTTP Result Code for the DELETE
-	*/
+	 * DELETE a text/icalendar resource
+	 *
+	 * @param string $url The URL to make the request to
+	 * @param string $etag The etag of an existing resource to be deleted, or '*' for any resource at that URL.
+	 *
+	 * @return int The HTTP Result Code for the DELETE
+	 */
 	function DoDELETERequest( $url, $etag = null ) {
 		if ( $etag != null ) {
 			$this->SetMatch( true, $etag );
@@ -390,10 +395,10 @@ class CalDAVClient {
 
 
 	/**
-	* Get a single item from the server.
-	*
-	* @param string $url The URL to PROPFIND on
-	*/
+	 * Get a single item from the server.
+	 *
+	 * @param string $url The URL to PROPFIND on
+	 */
 	function DoPROPFINDRequest( $url, $props, $depth = 0 ) {
 		$this->SetDepth($depth);
 		$xml = new XMLDocument( array( 'DAV:' => '', 'urn:ietf:params:xml:ns:caldav' => 'C' ) );
@@ -408,10 +413,10 @@ class CalDAVClient {
 
 
 	/**
-	* Get/Set the Principal URL
-	*
-	* @param $url string The Principal URL to set
-	*/
+	 * Get/Set the Principal URL
+	 *
+	 * @param $url string The Principal URL to set
+	 */
 	function PrincipalURL( $url = null ) {
 		if ( isset($url) ) {
 			$this->principal_url = $url;
@@ -421,10 +426,10 @@ class CalDAVClient {
 
 
 	/**
-	* Get/Set the calendar-home-set URL
-	*
-	* @param $url array of string The calendar-home-set URLs to set
-	*/
+	 * Get/Set the calendar-home-set URL
+	 *
+	 * @param $url array of string The calendar-home-set URLs to set
+	 */
 	function CalendarHomeSet( $urls = null ) {
 		if ( isset($urls) ) {
 			if ( !is_array($urls) ) {
@@ -437,10 +442,10 @@ class CalDAVClient {
 
 
 	/**
-	* Get/Set the calendar-home-set URL
-	*
-	* @param $urls array of string The calendar URLs to set
-	*/
+	 * Get/Set the calendar-home-set URL
+	 *
+	 * @param $urls array of string The calendar URLs to set
+	 */
 	function CalendarUrls( $urls = null ) {
 		if ( isset($urls) ) {
 			if ( !is_array($urls) ) {
@@ -453,10 +458,10 @@ class CalDAVClient {
 
 
 	/**
-	* Return the first occurrence of an href inside the named tag.
-	*
-	* @param string $tagname The tag name to find the href inside of
-	*/
+	 * Return the first occurrence of an href inside the named tag.
+	 *
+	 * @param string $tagname The tag name to find the href inside of
+	 */
 	function HrefValueInside( $tagname ) {
 		foreach( $this->xmltags[$tagname] AS $k => $v ) {
 			$j = $v + 1;
@@ -469,11 +474,11 @@ class CalDAVClient {
 
 
 	/**
-	* Return the href containing this property.  Except only if it's inside a status != 200
-	*
-	* @param string $tagname The tag name of the property to find the href for
-	* @param integer $which Which instance of the tag should we use
-	*/
+	 * Return the href containing this property.  Except only if it's inside a status != 200
+	 *
+	 * @param string $tagname The tag name of the property to find the href for
+	 * @param integer $which Which instance of the tag should we use
+	 */
 	function HrefForProp( $tagname, $i = 0 ) {
 		if ( isset($this->xmltags[$tagname]) && isset($this->xmltags[$tagname][$i]) ) {
 			$j = $this->xmltags[$tagname][$i];
@@ -497,11 +502,11 @@ class CalDAVClient {
 
 
 	/**
-	* Return the href which has a resourcetype of the specified type
-	*
-	* @param string $tagname The tag name of the resourcetype to find the href for
-	* @param integer $which Which instance of the tag should we use
-	*/
+	 * Return the href which has a resourcetype of the specified type
+	 *
+	 * @param string $tagname The tag name of the resourcetype to find the href for
+	 * @param integer $which Which instance of the tag should we use
+	 */
 	function HrefForResourcetype( $tagname, $i = 0 ) {
 		if ( isset($this->xmltags[$tagname]) && isset($this->xmltags[$tagname][$i]) ) {
 			$j = $this->xmltags[$tagname][$i];
@@ -518,10 +523,10 @@ class CalDAVClient {
 
 
 	/**
-	* Return the <prop> ... </prop> of a propstat where the status is OK
-	*
-	* @param string $nodenum The node number in the xmlnodes which is the href
-	*/
+	 * Return the <prop> ... </prop> of a propstat where the status is OK
+	 *
+	 * @param string $nodenum The node number in the xmlnodes which is the href
+	 */
 	function GetOKProps( $nodenum ) {
 		$props = null;
 		$level = $this->xmlnodes[$nodenum]['level'];
@@ -549,10 +554,10 @@ class CalDAVClient {
 
 
 	/**
-	* Attack the given URL in an attempt to find a principal URL
-	*
-	* @param string $url The URL to find the principal-URL from
-	*/
+	 * Attack the given URL in an attempt to find a principal URL
+	 *
+	 * @param string $url The URL to find the principal-URL from
+	 */
 	function FindPrincipal( $url=null ) {
 		$xml = $this->DoPROPFINDRequest( $url, array('resourcetype', 'current-user-principal', 'owner', 'principal-URL', 'urn:ietf:params:xml:ns:caldav:calendar-home-set'), 1);
 
@@ -571,10 +576,10 @@ class CalDAVClient {
 
 
 	/**
-	* Attack the given URL in an attempt to find a principal URL
-	*
-	* @param string $url The URL to find the calendar-home-set from
-	*/
+	 * Attack the given URL in an attempt to find a principal URL
+	 *
+	 * @param string $url The URL to find the calendar-home-set from
+	 */
 	function FindCalendarHome( $recursed=false ) {
 		if ( !isset($this->principal_url) ) {
 			$this->FindPrincipal();
@@ -607,8 +612,8 @@ class CalDAVClient {
 
 
 	/**
-	* Find the calendars, from the calendar_home_set
-	*/
+	 * Find the calendars, from the calendar_home_set
+	 */
 	function FindCalendars( $recursed=false ) {
 		if ( !isset($this->calendar_home_set[0]) ) {
 			$this->FindCalendarHome();
@@ -654,8 +659,8 @@ class CalDAVClient {
 
 
 	/**
-	* Find the calendars, from the calendar_home_set
-	*/
+	 * Find the calendars, from the calendar_home_set
+	 */
 	function GetCalendarDetails( $url = null ) {
 		if ( isset($url) ) {
 			$this->SetCalendar($url);
@@ -687,8 +692,8 @@ class CalDAVClient {
 
 
 	/**
-	* Get all etags for a calendar
-	*/
+	 * Get all etags for a calendar
+	 */
 	function GetCollectionETags( $url = null ) {
 		if ( isset($url) ) {
 			$this->SetCalendar($url);
@@ -711,8 +716,8 @@ class CalDAVClient {
 
 
 	/**
-	* Get a bunch of events for a calendar with a calendar-multiget report
-	*/
+	 * Get a bunch of events for a calendar with a calendar-multiget report
+	 */
 	function CalendarMultiget( $event_hrefs, $url = null ) {
 		if ( isset($url) ) {
 			$this->SetCalendar($url);
@@ -752,20 +757,20 @@ EOXML;
 
 
 	/**
-	* Given XML for a calendar query, return an array of the events (/todos) in the
-	* response.  Each event in the array will have a 'href', 'etag' and an optional '$response_type'
-	* part (depending on the flag '$include_data'), where the 'href' is relative to the calendar and 
-	* the '$response_type' contains the
-	* definition of the calendar data in iCalendar format.
-	*
-	* @param string $filter XML fragment which is the <filter> element of a calendar-query
-	* @param string $url The URL of the calendar, or empty/null to use the 'current' calendar_url
-	* @param boolean $include_data Flags whether to request the content-data (the icalendar data) in the response
-	*
-	* @return array An array of the relative URLs, etags, and events from the server.  Each element of the array will
-	*               be an array with 'href', 'etag' and 'data' elements, corresponding to the URL, the server-supplied
-	*               etag (which only varies when the data changes) and the calendar data in iCalendar format.
-	*/
+	 * Given XML for a calendar query, return an array of the events (/todos) in the
+	 * response.  Each event in the array will have a 'href', 'etag' and an optional '$response_type'
+	 * part (depending on the flag '$include_data'), where the 'href' is relative to the calendar and 
+	 * the '$response_type' contains the
+	 * definition of the calendar data in iCalendar format.
+	 *
+	 * @param string $filter XML fragment which is the <filter> element of a calendar-query
+	 * @param string $url The URL of the calendar, or empty/null to use the 'current' calendar_url
+	 * @param boolean $include_data Flags whether to request the content-data (the icalendar data) in the response
+	 *
+	 * @return array An array of the relative URLs, etags, and events from the server.  Each element of the array will
+	 *               be an array with 'href', 'etag' and 'data' elements, corresponding to the URL, the server-supplied
+	 *               etag (which only varies when the data changes) and the calendar data in iCalendar format.
+	 */
 	function DoCalendarQuery( $filter, $url = null, $include_data = true ) {
 		if ( !empty($url) ) {
 			$this->SetCalendar($url);
@@ -820,25 +825,25 @@ EOXML;
 	}
 
 	/**
-	* Get a list of events in a range from $start to $finish.  The dates should be in the
-	* format yyyymmddThhmmssZ and should be in GMT.  The events are returned as an
-	* array of event parameter arrays. Unlike the original GetEvents, each event array will only contain the 'href' and 'etag' 
-	* parts, where the 'href' is relative to the calendar. 
-	*
-	* @param timestamp $start The start time for the period
-	* @param timestamp $finish The finish time for the period
-	* @param string    $relative_url The URL relative to the base_url specified when the calendar was opened.  Default ''.
-	*
-	* @return array An array of the relative URLs and etags as [['href'], ['etag']]
-	*
-	* This function has been modified from the original GetEvents function; the function has been renamed to prevent regression errors
-	*/
+	 * Get a list of events in a range from $start to $finish.  The dates should be in the
+	 * format yyyymmddThhmmssZ and should be in GMT.  The events are returned as an
+	 * array of event parameter arrays. Unlike the original GetEvents, each event array will only contain the 'href' and 'etag' 
+	 * parts, where the 'href' is relative to the calendar. 
+	 *
+	 * @param timestamp $start The start time for the period
+	 * @param timestamp $finish The finish time for the period
+	 * @param string    $relative_url The URL relative to the base_url specified when the calendar was opened.  Default ''.
+	 *
+	 * @return array An array of the relative URLs and etags as [['href'], ['etag']]
+	 *
+	 * This function has been modified from the original GetEvents function; the function has been renamed to prevent regression errors
+	 */
 	function GetEventsList( $start = null, $finish = null, $relative_url = null ) {
-		$filter = "";
-		if ( isset($start) && isset($finish) ) {
+
+		if ( isset($start, $finish) ) {
 			$range = "<C:time-range start=\"$start\" end=\"$finish\"/>";
 		} else {
-			$range = '';
+			$range = "";
 		}
 
 		$filter = <<<EOFILTER
@@ -857,46 +862,67 @@ EOFILTER;
 
 
 	/**
-	* Get a list of todo's in a range from $start to $finish.  The dates should be in the
-	* format yyyymmddThhmmssZ and should be in GMT.  The events are returned as an
-	* array of event parameter arrays. Unlike the original GetTodos, each event array will only have 'href' and 'etag'
-	* parts, where the 'href' is relative to the calendar.
-	*
-	* @param timestamp $start The start time for the period
-	* @param timestamp $finish The finish time for the period
-	* @param boolean   $completed Whether to include completed tasks
-	* @param boolean   $cancelled Whether to include cancelled tasks
-	* @param string    $relative_url The URL relative to the base_url specified when the calendar was opened.  Default ''.
-	*
-	* @return array An array of the relative URLs and etags as [['href'], ['etag']]
-	* 
-	* This function has been modified from the original GetTodos function; the function has been renamed to prevent regression errors
-	*/
-	function GetTodosList( $start, $finish, $completed = false, $cancelled = false, $relative_url = null ) {
+	 * Get a list of todo's in a range from $start to $finish.  The dates should be in the
+	 * format yyyymmddThhmmssZ and should be in GMT.  The events are returned as an
+	 * array of event parameter arrays. Unlike the original GetTodos, each event array will only have 'href' and 'etag'
+	 * parts, where the 'href' is relative to the calendar.
+	 *
+	 * @param timestamp $start The start time for the period
+	 * @param timestamp $finish The finish time for the period
+	 * @param boolean   $completed Whether to include completed tasks
+	 * @param boolean   $cancelled Whether to include cancelled tasks
+	 * @param string    $relative_url The URL relative to the base_url specified when the calendar was opened.  Default ''.
+	 *
+	 * @return array An array of the relative URLs and etags as [['href'], ['etag']]
+	 * 
+	 * This function has been modified from the original GetTodos function; the function has been renamed to prevent regression errors
+	 */
+	function GetTodosList( $start = null, $finish = null, $completed = null, $cancelled = null, $relative_url = "" ) {
 
-		if ( $start && $finish ) {
-			$time_range = <<<EOTIME
-                <C:time-range start="$start" end="$finish"/>
-EOTIME;
-		} else {
-        	$time_range = "";
-    	}
+		$range_filter = "";
+		if(isset($start)) {
+			$range_filter .= ' start="' . $start . '"';
+		}
+		if(isset($finish)) {
+			$range_filter .= ' end="' . $finish . '"';
+		}
+		if($range_filter !== "") {
+			$range_filter = "<C:time-range" . $range_filter . "/>";
+		}
 
 		// Warning!  May contain traces of double negatives...
-		$neg_cancelled = ( $cancelled === true ? "no" : "yes" );
-		$neg_completed = ( $cancelled === true ? "no" : "yes" );
+		$completed_filter = "";
+		if(isset($completed)) {
+			$completed_filter = '<C:prop-filter name="STATUS"><C:text-match negate-condition="';
+			if($completed == true) {
+				$completed_filter .= "no";
+			}
+			else {
+				$completed_filter .= "yes";
+			}
+			$completed_filter .= '">COMPLETED</C:text-match></C:prop-filter>';
+		}
+
+		$cancelled_filter = "";
+		if(isset($cancelled)) {
+			$cancelled_filter = '<C:prop-filter name="STATUS"><C:text-match negate-condition="';
+			if($cancelled == true) {
+				$cancelled_filter .= "no";
+			}
+			else {
+				$cancelled_filter .= "yes";
+			}
+			$cancelled_filter .= '">CANCELLED</C:text-match></C:prop-filter>';
+		}
 
 		$filter = <<<EOFILTER
   <C:filter>
     <C:comp-filter name="VCALENDAR">
-          <C:comp-filter name="VTODO">
-                <C:prop-filter name="STATUS">
-                        <C:text-match negate-condition="$neg_completed">COMPLETED</C:text-match>
-                </C:prop-filter>
-                <C:prop-filter name="STATUS">
-                        <C:text-match negate-condition="$neg_cancelled">CANCELLED</C:text-match>
-                </C:prop-filter>$time_range
-          </C:comp-filter>
+      <C:comp-filter name="VTODO">
+        $completed_filter
+        $cancelled_filter
+        $range_filter
+      </C:comp-filter>
     </C:comp-filter>
   </C:filter>
 EOFILTER;
@@ -907,14 +933,14 @@ EOFILTER;
 
 
 	/**
-	* Get the calendar entry by UID
-	*
-	* @param uid
-	* @param string    $relative_url The URL relative to the base_url specified when the calendar was opened.  Default ''.
-	* @param string    $component_type The component type inside the VCALENDAR.  Default 'VEVENT'.
-	*
-	* @return array An array of the relative URL, etag, and calendar data returned from DoCalendarQuery() @see DoCalendarQuery()
-	*/
+	 * Get the calendar entry by UID
+	 *
+	 * @param uid
+	 * @param string    $relative_url The URL relative to the base_url specified when the calendar was opened.  Default ''.
+	 * @param string    $component_type The component type inside the VCALENDAR.  Default 'VEVENT'.
+	 *
+	 * @return array An array of the relative URL, etag, and calendar data returned from DoCalendarQuery() @see DoCalendarQuery()
+	 */
 	function GetEntryByUid( $uid, $relative_url = null, $component_type = 'VEVENT' ) {
 		$filter = "";
 		if ( $uid ) {
@@ -936,37 +962,38 @@ EOFILTER;
 
 
 	/**
-	* Get the calendar entry by HREF
-	*
-	* @param string    $href         The href from a call to GetEvents or GetTodos etc.
-	*
-	* @return string The iCalendar of the calendar entry
-	*/
+	 * Get the calendar entry by HREF
+	 *
+	 * @param string    $href         The href from a call to GetEvents or GetTodos etc.
+	 *
+	 * @return string The iCalendar of the calendar entry
+	 */
 	function GetEntryByHref( $href ) {
 		$href = str_replace( rawurlencode('/'),'/',rawurlencode($href));
 		return $this->DoGETRequest( $href );
 	}
 
 
-    /**
-     * Do a Sync operation. This is the fastest way to detect changes.
-     *
-     * @param string    $url                URL for the calendar
-     * @param boolean   $initial            It's the first synchronization
-     * @param boolean   $support_dav_sync   The CalDAV server supports sync-collection
-     *
-     * @return array of responses
-     */
-    public function GetSync($relative_url = null, $initial = true, $support_dav_sync = false) {
-        if (!empty($relative_url)) {
-            $this->SetCalendar($relative_url);
-        }
-        $hasToken = !$initial && isset($this->synctoken[$this->calendar_url]);
-        if ($support_dav_sync) {
-            $token = ($hasToken ? $this->synctoken[$this->calendar_url] : "");
+	/**
+	 * Do a Sync operation. This is the fastest way to detect changes.
+	 *
+	 * @param string    $url                URL for the calendar
+	 * @param boolean   $initial            It's the first synchronization
+	 * @param boolean   $support_dav_sync   The CalDAV server supports sync-collection
+	 *
+	 * @return array of responses
+	 */
+	public function GetSync($relative_url = null, $initial = true, $support_dav_sync = false) {
+		if (!empty($relative_url)) {
+			$this->SetCalendar($relative_url);
+		}
+		$hasToken = !$initial && isset($this->synctoken[$this->calendar_url]);
 
+		if ($support_dav_sync) {
+			$token = ($hasToken ? $this->synctoken[$this->calendar_url] : "");
 			ZLog::Write(LOGLEVEL_WBXML, sprintf("CalDAVClient->GetSync called for %s'%s' with token '%s'", ($initial ? "initial sync of " : ""), $this->calendar_url, $token));
-            $body = <<<EOXML
+
+			$body = <<<EOXML
 <?xml version="1.0" encoding="utf-8"?>
 <D:sync-collection xmlns:D="DAV:">
     <D:sync-token>$token</D:sync-token>
@@ -977,9 +1004,9 @@ EOFILTER;
     </D:prop>
 </D:sync-collection>
 EOXML;
-        }
-        else {
-            $body = <<<EOXML
+		}
+		else {
+			$body = <<<EOXML
 <?xml version="1.0" encoding="utf-8" ?>
 <C:calendar-query xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
   <D:prop>
@@ -991,50 +1018,49 @@ EOXML;
   </C:filter>
 </C:calendar-query>
 EOXML;
-        }
+		}
 
-        $this->SetDepth(1);
-        $this->DoRequest($this->calendar_url, "REPORT", $body, "text/xml");
+		$this->SetDepth(1);
+		$this->DoRequest($this->calendar_url, "REPORT", $body, "text/xml");
 
-        $report = array();
-        foreach ($this->xmlnodes as $k => $v) {
-            switch ($v['tag']) {
-                case 'DAV::response':
-                    if ($v['type'] == 'open') {
-                        $response = array();
-                    }
-                    elseif ($v['type'] == 'close') {
-                        $report[] = $response;
-                        ZLog::Write(LOGLEVEL_WBXML, sprintf("CalDAVClient->GetSync return value includes response: %s",implode("|",$response)));
-                    }
-                    break;
-                case 'DAV::href':
-                    $response['href'] = basename( rawurldecode($v['value']) );
-                    break;
-                case 'DAV::getlastmodified':
-                    if (isset($v['value'])) {
-                        $response['getlastmodified'] = $v['value'];
-                    }
-                    else {
-                        $response['getlastmodified'] = '';
-                    }
-                    break;
-                case 'DAV::getetag':
-                    $response['etag'] = preg_replace('/^"?([^"]+)"?/', '$1', $v['value']);
-                    break;
-                case 'DAV::sync-token':
-                    $this->synctoken[$this->calendar_url] = $v['value'];
-                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("CalDAVClient->GetSync: Response from '%s' includes sync token: '%s'", $this->calendar_url, $this->synctoken[$this->calendar_url]));
-                    break;
-            }
-        }
+		$report = array();
+		foreach ($this->xmlnodes as $k => $v) {
+			switch ($v['tag']) {
+				case 'DAV::response':
+					if ($v['type'] == 'open') {
+						$response = array();
+					}
+					elseif ($v['type'] == 'close') {
+						$report[] = $response;
+						ZLog::Write(LOGLEVEL_WBXML, sprintf("CalDAVClient->GetSync return value includes response: %s",implode("|",$response)));
+					}
+					break;
+				case 'DAV::href':
+					$response['href'] = basename( rawurldecode($v['value']) );
+					break;
+				case 'DAV::getlastmodified':
+					if (isset($v['value'])) {
+						$response['getlastmodified'] = $v['value'];
+					}
+					else {
+						$response['getlastmodified'] = '';
+					}
+					break;
+				case 'DAV::getetag':
+					$response['etag'] = preg_replace('/^"?([^"]+)"?/', '$1', $v['value']);
+					break;
+				case 'DAV::sync-token':
+					$this->synctoken[$this->calendar_url] = $v['value'];
+					ZLog::Write(LOGLEVEL_DEBUG, sprintf("CalDAVClient->GetSync: Response from '%s' includes sync token: '%s'", $this->calendar_url, $this->synctoken[$this->calendar_url]));
+					break;
+			}
+		}
 
-        // Report sync-token support on initial sync
-        if ($initial && $support_dav_sync && !isset($this->synctoken[$this->calendar_url])) {
-            ZLog::Write(LOGLEVEL_WARN, 'CalDAVClient->GetSync(): no DAV::sync-token received; did you set CALDAV_SUPPORTS_SYNC correctly?');
-        }
+		// Report sync-token support on initial sync
+		if ($initial && $support_dav_sync && !isset($this->synctoken[$this->calendar_url])) {
+			ZLog::Write(LOGLEVEL_WARN, 'CalDAVClient->GetSync(): no DAV::sync-token received; did you set CALDAV_SUPPORTS_SYNC correctly?');
+		}
 
-        return $report;
-    }
-
+		return $report;
+	}
 };

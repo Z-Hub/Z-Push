@@ -104,19 +104,29 @@ class iCalProp {
     }
     list($prop, $value) = $split;
 
-    // Unescape ESCAPED-CHAR
-    $this->content = preg_replace( "/\\\\([,;:\"\\\\])/", '$1', $value);
-
     // Split property name and parameters
     $parameters = $this->SplitQuoted($prop, ';');
     $this->name = array_shift($parameters);
     $this->parameters = array();
+
+    // Unescape ESCAPED-CHAR
+    switch( $this->name ) {
+      case 'CATEGORIES':
+      case 'RESOURCES':
+        $this->content = $value;
+        break;
+      default:
+        $this->content = preg_replace( "/\\\\([,;:\"\\\\])/", '$1', $value);
+    }
+
+    // Split parameters
     foreach ($parameters AS $k => $v) {
       $pos = strpos($v, '=');
       $name = substr($v, 0, $pos);
       $value = substr($v, $pos + 1);
       $this->parameters[$name] = preg_replace('/^"(.+)"$/', '$1', $value); // Removes DQUOTE on demand
     }
+
     ZLog::Write(LOGLEVEL_DEBUG, sprintf("iCalendar->ParseFrom(): found '%s' = '%s' with %d parameters", $this->name, substr($this->content,0,200), count($this->parameters)));
   }
 
@@ -282,7 +292,8 @@ class iCalProp {
       case 'DURATION':              case 'FREEBUSY':                  case 'TZOFFSETFROM':          case 'TZOFFSETTO':
       case 'TZURL':                 case 'ATTENDEE':                  case 'ORGANIZER':             case 'RECURRENCE-ID':
       case 'URL':                   case 'EXRULE':                    case 'SEQUENCE':              case 'CREATED':
-      case 'RRULE':                 case 'REPEAT':                    case 'TRIGGER':
+      case 'RRULE':                 case 'REPEAT':                    case 'TRIGGER':               case 'CATEGORIES':
+      case 'RESOURCES':
         break;
 
       case 'COMPLETED':             case 'DTEND':

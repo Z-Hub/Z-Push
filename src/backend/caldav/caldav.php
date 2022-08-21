@@ -125,7 +125,6 @@ class BackendCalDAV extends BackendDiff {
         $folders = array();
         $calendars = $this->_caldav->FindCalendars();
         foreach ($calendars as $val) {
-            $folder = array();
             $fpath = explode("/", $val->url, -1);
             if (is_array($fpath)) {
                 $folderid = array_pop($fpath);
@@ -216,7 +215,7 @@ class BackendCalDAV extends BackendDiff {
             $msgs = $this->_caldav->GetEventsList($begin, $finish, $path);
         }
         else {
-            $msgs = $this->_caldav->GetTodosList($begin, $finish, false, false, $path);
+            $msgs = $this->_caldav->GetTodosList(null, null, null, null, $path);
         }
 
         $messages = array();
@@ -335,11 +334,51 @@ class BackendCalDAV extends BackendDiff {
     }
 
     /**
-     * Move a message is not supported by CalDAV.
+     * Move a message by fetching it, trying to create a copy
+     * into another collection and deleting the original.
      * @see BackendDiff::MoveMessage()
      */
     public function MoveMessage($folderid, $id, $newfolderid, $contentParameters) {
-        return false;
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->MoveMessage('%s','%s','%s')", $folderid, $id, $newfolderid));
+
+        if ($folderid == $newfolderid) {
+            throw new StatusException(sprintf("BackendCalDAV->MoveMessage('%s','%s','%s'): Error, destination folder is source folder. Canceling the move.", $folderid, $id, $newfolderid), SYNC_MOVEITEMSSTATUS_SAMESOURCEANDDEST);
+        }
+
+        // get source message
+        $path = $this->_caldav_path . substr($folderid, 1) . "/";
+        $href = $path . $id;
+
+        $messages = $this->_caldav->CalendarMultiget( array( $href ), $path );
+        $data = $messages[$href];
+
+        if (!isset($data) || $data == '') {
+            throw new StatusException(sprintf("BackendIMAP->MoveMessage('%s','%s','%s'): Error, unable to retrieve source message.", $folderid, $id, $newfolderid), SYNC_MOVEITEMSSTATUS_INVALIDSOURCEID);
+        }
+        unset($messages, $href);
+
+        // create copy in destination folder with new id
+        $newId = sprintf("%s-%s.ics", gmdate("Ymd\THis\Z"), hash("md5", microtime()));
+        $path = sprintf("%s%s/%s", $this->_caldav_path, substr($newfolderid, 1), $newId);
+        $etag = "*";
+
+        $etag_new = $this->_caldav->DoPUTRequest($path, $data, $etag);
+        unset($data);
+
+        if ($etag_new != null) {
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->MoveMessage(): Created message copy '%s' in destination folder.", $newId));
+
+            if($this->DeleteMessage($folderid, $id, $contentParameters)) {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->MoveMessage(): Deleted source message '%s', MoveMessage() complete.", $id));
+                return $newId;
+            }
+            else {
+                throw new StatusException(sprintf("BackendCalDAV->MoveMessage('%s','%s','%s'): Error, deletion of source message failed, duplicates may exist.", $folderid, $id, $newfolderid), SYNC_MOVEITEMSSTATUS_SOURCEORDESTLOCKED);
+            }
+        }
+        else {
+            throw new StatusException(sprintf("BackendCalDAV->MoveMessage('%s','%s','%s'): Error, copy to destination folder failed.", $folderid, $id, $newfolderid), SYNC_MOVEITEMSSTATUS_CANNOTMOVE);
+        }
     }
 
     /**
@@ -484,14 +523,12 @@ class BackendCalDAV extends BackendDiff {
             if (CALDAV_SUPPORTS_SYNC) {
                 if (count($response) > 0) {
                     $changed = true;
-                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->ChangesSink - Changes detected"));
                 }
             }
             else {
                 // If the numbers of events are different, we know for sure, there are changes
                 if (count($response) != count($v)) {
                     $changed = true;
-                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->ChangesSink - Changes detected"));
                 }
                 else {
                     // If the numbers of events are equals, we compare the biggest date
@@ -510,14 +547,11 @@ class BackendCalDAV extends BackendDiff {
                             $changed = true;
                         }
                     }
-
-                    if ($changed) {
-                        ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->ChangesSink - Changes detected"));
-                    }
                 }
             }
 
             if ($changed) {
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->ChangesSink - Changes detected"));
                 $notifications[] = $k;
             }
         }
@@ -601,8 +635,13 @@ class BackendCalDAV extends BackendDiff {
      * @param int $truncsize
      */
     private function _ParseVEventToSyncObject($event, $message, $truncsize) {
-        //Defaults
-        $message->busystatus = "2";
+
+        // get user details
+        $userDetails = ZPush::GetBackend()->GetCurrentUsername();
+
+        // track vevent involvement
+        $userIsAttendee = false;
+        $userIsOrganizer = false;
 
         $properties = $event->GetProperties();
         foreach ($properties as $property) {
@@ -624,11 +663,20 @@ class BackendCalDAV extends BackendDiff {
                     break;
 
                 case "ORGANIZER":
-                    $org_mail = str_ireplace("MAILTO:", "", $property->Value());
-                    $message->organizeremail = $org_mail;
-                    $org_cn = $property->GetParameterValue("CN");
-                    if ($org_cn) {
-                        $message->organizername = $org_cn;
+                    $organizerEMail = str_ireplace("MAILTO:", "", $property->Value());
+                    if ($organizerEMail) {
+                        $message->organizeremail = $organizerEMail;
+                        if (strcasecmp($organizerEMail, $userDetails['emailaddress']) == 0) {
+                            $userIsOrganizer = true;
+                        }
+                    }
+
+                    $organizerName = $property->GetParameterValue("CN");
+                    if ($organizerName) {
+                        $message->organizername = $organizerName;
+                        if (strcasecmp($organizerName, $userDetails['fullname']) == 0) {
+                            $userIsOrganizer = true;
+                        }
                     }
                     break;
 
@@ -680,6 +728,7 @@ class BackendCalDAV extends BackendDiff {
                     }
                     break;
 
+                case "X-MICROSOFT-CDO-BUSYSTATUS":
                 case "X-MICROSOFT-CDO-INTENDEDSTATUS":
                     switch ($property->Value()) {
                         case "FREE":
@@ -714,25 +763,73 @@ class BackendCalDAV extends BackendDiff {
                 case "STATUS":
                     switch ($property->Value()) {
                         case "TENTATIVE":
-                            $message->meetingstatus = "3"; // was 1
-                            break;
                         case "CONFIRMED":
-                            $message->meetingstatus = "1"; // was 3
+                            $message->meetingstatus = "1";
                             break;
                         case "CANCELLED":
-                            $message->meetingstatus = "5"; // could also be 7
+                            $message->meetingstatus = "5";
                             break;
                     }
                     break;
 
                 case "ATTENDEE":
                     $attendee = new SyncAttendee();
-                    $att_email = str_ireplace("MAILTO:", "", $property->Value());
-                    $attendee->email = $att_email;
-                    $att_cn = $property->GetParameterValue("CN");
-                    if ($att_cn) {
-                        $attendee->name = $att_cn;
+
+                    $attendeeEMail = str_ireplace("MAILTO:", "", $property->Value());
+                    if ($attendeeEMail) {
+                        $attendee->email = $attendeeEMail;
+                        if (strcasecmp($attendeeEMail, $userDetails['emailaddress']) == 0) {
+                            $userIsAttendee = true;
+                        }
                     }
+
+                    $attendeeName = $property->GetParameterValue("CN");
+                    if ($attendeeName) {
+                        $attendee->name = $attendeeName;
+                        if (strcasecmp($attendeeName, $userDetails['fullname']) == 0) {
+                            $userIsAttendee = true;
+                        }
+                    }
+
+                    if (Request::GetProtocolVersion() >= 12.0) {
+                        // attendeestatus: 0 = response unknown, 2 = tentative, 3 = accept, 4 = decline, 5 = not responded
+                        $attendeeStatus = $property->GetParameterValue("PARTSTAT");
+                        if ($attendeeStatus) {
+                            switch ($attendeeStatus) {
+                                case "TENTATIVE":
+                                    $attendee->attendeestatus = "2";
+                                    break;
+                                case "ACCEPTED":
+                                    $attendee->attendeestatus = "3";
+                                    break;
+                                case "DECLINED":
+                                    $attendee->attendeestatus = "4";
+                                    break;
+                                case "NEEDS-ACTION":
+                                    $attendee->attendeestatus = "5";
+                                    break;
+                            }
+                        }
+
+                        // attendeetype: 1 = required, 2 = optional, 3 = resource
+                        $attendeeType = $property->GetParameterValue("ROLE");
+                        if ($attendeeType) {
+                            switch ($attendeeType) {
+                                case "REQ-PARTICIPANT":
+                                    $attendee->attendeetype = "1";
+                                    break;
+                                case "OPT-PARTICIPANT":
+                                    $attendee->attendeetype = "2";
+                                    break;
+                                case "NON-PARTICIPANT":
+                                    $attendee->attendeetype = "3";
+                                    break;
+                                case "CHAIR":
+                                    break;
+                            }
+                        }
+                    }
+
                     if (isset($message->attendees) && is_array($message->attendees)) {
                         $message->attendees[] = $attendee;
                     }
@@ -746,7 +843,7 @@ class BackendCalDAV extends BackendDiff {
                         $message->asbody = new SyncBaseBody();
 
                         // the DESCRIPTION component is specified to be plain text (RFC5545), for HTML use X-ALT-DESC
-                        $data = str_replace("\n","\r\n", str_replace("\r","",Utils::ConvertHtmlToText($property->Value())));
+                        $data = str_replace("\n", "\r\n", str_replace("\r", "", $property->Value()));
 
                         // truncate body, if requested
                         if (strlen($data) > $truncsize) {
@@ -779,22 +876,46 @@ class BackendCalDAV extends BackendDiff {
                     break;
 
                 case "CATEGORIES":
-                    $categories = explode(",", $property->Value());
-                    $message->categories = $categories;
+                    $categories = $this->explodeUnescapedDelimiter(",", $property->Value());
+                    if (!isset($message->categories)) {
+                        $message->categories = $this->unescape($categories);
+                    }
+                    else {
+                        foreach($categories as $category) {
+                            $message->categories[] = $this->unescape($category);
+                        }
+                    }
                     break;
 
                 case "EXDATE":
-                    $exception = new SyncAppointmentException();
-                    $exception->deleted = "1";
-                    $exception->exceptionstarttime = TimezoneUtil::MakeUTCDate($property->Value());
+                    $exceptionDateTimes = explode(",", $property->Value());
                     if (!isset($message->exceptions)) {
                         $message->exceptions = array();
                     }
-                    $message->exceptions[] = $exception;
+                    foreach($exceptionDateTimes as $exceptionDateTime) {
+                        $exception = new SyncAppointmentException();
+                        $exception->deleted = "1";
+                        $exception->exceptionstarttime = TimezoneUtil::MakeUTCDate($exceptionDateTime);
+                        $message->exceptions[] = $exception;
+                    }
+                    break;
+
+                case "X-MICROSOFT-DISALLOW-COUNTER":
+                    if (Request::GetProtocolVersion() >= 14.0) {
+                        switch ($property->Value()) {
+                            case "TRUE":
+                                $message->disallownewtimeproposal = true;
+                                break;
+                            case "FALSE":
+                                $message->disallownewtimeproposal = false;
+                                break;
+                        }
+                    }
                     break;
 
                 //We can ignore the following
                 case "PRIORITY":
+                case "X-MICROSOFT-CDO-IMPORTANCE":
                 case "SEQUENCE":
                 case "CREATED":
                 case "DTSTAMP":
@@ -809,14 +930,33 @@ class BackendCalDAV extends BackendDiff {
             }
         }
 
-        if ($message->meetingstatus > 0) {
-            // No organizer was set for the meeting, assume it is the user
+        // default busystatus
+        if (!isset($message->busystatus)) {
+            $message->busystatus = "2";
+        }
+
+        // meeting without attendee is an appointment
+        if (!isset($message->attendees)) {
+            $message->meetingstatus = 0;
+        }
+
+        // meeting with attendee
+        if ($message->meetingstatus > 0 || !isset($message->meetingstatus)) {
+            // set meetingstatus if not already set
+            $message->meetingstatus = isset($message->meetingstatus) ? $message->meetingstatus : 1;
+
+            // check if meeting has an organizer set, otherwise fallback to current user
             if (!isset($message->organizeremail)) {
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->_ParseVEventToSyncObject(): No organizeremail defined, using user details"));
-                $userDetails = ZPush::GetBackend()->GetCurrentUsername();
                 $message->organizeremail = $userDetails['emailaddress'];
                 $message->organizername = $userDetails['fullname'];
             }
+            // check if user is not organizer but attendee to detect received meeting
+            elseif ($userIsAttendee && !$userIsOrganizer) {
+                // apply received flag
+                $message->meetingstatus |= 0x2;
+            }
+
             // Ensure the organizer name is set
             if (!isset($message->organizername)) {
                 $message->organizername = Utils::GetLocalPartFromEmail($message->organizeremail);
@@ -833,12 +973,15 @@ class BackendCalDAV extends BackendDiff {
                         $trigger = date_create("@" . TimezoneUtil::MakeUTCDate($property->Value()));
                         $begin = date_create("@" . $message->starttime);
                         $interval = date_diff($begin, $trigger);
-                        $message->reminder = $interval->format("%i") + $interval->format("%h") * 60 + $interval->format("%a") * 60 * 24;
+                        $message->reminder = $interval->format("%i") + $interval->format("%h") * 60 + intval($interval->format("%a")) * 60 * 24;
                     }
                     elseif (!array_key_exists("VALUE", $parameters) || $parameters["VALUE"] == "DURATION") {
-                        $val = str_replace("-", "", $property->Value());
-                        $interval = new DateInterval($val);
-                        $message->reminder = $interval->format("%i") + $interval->format("%h") * 60 + $interval->format("%a") * 60 * 24;
+                        $val = $property->Value();
+                        // only use negative values, because reminder = minutes before calendar item start
+                        if ($val[0] == '-') {
+                            $interval = new DateInterval(substr($val, 1));
+                            $message->reminder = $interval->format("%i") + $interval->format("%h") * 60 + $interval->format("%d") * 60 * 24;
+                        }
                     }
                 }
             }
@@ -1010,39 +1153,73 @@ class BackendCalDAV extends BackendDiff {
             $vevent->AddProperty("UID", $id);
             $ical->AddComponent($vevent);
             if (isset($data->exceptions) && is_array($data->exceptions)) {
-                foreach ($data->exceptions as $ex) {
-                    if (isset($ex->deleted) && $ex->deleted == "1") {
+                foreach ($data->exceptions as $exception) {
+                    if (isset($exception->deleted) && $exception->deleted == "1") {
                         if ($exdate = $vevent->GetPValue("EXDATE")) {
                             if ($data->alldayevent == 1) {
-                                $vevent->SetPValue("EXDATE", $exdate.",".$this->_GetDateFromUTC("Ymd", $ex->exceptionstarttime, $data->timezone), array("VALUE" => "DATE"));
+                                $vevent->SetPValue("EXDATE", $exdate.",".$this->_GetDateFromUTC("Ymd", $exception->exceptionstarttime, $data->timezone), array("VALUE" => "DATE"));
                             }
                             else {
-                                $vevent->SetPValue("EXDATE", $exdate.",".$this->DAVDateTimeInTimezone($ex->exceptionstarttime, $tzid), $tzpar);
+                                $vevent->SetPValue("EXDATE", $exdate.",".$this->DAVDateTimeInTimezone($exception->exceptionstarttime, $tzid), $tzpar);
                             }
                         }
                         else {
                             if ($data->alldayevent == 1) {
-                                $vevent->AddProperty("EXDATE", $this->_GetDateFromUTC("Ymd", $ex->exceptionstarttime, $data->timezone), array("VALUE" => "DATE"));
+                                $vevent->AddProperty("EXDATE", $this->_GetDateFromUTC("Ymd", $exception->exceptionstarttime, $data->timezone), array("VALUE" => "DATE"));
                             }
                             else {
-                                $vevent->AddProperty("EXDATE", $this->DAVDateTimeInTimezone($ex->exceptionstarttime, $tzid), $tzpar);
+                                $vevent->AddProperty("EXDATE", $this->DAVDateTimeInTimezone($exception->exceptionstarttime, $tzid), $tzpar);
                             }
                         }
                         continue;
                     }
 
-                    $exception = $this->_ParseASEventToVEvent($ex, $id, $tzid, $tzpar);
+                    // If an element is not specified in the exception element, the element inherits from the top-level element.
+                    if (isset($data->busystatus) && !isset($exception->busystatus)) {
+                        $exception->busystatus = $data->busystatus;
+                    }
+                    if (isset($data->meetingstatus) && !isset($exception->meetingstatus)) {
+                        $exception->meetingstatus = $data->meetingstatus;
+                    }
+                    if (isset($data->dtstamp) && !isset($exception->dtstamp)) {
+                        $exception->dtstamp = $data->dtstamp;
+                    }
+                    if (isset($data->starttime) && !isset($exception->starttime)) {
+                        $exception->starttime = $data->starttime;
+                    }
+                    if (isset($data->endtime) && !isset($exception->endtime)) {
+                        $exception->endtime = $data->endtime;
+                    }
+                    if (isset($data->location) && !isset($exception->location)) {
+                        $exception->location = $data->location;
+                    }
+                    if (isset($data->subject) && !isset($exception->subject)) {
+                        $exception->subject = $data->subject;
+                    }
+                    if (isset($data->sensitivity) && !isset($exception->sensitivity)) {
+                        $exception->sensitivity = $data->sensitivity;
+                    }
+                    if (isset($data->reminder) && !isset($exception->reminder)) {
+                        $exception->reminder = $data->reminder;
+                    }
+                    if (isset($data->attendees) && !isset($exception->attendees)) {
+                        $exception->attendees = $data->attendees;
+                    }
+
+                    $exceptionVEvent = $this->_ParseASEventToVEvent($exception, $id, $tzid, $tzpar);
+
                     if ($data->alldayevent == 1) {
-                        $exception->AddProperty("RECURRENCE-ID", $this->_GetDateFromUTC("Ymd", $ex->exceptionstarttime, $data->timezone), array("VALUE" => "DATE"));
+                        $exceptionVEvent->AddProperty("RECURRENCE-ID", $this->_GetDateFromUTC("Ymd", $exception->exceptionstarttime, $data->timezone), array("VALUE" => "DATE"));
                     }
                     else {
-                        $exception->AddProperty("RECURRENCE-ID", $this->DAVDateTimeInTimezone($ex->exceptionstarttime, $tzid), $tzpar);
+                        $exceptionVEvent->AddProperty("RECURRENCE-ID", $this->DAVDateTimeInTimezone($exception->exceptionstarttime, $tzid), $tzpar);
                     }
-                    $exception->AddProperty("UID", $id);
-                    $ical->AddComponent($exception);
+                    $exceptionVEvent->AddProperty("UID", $id);
+                    $ical->AddComponent($exceptionVEvent);
                 }
             }
         }
+
         if ($folderid[0] == "T") {
             $vtodo = $this->_ParseASTaskToVTodo($data, $id);
             $vtodo->AddProperty("UID", $id);
@@ -1112,30 +1289,6 @@ class BackendCalDAV extends BackendDiff {
                     break;
             }
         }
-        if (isset($data->busystatus)) {
-            switch ($data->busystatus) {
-                case "0": //Free
-                    $vevent->AddProperty("TRANSP", "TRANSPARENT");
-                    $vevent->AddProperty("X-MICROSOFT-CDO-INTENDEDSTATUS", "FREE");
-                    break;
-                case "1": //Tentative
-                    $vevent->AddProperty("TRANSP", "OPAQUE");
-                    $vevent->AddProperty("X-MICROSOFT-CDO-INTENDEDSTATUS", "TENTATIVE");
-                    break;
-                case "2": //Busy
-                    $vevent->AddProperty("TRANSP", "OPAQUE");
-                    $vevent->AddProperty("X-MICROSOFT-CDO-INTENDEDSTATUS", "BUSY");
-                    break;
-                case "3": //Out of office
-                    $vevent->AddProperty("TRANSP", "TRANSPARENT");
-                    $vevent->AddProperty("X-MICROSOFT-CDO-INTENDEDSTATUS", "OOF");
-                    break;
-                case "4": //Working elsewhere (not yet in Android)
-                    $vevent->AddProperty("TRANSP", "TRANSPARENT");
-                    $vevent->AddProperty("X-MICROSOFT-CDO-INTENDEDSTATUS", "WORKINGELSEWHERE");
-                    break;
-            }
-        }
         if (isset($data->reminder)) {
             $valarm = new iCalComponent();
             $valarm->SetType("VALARM");
@@ -1151,24 +1304,74 @@ class BackendCalDAV extends BackendDiff {
             $rtfparser->parse();
             $vevent->AddProperty("DESCRIPTION", $rtfparser->out);
         }
-        if (isset($data->meetingstatus) && $data->meetingstatus > 0) {
-            switch ($data->meetingstatus) {
-                case "1":
-                    $vevent->AddProperty("STATUS", "TENTATIVE");
+        if (isset($data->busystatus) && ((isset($data->meetingstatus) && $data->meetingstatus == 0) || !isset($data->meetingstatus))) {
+            switch ($data->busystatus) {
+                case "0": //Free
+                    $vevent->AddProperty("TRANSP", "TRANSPARENT");
+                    $vevent->AddProperty("X-MICROSOFT-CDO-BUSYSTATUS", "FREE");
+                    break;
+                case "1": //Tentative
+                    $vevent->AddProperty("TRANSP", "OPAQUE");
                     $vevent->AddProperty("X-MICROSOFT-CDO-BUSYSTATUS", "TENTATIVE");
-                    $vevent->AddProperty("X-MICROSOFT-DISALLOW-COUNTER", "FALSE");
                     break;
-                case "3":
-                    $vevent->AddProperty("STATUS", "CONFIRMED");
-                    $vevent->AddProperty("X-MICROSOFT-CDO-BUSYSTATUS", "CONFIRMED");
-                    $vevent->AddProperty("X-MICROSOFT-DISALLOW-COUNTER", "FALSE");
+                case "2": //Busy
+                    $vevent->AddProperty("TRANSP", "OPAQUE");
+                    $vevent->AddProperty("X-MICROSOFT-CDO-BUSYSTATUS", "BUSY");
                     break;
-                case "5":
-                case "7":
-                    $vevent->AddProperty("STATUS", "CANCELLED");
-                    $vevent->AddProperty("X-MICROSOFT-CDO-BUSYSTATUS", "CANCELLED");
-                    $vevent->AddProperty("X-MICROSOFT-DISALLOW-COUNTER", "TRUE");
+                case "3": //Out of office
+                    $vevent->AddProperty("TRANSP", "OPAQUE");
+                    $vevent->AddProperty("X-MICROSOFT-CDO-BUSYSTATUS", "OOF");
                     break;
+                case "4": //Working elsewhere (not yet in Android) but not defined in [MS-OXCICAL]
+                    $vevent->AddProperty("TRANSP", "TRANSPARENT");
+                    $vevent->AddProperty("X-MICROSOFT-CDO-BUSYSTATUS", "WORKINGELSEWHERE");
+                    break;
+            }
+        }
+        elseif (isset($data->meetingstatus) && $data->meetingstatus > 0) {
+            if (isset($data->busystatus)) {
+                switch ($data->busystatus) {
+                    case "0": //Free
+                        $vevent->AddProperty("TRANSP", "TRANSPARENT");
+                        $vevent->AddProperty("X-MICROSOFT-CDO-INTENDEDSTATUS", "FREE");
+                        break;
+                    case "1": //Tentative
+                        $vevent->AddProperty("TRANSP", "OPAQUE");
+                        $vevent->AddProperty("X-MICROSOFT-CDO-INTENDEDSTATUS", "TENTATIVE");
+                        break;
+                    case "2": //Busy
+                        $vevent->AddProperty("TRANSP", "OPAQUE");
+                        $vevent->AddProperty("X-MICROSOFT-CDO-INTENDEDSTATUS", "BUSY");
+                        break;
+                    case "3": //Out of office
+                        $vevent->AddProperty("TRANSP", "OPAQUE");
+                        $vevent->AddProperty("X-MICROSOFT-CDO-INTENDEDSTATUS", "OOF");
+                        break;
+                    case "4": //Working elsewhere (not yet in Android) but not defined in [MS-OXCICAL]
+                        $vevent->AddProperty("TRANSP", "TRANSPARENT");
+                        $vevent->AddProperty("X-MICROSOFT-CDO-INTENDEDSTATUS", "WORKINGELSEWHERE");
+                        break;
+                }
+            }
+            if (isset($data->disallownewtimeproposal) && $data->disallownewtimeproposal == true) {
+                $vevent->AddProperty("X-MICROSOFT-DISALLOW-COUNTER", "TRUE");
+            }
+            else {
+                $vevent->AddProperty("X-MICROSOFT-DISALLOW-COUNTER", "FALSE");
+            }
+            if ($data->meetingstatus == 1 || $data->meetingstatus == 3) {
+                if (isset($data->busystatus)) {
+                    if ($data->busystatus == 1) {
+                        $vevent->AddProperty("STATUS", "TENTATIVE");
+                    }
+                    elseif ($data->busystatus == 2 || $data->busystatus == 3) {
+                        $vevent->AddProperty("STATUS", "CONFIRMED");
+                    }
+                }
+            }
+            elseif ($data->meetingstatus == 5 || $data->meetingstatus == 7) {
+                $vevent->AddProperty("STATUS", "CANCELLED");
+                $vevent->AddProperty("X-MICROSOFT-DISALLOW-COUNTER", "TRUE");
             }
             if (isset($data->organizeremail) && isset($data->organizername)) {
                 $vevent->AddProperty("ORGANIZER", sprintf("MAILTO:%s", $data->organizeremail), array("CN" => $data->organizername));
@@ -1182,12 +1385,48 @@ class BackendCalDAV extends BackendDiff {
                 $vevent->AddProperty("ORGANIZER", sprintf("MAILTO:%s", $userDetails['emailaddress']), array("CN" => $userDetails['fullname']));
             }
             if (isset($data->attendees) && is_array($data->attendees)) {
-                foreach ($data->attendees as $att) {
-                    if (isset($att->name)) {
-                        $vevent->AddProperty("ATTENDEE", sprintf("MAILTO:%s", $att->email), array("CN" => $att->name));
+                foreach ($data->attendees as $attendee) {
+                    $attendeeParameters = array();
+                    if (isset($attendee->name)) {
+                        $attendeeParameters += array("CN" => $attendee->name);
+                    }
+                    if (isset($attendee->attendeetype)) {
+                        switch($attendee->attendeetype) {
+                            case "1":
+                                $attendeeParameters += array("ROLE" => "REQ-PARTICIPANT");
+                                break;
+                            case "2":
+                                $attendeeParameters += array("ROLE" => "OPT-PARTICIPANT");
+                                break;
+                            case "3":
+                                $attendeeParameters += array("ROLE" => "NON-PARTICIPANT");
+                                break;
+                        }
+                    }
+                    if (isset($attendee->attendeestatus)) {
+                        switch($attendee->attendeestatus) {
+                            case "0":
+                                $attendeeParameters += array("PARTSTAT" => "NEEDS-ACTION");
+                                break;
+                            case "2":
+                                $attendeeParameters += array("PARTSTAT" => "TENTATIVE");
+                                break;
+                            case "3":
+                                $attendeeParameters += array("PARTSTAT" => "ACCEPTED");
+                                break;
+                            case "4":
+                                $attendeeParameters += array("PARTSTAT" => "DECLINED");
+                                break;
+                            case "5":
+                                $attendeeParameters += array("PARTSTAT" => "NEEDS-ACTION");
+                                break;
+                        }
+                    }
+                    if (!empty($attendeeParameters)) {
+                        $vevent->AddProperty("ATTENDEE", sprintf("MAILTO:%s", $attendee->email), $attendeeParameters);
                     }
                     else {
-                        $vevent->AddProperty("ATTENDEE", sprintf("MAILTO:%s", $att->email));
+                        $vevent->AddProperty("ATTENDEE", sprintf("MAILTO:%s", $attendee->email));
                     }
                 }
             }
@@ -1202,13 +1441,13 @@ class BackendCalDAV extends BackendDiff {
             }
         }
         if (isset($data->categories) && is_array($data->categories)) {
-            $vevent->AddProperty("CATEGORIES", implode(",", $data->categories));
+            $vevent->AddProperty("CATEGORIES", implode(",", $this->escape($data->categories)));
         }
 
-// X-MICROSOFT-CDO-APPT-SEQUENCE:0
-// X-MICROSOFT-CDO-OWNERAPPTID:2113393086
-// X-MICROSOFT-CDO-IMPORTANCE:1
-// X-MICROSOFT-CDO-INSTTYPE:0
+        // X-MICROSOFT-CDO-APPT-SEQUENCE:0
+        // X-MICROSOFT-CDO-OWNERAPPTID:2113393086
+        // X-MICROSOFT-CDO-IMPORTANCE:1
+        // X-MICROSOFT-CDO-INSTTYPE:0
 
 
         return $vevent;
@@ -1389,12 +1628,18 @@ class BackendCalDAV extends BackendDiff {
 
                 case "PRIORITY":
                     $priority = $property->Value();
-                    if ($priority <= 3)
-                        $message->importance = "0";
-                    if ($priority <= 6)
+                    // MS-ASTASK: 0 = low, 1 = normal (default), 2 = high
+                    // RFC5545: 0 = undefined, 1-4 = high, 5 = normal, 6-9 = low
+                    //  or 0 = undefined, 1-3 = high, 4-6 = normal, 7-9 = low
+                    if ($priority == 0 || $priority == 5) {
                         $message->importance = "1";
-                    if ($priority > 6)
+                    }
+                    elseif ($priority > 0 && $priority < 5) {
                         $message->importance = "2";
+                    }
+                    elseif ($priority > 5 && $priority <= 9) {
+                        $message->importance = "0";
+                    }
                     break;
 
                 case "RRULE":
@@ -1419,13 +1664,53 @@ class BackendCalDAV extends BackendDiff {
                     $message->utcstartdate = TimezoneUtil::MakeUTCDate($property->Value());
                     break;
 
-                case "SUMMARY":
-                    $message->subject = $property->Value();
+                case "DESCRIPTION":
+                    if (Request::GetProtocolVersion() >= 12.0) {
+                        $message->asbody = new SyncBaseBody();
+
+                        // the DESCRIPTION component is specified to be plain text (RFC5545), for HTML use X-ALT-DESC
+                        $data = str_replace("\n", "\r\n", str_replace("\r", "", $property->Value()));
+
+                        // truncate body, if requested
+                        if (strlen($data) > $truncsize) {
+                            $message->asbody->truncated = 1;
+                            $data = Utils::Utf8_truncate($data, $truncsize);
+                        }
+                        else {
+                            $message->asbody->truncated = 0;
+                        }
+                        $message->asbody->data = StringStreamWrapper::Open($data);
+                        $message->asbody->estimatedDataSize = strlen($data);
+                        unset($data);
+
+                        // set body type accordingly
+                        $message->asbody->type = SYNC_BODYPREFERENCE_PLAIN;
+                        $message->nativebodytype = SYNC_BODYPREFERENCE_PLAIN;
+                    }
+                    else {
+                        $body = $property->Value();
+                        // truncate body, if requested
+                        if(strlen($body) > $truncsize) {
+                            $body = Utils::Utf8_truncate($body, $truncsize);
+                            $message->bodytruncated = 1;
+                        } else {
+                            $message->bodytruncated = 0;
+                        }
+                        $body = str_replace("\n","\r\n", str_replace("\r","",$body));
+                        $message->body = $body;
+                    }
                     break;
 
                 case "CATEGORIES":
-                    $categories = explode(",", $property->Value());
-                    $message->categories = $categories;
+                    $categories = $this->explodeUnescapedDelimiter(",", $property->Value());
+                    if (!isset($message->categories)) {
+                        $message->categories = $this->unescape($categories);
+                    }
+                    else {
+                        foreach($categories as $category) {
+                            $message->categories[] = $this->unescape($category);
+                        }
+                    }
                     break;
             }
         }
@@ -1497,15 +1782,20 @@ class BackendCalDAV extends BackendDiff {
             $vtodo->AddProperty("DUE", gmdate("Ymd\THis\Z", $data->utcduedate));
         }
         if (isset($data->importance)) {
-            if ($data->importance == "1") {
-                $vtodo->AddProperty("PRIORITY", 6);
+            switch ($data->importance) {
+                case "0":
+                    $vtodo->AddProperty("PRIORITY", 9);
+                    break;
+                case "1":
+                    $vtodo->AddProperty("PRIORITY", 5);
+                    break;
+                case "2":
+                    $vtodo->AddProperty("PRIORITY", 1);
+                    break;
             }
-            elseif ($data->importance == "2") {
-                $vtodo->AddProperty("PRIORITY", 9);
-            }
-            else {
-                $vtodo->AddProperty("PRIORITY", 1);
-            }
+        }
+        else {
+            $vtodo->AddProperty("PRIORITY", 0);
         }
         if (isset($data->recurrence)) {
             $vtodo->AddProperty("RRULE", $this->_GenerateRecurrence($data->recurrence, false));
@@ -1546,7 +1836,7 @@ class BackendCalDAV extends BackendDiff {
             $vtodo->AddProperty("DESCRIPTION", $rtfparser->out);
         }
         if (isset($data->categories) && is_array($data->categories)) {
-            $vtodo->AddProperty("CATEGORIES", implode(",", $data->categories));
+            $vtodo->AddProperty("CATEGORIES", implode(",", $this->escape($data->categories)));
         }
 
         return $vtodo;
@@ -1838,6 +2128,76 @@ class BackendCalDAV extends BackendDiff {
         $offset = abs($phpoffset);
         $hours = floor($offset / 3600);
         return sprintf("$prefix%'.02d%'.02d", $hours, ($offset - ($hours * 3600)) / 60);
+    }
+
+    /**
+     * Escape string according to RFC5545 (3.3.11. TEXT)
+     * @param string|array  $data           string or array of strings to be escaped
+     * @access private
+     * @return string|array
+     */
+    private function escape($data) {
+        if (is_array($data)) {
+            foreach ($data as $key => $value) {
+                $data[$key] = $this->escape($value);
+            }
+            return $data;
+        }
+
+        $data = str_replace(array('\\', ';', ',', "\n", "\N", "\r"), array('\\\\', '\\;', '\\,', '\\n', '\\n'), $data);
+        return $data;
+    }
+
+    /**
+     * Un-escape string according to RFC5545 (3.3.11. TEXT)
+     * @param string        $data           string to be un-escaped
+     * @access private
+     * @return string
+     */
+    private function unescape($data) {
+        $data = str_replace(array('\\\\', '\\;', '\\,', '\\n','\\N'),array('\\', ';', ',', "\n", "\n"),$data);
+        return $data;
+    }
+
+    /**
+     * Explode string only on unescaped delimiter, this function does not regard quoted parts
+     * @param string        $delimiter      delimiter
+     * @param string        $data           string to be exploded
+     * @access private
+     * @return array
+     */
+    private function explodeUnescapedDelimiter($delimiter, $data, $escapeCharacter = '\\') {
+        $length = strlen($data);
+        $escaped = false;
+        $result = array();
+        $temp = '';
+
+        for ($position = 0; $position < $length; $position++) {
+            // use boolean switching to detect escaped delimiters
+            if ($data[$position] == $escapeCharacter) {
+                $escaped = !$escaped;
+            }
+            elseif ($escaped == false && $data[$position] == $delimiter) {
+                // only add non empty strings to result
+                if (strlen($temp) > 0) {
+                    $result[] = $temp;
+                }
+                $temp = '';
+                continue;
+            }
+            else {
+                $escaped = false;
+            }
+
+            $temp .= $data[$position];
+        }
+
+        //append last part if available
+        if (strlen($temp) > 0) {
+            $result[] = $temp;
+        }
+
+        return $result;
     }
 
 };
