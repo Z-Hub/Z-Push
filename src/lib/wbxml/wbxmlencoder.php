@@ -553,22 +553,24 @@ class WBXMLEncoder extends WBXMLDefs {
         }
         ZLog::Write(LOGLEVEL_WBXML, "WBXML-OUT: ". $data, false);
     }
-  
-  	/**
-    * converts string to stream
-    *
-    * @param string $string
-    *
-    * @access private
-    * @return 
-    */
+
+    /**
+     * converts string to stream
+     *
+     * @param string $string
+     *
+     * @access private
+     * @return 
+     */
     private function stringToStream($string) {
     	if (!is_string($string)) {
           return $string;
         }
+
       	$stream = fopen('php://memory', 'r+');
       	fwrite($stream, $string);
       	rewind($stream);
       	return $stream;
     }
+
 }
