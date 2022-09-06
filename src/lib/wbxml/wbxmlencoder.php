@@ -169,6 +169,7 @@ class WBXMLEncoder extends WBXMLDefs {
      */
     public function contentStream($stream, $asBase64 = false, $opaque = false) {
         // Do not append filters to opaque data as it might contain null char
+        $stream = $this->stringToStream($stream);
         if (!$asBase64 && !$opaque) {
             stream_filter_register('replacenullchar', 'ReplaceNullcharFilter');
             $rnc_filter = stream_filter_append($stream, 'replacenullchar');
@@ -302,6 +303,7 @@ class WBXMLEncoder extends WBXMLDefs {
         if ($asBase64) {
             $out_filter = stream_filter_append($this->_out, 'convert.base64-encode');
         }
+        $stream = $this->stringToStream($stream);
         $written = stream_copy_to_stream($stream, $this->_out);
         if ($asBase64) {
             stream_filter_remove($out_filter);
@@ -550,5 +552,23 @@ class WBXMLEncoder extends WBXMLDefs {
             $data = "more than 512K of data";
         }
         ZLog::Write(LOGLEVEL_WBXML, "WBXML-OUT: ". $data, false);
+    }
+  
+  	/**
+    * converts string to stream
+    *
+    * @param string $string
+    *
+    * @access private
+    * @return 
+    */
+    private function stringToStream($string) {
+    	if (!is_string($string)) {
+          return $string;
+        }
+      	$stream = fopen('php://memory', 'r+');
+      	fwrite($stream, $string);
+      	rewind($stream);
+      	return $stream;
     }
 }
