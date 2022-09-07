@@ -458,7 +458,7 @@ class Streamer implements Serializable {
      */
     private function formatDate($ts, $type) {
         if ('' === $ts) {
-          return $ts;
+          $ts = null;
         }
       
         if($type == self::STREAMER_TYPE_DATE)
