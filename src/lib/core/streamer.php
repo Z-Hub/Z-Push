@@ -457,14 +457,14 @@ class Streamer implements Serializable {
      * @return string
      */
     private function formatDate($ts, $type) {
-        if (is_string($ts)) {
+        if ('' === $ts) {
           return $ts;
         }
       
         if($type == self::STREAMER_TYPE_DATE)
-            return gmdate("%Y%m%dT%H%M%SZ", $ts);
+            return gmstrftime("%Y%m%dT%H%M%SZ", $ts);
         else if($type == self::STREAMER_TYPE_DATE_DASHES)
-            return gmdate("%Y-%m-%dT%H:%M:%S.000Z", $ts);
+            return gmstrftime("%Y-%m-%dT%H:%M:%S.000Z", $ts);
     }
 
     /**
