@@ -290,7 +290,6 @@ class WBXMLEncoder extends WBXMLDefs {
      * @return
      */
     private function _contentStream($stream, $asBase64, $opaque) {
-      	$stream = $this->stringToStream($stream);
         $stat = fstat($stream);
         // write full stream, including the finalizing terminator to the output stream (stuff outTermStr() would do)
         if ($opaque) {
