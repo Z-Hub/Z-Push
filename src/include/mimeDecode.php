@@ -527,7 +527,7 @@ class Mail_mimeDecode
                 if (!$got_start) {
                     // munge headers for mbox style from
                     if ($value[0] == '>') {
-                        $value = substring($value, 1); // remove mbox >
+                        $value = substr($value, 1); // remove mbox >
                     }
                     if (substr($value,0,5) == 'From ') {
                         $value = 'Return-Path: ' . substr($value, 5);
