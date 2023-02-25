@@ -179,7 +179,7 @@ class Mail_RFC822 {
 
         if (isset($address))        $this->address        = $address;
         // z-push addition
-        if (strlen(trim($this->address)) == 0) return array();
+        if (strlen(trim((string) $this->address)) == 0) return array();
         if (isset($default_domain)) $this->default_domain = $default_domain;
         if (isset($nest_groups))    $this->nestGroups     = $nest_groups;
         if (isset($validate))       $this->validate       = $validate;
@@ -244,7 +244,7 @@ class Mail_RFC822 {
         }
 
         // Split the string based on the above ten or so lines.
-        $parts  = explode($split_char, $address);
+        $parts  = explode($split_char, (string) $address);
         $string = $this->_splitCheck($parts, $split_char);
 
         // If a group...
@@ -276,7 +276,7 @@ class Mail_RFC822 {
 
         // Remove the now stored address from the initial line, the +1
         // is to account for the explode character.
-        $address = trim(substr($address, strlen($string) + 1));
+        $address = trim(substr((string) $address, strlen($string) + 1));
 
         // If the next char is a comma and this was a group, then
         // there are more addresses, otherwise, if there are any more
@@ -305,7 +305,7 @@ class Mail_RFC822 {
     protected function _isGroup($address)
     {
         // First comma not in quotes, angles or escaped:
-        $parts  = explode(',', $address);
+        $parts  = explode(',', (string) $address);
         $string = $this->_splitCheck($parts, ',');
 
         // Now we have the first address, we can reliably check for a
