@@ -2907,7 +2907,14 @@ class MAPIProvider {
                     if (strlen($persistData) == 4 && $persistData == PERSIST_SENTINEL) {
                         break;
                     }
-                    $unpackedData = unpack("vdataSize/velementID/velDataSize", substr($persistData, 2, 6));
+                    // incase of empty $persistData: Suppress error 'unpack(): Type v: not enough input, need 2, have 0'
+                    $part = substr($persistData, 2, 6);
+                    if(strlen($part)==6)
+                        $unpackedData = unpack("vdataSize/velementID/velDataSize", $part);
+                    else{
+                         ZLog::Write(LOGLEVEL_INFO, "MAPIProvider->getSpecialFoldersData(): Not enough data");
+                         $unpackedData = array();
+                    }
                     if (isset($unpackedData['dataSize']) && isset($unpackedData['elementID']) && $unpackedData['elementID'] == RSF_ELID_ENTRYID && isset($unpackedData['elDataSize'])) {
                         $this->specialFoldersData[] = substr($persistData, 8, $unpackedData['elDataSize']);
                         // Add PersistId and DataElementsSize lenghts to the data size as they're not part of it

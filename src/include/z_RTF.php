@@ -172,7 +172,7 @@ class z_RTF extends rtf {
         $c=0;
         $end = $off + $len;
         for($i=$off;$i < $end;$i++) {
-            $c=$this->CRC32_TABLE[($c ^ ord($buf{$i})) & 0xFF] ^ (($c >> 8) & 0x00ffffff);
+            $c=$this->CRC32_TABLE[($c ^ ord($buf[$i])) & 0xFF] ^ (($c >> 8) & 0x00ffffff);
         }
         return $c;
     }

@@ -104,6 +104,7 @@ class ZPushTop {
     private $activeHosts = array();
     private $activeUsers = array();
     private $activeDevices = array();
+    private $activeBackend;
 
     /**
      * Constructor
@@ -127,6 +128,9 @@ class ZPushTop {
         $this->scrSize = array('width' => 80, 'height' => 24);
         $this->pingInterval = (defined('PING_INTERVAL') && PING_INTERVAL > 0) ? PING_INTERVAL : 12;
 
+        // Identify the backend that will be loaded by z-push
+        $this->activeBackend = get_class(ZPush::GetBackend());
+      
         // get a TopCollector
         $this->topCollector = new TopCollector();
     }
@@ -304,8 +308,8 @@ class ZPushTop {
         $this->scrPrintAt($lc,0, "\033[1mZ-Push top live statistics\033[0m\t\t\t\t\t". @strftime("%d/%m/%Y %T")."\n"); $lc++;
 
         $this->scrPrintAt($lc,0, sprintf("Open connections: %d\t\t\t\tUsers:\t %d\tZ-Push:   %s ",count($this->activeConn),count($this->activeUsers), $this->getVersion())); $lc++;
-        $this->scrPrintAt($lc,0, sprintf("Push connections: %d\t\t\t\tDevices: %d\tPHP-MAPI: %s", $this->pushConn, count($this->activeDevices),phpversion("mapi"))); $lc++;
-        $this->scrPrintAt($lc,0, sprintf("                                                Hosts:\t %d", count($this->activeHosts))); $lc++;
+        $this->scrPrintAt($lc,0, sprintf("Push connections: %d\t\t\t\tDevices: %d\tPHP-MAPI: %s", $this->pushConn, count($this->activeDevices), phpversion("mapi"))); $lc++;
+        $this->scrPrintAt($lc,0, sprintf("                                                Hosts:\t %d\tBackend:  %s", count($this->activeHosts), $this->activeBackend)); $lc++;
         $lc++;
 
         $this->scrPrintAt($lc,0, "\033[4m". $this->getLine(array('pid'=>'PID', 'ip'=>'IP', 'user'=>'USER', 'command'=>'COMMAND', 'time'=>'TIME', 'devagent'=>'AGENT', 'devid'=>'DEVID', 'addinfo'=>'Additional Information')). str_repeat(" ",20)."\033[0m"); $lc++;

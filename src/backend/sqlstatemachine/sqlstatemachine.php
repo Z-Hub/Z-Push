@@ -716,7 +716,10 @@ class SqlStateMachine implements IStateMachine {
      */
     protected function checkDbAndTables() {
         try {
-            $sqlStmt = sprintf("SHOW TABLES FROM %s", STATE_SQL_DATABASE);
+	    if (STATE_SQL_ENGINE == "pgsql") 
+	    	$sqlStmt = "SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname != 'pg_catalog' AND schemaname != 'information_schema';";
+	    else
+	   	$sqlStmt = sprintf("SHOW TABLES FROM %s", STATE_SQL_DATABASE);
             $sth = $this->getDbh(false)->prepare($sqlStmt);
             $sth->execute();
             if ($sth->rowCount() != 3) {

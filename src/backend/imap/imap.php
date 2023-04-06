@@ -251,6 +251,10 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             $message->headers["cc"] = Utils::CheckAndFixEncodingInHeadersOfSentMail($Mail_RFC822->parseAddressList($message->headers["cc"], null, null, false, null));
         }
 
+        if (isset($message->headers["bcc"])) {
+            $message->headers["bcc"] = Utils::CheckAndFixEncodingInHeadersOfSentMail($Mail_RFC822->parseAddressList($message->headers["bcc"], null, null, false, null));
+        }
+
         unset($Mail_RFC822);
 
         if (isset($message->headers["subject"]) && mb_detect_encoding($message->headers["subject"], "UTF-8") != false && preg_match('/[^\x00-\x7F]/', $message->headers["subject"]) == 1) {
@@ -2635,11 +2639,11 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
         if (is_array($toaddr)) {
             $recipients = $toaddr;
         }
-        else {
+        elseif ($toaddr !== "") {
             $recipients = array($toaddr);
         }
 
-        // Cc and Bcc headers are sent, but we need to make sure that the recipient list contains them
+        // add Bcc and Cc header fields to recipients
         foreach (array("CC", "cc", "Cc", "BCC", "Bcc", "bcc") as $key) {
             if (!empty($headers[$key])) {
                 if (is_array($headers[$key])) {
@@ -2647,6 +2651,11 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
                 }
                 else {
                     $recipients[] = $headers[$key];
+                }
+
+                // remove BCC header field from message
+                if (strcasecmp($key, "BCC") == 0) {
+                    unset($headers[$key]);
                 }
             }
         }

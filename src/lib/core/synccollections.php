@@ -538,6 +538,8 @@ class SyncCollections implements Iterator {
             return true;
         }
 
+        // couter for forcing export
+        $forceRealExport = 0;
         // wait for changes
         $started = time();
         $endat = time() + $lifetime;
@@ -582,6 +584,15 @@ class SyncCollections implements Iterator {
 
             // Use changes sink if available
             if ($changesSink) {
+                //Force export after 600 seconds
+                if ($forceRealExport+600 <= $now){
+                    if ($this->CountChanges($onlyPingable)){
+                        ZLog::Write(LOGLEVEL_DEBUG,"SyncCollections->CheckForCanges(): Using ChangesSink but found changes with CountChanges timer");
+                        return true;
+                    }
+                    $forceRealExport = $now;
+                }
+
                 ZPush::GetTopCollector()->AnnounceInformation(sprintf("Sink %d/%ds on %s", ($now-$started), $lifetime, $checkClasses));
                 $notifications = ZPush::GetBackend()->ChangesSink($nextInterval);
 
