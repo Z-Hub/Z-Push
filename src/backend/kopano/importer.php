@@ -801,7 +801,7 @@ class ImportChangesICS implements IImportChanges {
 
         $folderentryid = mapi_msgstore_entryidfromsourcekey($this->store, hex2bin($id));
         if(!$folderentryid)
-            throw new StatusException(sprintf("ImportChangesICS->ImportFolderDeletion('%s','%s'): Error, unable to resolve folder", $id, $parent, mapi_last_hresult()), SYNC_FSSTATUS_FOLDERDOESNOTEXIST);
+            throw new StatusException(sprintf("ImportChangesICS->ImportFolderDeletion('%s','%s'): Error, unable to resolve folder: 0x%X", $id, $parent, mapi_last_hresult()), SYNC_FSSTATUS_FOLDERDOESNOTEXIST);
 
         // get the folder type from the MAPIProvider
         $type = $this->mapiprovider->GetFolderType($folderentryid);
