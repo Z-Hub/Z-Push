@@ -1,12 +1,3 @@
----
-name: Bug report
-about: Create a report to help us improve
-title: ''
-labels: ''
-assignees: ''
-
----
-
 **Describe the bug**
 A clear and concise description of what the bug is.
 
@@ -26,6 +17,8 @@ If applicable, add text or screenshots of the logs to help explain your problem.
 **Server (please complete the following information):**
  - OS: [e.g. iOS]
  - PHP Version: [e.g. 8.2] 
+ - Backend for: [e.g. Kopano, Zimbra, Mail-in-a-Box]
+ - and Version: [e.g. git, 9.0, v61.1]
 
 **Smartphone (please complete the following information):**
  - Device: [e.g. iPhone6]
