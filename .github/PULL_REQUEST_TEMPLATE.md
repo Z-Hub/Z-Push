@@ -1,3 +1,6 @@
+<!-- If you haven't released code to this project under github before please consider doing so now, the below is alternative wording that you can choose to use -->
+<!-- Released under the GNU Affero General Public License (AGPL), version 3 and Trademark Additional Terms. -->
+
 <!-- Thanks for sending a pull request! The below is all optional. -->
 
 What does this implement/fix? Explain your changes.
@@ -28,10 +31,3 @@ Where has this been tested?
  - OS: [e.g. iOS8.1]
  - Mail App [e.g. GMail, Apple Mail] 
  - Version [e.g. 22]
-
-Release under AGPLv3
----------------------------
-<!-- If you haven't released code to this project under github before please consider doing so now by uncommenting one of the below -->
-
-<!-- Released under the GNU Affero General Public License (AGPL), version 3. -->
-<!-- Released under the GNU Affero General Public License (AGPL), version 3 and Trademark Additional Terms. -->
