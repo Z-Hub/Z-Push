@@ -160,7 +160,8 @@ class ExportChangesDiff extends DiffState implements IExportChanges{
                         $message = $this->backend->GetMessage($this->folderid, $change["id"], $this->contentparameters);
 
                         // copy the flag to the message
-                        $message->flags = (isset($change["flags"])) ? $change["flags"] : 0;
+                        if($message)
+                            $message->flags = (isset($change["flags"])) ? $change["flags"] : 0;
 
                         if($stat && $message) {
                             if($this->flags & BACKEND_DISCARD_DATA || $this->importer->ImportMessageChange($change["id"], $message) == true)
