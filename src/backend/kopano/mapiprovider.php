@@ -1286,12 +1286,12 @@ class MAPIProvider {
 
             if (isset($existingstartendprops[$amapping["starttime"]]) && !isset($appointment->starttime)) {
                 $appointment->starttime = $existingstartendprops[$amapping["starttime"]];
-                ZLog::Write(LOGLEVEL_WBXML, sprintf("MAPIProvider->setAppointment(): Parameter 'starttime' was not set, using value from MAPI %d (%s).", $appointment->starttime, gmstrftime("%Y%m%dT%H%M%SZ", $appointment->starttime)));
+                ZLog::Write(LOGLEVEL_WBXML, sprintf("MAPIProvider->setAppointment(): Parameter 'starttime' was not set, using value from MAPI %d (%s).", $appointment->starttime, Utils::FormatDateUtc($appointment->starttime,"yyyyMMdd'T'HHmmSS'Z'")));
             }
             if (isset($existingstartendprops[$amapping["endtime"]]) && !isset($appointment->endtime)) {
                 $appointment->endtime = $existingstartendprops[$amapping["endtime"]];
-                ZLog::Write(LOGLEVEL_WBXML, sprintf("MAPIProvider->setAppointment(): Parameter 'endtime' was not set, using value from MAPI %d (%s).", $appointment->endtime, gmstrftime("%Y%m%dT%H%M%SZ", $appointment->endtime)));
-            }
+                ZLog::Write(LOGLEVEL_WBXML, sprintf("MAPIProvider->setAppointment(): Parameter 'endtime' was not set, using value from MAPI %d (%s).", $appointment->endtime, Utils::FormatDateUtc($appointment->endtime,"yyyyMMdd'T'HHmmSS'Z'")));
+                }
         }
         if (!isset($appointment->starttime) || !isset($appointment->endtime)) {
             throw new StatusException("MAPIProvider->setAppointment(): Error, start and/or end time not set and can not be retrieved from MAPI.", SYNC_STATUS_SYNCCANNOTBECOMPLETED);
