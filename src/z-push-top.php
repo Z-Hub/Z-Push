@@ -80,6 +80,7 @@ class ZPushTop {
     const SHOW_ACTIVE_ONLY = 1;
     const SHOW_UNKNOWN_ONLY = 2;
     const SHOW_TERM_DEFAULT_TIME = 5; // 5 secs
+    const SHOW_PID_CHARS = 7; //The PID_MAX_LIMIT can be set to any value up to 2^22 (approximately 4 million)
 
     private $topCollector;
     private $starttime;
@@ -666,10 +667,10 @@ class ZPushTop {
      */
     private function getLine($l) {
         if ($this->wide === true)
-            return sprintf("%s%s%s%s%s%s%s%s", $this->ptStr($l['pid'],6), $this->ptStr($l['ip'],16), $this->ptStr($l['user'],24), $this->ptStr($l['command'],16), $this->ptStr($this->sec2min($l['time']),8), $this->ptStr($l['devagent'],28), $this->ptStr($l['devid'],33, true), $l['addinfo']);
+            return sprintf("%s%s%s%s%s%s%s%s", $this->ptStr($l['pid'],self::SHOW_PID_CHARS+1), $this->ptStr($l['ip'],16), $this->ptStr($l['user'],24), $this->ptStr($l['command'],16), $this->ptStr($this->sec2min($l['time']),8), $this->ptStr($l['devagent'],28), $this->ptStr($l['devid'],33, true), $l['addinfo']);
         else
-            return sprintf("%s%s%s%s%s%s%s%s", $this->ptStr($l['pid'],6), $this->ptStr($l['ip'],16), $this->ptStr($l['user'],8), $this->ptStr($l['command'],8), $this->ptStr($this->sec2min($l['time']),6), $this->ptStr($l['devagent'],20), $this->ptStr($l['devid'],12, true), $l['addinfo']);
-    }
+            return sprintf("%s%s%s%s%s%s%s%s", $this->ptStr($l['pid'],self::SHOW_PID_CHARS+1), $this->ptStr($l['ip'],16), $this->ptStr($l['user'],8), $this->ptStr($l['command'],8), $this->ptStr($this->sec2min($l['time']),6), $this->ptStr($l['devagent'],20), $this->ptStr($l['devid'],12, true), $l['addinfo']);
+     }
 
     /**
      * Pads and trims string
