@@ -1,0 +1,2 @@
+- name: Psalm – Security Scanner for PHP
+  uses: psalm/psalm-github-security-scan@1.2.1
