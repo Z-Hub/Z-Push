@@ -1278,7 +1278,11 @@ class Utils {
                 $str .= $val->text;
             }
             else {
-                $str .= @mb_convert_encoding($val->text, "utf-8", $val->charset);
+                try {
+                    $str .= @mb_convert_encoding($val->text, "utf-8", $val->charset);
+                } catch (ValueError $exception) {
+                    $str .= @iconv($val->charset, "utf-8", $val->text);
+                }
             }
         }
         if (!$isiso2022jp) {
