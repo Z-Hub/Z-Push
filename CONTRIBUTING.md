@@ -23,7 +23,7 @@ License, version 3 (AGPLv3).
 There is a need to document that contributors understand the above. 
 
 All contributors must explicitly and publicly release their code under AGPLv3 at 
-least once with one of the following statments:
+least once with one of the following statements:
 
 * Released under the GNU Affero General Public License (AGPL), version 3.
 * Released under the GNU Affero General Public License (AGPL), version 3 and Trademark Additional Terms.
