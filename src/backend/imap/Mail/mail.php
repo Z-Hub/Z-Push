@@ -91,10 +91,12 @@ class Mail_mail extends Mail {
         /* Because the mail() function may pass headers as command
          * line arguments, we can't guarantee the use of the standard
          * "\r\n" separator.  Instead, we use the system's native line
-         * separator. */
-        if (defined('PHP_EOL')) {
+         * separator.
+         * Fixed in PHP 8.0.
+         */
+        if (defined('PHP_EOL') && version_compare(PHP_VERSION, '8.0.0', '<')) {
             $this->sep = PHP_EOL;
-        } else {
+        } elseif (version_compare(PHP_VERSION, '8.0.0', '<')) {
             $this->sep = (strpos(PHP_OS, 'WIN') === false) ? "\n" : "\r\n";
         }
     }
