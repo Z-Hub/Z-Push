@@ -1022,7 +1022,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
 
         if ($cutoffdate > 0) {
             // IMAP SINCE search criteria
-            $searchCriteria = "SINCE ". date("d-M-Y", $cutoffdate);
+            $searchCriteria = "SINCE ". date("d-M-Y", (int) $cutoffdate);
 
             // search messages in time range
             $search = @imap_search($this->mbox, $searchCriteria);
@@ -1128,7 +1128,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
     public function GetMessage($folderid, $id, $contentparameters) {
         $truncsize = Utils::GetTruncSize($contentparameters->GetTruncation());
         $mimesupport = $contentparameters->GetMimeSupport();
-        $bodypreference = $contentparameters->GetBodyPreference(); /* fmbiete's contribution r1528, ZP-320 */
+        $bodypreference = $contentparameters->GetBodyPreference() ?: []; /* fmbiete's contribution r1528, ZP-320 */
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->GetMessage('%s', '%s', '%s')", $folderid,  $id, implode(",", $bodypreference)));
 
         $folderImapid = $this->getImapIdFromFolderId($folderid);
@@ -1167,7 +1167,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
 
             // Detect Apple iOS devices
             $isAppleIosDevice = false;
-            $deviceType = strtolower(Request::GetDeviceType());
+            $deviceType = strtolower(Request::GetDeviceType() ?? '');
             if ($deviceType == 'iphone' || $deviceType == 'ipad' || $deviceType == 'ipod') {
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->GetMessage():: iOS device %s->%s detected", Request::GetDeviceType(), Request::GetUserAgent()));
                 $isAppleIosDevice = true;
@@ -2505,6 +2505,9 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
      * @return
      */
     protected function getModAndParentNames($fhir, &$displayname, &$parent) {
+        if (is_string($fhir)) {
+            $fhir = [$fhir];
+        }
         // if mod is already set add the previous part to it as it might be a folder which has delimiter in its name
         $displayname = (isset($displayname) && strlen($displayname) > 0) ? $displayname = array_pop($fhir) . $this->getServerDelimiter() . $displayname : array_pop($fhir);
         $parent = implode($this->getServerDelimiter(), $fhir);
