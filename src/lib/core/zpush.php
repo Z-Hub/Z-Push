@@ -825,7 +825,7 @@ class ZPush {
         $message $additionalMessage
         <br><br>
         More information about Z-Push can be found at:<br>
-        <a href="https://z-push.org/">Z-Push homepage</a><br>
+        <a href="http://z-push.org/">Z-Push homepage</a><br>
         <a href="https://z-push.github.io/download/index.html">Z-Push download page</a><br>
         <a href="https://github.com/Z-Hub/Z-Push/issues">Z-Push Bugtracker</a><br>
         <a href="https://github.com/Z-Hub/Z-Push/wiki">Z-Push Wiki</a> and <a href="https://github.com/Z-Hub/Z-Push/wiki/Roadmap">Roadmap</a><br>
