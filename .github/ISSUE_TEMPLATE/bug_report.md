@@ -1,6 +1,6 @@
 ---
 name: Bug Report
-about: Describe this issue template's purpose here.
+about: Use this when you have found a replicateable bug. 
 title: ''
 labels: ''
 assignees: ''
