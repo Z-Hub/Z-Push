@@ -107,8 +107,21 @@ class PingTracking extends InterProcessData {
         // check if there is another (and newer) active ping connection
         if (is_array($pings) && isset($pings[self::$devid][self::$user]) && count($pings[self::$devid][self::$user]) > 1) {
             foreach ($pings[self::$devid][self::$user] as $pid=>$starttime)
-                if ($starttime > self::$start)
+                if ($starttime > self::$start) {
+ZLog::Write(LOGLEVEL_DEBUG, "MultiPINGS: " . "Other process starttime after mine so terminate me - return TRUE");
                     return true;
+				}
+                elseif ($starttime == self::$start) {
+                    if ($pid > self::$pid) {
+ZLog::Write(LOGLEVEL_DEBUG, "MultiPINGS: " . 'Other process [' . $pid .'] starttime same as mine : Other process ID is "bigger" than mine - return TRUE');
+                        return true;
+                    } elseif ($pid < self::$pid) {
+ZLog::Write(LOGLEVEL_DEBUG, "MultiPINGS: " . 'Other process [' . $pid .'] starttime same as mine : Other process ID is "smaller" than mine - return FALSE');
+                    }
+                    else {
+ZLog::Write(LOGLEVEL_DEBUG, "MultiPINGS: " . 'This is my PID - Ignore me - return FALSE');
+                    }
+                }
         }
 
         return false;
