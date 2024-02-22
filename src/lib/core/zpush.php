@@ -826,9 +826,9 @@ class ZPush {
         <br><br>
         More information about Z-Push can be found at:<br>
         <a href="http://z-push.org/">Z-Push homepage</a><br>
-        <a href="http://z-push.org/download">Z-Push download page</a><br>
-        <a href="https://jira.z-hub.io/browse/ZP">Z-Push Bugtracker</a><br>
-        <a href="https://wiki.z-hub.io/display/ZP">Z-Push Wiki</a> and <a href="https://wiki.z-hub.io/display/ZP/Roadmap">Roadmap</a><br>
+        <a href="https://z-push.org/download/">Z-Push download page</a><br>
+        <a href="https://github.com/Z-Hub/Z-Push/issues">Z-Push Bugtracker</a><br>
+        <a href="https://github.com/Z-Hub/Z-Push/wiki">Z-Push Wiki</a> and <a href="https://github.com/Z-Hub/Z-Push/wiki/Roadmap">Roadmap</a><br>
         <br>
         All modifications to this sourcecode must be published and returned to the community.<br>
         Please see <a href="http://www.gnu.org/licenses/agpl-3.0.html">AGPLv3 License</a> for details.<br>
