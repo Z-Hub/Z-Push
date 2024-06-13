@@ -28,11 +28,16 @@ if (!defined("ZPUSH_VERSION")) {
     $branch = trim(exec("hash git 2>/dev/null && cd $path >/dev/null 2>&1 && git branch --no-color 2>/dev/null | sed -e '/^[^*]/d' -e \"s/* \(.*\)/\\1/\""));
     $version = exec("hash git 2>/dev/null && cd $path >/dev/null 2>&1 && git describe  --always 2>/dev/null");
     $file = dirname(realpath($_SERVER['SCRIPT_FILENAME'])) . '/version';
+    $fileparent = dirname(realpath($_SERVER['SCRIPT_FILENAME'])) . '/../version';
     if ($branch && $version) {
         define("ZPUSH_VERSION", $branch .'-'. $version);
     }
     elseif (file_exists($file)) {
         $line = fgets(fopen($file, 'r'));
+        define("ZPUSH_VERSION", $line);
+    }
+    elseif (file_exists($fileparent)) {
+        $line = fgets(fopen($fileparent, 'r'));
         define("ZPUSH_VERSION", $line);
     }
     else {
