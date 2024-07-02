@@ -227,7 +227,7 @@ class DiffState implements IChanges {
     protected function updateState($type, $change) {
         // Change can be a change or an add
         if($type == "change") {
-            for($i=0; $i < count($this->syncstate); $i++) {
+            for($i=0; $i < count((array)$this->syncstate); $i++) {
                 if($this->syncstate[$i]["id"] == $change["id"]) {
                     $this->syncstate[$i] = $change;
                     return;
@@ -236,7 +236,7 @@ class DiffState implements IChanges {
             // Not found, add as new
             $this->syncstate[] = $change;
         } else {
-            for($i=0; $i < count($this->syncstate); $i++) {
+            for($i=0; $i < count((array)$this->syncstate); $i++) {
                 // Search for the entry for this item
                 if($this->syncstate[$i]["id"] == $change["id"]) {
                     if($type == "flags") {
