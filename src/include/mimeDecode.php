@@ -404,6 +404,7 @@ class Mail_mimeDecode
                     }
                     // if there is no explicit charset, then don't try to convert to default charset, and make sure that only text mimetypes are converted
                     $charset = (isset($return->ctype_parameters['charset']) && ((isset($return->ctype_primary) && $return->ctype_primary == 'text') || !isset($return->ctype_primary)) ) ? $return->ctype_parameters['charset'] : '';
+                    $part = new stdClass();
                     $part->body = ($this->_decode_bodies ? $this->_decodeBody($body, $content_transfer_encoding['value'], $charset, false) : $body);
                     $ctype = explode('/', strtolower($content_type['value']));
                     $part->ctype_parameters['name'] = 'smime.p7m';
