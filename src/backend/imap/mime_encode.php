@@ -204,7 +204,7 @@ function build_mime_message($message) {
                 $mimeHeaders['content_type'] = $new_value;
                 break;
             case 'content-transfer-encoding':
-                if (strcasecmp($value, "base64") == 0 || strcasecmp($value, "binary") == 0) {
+                if (is_string($value) && (strcasecmp($value, "base64") == 0 || strcasecmp($value, "binary") == 0)) {
                     $mimeHeaders['encoding'] = "base64";
                 }
                 else {
