@@ -330,25 +330,12 @@ class Mail_mimeDecode
         if (isset($content_type)) {
             switch (strtolower($content_type['value'])) {
                 case 'text/plain':
-                    $encoding = isset($content_transfer_encoding) ? $content_transfer_encoding['value'] : '7bit';
-                    $charset = isset($return->ctype_parameters['charset']) ? $return->ctype_parameters['charset'] : $this->_charset;
-                    $this->_include_bodies ? $return->body = ($this->_decode_bodies ? $this->_decodeBody($body, $encoding, $charset, true) : $body) : null;
-                    break;
-
                 case 'text/html':
                     $encoding = isset($content_transfer_encoding) ? $content_transfer_encoding['value'] : '7bit';
                     $charset = isset($return->ctype_parameters['charset']) ? $return->ctype_parameters['charset'] : $this->_charset;
                     $this->_include_bodies ? $return->body = ($this->_decode_bodies ? $this->_decodeBody($body, $encoding, $charset, true) : $body) : null;
                     break;
-
-                case 'multipart/signed': // PGP
-                    $parts = $this->_boundarySplit($body, $content_type['other']['boundary'], true);
-                    $return->parts['msg_body'] = $parts[0];
-                    list($part_header, $part_body) = $this->_splitBodyHeader($parts[1]);
-                    $return->parts['sig_hdr'] = $part_header;
-                    $return->parts['sig_body'] = $part_body;
-                    break;
-
+                
                 case 'multipart/encrypted': // #190 encrypted parts will be treated as normal ones
                 case 'multipart/parallel':
                 case 'multipart/appledouble': // Appledouble mail
@@ -367,7 +354,7 @@ class Mail_mimeDecode
 
                     $default_ctype = (strtolower($content_type['value']) === 'multipart/digest') ? 'message/rfc822' : 'text/plain';
 
-                    $parts = $this->_boundarySplit($body, $content_type['other']['boundary']);
+                    $parts = $this->_boundarySplit($body, $content_type['other']['boundary'], strtolower($content_type['value']) === 'multipart/signed');
                     for ($i = 0; $i < count($parts); $i++) {
                         list($part_header, $part_body) = $this->_splitBodyHeader($parts[$i]);
                         $part = $this->_decode($part_header, $part_body, $default_ctype);
