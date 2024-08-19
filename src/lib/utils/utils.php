@@ -1263,6 +1263,9 @@ class Utils {
         $str = "";
         $striso2022jp = "";
         foreach (@imap_mime_header_decode($nonencstr) as $val) {
+            if ($val->charset == "unicode-1-1-utf-7") {
+                $val->charset = "utf-7";
+            }
             if (is_null($charset)) {
                 $charset = strtolower($val->charset);
             }
