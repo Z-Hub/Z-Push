@@ -528,8 +528,8 @@ abstract class SyncObject extends Streamer {
                                 ZLog::Write(LOGLEVEL_WARN, sprintf("SyncObject->Check(): Unmet condition in object from type %s: parameter '%s' can not be compared, as the comparable is not set. Check failed!", $objClass, $v[self::STREAMER_VAR]));
                                 return false;
                             }
-                            if ( ($rule == self::STREAMER_CHECK_CMPHIGHER && $this->{$v[self::STREAMER_VAR]} < $cmp) ||
-                                 ($rule == self::STREAMER_CHECK_CMPLOWER  && $this->{$v[self::STREAMER_VAR]} > $cmp)
+                            if ( ($rule == self::STREAMER_CHECK_CMPHIGHER && (float)$this->{$v[self::STREAMER_VAR]} < $cmp) ||
+                                 ($rule == self::STREAMER_CHECK_CMPLOWER  && (float)$this->{$v[self::STREAMER_VAR]} > $cmp)
                                 ) {
 
                                 ZLog::Write(LOGLEVEL_WARN, sprintf("SyncObject->Check(): Unmet condition in object from type %s: parameter '%s' is %s than '%s'. Check failed!",
