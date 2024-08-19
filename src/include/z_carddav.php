@@ -657,9 +657,10 @@ EOFXMLGETXMLVCARD;
 
             foreach ($xml->response as $response) {
                 if (isset($response->propstat)) {
-                    if ((strlen($this->url_vcard_extension) > 0 && preg_match('/'.$this->url_vcard_extension.'/', $response->href) &&
+                    if ((((strlen($this->url_vcard_extension) > 0 && preg_match('/'.$this->url_vcard_extension.'/', $response->href)) 
+                        || preg_match('/vcard/', $response->propstat->prop->getcontenttype)) &&
                         !(isset($response->propstat->prop->resourcetype) && isset($response->propstat->prop->resourcetype->addressbook)))
-                        || preg_match('/vcard/', $response->propstat->prop->getcontenttype) || isset($response->propstat->prop->{'address-data'}) || isset($response->propstat->prop->{'addressbook-data'})) {
+                        || isset($response->propstat->prop->{'address-data'}) || isset($response->propstat->prop->{'addressbook-data'})) {
                         // It's a vcard
                         $id = basename($response->href);
                         $id = str_replace($this->url_vcard_extension, null, $id);
