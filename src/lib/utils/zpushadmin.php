@@ -1019,6 +1019,9 @@ class ZPushAdmin {
                 if ($obsoleteState['type'] === IStateMachine::DEVICEDATA)
                     continue;
 
+                if ($obsoleteState['type'] === IStateMachine::BACKENDSTORAGE)
+                    continue;
+                
                 if (!in_array($obsoleteState['uuid'], $knownUuids)) {
                     if (is_numeric($obsoleteState['counter']))
                         $obsoleteState['counter']++;
