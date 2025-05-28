@@ -1536,8 +1536,8 @@ class Sync extends RequestProcessor {
                                 $response = $this->importer->ImportMessageChange($serverid, $message);
                             }
 
-                            // set the serverid if AS 16.0+ is used
-                            if (Request::GetProtocolVersion() >= 16.0 && ($response instanceof SyncObject)) {
+                            // set serverid if not set
+                            if (!isset($response->serverid)) {
                                 $response->serverid = $serverid;
                             } 
 

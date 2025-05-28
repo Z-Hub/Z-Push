@@ -64,7 +64,7 @@ class ImportChangesDiff extends DiffState implements IImportChanges {
      * @param SyncObject    $message
      *
      * @access public
-     * @return boolean/string - failure / id of message
+     * @return boolean/SyncObject - failure / message
      * @throws StatusException
      */
     public function ImportMessageChange($id, $message) {
@@ -102,19 +102,13 @@ class ImportChangesDiff extends DiffState implements IImportChanges {
         // Record the state of the message
         $this->updateState("change", $stat);
 
-        if (Request::GetProtocolVersion() >= 16.0) {
-            $response = $this->backend->GetMessage($this->folderid, $stat["id"], $this->contentparameters);
-            $response = Utils::GetResponseFromObject($response);
-            if (property_exists($response, "serverid")) {
-                $response->serverid = $stat["id"];
-            }            
-            if (property_exists($response, "hasResponse")) {
-                $response->hasResponse = true;
-            }
-        } 
-        else {
-            // Return the server id of the message
-            $response = $stat["id"];
+        $response = $this->backend->GetMessage($this->folderid, $stat["id"], $this->contentparameters);
+        $response = Utils::GetResponseFromObject($response);
+        if (property_exists($response, "serverid")) {
+            $response->serverid = $stat["id"];
+        }            
+        if (property_exists($response, "hasResponse")) {
+            $response->hasResponse = true;
         }
 
         return $response;
