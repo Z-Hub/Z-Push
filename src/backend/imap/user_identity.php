@@ -208,9 +208,14 @@ function getIdentityFromSql($username, $domain, $identity, $encode = true) {
         $dbh = new PDO(IMAP_FROM_SQL_DSN, IMAP_FROM_SQL_USER, IMAP_FROM_SQL_PASSWORD, unserialize(IMAP_FROM_SQL_OPTIONS));
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->getIdentityFromSql() - Connected to SQL Database"));
 
-        $sql = str_replace('#username', $username, str_replace('#domain', $domain, IMAP_FROM_SQL_QUERY));
+        //replace config placeholdes with parameter placeholders
+        $sql = str_replace("'#username'", ":username", str_replace("'#domain'", ":domain", str_replace("'#username@#domain'", ":usernameatdomain", IMAP_FROM_SQL_QUERY)));
+        $usernameatdomain = $username . '@' . $domain;
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->getIdentityFromSql() - Searching From with filter: %s", $sql));
         $sth = $dbh->prepare($sql);
+        if(mb_strpos($sql, ':username') !== false) $sth->bindValue(':username', $username, PDO::PARAM_STR);
+        if(mb_strpos($sql, ':domain') !== false) $sth->bindValue(':domain', $domain, PDO::PARAM_STR);
+        if(mb_strpos($sql, ':usernameatdomain') !== false) $sth->bindValue(':usernameatdomain', $usernameatdomain, PDO::PARAM_STR);
         $sth->execute();
         $record = $sth->fetch(PDO::FETCH_ASSOC);
         if ($record) {
