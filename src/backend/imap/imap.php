@@ -1318,7 +1318,9 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             unset($textBody);
             unset($mail_headers);
 
-            $output->datereceived = isset($message->headers["date"]) ? $this->cleanupDate($message->headers["date"]) : null;
+            $output->datereceived = null;
+            if (isset($message->headers["date"]))
+                $output->datereceived = is_array($message->headers["date"]) ? $message->headers["date"][0] : $message->headers["date"];
 
             if ($is_smime) {
                 // #190, KD 2015-06-04 - Add Encrypted (and possibly signed) to the classifications emitted
@@ -1332,10 +1334,15 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             else {
                 $output->messageclass = "IPM.Note";
             }
-            $output->subject = isset($message->headers["subject"]) ? $message->headers["subject"] : "";
-            $output->read = $stat["flags"];
-            $output->from = isset($message->headers["from"]) ? $message->headers["from"] : null;
+            $output->subject = null;
+            if (isset($message->headers["subject"]))
+                $output->subject = is_array($message->headers["subject"]) ? $message->headers["subject"][0] : $message->headers["subject"];
 
+            $output->read = $stat["flags"];
+
+            $output->from = null;
+            if (isset($message->headers["from"]))
+                $output->from = is_array($message->headers["from"]) ? $message->headers["from"][0] : $message->headers["from"];
             if (isset($message->headers["thread-topic"])) {
                 $output->threadtopic = $message->headers["thread-topic"];
             }
