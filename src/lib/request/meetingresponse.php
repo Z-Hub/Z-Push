@@ -126,7 +126,7 @@ class MeetingResponse extends RequestProcessor {
                 if (!self::$backend->Setup(ZPush::GetAdditionalSyncFolderStore($backendFolderId)))
                     throw new StatusException(sprintf("HandleMoveItems() could not Setup() the backend for folder id %s/%s", $req["folderid"], $backendFolderId), SYNC_MEETRESPSTATUS_SERVERERROR);
 
-                $calendarid = self::$backend->MeetingResponse($req["requestid"], $backendFolderId, $req["response"]);
+                $calendarid = self::$backend->MeetingResponse($req["requestid"], $backendFolderId, $req["response"], $req["instanceid"] ?? null);
                 if ($calendarid === false)
                     throw new StatusException("HandleMeetingResponse() not possible", SYNC_MEETRESPSTATUS_SERVERERROR);
             }
