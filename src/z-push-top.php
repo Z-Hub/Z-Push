@@ -46,7 +46,7 @@ require_once 'vendor/autoload.php';
         if (php_sapi_name() != "cli")
             throw new FatalException("This script can only be called from the CLI.");
 
-        $zpt = new ZPushTop();
+        $zpt = new ZPushTop($argv);
 
         // check if help was requested from CLI
         if (in_array('-h', $argv) || in_array('--help', $argv)) {
@@ -82,6 +82,55 @@ class ZPushTop {
     const SHOW_TERM_DEFAULT_TIME = 5; // 5 secs
     const SHOW_PID_CHARS = 7; //The PID_MAX_LIMIT can be set to any value up to 2^22 (approximately 4 million)
 
+	// Common ANSI codes:
+	// 0 = Reset.
+	// 1 = Bold.
+	// 4 = Underline.
+	// 30 (normal text), 90 (bright text), 40 (normal background), 100 (bright background) = Black
+	// 31 (normal text), 91 (bright text), 41 (normal background), 101 (bright background) = Red
+	// 32 (normal text), 92 (bright text), 42 (normal background), 102 (bright background) = Green
+	// 33 (normal text), 93 (bright text), 43 (normal background), 103 (bright background) = Yellow
+	// 34 (normal text), 94 (bright text), 44 (normal background), 104 (bright background) = Blue
+	// 35 (normal text), 95 (bright text), 45 (normal background), 105 (bright background) = Magenta
+	// 36 (normal text), 96 (bright text), 46 (normal background), 106 (bright background) = Cyan
+	// 37 (normal text), 97 (bright text), 47 (normal background), 107 (bright background) = White
+	const COLOR_LIGHT = "\033[0m";
+	const COLOR_LIGHT_HEADER = "\033[0;4m";
+	const COLOR_LIGHT_ACTION = "\033[0;32m";
+	const COLOR_LIGHT_FILTER = "\033[0;32m";
+	const COLOR_LIGHT_STATUS = "\033[0;31m";
+	const COLOR_LIGHT_STATUS_BOLD = "\033[1;31m";
+	const COLOR_LIGHT_ACTIVE = "\033[1m";
+	const COLOR_LIGHT_OPEN = "\033[0m";
+	const COLOR_LIGHT_PUSH = "\033[0;31m";
+	const COLOR_LIGHT_UNKNOWN = "\033[1;31m";
+	const COLOR_LIGHT_TERMINATED = "\033[1;30m";
+
+	const COLOR_DARK = "\033[0m";
+	const COLOR_DARK_HEADER = "\033[0;33;4m";
+	const COLOR_DARK_ACTION = "\033[0;32m";
+	const COLOR_DARK_FILTER = "\033[0;32m";
+	const COLOR_DARK_STATUS = "\033[0;31m";
+	const COLOR_DARK_STATUS_BOLD = "\033[1;31m";
+	const COLOR_DARK_ACTIVE = "\033[1m";
+	const COLOR_DARK_OPEN = "\033[0m";
+	const COLOR_DARK_PUSH = "\033[0;31m";
+	const COLOR_DARK_UNKNOWN = "\033[1;31m";
+	const COLOR_DARK_TERMINATED = "\033[1;36m";
+
+	private $colorMode = 'light';
+	private $color = self::COLOR_LIGHT;
+	private $colorHeader = self::COLOR_LIGHT_HEADER;
+	private $colorAction = self::COLOR_LIGHT_ACTION;
+	private $colorFilter = self::COLOR_LIGHT_FILTER;
+	private $colorStatus = self::COLOR_LIGHT_STATUS;
+	private $colorStatusBold = self::COLOR_LIGHT_STATUS_BOLD;
+	private $colorActive = self::COLOR_LIGHT_ACTIVE;
+	private $colorOpen = self::COLOR_LIGHT_OPEN;
+	private $colorPush = self::COLOR_LIGHT_PUSH;
+	private $colorUnknown = self::COLOR_LIGHT_UNKNOWN;
+	private $colorTerminated = self::COLOR_LIGHT_TERMINATED;
+
     private $topCollector;
     private $starttime;
     private $action;
@@ -89,6 +138,7 @@ class ZPushTop {
     private $status;
     private $statusexpire;
     private $wide;
+    private $wideDefault;
     private $wasEnabled;
     private $terminate;
     private $scrSize;
@@ -112,7 +162,8 @@ class ZPushTop {
      *
      * @access public
      */
-    public function __construct() {
+    public function __construct($argv) {
+		$this->colorMode = 'light';
         $this->starttime = time();
         $this->currenttime = time();
         $this->action = "";
@@ -122,6 +173,7 @@ class ZPushTop {
         $this->helpexpire = 0;
         $this->doingTail = false;
         $this->wide = false;
+        $this->wideDefault = $this->wide;
         $this->terminate = false;
         $this->showPush = true;
         $this->showOption = self::SHOW_DEFAULT;
@@ -131,9 +183,25 @@ class ZPushTop {
 
         // Identify the backend that will be loaded by z-push
         $this->activeBackend = get_class(ZPush::GetBackend());
-      
+
         // get a TopCollector
         $this->topCollector = new TopCollector();
+
+		// Set-up initial values, based on arguments.
+		for ($i = 0; $i < count($argv); $i++) {
+			if ($argv[$i] == 'wide') {
+				$this->wideDefault = true;
+			}
+			else if ($argv[$i] == 'dark') {
+				$this->colorMode = 'dark';
+			}
+			else if ($argv[$i] == 'light') {
+				$this->colorMode = 'light';
+			}
+			else if (is_numeric($argv[$i])) {
+				$this->showTermSec = $argv[$i];
+			}
+		}
     }
 
     /**
@@ -184,10 +252,12 @@ class ZPushTop {
             // check if screen size changed
             $s = $this->scrGetSize();
             if ($this->scrSize['width'] != $s['width']) {
-                if ($s['width'] > 180)
+                if ($s['width'] <= 80)
+                    $this->wide = false;
+                else if ($s['width'] > 180)
                     $this->wide = true;
                 else
-                    $this->wide = false;
+                    $this->wide = $this->wideDefault;
             }
             $this->scrSize = $s;
 
@@ -306,14 +376,14 @@ class ZPushTop {
     private function scrOverview() {
         $linesAvail = $this->scrSize['height'] - 8;
         $lc = 1;
-        $this->scrPrintAt($lc,0, "\033[1mZ-Push top live statistics\033[0m\t\t\t\t\t". @strftime("%d/%m/%Y %T")."\n"); $lc++;
+        $this->scrPrintAt($lc,0, $this->colorActive . "Z-Push top live statistics" . $this->color . "\t\t\t\t\t". @strftime("%d/%m/%Y %T")."\n"); $lc++;
 
         $this->scrPrintAt($lc,0, sprintf("Open connections: %d\t\t\t\tUsers:\t %d\tZ-Push:   %s ",count($this->activeConn),count($this->activeUsers), $this->getVersion())); $lc++;
         $this->scrPrintAt($lc,0, sprintf("Push connections: %d\t\t\t\tDevices: %d\tPHP-MAPI: %s", $this->pushConn, count($this->activeDevices), phpversion("mapi"))); $lc++;
         $this->scrPrintAt($lc,0, sprintf("                                                Hosts:\t %d\tBackend:  %s", count($this->activeHosts), $this->activeBackend)); $lc++;
         $lc++;
 
-        $this->scrPrintAt($lc,0, "\033[4m". $this->getLine(array('pid'=>'PID', 'ip'=>'IP', 'user'=>'USER', 'command'=>'COMMAND', 'time'=>'TIME', 'devagent'=>'AGENT', 'devid'=>'DEVID', 'addinfo'=>'Additional Information')). str_repeat(" ",20)."\033[0m"); $lc++;
+        $this->scrPrintAt($lc,0, $this->colorHeader . $this->getLine(array('pid'=>'PID', 'ip'=>'IP', 'user'=>'USER', 'command'=>'COMMAND', 'time'=>'TIME', 'devagent'=>'AGENT', 'devid'=>'DEVID', 'addinfo'=>'Additional Information')). str_repeat(" ",20) . $this->color); $lc++;
 
         // print help text if requested
         $hl = 0;
@@ -359,7 +429,7 @@ class ZPushTop {
             if ($linesprinted >= $toPrintActive)
                 break;
 
-            $this->scrPrintAt($lc,0, "\033[01m" . $this->getLine($l)  ."\033[0m");
+            $this->scrPrintAt($lc,0, $this->colorActive . $this->getLine($l) . $this->color);
             $lc++;
             $linesprinted++;
         }
@@ -369,7 +439,7 @@ class ZPushTop {
             if ($linesprinted >= $toPrintOpen)
                 break;
 
-            $this->scrPrintAt($lc,0, $this->getLine($l));
+            $this->scrPrintAt($lc,0, $this->colorOpen . $this->getLine($l) . $this->color);
             $lc++;
             $linesprinted++;
         }
@@ -379,10 +449,10 @@ class ZPushTop {
             if ($linesprinted >= $toPrintUnknown)
                 break;
 
-            $color = "0;31m";
+            $color = $this->colorUnknown;
             if ($l['push'] == false && $time - $l["start"] > 30)
-                $color = "1;31m";
-            $this->scrPrintAt($lc,0, "\033[0". $color . $this->getLine($l)  ."\033[0m");
+                $color = $this->colorPush;
+            $this->scrPrintAt($lc,0, $color . $this->getLine($l) . $this->color);
             $lc++;
             $linesprinted++;
         }
@@ -395,7 +465,7 @@ class ZPushTop {
             if ($linesprinted >= $toPrintTerm)
                 break;
 
-            $this->scrPrintAt($lc,0, "\033[01;30m" . $this->getLine($l)  ."\033[0m");
+            $this->scrPrintAt($lc,0, $this->colorTerminated . $this->getLine($l) . $this->color);
             $lc++;
             $linesprinted++;
         }
@@ -403,7 +473,7 @@ class ZPushTop {
         // add the lines used when displaying the help text
         $lc += $hl;
         $this->scrPrintAt($lc,0, "\033[K"); $lc++;
-        $this->scrPrintAt($lc,0, "Colorscheme: \033[01mActive  \033[0mOpen  \033[01;31mUnknown  \033[01;30mTerminated\033[0m");
+        $this->scrPrintAt($lc,0, "Colorscheme: " . $this->colorActive . "Active  " . $this->color . "Open  " . $this->colorUnknown . "Unknown  " . $this->colorTerminated . "Terminated" . $this->color);
 
         // remove old status
         if ($this->statusexpire < $this->currenttime)
@@ -411,35 +481,34 @@ class ZPushTop {
 
         // show request information and help command
         if ($this->starttime + 6 > $this->currenttime) {
-            $this->status = sprintf("Requesting information (takes up to %dsecs)", $this->pingInterval). str_repeat(".", ($this->currenttime-$this->starttime)) . "  type \033[01;31mh\033[00;31m or \033[01;31mhelp\033[00;31m for usage instructions";
+            $this->status = $this->colorStatus . sprintf("Requesting information (takes up to %dsecs)", $this->pingInterval) . str_repeat(".", ($this->currenttime-$this->starttime)) . "  type " . $this->colorStatusBold . "h" . $this->colorStatus . " or " . $this->colorStatusBold . "help" . $this->colorStatus . " for usage instructions";
             $this->statusexpire = $this->currenttime+1;
         }
 
-
         $str = "";
         if (! $this->showPush)
-            $str .= "\033[00;32mPush: \033[01;32mNo\033[0m   ";
+            $str .= $this->colorFilter . "Push: " . $this->colorAction . "No" . $this->color . "   ";
 
         if ($this->showOption == self::SHOW_ACTIVE_ONLY)
-            $str .= "\033[01;32mActive only\033[0m   ";
+            $str .= $this->colorAction . "Active only" . $this->color . "   ";
 
         if ($this->showOption == self::SHOW_UNKNOWN_ONLY)
-            $str .= "\033[01;32mUnknown only\033[0m   ";
+            $str .= $this->colorAction . "Unknown only" . $this->color . "   ";
 
         if ($this->showTermSec != self::SHOW_TERM_DEFAULT_TIME)
-            $str .= "\033[01;32mTerminated: ". $this->showTermSec. "s\033[0m   ";
+            $str .= $this->colorAction . "Terminated: ". $this->showTermSec. "s" . $this->color . "   ";
 
         if ($this->filter !== false || ($this->status !== false && $this->statusexpire > $this->currenttime)) {
             // print filter in green
             if ($this->filter !== false)
-                $str .= "\033[00;32mFilter: \033[01;32m$this->filter\033[0m   ";
+                $str .= $this->colorFilter . "Filter: " . $this->colorAction . "$this->filter" . $this->color . "   ";
             // print status in red
             if ($this->status !== false)
-                $str .= "\033[00;31m$this->status\033[0m";
+                $str .= $this->colorStatus . "$this->status" . $this->color;
         }
         $this->scrPrintAt(5,0, $str);
 
-        $this->scrPrintAt(4,0,"Action: \033[01m".$this->action . "\033[0m");
+        $this->scrPrintAt(4,0,"Action: " . $this->colorActive . $this->action . $this->color);
     }
 
     /**
@@ -484,6 +553,16 @@ class ZPushTop {
                         $this->status = false;
                     }
                 }
+                else if ($cmds[0] == "color" || $cmds[0] == "c") {
+                	if ($this->colorMode == "dark") {
+						$this->colorMode = 'light';
+				        $this->scrDefaultColors();
+                	}
+                	else {
+						$this->colorMode = 'dark';
+				        $this->scrDefaultColors();
+                	}
+               	}
                 else if ($cmds[0] == "option" || $cmds[0] == "o") {
                     if (!isset($cmds[1]) || $cmds[1] == "") {
                         $this->status = "Option value needs to be specified. See 'help' or 'h' for instructions";
@@ -510,6 +589,7 @@ class ZPushTop {
                 else if ($cmds[0] == "reset" || $cmds[0] == "r") {
                     $this->filter = false;
                     $this->wide = false;
+                    $this->wideDefault = $this->wide;
                     $this->helpexpire = 0;
                     $this->status = "resetted";
                     $this->statusexpire = $this->currenttime+2;
@@ -517,6 +597,7 @@ class ZPushTop {
                 // enable/disable wide view
                 else if ($cmds[0] == "wide" || $cmds[0] == "w") {
                     $this->wide = ! $this->wide;
+                    $this->wideDefault = $this->wide;
                     $this->status = ($this->wide)?"w i d e  view" : "normal view";
                     $this->statusexpire = $this->currenttime+2;
                 }
@@ -602,8 +683,13 @@ class ZPushTop {
      * @access public
      */
     public function UsageInstructions() {
-        $help = "Usage:\n\tz-push-top.php\n\n" .
-                "  Z-Push-Top is a live top-like overview of what Z-Push is doing. It does not have specific command line options.\n\n".
+        $help = "  Usage:\t\tz-push-top.php  [[wide|dark|light|10]..]\n\n".
+                "  Z-Push-Top is a live top-like overview of what Z-Push is doing.\n".
+                "  The following arguments can be used to initialise Z-Push-Top in a specific way.\n\n".
+				"  " .$this->scrAsBold("wide") ."\t\t\tTries not to truncate data. Automatically done if more than 180 columns available.\n".
+				"  " .$this->scrAsBold("dark") ."\t\t\tUse dark colour mode.\n".
+				"  " .$this->scrAsBold("light") ."\t\t\tUse light colour mode. Default.\n".
+				"  " .$this->scrAsBold("10") ."\t\t\tLists terminated connections for 10 seconds. Any other number can be used.\n\n".
                 "  When Z-Push-Top is running you can specify certain actions and options which can be executed (listed below).\n".
                 "  This help information can also be shown inside Z-Push-Top by hitting 'help' or 'h'.\n\n";
         $scrhelp = $this->scrHelp();
@@ -634,6 +720,7 @@ class ZPushTop {
         $h[] = "  ".$this->scrAsBold("l:STR")." or ".$this->scrAsBold("log:STR")."\tIssues 'less +G' on the logfile, after grepping on the optional STR.";
         $h[] = "  ".$this->scrAsBold("t:STR")." or ".$this->scrAsBold("tail:STR")."\tIssues 'tail -f' on the logfile, grepping for optional STR.";
         $h[] = "  ".$this->scrAsBold("e:STR")." or ".$this->scrAsBold("error:STR")."\tIssues 'tail -f' on the error logfile, grepping for optional STR.";
+        $h[] = "  ".$this->scrAsBold("c")." or ".$this->scrAsBold("color")."\t\tToggle between light and dark colour mode.";
         $h[] = "  ".$this->scrAsBold("r")." or ".$this->scrAsBold("reset")."\t\tResets 'wide' or 'filter'.";
         $h[] = "  ".$this->scrAsBold("o:")." or ".$this->scrAsBold("option:")."\t\tSets display options. Valid options specified below";
         $h[] = "  ".$this->scrAsBold("  p")." or ".$this->scrAsBold("push")."\t\tLists/not lists active and open push connections.";
@@ -654,7 +741,7 @@ class ZPushTop {
      * @return string       same text as bold
      */
     private function scrAsBold($text) {
-        return "\033[01m" . $text  ."\033[0m";
+        return $this->colorActive . $text . $this->color;
     }
 
     /**
@@ -745,7 +832,36 @@ class ZPushTop {
      * @return
      */
     private function scrDefaultColors() {
-        echo "\033[0m";
+    	// Set the colours.
+		if ($this->colorMode == "dark") {
+			$this->color = self::COLOR_DARK;
+			$this->colorHeader = self::COLOR_DARK_HEADER;
+			$this->colorAction = self::COLOR_DARK_ACTION;
+			$this->colorFilter = self::COLOR_DARK_FILTER;
+			$this->colorStatus = self::COLOR_DARK_STATUS;
+			$this->colorStatusBold = self::COLOR_DARK_STATUS_BOLD;
+			$this->colorActive = self::COLOR_DARK_ACTIVE;
+			$this->colorOpen = self::COLOR_DARK_OPEN;
+			$this->colorPush = self::COLOR_DARK_PUSH;
+			$this->colorUnknown = self::COLOR_DARK_UNKNOWN;
+			$this->colorTerminated = self::COLOR_DARK_TERMINATED;
+		}
+		else {
+			$this->color = self::COLOR_LIGHT;
+			$this->colorHeader = self::COLOR_LIGHT_HEADER;
+			$this->colorAction = self::COLOR_LIGHT_ACTION;
+			$this->colorFilter = self::COLOR_LIGHT_FILTER;
+			$this->colorStatus = self::COLOR_LIGHT_STATUS;
+			$this->colorStatusBold = self::COLOR_LIGHT_STATUS_BOLD;
+			$this->colorActive = self::COLOR_LIGHT_ACTIVE;
+			$this->colorOpen = self::COLOR_LIGHT_OPEN;
+			$this->colorPush = self::COLOR_LIGHT_PUSH;
+			$this->colorUnknown = self::COLOR_LIGHT_UNKNOWN;
+			$this->colorTerminated = self::COLOR_LIGHT_TERMINATED;
+		}
+
+		// Set the default colour.
+        echo $this->color;
     }
 
     /**
