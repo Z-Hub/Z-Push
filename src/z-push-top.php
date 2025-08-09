@@ -138,6 +138,7 @@ class ZPushTop {
     private $status;
     private $statusexpire;
     private $wide;
+    private $wideDefault;
     private $wasEnabled;
     private $terminate;
     private $scrSize;
@@ -172,6 +173,7 @@ class ZPushTop {
         $this->helpexpire = 0;
         $this->doingTail = false;
         $this->wide = false;
+        $this->wideDefault = $this->wide;
         $this->terminate = false;
         $this->showPush = true;
         $this->showOption = self::SHOW_DEFAULT;
@@ -188,7 +190,7 @@ class ZPushTop {
 		// Set-up initial values, based on arguments.
 		for ($i = 0; $i < count($argv); $i++) {
 			if ($argv[$i] == 'wide') {
-				$this->wide = true;
+				$this->wideDefault = true;
 			}
 			else if ($argv[$i] == 'dark') {
 				$this->colorMode = 'dark';
@@ -250,10 +252,12 @@ class ZPushTop {
             // check if screen size changed
             $s = $this->scrGetSize();
             if ($this->scrSize['width'] != $s['width']) {
-                if ($s['width'] > 180)
+                if ($s['width'] <= 80)
+                    $this->wide = false;
+                else if ($s['width'] > 180)
                     $this->wide = true;
                 else
-                    $this->wide = false;
+                    $this->wide = $this->wideDefault;
             }
             $this->scrSize = $s;
 
@@ -585,6 +589,7 @@ class ZPushTop {
                 else if ($cmds[0] == "reset" || $cmds[0] == "r") {
                     $this->filter = false;
                     $this->wide = false;
+                    $this->wideDefault = $this->wide;
                     $this->helpexpire = 0;
                     $this->status = "resetted";
                     $this->statusexpire = $this->currenttime+2;
@@ -592,6 +597,7 @@ class ZPushTop {
                 // enable/disable wide view
                 else if ($cmds[0] == "wide" || $cmds[0] == "w") {
                     $this->wide = ! $this->wide;
+                    $this->wideDefault = $this->wide;
                     $this->status = ($this->wide)?"w i d e  view" : "normal view";
                     $this->statusexpire = $this->currenttime+2;
                 }
