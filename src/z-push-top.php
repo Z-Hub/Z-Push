@@ -119,17 +119,17 @@ class ZPushTop {
 	const COLOR_DARK_TERMINATED = "\033[1;36m";
 
 	private $colorMode = 'light';
-	private $color = self::COLOR_DARK;
-	private $colorHeader = self::COLOR_DARK_HEADER;
-	private $colorAction = self::COLOR_DARK_ACTION;
-	private $colorFilter = self::COLOR_DARK_FILTER;
-	private $colorStatus = self::COLOR_DARK_STATUS;
-	private $colorStatusBold = self::COLOR_DARK_STATUS_BOLD;
-	private $colorActive = self::COLOR_DARK_ACTIVE;
-	private $colorOpen = self::COLOR_DARK_OPEN;
-	private $colorPush = self::COLOR_DARK_PUSH;
-	private $colorUnknown = self::COLOR_DARK_UNKNOWN;
-	private $colorTerminated = self::COLOR_DARK_TERMINATED;
+	private $color = self::COLOR_LIGHT;
+	private $colorHeader = self::COLOR_LIGHT_HEADER;
+	private $colorAction = self::COLOR_LIGHT_ACTION;
+	private $colorFilter = self::COLOR_LIGHT_FILTER;
+	private $colorStatus = self::COLOR_LIGHT_STATUS;
+	private $colorStatusBold = self::COLOR_LIGHT_STATUS_BOLD;
+	private $colorActive = self::COLOR_LIGHT_ACTIVE;
+	private $colorOpen = self::COLOR_LIGHT_OPEN;
+	private $colorPush = self::COLOR_LIGHT_PUSH;
+	private $colorUnknown = self::COLOR_LIGHT_UNKNOWN;
+	private $colorTerminated = self::COLOR_LIGHT_TERMINATED;
 
     private $topCollector;
     private $starttime;
