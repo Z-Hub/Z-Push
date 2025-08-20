@@ -876,6 +876,11 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             $folder->displayname = "Archive";
             $folder->type = SYNC_FOLDER_TYPE_USER_MAIL;
         }
+        else if (strcasecmp($imapid, $this->create_name_folder(IMAP_FOLDER_NOTE)) == 0) {
+            $folder->parentid = "0";
+            $folder->displayname = "Notes";
+            $folder->type = SYNC_FOLDER_TYPE_USER_NOTE;
+        }
         else {
             if (defined('IMAP_FOLDER_PREFIX') && strlen(IMAP_FOLDER_PREFIX) > 0) {
                 if (strcasecmp($fhir[0], IMAP_FOLDER_PREFIX) == 0) {
@@ -1015,13 +1020,17 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
     public function GetMessageList($folderid, $cutoffdate) {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->GetMessageList('%s','%s')", $folderid, $cutoffdate));
 
-        $folderid = $this->getImapIdFromFolderId($folderid);
-
-        if ($folderid == false)
+        $imapFolderid = $this->getImapIdFromFolderId($folderid);
+ 
+        if ($imapFolderid == false)
             throw new StatusException("Folderid not found in cache", SYNC_STATUS_FOLDERHIERARCHYCHANGED);
 
         $messages = array();
-        $this->imap_reopen_folder($folderid, true);
+        $this->imap_reopen_folder($imapFolderid, true);
+
+        if ($imapFolderid == "Notes"){
+            $cutoffdate= 1;
+        }
 
         if ($cutoffdate > 0) {
             // IMAP SINCE search criteria
@@ -1030,7 +1039,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             // search messages in time range
             $search = @imap_search($this->mbox, $searchCriteria);
             if ($search === false) {
-                ZLog::Write(LOGLEVEL_INFO, sprintf("BackendIMAP->GetMessageList('%s','%s'): 0 result for the search or error: %s", $folderid, $cutoffdate, imap_last_error()));
+                ZLog::Write(LOGLEVEL_INFO, sprintf("BackendIMAP->GetMessageList('%s','%s'): 0 result for the search or error: %s", $imapFolderid, $cutoffdate, imap_last_error()));
                 return $messages;
             }
 
@@ -1052,7 +1061,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
         if (!is_array($overviews) || count($overviews) == 0) {
             $error = imap_last_error();
             if (strlen($error) > 0 && imap_num_msg($this->mbox) > 0) {
-                ZLog::Write(LOGLEVEL_WARN, sprintf("BackendIMAP->GetMessageList('%s','%s'): Failed to retrieve overview: %s", $folderid, $cutoffdate, imap_last_error()));
+                ZLog::Write(LOGLEVEL_WARN, sprintf("BackendIMAP->GetMessageList('%s','%s'): Failed to retrieve overview: %s", $imapFolderid, $cutoffdate, imap_last_error()));
             }
             return $messages;
         }
@@ -1208,6 +1217,38 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
 
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->GetMessage(): after thinking a bit we will use: %d", $bpReturnType));
 
+            // Handle NOTES retrieval
+            if (strcasecmp($folderImapid, $this->create_name_folder(IMAP_FOLDER_NOTE)) == 0) {
+
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->GetMessage('%s','%s')", $folderid,  $id));
+                
+                $NoteMessage = new SyncNote();
+                $NoteMessage->asbody = new SyncBaseBody();
+        
+                $NoteMessage->asbody->type = 2;
+
+                // unset or empty category means we have to reset the color to yellow (3)
+                $NoteMessage->Color = isset($message->headers["x-note-color"])?intval($message->headers["X-Note-Color"]):3;
+                // $NoteMessage->categories
+
+                $bodyLength = strlen($textBody);
+
+                if ($bodyLength > 1){
+                    Utils::CheckAndFixEncoding($textBody);
+                    // $output->asbody->data = StringStreamWrapper::Open($textBody, ($bpReturnType == SYNC_BODYPREFERENCE_HTML));
+                    $NoteMessage->asbody->data = StringStreamWrapper::Open($textBody, ($bpReturnType == SYNC_BODYPREFERENCE_HTML));
+                    $NoteMessage->asbody->estimatedDataSize = $bodyLength;
+                }
+
+                // Set the note subject
+                $NoteMessage->subject = isset($message->headers["subject"]) ? $message->headers["subject"] : "";
+                $NoteMessage->lastmodified = isset($message->headers["date"]) ? $this->cleanupDate($message->headers["date"]) : null;
+                $NoteMessage->type = $bpReturnType; //'IPM.StickyNote';
+
+                ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->GetMessage(): NOTES result = '%s'", print_r($NoteMessage, true)));
+        
+                return $NoteMessage;
+            }
 
             $output = new SyncMail();
 
@@ -1670,10 +1711,11 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->ChangeMessage('%s','%s','%s')", $folderid, $id, get_class($message)));
         // TODO this could throw several StatusExceptions like e.g. SYNC_STATUS_OBJECTNOTFOUND, SYNC_STATUS_SYNCCANNOTBECOMPLETED
 
+        $folderImapid = $this->getImapIdFromFolderId($folderid);
+
         if (isset($message->flag)) {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->ChangeMessage('Setting flag')"));
 
-            $folderImapid = $this->getImapIdFromFolderId($folderid);
             $this->imap_reopen_folder($folderImapid);
 
             if ($this->imap_inside_cutoffdate(Utils::GetCutOffDate($contentparameters->GetFilterType()), $id)) {
@@ -1695,6 +1737,89 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             }
             else {
                 throw new StatusException(sprintf("BackendIMAP->ChangeMessage(): Message is outside the sync range"), SYNC_STATUS_SYNCCANNOTBECOMPLETED);
+            }
+        }
+
+        // NOTES support
+        if (strcasecmp($folderImapid, $this->create_name_folder(IMAP_FOLDER_NOTE)) == 0) {    
+    
+            $this->imap_reopen_folder($folderImapid);
+
+            $_body = stream_get_contents($message->asbody->data);
+            $finalHeaders = array();
+        
+            $finalHeaders["Content-Type"] = "text/html; charset=utf-8";
+            $finalHeaders["Content-Transfer-Encoding"] = "7bit";
+            $this->setFromHeaderValue($finalHeaders);
+            $finalHeaders["X-Uniform-Type-Identifier"] = "com.apple.mail-note";
+            $finalHeaders["Mime-Version"] = "1.0";
+            $finalHeaders["Date"] = strftime("%a, %d %B %Y %H:%M:%S %z");
+            $finalHeaders["Subject"] = $message->subject;
+            $finalHeaders["X-Universally-Unique-Identifier"] = sprintf ("%s-%s-%s-%s-%s", substr(uniqid(), 0, 8), substr(uniqid(), 8), substr(uniqid(), 8), substr(uniqid(), 8), substr(uniqid(), 1, 8)); //uniqid()."-".uniqid()."-".uniqid()."-".uniqid()."-".uniqid();// 5B20F060-7A65-4058-8655-E8E32E4FB797";
+            $finalHeaders["Message-Id"] = sprintf ("<%s-%s-%s-%s-%s@%s>", substr(uniqid(), 2, 8), substr(uniqid(), 8), substr(uniqid(), 7,4), substr(uniqid(), 6,4), uniqid(),$this->domain); //"<128CB7AA-2C4E-4DC3-AE01-F990EEAB7CF9@fammeijer.org>";
+            $this->setReturnPathValue($finalHeaders, getDefaultFromValue($this->username, $this->domain));
+            if (is_int ($message->Color)){
+                $finalHeaders["X-Note-Color"] = strval($message->Color);
+            }
+
+            $orgStatInfo = $this->StatMessage($folderid, $id);
+
+            // If we have a null ID then it's a new note;
+            if ($id) {
+                $_orgHeaders = @imap_fetchheader($this->mbox, $id, FT_UID);
+
+                // if (is_smime($_orgHeaders)) {
+                $mobj = new Mail_mimeDecode($_orgHeaders);
+                $headerObj =$mobj->decode(array('decode_headers' => 'utf-8', 'decode_bodies' => false, 'include_bodies' => false, 'rfc_822bodies' => true, 'charset' => 'utf-8'));
+                unset($mobj);
+
+                // Get data from original headers
+                // 
+                if (array_key_exists("x-uniform-type-identifier", $headerObj->headers)) {
+                    $finalHeaders["X-Uniform-Type-Identifier"] = $headerObj->headers["x-uniform-type-identifier"];
+                }
+                if (array_key_exists("content-transfer-encoding", $headerObj->headers)) {
+                    $finalHeaders["Content-Transfer-Encoding"] = $headerObj->headers["content-transfer-encoding"];
+                }
+                if (array_key_exists("x-universally-unique-identifier", $headerObj->headers)) {
+                    $finalHeaders["X-Universally-Unique-Identifier"] = $headerObj->headers["x-universally-unique-identifier"];
+                }
+                if (array_key_exists("message-id", $headerObj->headers)) {
+                    $finalHeaders["Message-Id"] = $headerObj->headers["message-id"];
+                }
+
+                // Modify a note -> delete the original message
+                $s1  = @imap_delete ($this->mbox, $id, FT_UID);
+                $s11 = @imap_setflag_full($this->mbox, $id, "\\Deleted", FT_UID);
+                $s2  = @imap_expunge($this->mbox);
+            }
+            
+            $_headers = "";
+
+            // Create string from headers array
+            foreach ($finalHeaders as $k => $v) {
+                if (strlen($_headers) > 0) {
+                    $_headers .= "\n";
+                }
+                $_headers .= "$k: $v";
+            }
+            
+            // Add the new message
+            if (!$this->addSentMessage($folderImapid, $_headers, $_body)){
+                ZLog::Write(LOGLEVEL_ERROR, sprintf("BackendIMAP->ChangeMessage(): Error failed to add new message"));
+            }
+
+            // Try to get the new message id
+            $check = imap_check($this->mbox);
+            $uid=imap_uid($this->mbox,$check->Nmsgs);
+
+            $statInfo =$this->StatMessage($folderid, $uid);
+
+            if ($id == 0) {
+                // Special case, there was no note before we need to return the new statInfo
+                return $statInfo;
+            }else{
+                return $orgStatInfo;
             }
         }
 
@@ -1750,7 +1875,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->DeleteMessage('%s','%s')", $folderid, $id));
 
         $folderImapid = $this->getImapIdFromFolderId($folderid);
-        if (strcasecmp($folderImapid, $this->create_name_folder(IMAP_FOLDER_TRASH)) != 0) {
+        if (strcasecmp($folderImapid, $this->create_name_folder(IMAP_FOLDER_TRASH)) != 0 && strcasecmp($folderImapid, $this->create_name_folder(IMAP_FOLDER_NOTE)) != 0) {
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->DeleteMessage('%s','%s') move message to trash folder", $folderid, $id));
             return $this->MoveMessage($folderid, $id, $this->create_name_folder(IMAP_FOLDER_TRASH), $contentparameters);
         }

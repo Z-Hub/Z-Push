@@ -104,6 +104,8 @@ define('IMAP_FOLDER_SPAM', 'SPAM');
 // Archive folder name (case doesn't matter). Only showed as special by iOS devices
 define('IMAP_FOLDER_ARCHIVE', 'ARCHIVE');
 
+// Apple NOTES folder (case doesn't matter)
+define('IMAP_FOLDER_NOTE', 'NOTES');
 
 
 // forward messages inline (default true - inlined)

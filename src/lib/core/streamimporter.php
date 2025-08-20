@@ -73,7 +73,7 @@ class ImportChangesStream implements IImportChanges {
         }
 
         // KOE ZO-42: to sync Notes to Outlook we sync them as Appointments
-        if ($this->classAsString == "SyncNote") {
+        if ($this->classAsString == "SyncNote" && ZPush::GetDeviceManager()->IsKoe() ) {
             if (KOE_CAPABILITY_NOTES && ZPush::GetDeviceManager()->IsKoe()) {
                 // update category from SyncNote->Color
                 $message->SetCategoryFromColor();
