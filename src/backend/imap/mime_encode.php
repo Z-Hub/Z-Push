@@ -32,28 +32,60 @@
  *
  * @return void
  */
-function add_extra_sub_parts(&$email, $parts) {
-    if (isset($parts)) {
+/**
+ * Recursively adds extra sub-parts to the email.
+ * * @param Mail_mime $email The email object
+ * @param array $parts The parts to add
+ * @param bool $inside_container Whether we are currently inside a nested container (e.g. .eml)
+ */
+function add_extra_sub_parts(&$email, $parts, $inside_container = false) {
+    if (isset($parts) && is_array($parts)) {
         foreach ($parts as $part) {
             $new_part = null;
-            // Only if it's an attachment we will add the text parts, because all the inline/no disposition have been already added
-            if (isset($part->disposition) && $part->disposition == "attachment") {
-                // it's an attachment
+            $should_add = false;
+
+            // Normalize types for checking
+            $ctype_primary = isset($part->ctype_primary) ? strtolower($part->ctype_primary) : '';
+            
+            $is_text = ($ctype_primary == 'text');
+            $is_multipart = ($ctype_primary == 'multipart');
+            $is_message = ($ctype_primary == 'message'); 
+            $is_attachment = (isset($part->disposition) && strtolower($part->disposition) == 'attachment');
+
+            // Decision logic
+            if ($inside_container) {
+                // Inside a container (e.g. .eml), we must add everything to preserve the structure
+                $should_add = true;
+            } 
+            else {
+                // At the root level:
+                // We skip 'multipart' containers to avoid duplicating the structure in the main body.
+                // We add messages (.eml), attachments, and anything that isn't plain text.
+                if ($is_multipart) {
+                    $should_add = false;
+                }
+                elseif ($is_message) {
+                    $should_add = true;
+                }
+                elseif ($is_attachment || !$is_text) {
+                    $should_add = true;
+                }
+            }
+
+            // Add the part if applicable
+            if ($should_add) {
                 $new_part = add_sub_part($email, $part);
             }
-            else {
-                if (isset($part->ctype_primary) && $part->ctype_primary != "text" && $part->ctype_primary != "multipart") {
-                    // it's not a text part or a multipart
-                    $new_part = add_sub_part($email, $part);
-                }
-            }
+
+            // Recursive step
             if (isset($part->parts)) {
-                // We add sub-parts to the new part (if any), not to the main message. Recursive calling
-                if ($new_part === null) {
-                    add_extra_sub_parts($email, $part->parts);
-                }
+                if ($new_part !== null) {
+                    // New container created; dive in with $inside_container = true
+                    add_extra_sub_parts($new_part, $part->parts, true);
+                } 
                 else {
-                    add_extra_sub_parts($new_part, $part->parts);
+                    // Container skipped (flattening); continue with current context
+                    add_extra_sub_parts($email, $part->parts, $inside_container);
                 }
             }
         }
@@ -66,66 +98,98 @@ function add_extra_sub_parts(&$email, $parts) {
  * @param Mail_mimePart $email reference to the object
  * @param object $part message part
  *
- * @return void
+ * @return mixed The new part object or null
  */
 function add_sub_part(&$email, $part) {
-    //http://tools.ietf.org/html/rfc4021
+    // http://tools.ietf.org/html/rfc4021
     $new_part = null;
     $params = array();
-    $params['content_type'] = '';
+    
+    // Normalize types
+    $ctype_p = isset($part->ctype_primary) ? strtolower($part->ctype_primary) : '';
+    $ctype_s = isset($part->ctype_secondary) ? strtolower($part->ctype_secondary) : '';
+
+    // Identify containers (multipart or message/rfc822)
+    $is_container = (
+        $ctype_p == 'multipart' || 
+        ($ctype_p == 'message' && $ctype_s == 'rfc822')
+    );
+
     if (isset($part) && isset($email)) {
+        
+        // 1. Build Content-Type
+        $params['content_type'] = '';
         if (isset($part->ctype_primary)) {
             $params['content_type'] = $part->ctype_primary;
             if (isset($part->ctype_secondary)) {
                 $params['content_type'] .= '/' . $part->ctype_secondary;
             }
         }
+        
+        // 2. Parameters (Boundary, Charset, etc.)
         if (isset($part->ctype_parameters)) {
             foreach ($part->ctype_parameters as $k => $v) {
+                // Skip old boundary; lib will generate a new one
                 if(strcasecmp($k, 'boundary') != 0) {
                     $params['content_type'] .= '; ' . $k . '=' . $v;
                 }
             }
         }
+        
         if (isset($part->disposition)) {
             $params['disposition'] = $part->disposition;
         }
-        //FIXME: dfilename => filename
+        
         if (isset($part->d_parameters)) {
             $params['headers_charset'] = 'utf-8';
             foreach ($part->d_parameters as $k => $v) {
                 $params[$k] = $v;
             }
         }
+        
+        // 3. Header Copying with Filtering
         foreach ($part->headers as $k => $v) {
-            switch($k) {
+            $key = strtolower($k);
+            switch($key) {
+                // Blacklist headers that cause data corruption or conflicts
+                case "content-type":
+                case "content-disposition":
+                case "content-transfer-encoding": 
+                case "content-length": // Critical: Prevents 0-byte attachments
+                case "mime-version":
+                    break;
+                
+                case "content-id":
+                    $params['cid'] = str_replace(array('<', '>'), '', $v);
+                    break;
+                    
                 case "content-description":
                     $params['description'] = $v;
                     break;
-                case "content-type":
-                case "content-disposition":
-                case "content-transfer-encoding":
-                    // Do nothing, we already did
-                    break;
-                case "content-id":
-                    $params['cid'] = str_replace('<', '', str_replace('>', '', $v));
-                    break;
+
                 default:
                     $params[$k] = $v;
                     break;
             }
         }
 
-        // If not exist body, the part will be multipart/alternative, so we don't add encoding
-        if (!isset($params['encoding']) && isset($part->body)) {
+        // 4. Body and Encoding
+        if ($is_container) {
+            // Containers have empty bodies and should not force encoding
+            $body_content = "";
+            if (isset($params['encoding'])) unset($params['encoding']);
+        } else {
+            // Files/Leaves: Use body and force base64 for safety
+            $body_content = isset($part->body) ? $part->body : "";
             $params['encoding'] = 'base64';
         }
-        // We could not have body; recursive messages
-        $new_part = $email->addSubPart(isset($part->body) ? $part->body : "", $params);
+
+        // Add the subpart
+        $new_part = $email->addSubPart($body_content, $params);
+        
         unset($params);
     }
 
-    // return the new part
     return $new_part;
 }
 
