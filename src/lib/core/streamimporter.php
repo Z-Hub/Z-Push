@@ -311,27 +311,4 @@ class ImportChangesStream implements IImportChanges {
     public function GetImportedMessages() {
         return $this->importedMsgs;
     }
-
-    /**
-     * Returns a small summary of object ids streamed in this request.
-     *
-     * @param int $limit
-     *
-     * @access public
-     * @return string
-     */
-    public function GetSeenObjectIdsSummary($limit = 10) {
-        if (empty($this->seenObjects)) {
-            return "-";
-        }
-
-        $ids = array_slice($this->seenObjects, 0, $limit);
-        $summary = implode(",", $ids);
-
-        if (count($this->seenObjects) > $limit) {
-            $summary .= ",...";
-        }
-
-        return $summary;
-    }
 }

@@ -38,8 +38,6 @@ class DiffState implements IChanges {
     protected $cutoffdate;
     protected $moveSrcState;
     protected $moveDstState;
-    protected $debugFolderId;
-
     /**
      * Initializes the state
      *
@@ -179,39 +177,31 @@ class DiffState implements IChanges {
                     // 'answered' changed
                     $change["type"] = "change";
                     $change["stat"] = $item;
-                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("DiffState->getDiffTo(): re-queue folder '%s' message '%s' field 'answered' snapshotstat=1", Utils::PrintAsString($this->debugFolderId), $id));
                     $changes[] = $change;
                 }
                 elseif(isset($old_item["forwarded"], $item["forwarded"]) && $old_item["forwarded"] != $item["forwarded"]) {
                     // 'forwarded' changed
                     $change["type"] = "change";
                     $change["stat"] = $item;
-                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("DiffState->getDiffTo(): re-queue folder '%s' message '%s' field 'forwarded' snapshotstat=1", Utils::PrintAsString($this->debugFolderId), $id));
                     $changes[] = $change;
                 }
                 elseif(isset($old_item["star"], $item["star"]) && $old_item["star"] != $item["star"]) {
                     // 'flagged' aka 'FollowUp' aka 'starred' changed
                     $change["type"] = "change";
                     $change["stat"] = $item;
-                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("DiffState->getDiffTo(): re-queue folder '%s' message '%s' field 'star' snapshotstat=1", Utils::PrintAsString($this->debugFolderId), $id));
                     $changes[] = $change;
                 }
                 elseif(isset($old_item['mod'], $item['mod']) && $old_item['mod'] != $item['mod']) {
                     // message modified
                     $change["type"] = "change";
                     $change["stat"] = $item;
-                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("DiffState->getDiffTo(): re-queue folder '%s' message '%s' field 'mod' snapshotstat=1", Utils::PrintAsString($this->debugFolderId), $id));
                     $changes[] = $change;
                 }
                 elseif(isset($old_item['mod']) xor isset($item['mod'])) {
                     // modified date missing
                     $change["type"] = "change";
                     $change["stat"] = $item;
-                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("DiffState->getDiffTo(): re-queue folder '%s' message '%s' field 'mod-missing' snapshotstat=1", Utils::PrintAsString($this->debugFolderId), $id));
                     $changes[] = $change;
-                }
-                elseif(isset($old_item["flags"], $item["flags"]) && $old_item["flags"] != $item["flags"]) {
-                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("DiffState->getDiffTo(): re-queue folder '%s' message '%s' field 'flags'", Utils::PrintAsString($this->debugFolderId), $id));
                 }
 
                 // unset in $old, so $old contains only the deleted items

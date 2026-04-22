@@ -683,9 +683,6 @@ class LoopDetection extends InterProcessData {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("LoopDetection->Detect(): folderid:'%s' uuid:'%s' counter:'%s' max:'%s' queued:'%s'", $folderid, $uuid, $counter, $maxItems, $queuedMessages));
         $this->broken_message_uuid = $uuid;
         $this->broken_message_counter = $counter;
-        $debugCase = "init";
-        $repeatRequest = 0;
-
         // if an incoming loop is already detected, do nothing
         if ($maxItems === 0 && $queuedMessages > 0) {
             ZPush::GetTopCollector()->AnnounceInformation("Incoming loop!", true);
@@ -709,13 +706,11 @@ class LoopDetection extends InterProcessData {
             // completely new/unknown UUID
             if (empty($current)) {
                 $current = array("uuid" => $uuid, "count" => $counter-1, "queued" => $queuedMessages);
-                $debugCase = "new-state";
             }
 
             // old UUID in cache - the device requested a new state!!
             if (isset($current['uuid']) && $current['uuid'] != $uuid ) {
                 ZLog::Write(LOGLEVEL_DEBUG, "LoopDetection->Detect(): UUID changed for folder");
-                $debugCase = "uuid-changed";
 
                 // some devices (iPhones) may request new UUIDs after broken items were sent several times
                 if (isset($current['queued']) && $current['queued'] > 0 &&
@@ -724,7 +719,6 @@ class LoopDetection extends InterProcessData {
                     ZLog::Write(LOGLEVEL_DEBUG, "LoopDetection->Detect(): UUID changed and while items where sent to device - forcing loop mode");
                     $loop = true; // force loop mode
                     $current['queued'] = $queuedMessages;
-                    $debugCase = "uuid-changed-force-loop";
                 }
                 else {
                     $current['queued'] = 0;
@@ -746,8 +740,6 @@ class LoopDetection extends InterProcessData {
 
                 // case 1 - standard, during loop-resolving & resolving
                 if ($current['count'] < $counter) {
-                    $debugCase = "advance";
-
                     // case 1.1
                     $current['count'] = $counter;
                     $current['queued'] = $queuedMessages;
@@ -764,7 +756,6 @@ class LoopDetection extends InterProcessData {
                             $current['loopcount'] = 1;
                             $loop = true; // continue in loop-resolving
                             ZLog::Write(LOGLEVEL_DEBUG, "LoopDetection->Detect(): case 1.2.1 detected");
-                            $debugCase = "advance-loop-continue";
                         }
                         // case 1.2.2 - if there were any broken items they should be gone, return to normal
                         else {
@@ -774,7 +765,6 @@ class LoopDetection extends InterProcessData {
                             unset($current['maxCount']);
                             unset($current['potential']);
                             unset($current['windowLimit']);
-                            $debugCase = "advance-loop-clear";
                         }
                     }
                 }
@@ -784,14 +774,10 @@ class LoopDetection extends InterProcessData {
                     $current['queued'] = $queuedMessages;
                     if (isset($current["usage"]) && $current["usage"] < $current['count'])
                         unset($current["usage"]);
-                    $debugCase = "same-counter-new-queued";
                 }
 
                 // case 3 - same counter, changes sent before, hanging loop and ignoring
                 else if ($current['count'] == $counter && $current['queued'] > 0) {
-                    $repeatRequest = 1;
-                    $debugCase = "repeat-counter";
-
                     if (!isset($current['loopcount'])) {
                         // ZP-1213 we are potentially synching a lot of data, e.g. OL with 512 WindowSize
                         // In case there are more then 40 items in the last request, we limit to 25 items
@@ -802,7 +788,6 @@ class LoopDetection extends InterProcessData {
                             // return suggested new window size
                             $current['windowLimit'] = 25;
                             $loop = $current['windowLimit'];
-                            $debugCase = "repeat-window-limit";
                         }
                         else {
                             // case 3.1) we have just encountered a loop!
@@ -815,7 +800,6 @@ class LoopDetection extends InterProcessData {
                             // the MaxCount is the max number of messages exported before
                             $current['maxCount'] = $counter + (($maxItems < $queuedMessages) ? $maxItems : $queuedMessages);
                             $loop = true;   // loop mode!!
-                            $debugCase = "repeat-loop-init";
                         }
                     }
                     else if ($queuedMessages == 0) {
@@ -827,19 +811,16 @@ class LoopDetection extends InterProcessData {
                         unset($current['maxCount']);
                         unset($current['potential']);
                         unset($current['windowLimit']);
-                        $debugCase = "repeat-loop-cleared";
                     }
                     else {
                         // case 3.3) still looping the same message! Increase counter
                         ZLog::Write(LOGLEVEL_DEBUG, "LoopDetection->Detect(): case 3.3 detected - in loop mode, increase loop counter");
                         $current['loopcount']++;
-                        $debugCase = "repeat-loop-continue";
 
                         // case 3.3.1 - we got our broken item!
                         if ($current['loopcount'] >= 3 && isset($current['potential'])) {
                             ZLog::Write(LOGLEVEL_DEBUG, sprintf("LoopDetection->Detect(): case 3.3.1 detected - broken item should be next, attempt to ignore it - id '%s'", $current['potential']));
                             $this->ignore_messageid = $current['potential'];
-                            $debugCase = "repeat-loop-ignore-next";
                         }
                         $current['maxCount'] = $counter + (($maxItems < $queuedMessages) ? $maxItems : $queuedMessages);
                         $loop = true;   // loop mode!!
@@ -853,22 +834,6 @@ class LoopDetection extends InterProcessData {
             // update loop data
             $loopdata[self::$devid][self::$user][$folderid] = $current;
             $ok = $this->setData($loopdata);
-
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf(
-                "SYNCDBG loop folder='%s' uuid='%s' counter='%s' repeat=%d case='%s' reqwin=%d queued=%d result='%s' loopcount=%s maxcount=%s potential='%s' ignored='%s'",
-                $folderid,
-                $uuid,
-                $counter,
-                $repeatRequest,
-                $debugCase,
-                $maxItems,
-                $queuedMessages,
-                ($loop === false ? 'none' : ($loop === true ? 'loop' : sprintf('window:%d', $loop))),
-                isset($current['loopcount']) ? $current['loopcount'] : '-',
-                isset($current['maxCount']) ? $current['maxCount'] : '-',
-                isset($current['potential']) ? $current['potential'] : '-',
-                isset($current['ignored']) ? $current['ignored'] : '-'
-            ));
 
             $this->releaseMutex();
         }

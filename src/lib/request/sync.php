@@ -599,17 +599,6 @@ class Sync extends RequestProcessor {
                     // save actiondata
                     $sc->AddParameter($spa, "actiondata", $actiondata);
 
-                    ZLog::Write(LOGLEVEL_DEBUG, sprintf(
-                        "SYNCDBG req folder='%s' class='%s' reqkey='%s' getchanges=%s winreq=%d incoming=%d fetch=%d",
-                        $spa->GetFolderId(),
-                        $spa->HasContentClass() ? $spa->GetContentClass() : '-',
-                        $synckey !== false ? $synckey : '-',
-                        Utils::PrintAsString($sc->GetParameter($spa, "getchanges")),
-                        $spa->GetWindowSize(),
-                        count($actiondata["clientids"]) + count($actiondata["modifyids"]) + count($actiondata["removeids"]),
-                        count($actiondata["fetchids"])
-                    ));
-
                     if(!self::$decoder->getElementEndTag()) // end collection
                         return false;
 
@@ -1388,24 +1377,6 @@ class Sync extends RequestProcessor {
         // save SyncParameters
         if ($status == SYNC_STATUS_SUCCESS && empty($actiondata["fetchids"]))
             $sc->SaveCollection($spa);
-
-        $responseSyncKey = ($status == SYNC_STATUS_SUCCESS && $spa->HasNewSyncKey()) ? $spa->GetNewSyncKey() : $spa->GetSyncKey();
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf(
-            "SYNCDBG cycle folder='%s' reqkey='%s' respkey='%s' status=%d winreq=%d wineff=%d queued=%s exported=%d more=%d incoming=%d fetch=%d ids='%s'",
-            $spa->GetFolderId(),
-            $spa->GetSyncKey() ? $spa->GetSyncKey() : '-',
-            $responseSyncKey ? $responseSyncKey : '-',
-            $status,
-            $requestedWindowSize,
-            $windowSize,
-            Utils::PrintAsString($changecount),
-            $streamimporter ? $streamimporter->GetImportedMessages() : 0,
-            (isset($moreAvailableSent) && $moreAvailableSent) ? 1 : 0,
-            count($actiondata["clientids"]) + count($actiondata["modifyids"]) + count($actiondata["removeids"]),
-            count($actiondata["fetchids"]),
-            $streamimporter ? $streamimporter->GetSeenObjectIdsSummary() : '-'
-        ));
-
         return $status;
     }
 

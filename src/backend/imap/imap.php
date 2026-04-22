@@ -1131,7 +1131,6 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
         $mimesupport = $contentparameters->GetMimeSupport();
         $bodypreference = $contentparameters->GetBodyPreference() ?: []; /* fmbiete's contribution r1528, ZP-320 */
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->GetMessage('%s', '%s', '%s')", $folderid,  $id, implode(",", $bodypreference)));
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->GetMessage(): start folder '%s' message '%s'", $folderid, $id));
 
         $folderImapid = $this->getImapIdFromFolderId($folderid);
 
@@ -1147,7 +1146,6 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             $mail =  $mail_headers . @imap_body($this->mbox, $id, FT_PEEK | FT_UID);
 
             if (empty($mail)) {
-                ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->GetMessage(): fail folder '%s' message '%s' reason='empty-mail'", $folderid, $id));
                 throw new StatusException(sprintf("BackendIMAP->GetMessage(): Error, message not found, maybe was moved"), SYNC_ITEMOPERATIONSSTATUS_INVALIDATT);
             }
 
@@ -1545,73 +1543,11 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
                 }
             }
 
-            $attachmentCount = 0;
-            $inlineAttachmentCount = 0;
-            if (isset($output->asattachments) && is_array($output->asattachments)) {
-                $attachmentCount = count($output->asattachments);
-                foreach ($output->asattachments as $attachment) {
-                    if (isset($attachment->isinline) && $attachment->isinline) {
-                        $inlineAttachmentCount++;
-                    }
-                }
-            }
-            elseif (isset($output->attachments) && is_array($output->attachments)) {
-                $attachmentCount = count($output->attachments);
-            }
-
-            $bodyType = isset($output->asbody) && isset($output->asbody->type) ? $output->asbody->type : "none";
-            $bodySize = isset($output->asbody) && isset($output->asbody->estimatedDataSize) ? $output->asbody->estimatedDataSize : 0;
-            $bodyTruncated = isset($output->asbody) && isset($output->asbody->truncated) ? $output->asbody->truncated : 0;
-            $topContentType = "unknown";
-            if (isset($message->ctype_primary) && isset($message->ctype_secondary)) {
-                $topContentType = $message->ctype_primary . "/" . $message->ctype_secondary;
-            }
-            $mimePartCount = isset($message->parts) && is_array($message->parts) ? count($message->parts) : 0;
-            $toFallback = ($toaddr === false) ? 1 : 0;
-            $ccFallback = ($ccaddr === false) ? 1 : 0;
-            $replyToFallback = ($replytoaddr === false) ? 1 : 0;
-            $emptyToEntries = isset($output->to) && is_array($output->to) ? count(array_filter($output->to, function($entry) { return trim((string) $entry) === ""; })) : 0;
-            $emptyCcEntries = isset($output->cc) && is_array($output->cc) ? count(array_filter($output->cc, function($entry) { return trim((string) $entry) === ""; })) : 0;
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf(
-                "BackendIMAP->GetMessage(): success folder '%s' message '%s' subject=%s from=%s to=%d cc=%d att=%d inline=%d body=%s bodylen=%d trunc=%d datereceived=%s class=%s importance=%s read=%d answered=%d forwarded=%d star=%d cpid=%s mime=%d multipart=%d parts=%d top=%s tofb=%d ccfb=%d rtfb=%d emptyto=%d emptycc=%d",
-                $folderid,
-                $id,
-                (isset($output->subject) && strlen($output->subject) > 0) ? "present" : "empty",
-                (isset($output->from) && strlen($output->from) > 0) ? "present" : "empty",
-                (isset($output->to) && is_array($output->to)) ? count($output->to) : 0,
-                (isset($output->cc) && is_array($output->cc)) ? count($output->cc) : 0,
-                $attachmentCount,
-                $inlineAttachmentCount,
-                Utils::PrintAsString($bodyType),
-                $bodySize,
-                $bodyTruncated,
-                isset($output->datereceived) ? "present" : "empty"
-                ,
-                isset($output->messageclass) ? $output->messageclass : "none",
-                isset($output->importance) ? Utils::PrintAsString($output->importance) : "none",
-                isset($output->read) ? $output->read : -1,
-                isset($stat["answered"]) ? $stat["answered"] : -1,
-                isset($stat["forwarded"]) ? $stat["forwarded"] : -1,
-                isset($stat["star"]) ? $stat["star"] : -1,
-                isset($output->internetcpid) ? Utils::PrintAsString($output->internetcpid) : "none",
-                ($bpReturnType == SYNC_BODYPREFERENCE_MIME) ? 1 : 0,
-                $is_multipart ? 1 : 0,
-                $mimePartCount,
-                $topContentType,
-                $toFallback,
-                $ccFallback,
-                $replyToFallback,
-                $emptyToEntries,
-                $emptyCcEntries
-            ));
-
             unset($message);
             unset($mail);
 
             return $output;
         }
-
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->GetMessage(): fail folder '%s' message '%s' reason='stat-false'", $folderid, $id));
 
         return false;
     }
@@ -1714,10 +1650,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
      * @return array
      */
     private function getForwardedMessageSet($folderImapid) {
-        $start = microtime(true);
-
         if (isset($this->forwardedMessagesCache[$folderImapid])) {
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->getForwardedMessageSet(): cache hit for '%s' with %d forwarded UIDs", $folderImapid, count($this->forwardedMessagesCache[$folderImapid])));
             return $this->forwardedMessagesCache[$folderImapid];
         }
 
@@ -1725,8 +1658,6 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
         $this->forwardedMessagesCache[$folderImapid] = is_array($forwardedMessages)
             ? array_fill_keys($forwardedMessages, true)
             : array();
-
-        ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->getForwardedMessageSet(): cache miss for '%s' with %d forwarded UIDs in %d ms", $folderImapid, count($this->forwardedMessagesCache[$folderImapid]), round((microtime(true) - $start) * 1000)));
 
         return $this->forwardedMessagesCache[$folderImapid];
     }
