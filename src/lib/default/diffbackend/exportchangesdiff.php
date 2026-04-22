@@ -60,6 +60,7 @@ class ExportChangesDiff extends DiffState implements IExportChanges{
         $this->importer = $importer;
 
         if($this->folderid) {
+            $this->debugFolderId = $this->folderid;
             // Get the changes since the last sync
             if(!isset($this->syncstate) || !$this->syncstate)
                 $this->syncstate = array();
@@ -78,6 +79,7 @@ class ExportChangesDiff extends DiffState implements IExportChanges{
             }
         }
         else {
+            $this->debugFolderId = false;
             ZLog::Write(LOGLEVEL_DEBUG, "ExportChangesDiff->InitializeExporter(): Initializing folder diff engine");
 
             $folderlist = $this->backend->GetFolderList();
@@ -156,16 +158,24 @@ class ExportChangesDiff extends DiffState implements IExportChanges{
                         // calls, we have a chance that the message has changed between both
                         // calls. This may cause our algorithm to 'double see' changes.
 
-                        $stat = $this->backend->StatMessage($this->folderid, $change["id"]);
                         $message = $this->backend->GetMessage($this->folderid, $change["id"], $this->contentparameters);
 
                         // copy the flag to the message
                         if($message)
                             $message->flags = (isset($change["flags"])) ? $change["flags"] : 0;
 
-                        if($stat && $message) {
-                            if($this->flags & BACKEND_DISCARD_DATA || $this->importer->ImportMessageChange($change["id"], $message) == true)
-                                $this->updateState("change", $stat);
+                        if($message) {
+                            $importResult = ($this->flags & BACKEND_DISCARD_DATA) ? true : ($this->importer->ImportMessageChange($change["id"], $message) == true);
+                            ZLog::Write(LOGLEVEL_DEBUG, sprintf("ExportChangesDiff->Synchronize(): ImportMessageChange folder '%s' message '%s' result=%s", $this->folderid, $change["id"], $importResult ? "true" : "false"));
+                            if($importResult) {
+                                $statSource = isset($change["stat"]) ? "snapshot" : "live";
+                                $stat = isset($change["stat"]) ? $change["stat"] : $this->backend->StatMessage($this->folderid, $change["id"]);
+                                ZLog::Write(LOGLEVEL_DEBUG, sprintf("ExportChangesDiff->Synchronize(): state commit from %s for folder '%s' message '%s' snapshotstat=%d", $statSource, $this->folderid, $change["id"], isset($change["stat"]) ? 1 : 0));
+                                if ($stat) {
+                                    $this->updateState("change", $stat);
+                                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("ExportChangesDiff->Synchronize(): state commit applied for folder '%s' message '%s'", $this->folderid, $change["id"]));
+                                }
+                            }
                         }
                         break;
                     case "delete":

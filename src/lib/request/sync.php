@@ -26,6 +26,7 @@
 class Sync extends RequestProcessor {
     // Ignored SMS identifier
     const ZPUSHIGNORESMS = "ZPISMS";
+    const EARLY_DUPLICATE_INIT_GRACE = 30;
     private $importer;
     private $globallyExportedItems;
     private $singleFolder;
@@ -133,6 +134,7 @@ class Sync extends RequestProcessor {
                     }
 
                     // folderid HAS TO BE known by now, so we retrieve the correct SyncParameters object for an update
+                    $requestedZeroSyncKey = ($synckey == "0");
                     try {
                         $spa = self::$deviceManager->GetStateManager()->GetSynchedFolderState($folderid);
 
@@ -141,13 +143,7 @@ class Sync extends RequestProcessor {
                         if (! $spa instanceof SyncParameters)
                             throw new StateInvalidException("Saved state are not of type SyncParameters");
 
-                        // new/resync requested
-                        if ($synckey == "0") {
-                            $spa->RemoveSyncKey();
-                            $spa->DelFolderStat();
-                            $spa->SetMoveState(false);
-                        }
-                        else if ($synckey !== false) {
+                        if ($synckey !== false && $synckey != "0") {
                             if (($synckey !== $spa->GetSyncKey() && $synckey !== $spa->GetNewSyncKey()) || !!$spa->GetMoveState()) {
                                 ZLog::Write(LOGLEVEL_DEBUG, "HandleSync(): Synckey does not match latest saved for this folder or there is a move state, removing folderstat to force Exporter setup");
                                 $spa->DelFolderStat();
@@ -179,6 +175,17 @@ class Sync extends RequestProcessor {
                         catch (NoHierarchyCacheAvailableException $nhca) {
                             $status = SYNC_STATUS_FOLDERHIERARCHYCHANGED;
                             self::$deviceManager->ForceFullResync();
+                        }
+                    }
+
+                    if ($requestedZeroSyncKey) {
+                        if ($this->AttachEarlyDuplicateInitialSync($spa, $synckey)) {
+                            $spa->SetSyncKey($synckey);
+                        }
+                        else {
+                            $spa->RemoveSyncKey();
+                            $spa->DelFolderStat();
+                            $spa->SetMoveState(false);
                         }
                     }
 
@@ -591,6 +598,17 @@ class Sync extends RequestProcessor {
 
                     // save actiondata
                     $sc->AddParameter($spa, "actiondata", $actiondata);
+
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf(
+                        "SYNCDBG req folder='%s' class='%s' reqkey='%s' getchanges=%s winreq=%d incoming=%d fetch=%d",
+                        $spa->GetFolderId(),
+                        $spa->HasContentClass() ? $spa->GetContentClass() : '-',
+                        $synckey !== false ? $synckey : '-',
+                        Utils::PrintAsString($sc->GetParameter($spa, "getchanges")),
+                        $spa->GetWindowSize(),
+                        count($actiondata["clientids"]) + count($actiondata["modifyids"]) + count($actiondata["removeids"]),
+                        count($actiondata["fetchids"])
+                    ));
 
                     if(!self::$decoder->getElementEndTag()) // end collection
                         return false;
@@ -1016,6 +1034,57 @@ class Sync extends RequestProcessor {
     }
 
     /**
+     * Attaches a duplicate very-early initial request to an already running initial sync.
+     *
+     * @param SyncParameters $spa
+     * @param string         $synckey
+     *
+     * @access private
+     * @return boolean
+     */
+    private function AttachEarlyDuplicateInitialSync($spa, &$synckey) {
+        if (! $spa->HasFolderId() || ! $spa->HasContentClass()) {
+            return false;
+        }
+
+        if ($spa->GetContentClass() !== "Email") {
+            return false;
+        }
+
+        if (! $spa->HasSyncKey()) {
+            return false;
+        }
+
+        if (! self::$deviceManager->HasFolderSyncStatus($spa->GetFolderId())) {
+            return false;
+        }
+
+        if (! $spa->HasLastSyncTime() || $spa->GetLastSyncTime() < time() - self::EARLY_DUPLICATE_INIT_GRACE) {
+            return false;
+        }
+
+        if (! $spa->GetFolderSyncRemaining()) {
+            return false;
+        }
+
+        $attachSyncKey = $spa->HasNewSyncKey() ? $spa->GetNewSyncKey() : $spa->GetSyncKey();
+        if (! $attachSyncKey || $attachSyncKey == "0") {
+            return false;
+        }
+
+        $synckey = $attachSyncKey;
+        ZLog::Write(LOGLEVEL_INFO, sprintf(
+            "HandleSync(): attaching early duplicate initial request for folder '%s' to active synckey '%s' remaining=%s lastsync=%s",
+            $spa->GetFolderId(),
+            $synckey,
+            Utils::PrintAsString($spa->GetFolderSyncRemaining()),
+            Utils::GetFormattedTime($spa->GetLastSyncTime())
+        ));
+
+        return true;
+    }
+
+    /**
      * Synchronizes a folder to the output stream. Changes for this folders are expected.
      *
      * @param SyncCollections       $sc
@@ -1031,6 +1100,8 @@ class Sync extends RequestProcessor {
      */
     private function syncFolder($sc, $spa, $exporter, $changecount, $streamimporter, $status, $newFolderStat) {
         $actiondata = $sc->GetParameter($spa, "actiondata");
+        $requestedWindowSize = $spa->GetWindowSize();
+        $windowSize = 0;
 
         // send the WBXML start tags (if not happened already)
         $this->sendFolderStartTag();
@@ -1317,6 +1388,23 @@ class Sync extends RequestProcessor {
         // save SyncParameters
         if ($status == SYNC_STATUS_SUCCESS && empty($actiondata["fetchids"]))
             $sc->SaveCollection($spa);
+
+        $responseSyncKey = ($status == SYNC_STATUS_SUCCESS && $spa->HasNewSyncKey()) ? $spa->GetNewSyncKey() : $spa->GetSyncKey();
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf(
+            "SYNCDBG cycle folder='%s' reqkey='%s' respkey='%s' status=%d winreq=%d wineff=%d queued=%s exported=%d more=%d incoming=%d fetch=%d ids='%s'",
+            $spa->GetFolderId(),
+            $spa->GetSyncKey() ? $spa->GetSyncKey() : '-',
+            $responseSyncKey ? $responseSyncKey : '-',
+            $status,
+            $requestedWindowSize,
+            $windowSize,
+            Utils::PrintAsString($changecount),
+            $streamimporter ? $streamimporter->GetImportedMessages() : 0,
+            (isset($moreAvailableSent) && $moreAvailableSent) ? 1 : 0,
+            count($actiondata["clientids"]) + count($actiondata["modifyids"]) + count($actiondata["removeids"]),
+            count($actiondata["fetchids"]),
+            $streamimporter ? $streamimporter->GetSeenObjectIdsSummary() : '-'
+        ));
 
         return $status;
     }
