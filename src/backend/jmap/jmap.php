@@ -473,7 +473,7 @@ class BackendJmap extends BackendDiff {
                     'hasAttachment', 'textBody', 'htmlBody', 'attachments', 'bodyValues',
                 ],
                 'fetchAllBodyValues' => true,
-                'maxBodyValueBytes'  => JMAP_MAX_BODY_BYTES,
+                ...(JMAP_MAX_BODY_BYTES > 0 ? ['maxBodyValueBytes' => JMAP_MAX_BODY_BYTES] : []),
             ], '0'],
         ]);
 
@@ -553,9 +553,12 @@ class BackendJmap extends BackendDiff {
         $output->subject      = $email['subject']  ?? '';
         $output->from         = $this->formatAddressList($email['from']    ?? []);
         $output->to           = $this->formatAddressList($email['to']      ?? []);
-        $output->cc           = $this->formatAddressList($email['cc']      ?? []);
-        $output->bcc          = $this->formatAddressList($email['bcc']     ?? []);
-        $output->reply_to     = $this->formatAddressList($email['replyTo'] ?? []);
+        $cc      = $this->formatAddressList($email['cc']      ?? []);
+        $bcc     = $this->formatAddressList($email['bcc']     ?? []);
+        $replyTo = $this->formatAddressList($email['replyTo'] ?? []);
+        if ($cc)      $output->cc       = $cc;
+        if ($bcc)     $output->bcc      = $bcc;
+        if ($replyTo) $output->reply_to = $replyTo;
         $output->datereceived = $this->parseJmapDate($email['receivedAt']  ?? '');
         $output->messageclass = 'IPM.Note';
         $output->read         = isset($email['keywords'][self::KW_SEEN]) ? 1 : 0;
@@ -597,13 +600,21 @@ class BackendJmap extends BackendDiff {
 
         if (in_array(SYNC_BODYPREFERENCE_MIME, $bodypreference, true) && !empty($email['blobId'])) {
             try {
-                return [SYNC_BODYPREFERENCE_MIME, $this->client->downloadBlob($email['blobId'], 'message.eml', 'message/rfc822')];
+                $mime = $this->client->downloadBlob($email['blobId'], 'message.eml', 'message/rfc822');
+                if ($mime !== '') {
+                    return [SYNC_BODYPREFERENCE_MIME, $mime];
+                }
+                ZLog::Write(LOGLEVEL_WARN, sprintf('BackendJmap->selectBody(): empty MIME blob for email %s, falling back to HTML/text', $email['id'] ?? '?'));
             } catch (\Throwable $e) {
                 ZLog::Write(LOGLEVEL_WARN, 'BackendJmap->selectBody(): MIME download failed: ' . $e->getMessage());
             }
         }
 
-        $wantHtml = in_array(SYNC_BODYPREFERENCE_HTML, $bodypreference, true) || !$bodypreference;
+        // Prefer HTML if the client wants it, or if no specific preference (also used as
+        // fallback when MIME failed — we try HTML/text regardless of original preference).
+        $wantHtml = !$bodypreference
+            || in_array(SYNC_BODYPREFERENCE_HTML,  $bodypreference, true)
+            || in_array(SYNC_BODYPREFERENCE_MIME,  $bodypreference, true);
         if ($wantHtml && !empty($email['htmlBody'])) {
             $partId = $email['htmlBody'][0]['partId'] ?? null;
             if ($partId && isset($bodyValues[$partId]['value'])) {
@@ -618,6 +629,26 @@ class BackendJmap extends BackendDiff {
             }
         }
 
+        // bodyValues was empty or partIds didn't match — last resort: download raw MIME
+        if (!empty($email['blobId'])) {
+            try {
+                $mime = $this->client->downloadBlob($email['blobId'], 'message.eml', 'message/rfc822');
+                if ($mime !== '') {
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf('BackendJmap->selectBody(): used MIME fallback for email %s', $email['id'] ?? '?'));
+                    return [SYNC_BODYPREFERENCE_MIME, $mime];
+                }
+            } catch (\Throwable $e) {
+                ZLog::Write(LOGLEVEL_WARN, 'BackendJmap->selectBody(): MIME fallback failed: ' . $e->getMessage());
+            }
+        }
+
+        ZLog::Write(LOGLEVEL_WARN, sprintf(
+            'BackendJmap->selectBody(): no usable body for email %s (htmlBody=%d textBody=%d bodyValues=%d)',
+            $email['id'] ?? '?',
+            count($email['htmlBody'] ?? []),
+            count($email['textBody'] ?? []),
+            count($bodyValues)
+        ));
         return [SYNC_BODYPREFERENCE_PLAIN, ''];
     }
 
@@ -1064,6 +1095,7 @@ class BackendJmap extends BackendDiff {
         foreach ($addresses as $addr) {
             $email = $addr['email'] ?? '';
             $name  = $addr['name']  ?? '';
+            if (!$email && !$name) continue;
             $parts[] = $name ? '"' . addslashes($name) . '" <' . $email . '>' : $email;
         }
         return implode(', ', $parts);
