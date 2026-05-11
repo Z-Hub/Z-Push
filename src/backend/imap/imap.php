@@ -2145,6 +2145,25 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
 
             $p = 0;
             $pc = 0;
+            // $rangestart is the offset into the flat (cross-folder)
+            // result stream. Without this skip-ahead, $pc starts at 0
+            // and the emit loop reads $listMessages[0..N-1] regardless
+            // of $rangestart — every page of search results would look
+            // like page one. Walk $p/$pc forward until they point at
+            // the requested item.
+            $toSkip = $rangestart;
+            while ($toSkip > 0 && $p < count($listMessages)) {
+                $keys = array_keys($listMessages[$p]);
+                $cntFolder = count($listMessages[$p][$keys[0]]);
+                if ($cntFolder <= $toSkip) {
+                    $toSkip -= $cntFolder;
+                    $p++;
+                }
+                else {
+                    $pc = $toSkip;
+                    $toSkip = 0;
+                }
+            }
             for ($i = $rangestart, $j = 0; $i <= $rangeend && $i < $querycnt; $i++, $j++) {
                 $keys = array_keys($listMessages[$p]);
                 $cntFolder = count($listMessages[$p][$keys[0]]);
