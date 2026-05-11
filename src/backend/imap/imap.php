@@ -1256,8 +1256,45 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
                     }
                 }
                 else {
-                    if (strlen($data) > $truncsize) {
-                        $data = Utils::Utf8_truncate($data, $truncsize);
+                    // Prefer the AirSyncBase BodyPreference's per-type
+                    // TruncationSize (the AS-12+ field) over the legacy
+                    // <Truncation> element's $truncsize. AS-12+ clients
+                    // (Outlook, every modern EAS client) send their
+                    // body-size budget via <BodyPreference><TruncationSize>
+                    // and don't set the legacy field, so without this the
+                    // legacy default (1024 from Utils::GetTruncSize) — or
+                    // SYNC_TRUNCATION_ALL when called via Fetch (Search /
+                    // ItemOperations) — silently fires regardless of what
+                    // the client requested.
+                    //
+                    // If the chosen return type doesn't have a per-type
+                    // BodyPreference (we may have promoted Plain→HTML
+                    // above when no plain part exists), fall back to the
+                    // smallest TruncationSize across whatever preferences
+                    // the client did send: that's the tightest body-size
+                    // budget the caller expressed.
+                    $effectiveTrunc = $truncsize;
+                    $bpoTrunc = $contentparameters->BodyPreference($bpReturnType);
+                    if ($bpoTrunc !== false && $bpoTrunc->GetTruncationSize() > 0) {
+                        $effectiveTrunc = $bpoTrunc->GetTruncationSize();
+                    }
+                    elseif (is_array($bodypreference) && !empty($bodypreference)) {
+                        $bestBpTrunc = false;
+                        foreach ($bodypreference as $bpType) {
+                            $bpo = $contentparameters->BodyPreference($bpType);
+                            if ($bpo !== false && $bpo->GetTruncationSize() > 0) {
+                                $sz = $bpo->GetTruncationSize();
+                                if ($bestBpTrunc === false || $sz < $bestBpTrunc) {
+                                    $bestBpTrunc = $sz;
+                                }
+                            }
+                        }
+                        if ($bestBpTrunc !== false) {
+                            $effectiveTrunc = $bestBpTrunc;
+                        }
+                    }
+                    if (strlen($data) > $effectiveTrunc) {
+                        $data = Utils::Utf8_truncate($data, $effectiveTrunc);
                         $output->asbody->truncated = 1;
                     }
                     else {
