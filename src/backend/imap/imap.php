@@ -27,6 +27,7 @@
 
 // config file
 require_once("backend/imap/config.php");
+require_once("backend/imap/imap_idle_sink.php");
 
 require_once("backend/imap/mime_calendar.php");
 require_once("backend/imap/mime_encode.php");
@@ -49,6 +50,8 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
     private $sinkfolders = array();
     private $sinkstates = array();
     private $changessinkinit = false;
+    /** @var ImapIdleSink|null|false  null=not initialized, instance=in use, false=disabled (fallback) */
+    private $idleSink = null;
     private $folderhierarchy;
     private $excludedFolders;
     private static $mimeTypes = false;
@@ -718,6 +721,36 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             // We sleep and do nothing else
             sleep($timeout);
             return $notifications;
+        }
+
+        // Prefer real IMAP IDLE (RFC 2177) when the server supports it. On any
+        // failure during setup or wait the sink is disabled for the rest of
+        // this Ping and we fall through to the original polling code below.
+        if ($this->idleSink !== false) {
+            try {
+                if ($this->idleSink === null) {
+                    $this->idleSink = new ImapIdleSink(IMAP_SERVER, IMAP_PORT, $this->username, $this->password);
+                    foreach ($this->sinkfolders as $imapid) {
+                        $this->idleSink->addFolder($imapid);
+                    }
+                    ZLog::Write(LOGLEVEL_INFO, sprintf("BackendIMAP->ChangesSink: IDLE pool built with %d folder(s)", $this->idleSink->getFolderCount()));
+                }
+                $changed = $this->idleSink->wait($timeout);
+                foreach ($changed as $imapid) {
+                    $notifications[] = $this->getFolderIdFromImapId($imapid);
+                }
+                if (!empty($notifications)) {
+                    ZLog::Write(LOGLEVEL_INFO, sprintf("BackendIMAP->ChangesSink: IDLE push detected %d folder change(s)", count($notifications)));
+                }
+                return $notifications;
+            }
+            catch (Exception $e) {
+                ZLog::Write(LOGLEVEL_WARN, "BackendIMAP->ChangesSink: IDLE failed (" . $e->getMessage() . "), falling back to status polling");
+                if ($this->idleSink) {
+                    $this->idleSink->closeAll();
+                }
+                $this->idleSink = false;
+            }
         }
 
         // Reconnect IMAP server
