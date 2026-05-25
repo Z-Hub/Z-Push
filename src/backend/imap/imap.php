@@ -1318,7 +1318,17 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             unset($textBody);
             unset($mail_headers);
 
-            $output->datereceived = isset($message->headers["date"]) ? $this->cleanupDate($message->headers["date"]) : null;
+            if (isset($message->headers["date"])) {
+                $output->datereceived = $this->cleanupDate($message->headers["date"]);
+            }
+            else {
+                // Fall back to IMAP INTERNALDATE for messages without a Date: header
+                // (e.g. RFC 5322 violators such as some IP cameras). Otherwise
+                // $output->datereceived would be null and EAS clients (iOS Mail etc.)
+                // display the sync time instead of the actual receipt time.
+                $overview = @imap_fetch_overview($this->mbox, $id, FT_UID);
+                $output->datereceived = (is_array($overview) && !empty($overview) && isset($overview[0]->udate)) ? $overview[0]->udate : null;
+            }
 
             if ($is_smime) {
                 // #190, KD 2015-06-04 - Add Encrypted (and possibly signed) to the classifications emitted
