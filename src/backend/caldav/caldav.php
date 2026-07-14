@@ -2005,6 +2005,24 @@ class BackendCalDAV extends BackendDiff {
         ,"600/-60/0/0/0/0/0/0/0/0"=>"Pacific/Honolulu"
     );
 
+    private static function normalizeMSTZName($name) {
+        return trim(str_replace("\0", "", (string)$name));
+    }
+
+    /**
+     * Prefer explicit Windows time zone names over offset-only matching.
+     * Multiple regions share the same ActiveSync bias and DST signature.
+     */
+    private static function tzidFromWindowsName($name) {
+        $name = self::normalizeMSTZName($name);
+        if ($name !== "" && ($tzid = TimezoneUtil::GetPhpTimezoneFromWinTZName($name))) {
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCalDAV->tzidFromMSTZ(): Found tzid from Windows timezone name '%s': '%s'.", $name, $tzid));
+            return $tzid;
+        }
+
+        return null;
+    }
+
     /**
      * Given the MS timezone find a matching tzid, for the year the event starts in.
      * @param string $mstz
@@ -2017,6 +2035,15 @@ class BackendCalDAV extends BackendDiff {
                                     ."vdstendminute/vdstendsecond/vdstendmillis/lstdbias/Z64tznamedst/vdststartyear/"
                                     ."vdststartmonth/vdststartday/vdststartweek/vdststarthour/vdststartminute/"
                                     ."vdststartsecond/vdststartmillis/ldstbias", base64_decode($mstz));
+
+        if (($tzid = self::tzidFromWindowsName($mstz_parts['tzname']))) {
+            return $tzid;
+        }
+
+        if (($tzid = self::tzidFromWindowsName($mstz_parts['tznamedst']))) {
+            return $tzid;
+        }
+
         $mstz = $mstz_parts['bias']
                     ."/".$mstz_parts['dstbias']
                     ."/".$mstz_parts['dstendmonth']
