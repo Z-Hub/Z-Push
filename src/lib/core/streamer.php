@@ -276,10 +276,9 @@ class Streamer implements Serializable {
                                 $encoder->endTag();
                             }
                             else {
-                                if(strlen($element) == 0)
-                                      // Do not output empty items. Not sure if we should output an empty tag with $encoder->startTag($map[self::STREAMER_ARRAY], false, true);
-                                      ;
-                                else {
+                                // Do not output empty items. Not sure if we should output an empty tag with $encoder->startTag($map[self::STREAMER_ARRAY], false, true);
+                                // PHP 8+: strlen() only accepts strings; skip non-scalars instead of TypeError.
+                                if (is_scalar($element) && strlen((string)$element) > 0) {
                                     $encoder->startTag($map[self::STREAMER_ARRAY]);
                                     $encoder->content($element);
                                     $encoder->endTag();
@@ -306,7 +305,13 @@ class Streamer implements Serializable {
                     }
 
                     // Simple type
-                    if(!isset($map[self::STREAMER_TYPE]) && strlen($this->{$map[self::STREAMER_VAR]}) == 0) {
+                    // PHP 8+: strlen() no longer accepts arrays (TypeError). Treat non-scalars as empty
+                    // and cast scalars so empty checks match PHP 7 coercion behaviour.
+                    $_sv = $this->{$map[self::STREAMER_VAR]};
+                    if (!isset($map[self::STREAMER_TYPE]) && (!is_scalar($_sv) || strlen((string)$_sv) == 0)) {
+                        if (!is_scalar($_sv)) {
+                            ZLog::Write(LOGLEVEL_WARN, sprintf("Streamer->Encode(): skipping non-scalar property '%s' on %s", $map[self::STREAMER_VAR], get_class($this)));
+                        }
                         // send empty tags
                         if (isset($map[self::STREAMER_PROP]) && $map[self::STREAMER_PROP] == self::STREAMER_TYPE_SEND_EMPTY)
                             $encoder->startTag($tag, false, true);
