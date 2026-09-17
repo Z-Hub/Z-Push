@@ -99,9 +99,9 @@ class DeviceManager {
         $this->additionalFoldersHash = $this->getAdditionalFoldersHash();
 
         if ($this->IsKoe() && $this->device->GetKoeVersion() !== false) {
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("KOE: %s / %s / %s", $this->device->GetKoeVersion(), $this->device->GetKoeBuild(), date("Y-m-d %G:%i", $this->device->GetKoeBuildDate())));
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("KOE: %s / %s / %s", $this->device->GetKoeVersion(), $this->device->GetKoeBuild(), date("Y-m-d G:i", $this->device->GetKoeBuildDate())));
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("KOE Capabilities: %s ", count($this->device->GetKoeCapabilities()) ? implode(',', $this->device->GetKoeCapabilities()) : 'unknown'));
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("KOE Last confirmed access: %s (may be up to 7h old)", ($this->device->GetKoeLastAccess() ? date("Y-m-d %G:%i", $this->device->GetKoeLastAccess()) : 'unknown')));
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("KOE Last confirmed access: %s (may be up to 7h old)", ($this->device->GetKoeLastAccess() ? date("Y-m-d G:i", $this->device->GetKoeLastAccess()) : 'unknown')));
         }
     }
 
