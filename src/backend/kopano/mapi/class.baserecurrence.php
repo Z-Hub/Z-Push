@@ -1513,7 +1513,7 @@
         {
             $gmdate = gmtime($date);
             $gmdate["tm_mday"] = 0;
-            return strftime("%W", $date) - strftime("%W", gmmktime($gmdate)) + 1;
+            return date("W", $date) - date("W", gmmktime($gmdate)) + 1;
         }
 
         /**

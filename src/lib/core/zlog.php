@@ -175,9 +175,16 @@ class ZLog {
 
 // TODO review error handler
 function zpush_error_handler($errno, $errstr, $errfile, $errline) {
-    if (defined('LOG_ERROR_MASK')) $errno &= LOG_ERROR_MASK;
 
-    switch ($errno) {
+    // push current error info to temporary variables for snapshot-based analysis
+    $tmp_errno = $errno;
+    $tmp_errstr = $errstr;
+    $tmp_errfile = $errfile;
+    $tmp_errline = $errline;
+
+    if (defined('LOG_ERROR_MASK')) $tmp_errno &= LOG_ERROR_MASK;
+
+    switch ($tmp_errno) {
         case 0:
             // logging disabled by LOG_ERROR_MASK
             break;
@@ -189,9 +196,9 @@ function zpush_error_handler($errno, $errstr, $errfile, $errline) {
         case E_NOTICE:
         case E_WARNING:
             // TODO check if there is a better way to avoid these messages
-            if (stripos($errfile,'interprocessdata') !== false && stripos($errstr,'shm_get_var()') !== false)
+            if (stripos($tmp_errfile,'interprocessdata') !== false && stripos($tmp_errstr,'shm_get_var()') !== false)
                 break;
-            ZLog::Write(LOGLEVEL_WARN, "$errfile:$errline $errstr ($errno)");
+            ZLog::Write(LOGLEVEL_WARN, "$tmp_errfile:$tmp_errline $tmp_errstr ($tmp_errno)");
             break;
 
         default:
@@ -227,7 +234,7 @@ function zpush_fatal_handler() {
         $errstr  = $error["message"];
 
         // do NOT log PHP Notice, Warning, Deprecated or Strict as FATAL
-        if ($errno & ~(E_NOTICE|E_WARNING|E_DEPRECATED|E_STRICT)) {
+        if ($errno & ~(E_NOTICE|E_WARNING|E_DEPRECATED)) {
             ZLog::Write(LOGLEVEL_FATAL, sprintf("Fatal error: %s:%d - %s (%s)", $errfile, $errline, $errstr, $errno));
         }
     }

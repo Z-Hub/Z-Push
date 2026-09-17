@@ -38,7 +38,7 @@
  *
  * @category    Mail
  * @package     Mail
- * @author      Chuck Hagenbuch <chuck@horde.org> 
+ * @author      Chuck Hagenbuch <chuck@horde.org>
  * @copyright   2010-2017 Chuck Hagenbuch
  * @license     http://opensource.org/licenses/BSD-3-Clause New BSD License
  * @version     CVS: $Id$
@@ -55,7 +55,7 @@
  *
  *
  */
- 
+
 /**
  * internal PHP-mail() implementation of the PEAR Mail:: interface.
  * @package Mail
@@ -154,8 +154,8 @@ class Mail_mail extends Mail {
         list(, $text_headers) = $headerElements;
 
         // We only use mail()'s optional fifth parameter if the additional
-        // parameters have been provided and we're not running in safe mode.
-        if (empty($this->_params) || ini_get('safe_mode')) {
+        // parameters have been provided.
+        if (empty($this->_params)) {
             $result = mail($recipients, $subject, $body, $text_headers);
         } else {
             $result = mail($recipients, $subject, $body, $text_headers,

@@ -628,7 +628,7 @@ class ZPushAdminCLI {
                 if (self::$daysold > $daysOld) {
                     continue;
                 }
-                $lastsync = $device->GetLastSyncTime() ? strftime("%Y-%m-%d %H:%M", $device->GetLastSyncTime()) . ' (' . str_pad($daysOld, 3, ' ', STR_PAD_LEFT) . ' days ago)' : "never";
+                $lastsync = $device->GetLastSyncTime() ? date("Y-m-d H:i", $device->GetLastSyncTime()) . ' (' . str_pad($daysOld, 3, ' ', STR_PAD_LEFT) . ' days ago)' : "never";
                 $hasShortFolderIds = $device->HasFolderIdMapping() ? "Yes":"No";
                 echo str_pad($deviceId, 36) . str_pad($user, 30) . " " . str_pad($lastsync, 33) . $hasShortFolderIds . "\n";
             }
@@ -690,7 +690,7 @@ class ZPushAdminCLI {
                 if (self::$daysold > $daysOld) {
                     continue;
                 }
-                $lastsync = $device->GetLastSyncTime() ? strftime("%Y-%m-%d %H:%M", $device->GetLastSyncTime()) . ' (' . str_pad($daysOld, 3, ' ', STR_PAD_LEFT) . ' days ago)' : "never";
+                $lastsync = $device->GetLastSyncTime() ? date("Y-m-d H:i", $device->GetLastSyncTime()) . ' (' . str_pad($daysOld, 3, ' ', STR_PAD_LEFT) . ' days ago)' : "never";
                 $data = self::ListDeviceFolders($deviceId, $usr);
                 echo $deviceId, "\t",
                 $usr, "\t",
@@ -1433,8 +1433,8 @@ class ZPushAdminCLI {
                 echo "Device Outbound SMS:\t". $device->GetDeviceEnableOutboundSMS(). "\n";
 
             echo "ActiveSync version:\t".($device->GetASVersion() ? $device->GetASVersion() : "unknown") ."\n";
-            echo "First sync:\t\t". strftime("%Y-%m-%d %H:%M", $device->GetFirstSyncTime()) ."\n";
-            echo "Last sync:\t\t". ($device->GetLastSyncTime() ? strftime("%Y-%m-%d %H:%M", $device->GetLastSyncTime()) : "never")."\n";
+            echo "First sync:\t\t". date("Y-m-d H:i", $device->GetFirstSyncTime()) ."\n";
+            echo "Last sync:\t\t". ($device->GetLastSyncTime() ? date("Y-m-d H:i", $device->GetLastSyncTime()) : "never")."\n";
 
 
             $filterType = (defined('SYNC_FILTERTIME_MAX') && SYNC_FILTERTIME_MAX > SYNC_FILTERTYPE_ALL) ? SYNC_FILTERTIME_MAX : SYNC_FILTERTYPE_ALL;
@@ -1586,9 +1586,9 @@ class ZPushAdminCLI {
                     echo "Not available\n";
                     break;
             }
-            echo "WipeRequest on:\t\t". ($device->GetWipeRequestedOn() ? strftime("%Y-%m-%d %H:%M", $device->GetWipeRequestedOn()) : "not set")."\n";
+            echo "WipeRequest on:\t\t". ($device->GetWipeRequestedOn() ? date("Y-m-d H:i", $device->GetWipeRequestedOn()) : "not set")."\n";
             echo "WipeRequest by:\t\t". ($device->GetWipeRequestedBy() ? $device->GetWipeRequestedBy() : "not set")."\n";
-            echo "Wiped on:\t\t". ($device->GetWipeActionOn() ? strftime("%Y-%m-%d %H:%M", $device->GetWipeActionOn()) : "not set")."\n";
+            echo "Wiped on:\t\t". ($device->GetWipeActionOn() ? date("Y-m-d H:i", $device->GetWipeActionOn()) : "not set")."\n";
             echo "Policy name:\t\t". ($device->GetPolicyName() ? $device->GetPolicyName() : ASDevice::DEFAULTPOLICYNAME)."\n";
         }
 
@@ -1596,9 +1596,9 @@ class ZPushAdminCLI {
             echo "Kopano Outlook Extension:\n";
             echo "\tVersion:\t". $device->GetKoeVersion() ."\n";
             echo "\tBuild:\t\t". $device->GetKoeBuild() ."\n";
-            echo "\tBuild Date:\t". strftime("%Y-%m-%d %H:%M", $device->GetKoeBuildDate()) ."\n";
+            echo "\tBuild Date:\t". date("Y-m-d H:i", $device->GetKoeBuildDate()) ."\n";
             echo "\tCapabilities:\t". (count($device->GetKoeCapabilities()) ? implode(',', $device->GetKoeCapabilities()) : 'unknown') ."\n";
-            echo "\tLast access:\t". ($device->GetKoeLastAccess() ? strftime("%Y-%m-%d", $device->GetKoeLastAccess()) : 'unknown') ."\n";
+            echo "\tLast access:\t". ($device->GetKoeLastAccess() ? date("Y-m-d H:i", $device->GetKoeLastAccess()) : 'unknown') ."\n";
         }
 
         echo "Attention needed:\t";
@@ -1624,11 +1624,11 @@ class ZPushAdminCLI {
                 if (isset($im->asobject->from))
                     $info .= sprintf(" - From: '%s'", $im->asobject->from);
                 if (isset($im->asobject->starttime))
-                    $info .= sprintf(" - On: '%s'", strftime("%Y-%m-%d %H:%M", $im->asobject->starttime));
+                    $info .= sprintf(" - On: '%s'", date("Y-m-d H:i", $im->asobject->starttime));
                 $reason = $im->reasonstring;
                 if ($im->reasoncode == 2)
                     $reason = "Message was causing loop";
-                printf("\tBroken object:\t'%s' ignored on '%s'\n", $im->asclass,  strftime("%Y-%m-%d %H:%M", $im->timestamp));
+                printf("\tBroken object:\t'%s' ignored on '%s'\n", $im->asclass,  date("Y-m-d H:i", $im->timestamp));
                 printf("\tInformation:\t%s\n", $info);
                 printf("\tReason: \t%s (%s)\n", $reason, $im->reasoncode);
                 printf("\tItem/Parent id: %s/%s\n", $im->id, $im->folderid);

@@ -657,7 +657,7 @@ EOFXMLGETXMLVCARD;
 
             foreach ($xml->response as $response) {
                 if (isset($response->propstat)) {
-                    if ((((strlen($this->url_vcard_extension) > 0 && preg_match('/'.$this->url_vcard_extension.'/', $response->href)) 
+                    if ((((strlen($this->url_vcard_extension) > 0 && preg_match('/'.$this->url_vcard_extension.'/', $response->href))
                         || preg_match('/vcard/', $response->propstat->prop->getcontenttype)) &&
                         !(isset($response->propstat->prop->resourcetype) && isset($response->propstat->prop->resourcetype->addressbook)))
                         || isset($response->propstat->prop->{'address-data'}) || isset($response->propstat->prop->{'addressbook-data'})) {
@@ -897,7 +897,11 @@ EOFXSL;
      */
     public function disconnect() {
         if ($this->curl !== false) {
-            curl_close($this->curl);
+            if (PHP_VERSION_ID >= 80000) {
+                unset($this->curl);
+            } else {
+                curl_close($this->curl); // accepted Compatibility Error, since we explicitly lock this behind a PHP version check
+            }
             $this->curl = false;
         }
     }

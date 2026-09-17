@@ -191,7 +191,7 @@ class StateObject implements Serializable {
      * @access public
      * @return array
      */
-    public function serialize() {
+    public function __serialize(): array {
         // perform tasks just before serialization
         $this->preSerialize();
 
@@ -205,7 +205,7 @@ class StateObject implements Serializable {
      * @return array
      * @throws StateInvalidException
      */
-    public function unserialize($data) {
+    public function __unserialize(array $data) {
         // throw a StateInvalidException if unserialize fails
         ini_set('unserialize_callback_func', 'StateObject::ThrowStateInvalidException');
 

@@ -422,7 +422,7 @@ class Streamer implements Serializable {
      * @access public
      * @return array
      */
-    public function serialize() {
+    public function __serialize(): array {
         $values = array();
         foreach ($this->mapping as $k=>$v) {
             if (isset($this->{$v[self::STREAMER_VAR]}))
@@ -438,7 +438,7 @@ class Streamer implements Serializable {
      * @access public
      * @return array
      */
-    public function unserialize($data) {
+    public function __unserialize(array $data) {
         $this->__construct();
         $values = unserialize($data);
         foreach ($values as $k=>$v)
@@ -482,7 +482,7 @@ class Streamer implements Serializable {
         if ('' === $ts) {
             return $ts;
         }
-      
+
         if($type == self::STREAMER_TYPE_DATE)
             return Utils::FormatDateUtc($ts,"yyyyMMdd'T'HHmmSS'Z'");
         else if($type == self::STREAMER_TYPE_DATE_DASHES)

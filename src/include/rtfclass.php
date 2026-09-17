@@ -1,4 +1,4 @@
-<?
+<?php
     // use tabstop=4
 
     /*
@@ -368,10 +368,9 @@
                 $this->out.="</rtf>";
         }
 
-
         function checkHtmlSpanContent( $command) {
             reset( $this->fontmodifier_table);
-            while( list( $rtf, $html) = each( $this->fontmodifier_table)) {
+            foreach ($this->fontmodifier_table as $rtf => $html) {
                 if( $this->flags[$rtf] == true) {
                     if( $command == "start")
                         $this->out .= "<".$html.">";
@@ -460,10 +459,12 @@
             if( count( $this->err) > 0) {
                 if( $this->wantXML) {
                         $this->out .= "<errors>";
-                        while( list($num,$value) = each( $this->err)) {
+
+                        foreach($this->err as $num => $value) {
                             $this->out .= "<message>".$value."</message>";
                         }
                         $this->out .= "</errors>";
+
                 }
             }
         }
@@ -471,7 +472,7 @@
         function makeStyles() {
             $this->outstyles = "<style type=\"text/css\"><!--\n";
             reset( $this->styles);
-            while( list( $stylename, $styleattrib) = each( $this->styles)) {
+            foreach($this->styles as $stylename => $styleattrib) {
                 $this->outstyles .= ".".$stylename." { ".$styleattrib." }\n";
             }
             $this->outstyles .= "--></style>\n";

@@ -716,9 +716,9 @@ class Utils {
      */
     public static function GetFormattedTime($timestamp = false) {
         if (!$timestamp)
-            return @strftime("%d/%m/%Y %H:%M:%S");
+            return @date("d/m/Y G:i:s");
         else
-            return @strftime("%d/%m/%Y %H:%M:%S", $timestamp);
+            return @date("d/m/Y G:i:s", $timestamp);
     }
 
 
@@ -1264,7 +1264,7 @@ class Utils {
         $charset = NULL;
         $str = "";
         $striso2022jp = "";
-        foreach (@imap_mime_header_decode($nonencstr) as $val) {
+        foreach (@imap_mime_header_decode($nonencstr) as $val) { // imap_mime_header_decode is present, via the php-imap extension (Compatibility Error is hence ignored)
             if ($val->charset == "unicode-1-1-utf-7") {
                 $val->charset = "utf-7";
             }
@@ -1418,7 +1418,7 @@ class Utils {
 
     /**
      * Tries to load the content of a file from disk with retries in case of file system returns an empty file.
-     * If $unserialize set true, in case of non empty files it tries to unserialize them. 
+     * If $unserialize set true, in case of non empty files it tries to unserialize them.
      *
      * @param $filename
      *        $filename is the name of the file to be opened
@@ -1492,7 +1492,7 @@ class Utils {
             IntlDateFormatter::FULL,
             IntlDateFormatter::FULL,
             'UTC',
-            IntlDateFormatter::GREGORIAN, 
+            IntlDateFormatter::GREGORIAN,
             $format
         );
         return datefmt_format($dateFormatUtc, $ts);
@@ -1536,7 +1536,7 @@ function utf8_to_windows1252($string, $option = "", $force_convert = false) {
     if (function_exists("iconv")){
         return @iconv("UTF-8", "Windows-1252" . $option, $string);
     }else{
-        return utf8_decode($string); // no euro support here
+        return mb_convert_encoding($string, "UTF-8", "Windows-1252"); // php 8.3+ Support
     }
 }
 
@@ -1547,7 +1547,7 @@ function windows1252_to_utf8($string, $option = "", $force_convert = false) {
     if (function_exists("iconv")){
         return @iconv("Windows-1252", "UTF-8" . $option, $string);
     }else{
-        return utf8_encode($string); // no euro support here
+        return mb_convert_encoding($string, "Windows-1252", "UTF-8"); // php 8.3+ Support
     }
 }
 
