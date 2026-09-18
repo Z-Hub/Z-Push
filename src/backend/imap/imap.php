@@ -3246,20 +3246,6 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             $save = $id;
             $this->deleteDraftMessage($imapid, $prevuid);
         }
-        
-            $logWbxmlHeaders = "";
-            foreach ($finalHeaders as $k => $v) {
-                $logWbxmlHeaders .= $k . ": " . $v . PHP_EOL;
-            }
-            ZLog::Write(LOGLEVEL_DEBUG, $logWbxmlHeaders, false);
-            unset($logWbxmlHeaders);
-
-            $logWbxmlBody = "";
-            foreach (preg_split("/((\r)?\n)/", $finalBody) as $bodyline) {
-                $logWbxmlBody .= "Body: " . $bodyline . PHP_EOL;
-            }
-            ZLog::Write(LOGLEVEL_DEBUG, $logWbxmlBody, false);
-            unset($logWbxmlBody);
 
         unset($finalHeaders);
         unset($finalBody);
