@@ -1684,26 +1684,14 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
 
         // 'draft'
         if(!$id || $isdraftfolder) {
-            ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->ChangeMessage(): Save Draft"));
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->ChangeMessage(): Save Draft id: %s", $id));
 
-            // set previous uid for existing draft
-            if ($id) {
-                $prevuid = $this->getUidFromId($folderid, $id);
-            }
-            
-            $saved = $this->saveDraftMail($id, $message);
+            $id = $this->saveDraftMail($id, $message);
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->ChangeMessage() saved id: %s", $id));
 
-            // for new draft set uid and id then resave to set header X-Z-Push-draft-message-id
-            if (!$id && $saved) {
-                $prevuid = $this->getRecentDraft();
-                $id = $prevuid;
-                $saved = $this->saveDraftMail($id, $message);
-            }
-
-            // if save is successful, delete the previous draft
-            if ($saved) {
-                $this->deleteDraftMessage($imapid, $prevuid);
-            }            
+            if ($id == false) {
+                return false;
+            }         
         }
 
         if (isset($message->flag)) {
@@ -3226,7 +3214,49 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             unset($logWbxmlBody);
         }
 
+        // set draftID if not set 
+        if ($this->draftID === false) {
+            $this->draftID = $this->getFolderIdFromImapId($this->create_name_folder(IMAP_FOLDER_DRAFT), false);
+        }
+
+        ZLog::Write(LOGLEVEL_WARN, sprintf("BackendIMAP->saveDraftMail() id: %s", $id));
+
+        // set previous uid for existing draft
+        if ($id) {
+            $prevuid = $this->getUidFromId($this->draftID, $id);
+            ZLog::Write(LOGLEVEL_WARN, sprintf("BackendIMAP->saveDraftMail() prevuid: %s", $prevuid));
+        }
+        
+
         $save = $this->saveDraftMessage($finalHeaders, $finalBody);
+
+        // for new draft set uid and id then resave to set header X-Z-Push-draft-message-id
+        if (!$id && $save) {
+            $prevuid = $this->getRecentDraft();
+            $id = $prevuid;
+            $finalHeaders["X-Z-Push-draft-message-id"] = $id;
+            $save = $this->saveDraftMessage($finalHeaders, $finalBody);
+        }
+
+        // if save is successful, delete the previous draft
+        if ($save) {
+            $save = $id;
+            $this->deleteDraftMessage($this->draftID, $prevuid);
+        }
+        
+            $logWbxmlHeaders = "";
+            foreach ($finalHeaders as $k => $v) {
+                $logWbxmlHeaders .= $k . ": " . $v . PHP_EOL;
+            }
+            ZLog::Write(LOGLEVEL_DEBUG, $logWbxmlHeaders, false);
+            unset($logWbxmlHeaders);
+
+            $logWbxmlBody = "";
+            foreach (preg_split("/((\r)?\n)/", $finalBody) as $bodyline) {
+                $logWbxmlBody .= "Body: " . $bodyline . PHP_EOL;
+            }
+            ZLog::Write(LOGLEVEL_DEBUG, $logWbxmlBody, false);
+            unset($logWbxmlBody);
 
         unset($finalHeaders);
         unset($finalBody);
