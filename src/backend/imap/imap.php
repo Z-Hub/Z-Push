@@ -3330,7 +3330,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
     protected function addDraftMessage($imapid, $header, $body) {
         $header_body = str_replace("\n", "\r\n", str_replace("\r", "", $header . "\n\n" . $body));
 
-        return @imap_append($this->mbox, $this->server . $imapid, $header_body, "\\Seen");
+        return @imap_append($this->mbox, $this->server . $imapid, $header_body, "\\Seen \\Draft");
     }    
 
     /**
