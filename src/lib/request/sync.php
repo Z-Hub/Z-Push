@@ -1537,7 +1537,7 @@ class Sync extends RequestProcessor {
                             }
 
                             // set serverid if not set
-                            if (property_exists($response, 'serverid') && !isset($response->serverid)) {
+                            if (($response instanceof SyncObject) && property_exists($response, 'serverid') && !isset($response->serverid)) {
                                 $response->serverid = $serverid;
                             } 
 
