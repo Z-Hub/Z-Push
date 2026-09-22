@@ -3058,6 +3058,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->SaveDraftMail(): We get the new message"));
 
         // build basic message,  set from header and body
+        $date = (new DateTime())->format('D, d M Y H:i:s O');
         $fromaddr = $sm->from;
         if (empty($fromaddr)){
             $fromaddr = getDefaultFromValue($this->username, $this->domain);
@@ -3093,7 +3094,8 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
 
         $body = stream_get_contents($sm->asbody->data);        
 
-        $mimedata = 'From: ' . $fromaddr;
+        $mimedata = 'Date: ' . $date;
+        $mimedata = $mimedata . "\n" . 'From: ' . $fromaddr;
         if(!empty($toaddr)) {
             $mimedata = $mimedata . "\n" . 'To: ' . $toaddr;
         }
