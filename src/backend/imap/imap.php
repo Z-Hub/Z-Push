@@ -1614,7 +1614,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
         } else {
             $entry["mod"] = 0;
         }
-        $entry["id"] = $overview[0]->uid;
+        $entry["id"] = $this->getIdFromUid($imapid, $overview[0]->uid);
 
         // 'seen' aka 'read'
         if (isset($overview[0]->seen) && $overview[0]->seen) {
