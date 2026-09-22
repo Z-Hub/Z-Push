@@ -3074,25 +3074,34 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             $bccaddr = implode(', ', $sm->bcc);
         }
 
-        switch ($sm->asbody->type) {
-            case SYNC_BODYPREFERENCE_UNDEFINED:
-                $contenttype = 'application/octet-stream';
-                break;
-            case SYNC_BODYPREFERENCE_PLAIN:
-                $contenttype = 'text/plain';
-                break;
-            case SYNC_BODYPREFERENCE_HTML:
-                $contenttype = 'text/html';
-                break;
-            case SYNC_BODYPREFERENCE_RTF:
-                $contenttype = 'text/rtf';
-                break;
-            case SYNC_BODYPREFERENCE_MIME:
-                $contenttype = 'multipart/alternative';
-                break;
+        $contenttype = 'text/plain';
+        if(isset($sm->asbody->type)) {
+            switch ($sm->asbody->type) {
+                case SYNC_BODYPREFERENCE_UNDEFINED:
+                    $contenttype = 'application/octet-stream';
+                    break;
+                case SYNC_BODYPREFERENCE_PLAIN:
+                    $contenttype = 'text/plain';
+                    break;
+                case SYNC_BODYPREFERENCE_HTML:
+                    $contenttype = 'text/html';
+                    break;
+                case SYNC_BODYPREFERENCE_RTF:
+                    $contenttype = 'text/rtf';
+                    break;
+                case SYNC_BODYPREFERENCE_MIME:
+                    $contenttype = 'multipart/alternative';
+                    break;
+                default: 
+                    $contenttype = 'text/plain';
+                    break;
+            }
         }
-
-        $body = stream_get_contents($sm->asbody->data);        
+        
+        $body = '';
+        if(isset($sm->asbody->data)) {
+            $body = stream_get_contents($sm->asbody->data);
+        }        
 
         $mimedata = 'Date: ' . $date;
         $mimedata = $mimedata . "\n" . 'From: ' . $fromaddr;
