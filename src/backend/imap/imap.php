@@ -3119,6 +3119,11 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
         $mimedata = $mimedata . "\n";
         $mimedata = $mimedata . "\n" . $body;
 
+        if ($contenttype == 'multipart/alternative') {
+            // iPhones send a RFC822 message already
+            $mimedata = $body;
+        }
+
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->SaveDraftMail(): mimedata \n%s", $mimedata));
 
         $mobj = new Mail_mimeDecode($mimedata);
@@ -3163,7 +3168,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             $message->headers["received"] = "from " . Request::GetRemoteAddr() . " by " . gethostname() . " (Z-Push); " . $message->headers["date"];
 
         if(!empty($id)) {
-            $message->headers["X-Z-Push-draft-message-id"] = $id;
+            $message->headers["X-z-push-draft-message-id"] = $id;
         }
 
         $finalBody = "";
@@ -3244,11 +3249,11 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
 
         $save = $this->saveDraftMessage($finalHeaders, $finalBody);
 
-        // for new draft set uid and id then resave to set header X-Z-Push-draft-message-id
+        // for new draft set uid and id then resave to set header X-z-push-draft-message-id
         if (!$id && $save) {
             $prevuid = $this->getRecentDraft();
             $id = $prevuid;
-            $finalHeaders["X-Z-Push-draft-message-id"] = $id;
+            $finalHeaders["X-z-push-draft-message-id"] = $id;
             $save = $this->saveDraftMessage($finalHeaders, $finalBody);
         }
 
@@ -3435,11 +3440,11 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
 
             $this->imap_reopen_folder($imapid, true);
 
-            // get the id from X-Z-Push-draft-message-id
+            // get the id from X-z-push-draft-message-id
             $header = @imap_fetchheader($this->mbox, $uid, FT_UID);
             $headers = preg_split("/\r\n|\n|\r/", $header);
             foreach ($headers as $header) {
-                if (preg_match("/X-Z-Push-draft-message-id: (.*)/", $header, $matches)) {
+                if (preg_match("/X-z-push-draft-message-id: (.*)/", $header, $matches)) {
                     $id = trim($matches[1]);
                     $message["id"] = $id;
                 }
