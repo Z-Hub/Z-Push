@@ -3254,6 +3254,13 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             $prevuid = $this->getRecentDraft();
             $id = $prevuid;
             $finalHeaders["X-z-push-draft-message-id"] = $id;
+            
+            // remove previous drafts that have the same unique id header, for iPhones
+            if ($contenttype == 'multipart/alternative') {
+                $uniqueid = $finalHeaders["X-universally-unique-identifier"];
+                $this->deleteDraftMessagesByUniqueId($imapid, $uniqueid, $prevuid);
+            }
+
             $save = $this->saveDraftMessage($finalHeaders, $finalBody);
         }
 
@@ -3372,6 +3379,53 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
 
         return ($s1 && $s2 && $s11);
     }    
+
+    /**
+     * Deletes draft messages carrying a given client unique identifier.
+     *
+     * Used when a client re-Adds a draft it already created: the new copy is appended
+     * first, then earlier copies carrying the same identifier are removed.
+     *
+     * @param string        $imapid         imap id of the folder
+     * @param string        $uniqueid       client unique identifier to match
+     * @param string   $excludeid      (opt) uid to keep - normally the copy just appended
+     *
+     * @access protected
+     * @return boolean                      true if every matched message was deleted
+     */
+    protected function deleteDraftMessagesByUniqueId($imapid, $uniqueid, $excludeid) {
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->deleteDraftMessagesByUniqueId('%s','%s','%s')", $imapid, $uniqueid, Utils::PrintAsString($excludeid)));
+
+        if (!$this->isDraftFolder($this->getFolderIdFromImapId($imapid))) {
+            return false;
+        }
+
+        $this->imap_reopen_folder($imapid, true);
+
+        $uids = @imap_search($this->mbox, 'ALL', SE_UID, IMAP_SEARCH_CHARSET);
+        if ($uids === false) {
+            return false;
+        }
+
+        // collect first, delete afterwards - deleteDraftMessage() expunges on every call
+        foreach ($uids as $uid) {
+            if ($uid == $excludeid) {
+                continue;
+            }
+            
+            $header = @imap_fetchheader($this->mbox, $uid, FT_UID);
+            $headers = preg_split("/\r\n|\n|\r/", $header);
+            foreach ($headers as $headerline) {
+                if (preg_match("/^X-Universally-Unique-Identifier:\s*" . preg_quote($uniqueid, "/") . "\s*$/i", $headerline)) {
+                    ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->deleteDraftMessagesByUniqueId(): deleting previous copy uid '%s'", $uid));
+                    $this->deleteDraftMessage($imapid, $uid);
+                    break;
+                }
+            }
+        }
+
+        return true;
+    }
 
     /**
      * Check if folder is the drafts folder
