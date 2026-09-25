@@ -3238,12 +3238,12 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
         // Convert draftID to IMAP id
         $imapid = $this->getImapIdFromFolderId($this->draftID);
 
-        ZLog::Write(LOGLEVEL_WARN, sprintf("BackendIMAP->saveDraftMail() id: %s", $id));
+        ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->saveDraftMail() id: %s", $id));
 
         // set previous uid for existing draft
         if ($id) {
             $prevuid = $this->getUidFromId($this->draftID, $id);
-            ZLog::Write(LOGLEVEL_WARN, sprintf("BackendIMAP->saveDraftMail() prevuid: %s", $prevuid));
+            ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->saveDraftMail() prevuid: %s", $prevuid));
         }
         
 
