@@ -1523,6 +1523,67 @@ class Utils {
         }
         return 0;
     }
+
+    /**
+	 * Returns the appropriate SyncObjectResponse object based on message class.
+	 *
+	 * @param string $messageClass
+	 *
+	 * @return object
+	 */
+	public static function GetResponseFromMessageClass($messageClass) {
+		$messageClass = strtolower($messageClass);
+
+		switch ($messageClass) {
+			case 'syncappointment':
+				return new SyncAppointmentResponse();
+
+			case 'synccontact':
+				return new SyncContactResponse();
+
+			case 'syncnote':
+				return new SyncNoteResponse();
+
+			case 'synctask':
+				return new SyncTaskResponse();
+
+			case 'syncmail':
+				return new SyncMailResponse();
+
+			default:
+				return null;
+		}
+
+		return new SyncMailResponse();
+	}
+
+    /**
+	 * Returns a copy to the appropriate SyncObjectResponse object from SyncObject based on the message class.
+	 *
+	 * @param  SyncObject  $message
+	 *
+	 * @return SyncObject
+	 */
+	public static function GetResponseFromObject($message) {
+
+        $messageClass = strtolower(get_class($message));
+
+        $response = Utils::GetResponseFromMessageClass($messageClass);
+
+        if ($response === null) {
+            return $message;
+        }
+
+        // Copy the message to the response object
+        foreach ($message as $key => $value) {
+            if (property_exists($response, $key)) {
+                $response->$key = $value;
+            }
+        }
+
+		return $response;
+	}
+
 }
 
 // TODO Win1252/UTF8 functions are deprecated and will be removed sometime

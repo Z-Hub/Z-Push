@@ -1536,8 +1536,11 @@ class Sync extends RequestProcessor {
                                 $response = $this->importer->ImportMessageChange($serverid, $message);
                             }
 
-                            // revert AS16 breaking change  
-                            //$response->serverid = $serverid;
+                            // set serverid if not set
+                            if (($response instanceof SyncObject) && property_exists($response, 'serverid') && !isset($response->serverid)) {
+                                $response->serverid = $serverid;
+                            } 
+
                             $actiondata["modifyids"][$serverid] = $response;
                             $actiondata["statusids"][$serverid] = SYNC_STATUS_SUCCESS;
                         }
