@@ -1,12 +1,30 @@
 <?php
-/*
- * SPDX-License-Identifier: AGPL-3.0-only
- * SPDX-FileCopyrightText: Copyright 2022 grommunio GmbH
- *
- * WBXML mail entities that can be parsed directly (as a stream) from WBXML.
- * It is automatically decoded according to $mapping and the Sync WBXML
- * mappings.
- */
+/***********************************************
+* File      :   syncfindproperties.php
+* Project   :   Z-Push
+* Descr     :   WBXML mail entities that can be parsed directly (as a stream) from WBXML.
+*               It is automatically decoded according to $mapping and the Sync WBXML
+*               mappings.
+*
+* Created   :   15.12.2022
+*
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
+* Copyright 2022 grommunio GmbH
+*
+* This program is free software: you can redistribute it and/or modify
+* it under the terms of the GNU Affero General Public License, version 3,
+* as published by the Free Software Foundation.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+* GNU Affero General Public License for more details.
+*
+* You should have received a copy of the GNU Affero General Public License
+* along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*
+* Consult LICENSE file for details
+************************************************/
 
 class SyncFindProperties extends SyncObject {
     // AS 16.1 props
