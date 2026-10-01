@@ -11,6 +11,7 @@
 * Created   :   05.09.2011
 *
 * Copyright 2007 - 2016 Zarafa Deutschland GmbH
+* Copyright 2020 - 2022 grommunio GmbH
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
