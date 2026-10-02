@@ -485,8 +485,9 @@ EOFXMLINITIALSYNC;
      * @return	string				vCard (text/vcard)
      */
     private function get_vcard($vcard_href) {
-//         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCardDAV->carddav_backend->get_vcard"));
-        $url = $this->url_parts['scheme'] . '://' . $this->url_parts['host'] . ':' . $this->url_parts['port'] . $vcard_href;
+        // ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCardDAV->carddav_backend->get_vcard"));
+        // Make sure server has a trailing slash, before vcard_href
+        $url = $this->url_parts['scheme'] . '://' . $this->url_parts['host'] . ':' . $this->url_parts['port'] . '/' . ltrim($vcard_href, '/');
         $result = $this->query($url, 'GET');
 
         switch ($result['http_code']) {
@@ -699,10 +700,11 @@ EOFXMLGETXMLVCARD;
                             $href = $response->href;
                         }
                         else {
-                            $href = null;
+                            $href = "";
                         }
 
-                        $url = str_replace($this->url_parts['path'], null, $this->url) . $href;
+                        // Make sure server has a trailing slash, before href
+                        $url = str_replace($this->url_parts['path'], null, $this->url) . '/' . ltrim($href, '/');
                         $simplified_xml->startElement('addressbook_element');
                         $simplified_xml->writeElement('display_name', $response->propstat->prop->displayname);
                         $simplified_xml->writeElement('url', $url);
