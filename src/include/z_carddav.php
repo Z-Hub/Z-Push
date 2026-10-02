@@ -700,7 +700,7 @@ EOFXMLGETXMLVCARD;
                             $href = $response->href;
                         }
                         else {
-                            $href = null;
+                            $href = "";
                         }
 
                         // Make sure server has a trailing slash, before href
