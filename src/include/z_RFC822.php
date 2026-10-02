@@ -199,6 +199,7 @@ class Mail_RFC822 {
 
         if (isset($address))        $this->address        = $address;
         // z-push addition
+	if (is_array($this->address)) $this->address      = $this->address[0];
         if (strlen(trim((string) $this->address)) == 0) return array();
         if (isset($default_domain)) $this->default_domain = $default_domain;
         if (isset($nest_groups))    $this->nestGroups     = $nest_groups;
