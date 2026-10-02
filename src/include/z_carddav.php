@@ -703,7 +703,8 @@ EOFXMLGETXMLVCARD;
                             $href = null;
                         }
 
-                        $url = str_replace($this->url_parts['path'], null, $this->url) . $href;
+                        // Make sure server has a trailing slash, before href
+                        $url = str_replace($this->url_parts['path'], null, $this->url) . '/' . ltrim($href, '/');
                         $simplified_xml->startElement('addressbook_element');
                         $simplified_xml->writeElement('display_name', $response->propstat->prop->displayname);
                         $simplified_xml->writeElement('url', $url);
