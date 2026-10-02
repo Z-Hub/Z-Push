@@ -35,20 +35,41 @@ class ImapIdleSink {
     private $port;
     private $username;
     private $password;
+    private $tlsMode;              // 'ssl' (implicit TLS), 'starttls' or 'none'
+    private $verifyCert;
     private $connectTimeout = 5;
     private $ioTimeout = 30;
 
     /**
      * @param string $host       IMAP server hostname or IP
      * @param int    $port       IMAP server port (typically 143 or 993)
+     * @param string $options    IMAP_OPTIONS as passed to imap_open(). Only the
+     *                           transport flags are used: /ssl, /tls, /notls and
+     *                           /novalidate-cert.
      * @param string $username   IMAP login username
      * @param string $password   IMAP login password
      */
-    public function __construct($host, $port, $username, $password) {
+    public function __construct($host, $port, $options, $username, $password) {
         $this->host = $host;
         $this->port = (int)$port;
         $this->username = $username;
         $this->password = $password;
+
+        $opts = strtolower((string)$options);
+        if (strpos($opts, '/ssl') !== false) {
+            $this->tlsMode = 'ssl';
+        }
+        elseif (strpos($opts, '/notls') !== false) {
+            $this->tlsMode = 'none';
+        }
+        else {
+            // "/tls" and the c-client default both use STARTTLS. Unlike c-client,
+            // the sink does not fall back to plaintext when the server does not
+            // offer STARTTLS: credentials are only sent in clear when /notls is
+            // configured explicitly.
+            $this->tlsMode = 'starttls';
+        }
+        $this->verifyCert = (strpos($opts, '/novalidate-cert') === false);
     }
 
     public function __destruct() {
@@ -71,9 +92,18 @@ class ImapIdleSink {
 
         $errno = 0;
         $errstr = '';
-        $sock = @fsockopen($this->host, $this->port, $errno, $errstr, $this->connectTimeout);
+        $context = stream_context_create(array('ssl' => array(
+            'verify_peer'       => $this->verifyCert,
+            'verify_peer_name'  => $this->verifyCert,
+            'allow_self_signed' => !$this->verifyCert,
+            'peer_name'         => $this->host,
+        )));
+        // IPv6 literals need brackets in a socket URI
+        $uriHost = (strpos($this->host, ':') !== false && $this->host[0] !== '[') ? '[' . $this->host . ']' : $this->host;
+        $scheme = ($this->tlsMode === 'ssl') ? 'ssl' : 'tcp';
+        $sock = @stream_socket_client("$scheme://$uriHost:{$this->port}", $errno, $errstr, $this->connectTimeout, STREAM_CLIENT_CONNECT, $context);
         if (!$sock) {
-            throw new Exception("ImapIdleSink: connect {$this->host}:{$this->port} failed: $errstr ($errno)");
+            throw new Exception("ImapIdleSink: connect {$this->host}:{$this->port} ($scheme) failed: $errstr ($errno)");
         }
         stream_set_timeout($sock, $this->ioTimeout);
 
@@ -82,6 +112,28 @@ class ImapIdleSink {
         if (strpos($greeting, '* OK') !== 0) {
             @fclose($sock);
             throw new Exception("ImapIdleSink: unexpected greeting: " . trim($greeting));
+        }
+
+        // STARTTLS before any credentials are sent
+        if ($this->tlsMode === 'starttls') {
+            $tag = $this->nextTag();
+            @fwrite($sock, $tag . " STARTTLS\r\n");
+            $resp = $this->readTagged($sock, $tag);
+            if (!preg_match('/^' . preg_quote($tag, '/') . ' OK/m', $resp)) {
+                @fclose($sock);
+                throw new Exception("ImapIdleSink: STARTTLS refused by {$this->host}: " . trim($resp));
+            }
+            $method = STREAM_CRYPTO_METHOD_TLS_CLIENT;
+            if (defined('STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT')) {
+                $method |= STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT;
+            }
+            if (defined('STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT')) {
+                $method |= STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT;
+            }
+            if (!@stream_socket_enable_crypto($sock, true, $method)) {
+                @fclose($sock);
+                throw new Exception("ImapIdleSink: TLS negotiation with {$this->host} failed");
+            }
         }
 
         // LOGIN

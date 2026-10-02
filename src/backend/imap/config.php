@@ -47,6 +47,8 @@ define('IMAP_AUTOSEEN_ON_DELETE', false);
 //      When true, one IDLE connection per synchronized folder is kept open for the duration of a Ping,
 //      and the backend falls back to polling for the rest of that Ping if IDLE fails for any reason.
 //      Requires an IMAP server that advertises the IDLE capability.
+//      The IDLE connections follow the transport flags in IMAP_OPTIONS (/ssl, /tls, /notls, /novalidate-cert).
+//      Without /notls they are always encrypted: if STARTTLS is not offered, IDLE is not used.
 define('IMAP_USE_IDLE', false);
 
 

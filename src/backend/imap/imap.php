@@ -729,7 +729,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
         if (defined('IMAP_USE_IDLE') && IMAP_USE_IDLE && $this->idleSink !== false) {
             try {
                 if ($this->idleSink === null) {
-                    $this->idleSink = new ImapIdleSink(IMAP_SERVER, IMAP_PORT, $this->username, $this->password);
+                    $this->idleSink = new ImapIdleSink(IMAP_SERVER, IMAP_PORT, IMAP_OPTIONS, $this->username, $this->password);
                     foreach ($this->sinkfolders as $imapid) {
                         $this->idleSink->addFolder($imapid);
                     }
