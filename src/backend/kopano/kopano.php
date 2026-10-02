@@ -968,7 +968,7 @@ class BackendKopano implements IBackend, ISearchProvider {
 
         $meetingrequest = new Meetingrequest($this->store, $mapimessage, $this->session);
 
-        if (Request::GetProtocolVersion() <= 14.0 && !$meetingrequest->isMeetingRequest() && !$meetingrequest->isMeetingRequestResponse() && !$meetingrequest->isMeetingCancellation()) {
+        if (Request::GetProtocolVersion() <= 14.0 && !$meetingrequest->isMeetingRequest() && !$meetingrequest->isMeetingRequestResponse() && !$meetingrequest->isMeetingCancellation())
             throw new StatusException(sprintf("BackendKopano->MeetingResponse('%s','%s', '%s'): Error, attempt to respond to non-meeting request", $requestid, $folderid, $response), SYNC_MEETRESPSTATUS_INVALIDMEETREQ);
 
         if($meetingrequest->isLocalOrganiser())
