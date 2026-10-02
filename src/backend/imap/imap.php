@@ -57,7 +57,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
     private $imapParams = array();
 
     private $dontStat = array();            //keys in this array represent mailboxes which can't be stat'd (ie, /NoSELECT status)
-    
+
     //define constants for imap mailbox attributes
     const LATT_NOINFERIORS = 1;
     const LATT_NOSELECT = 2;
@@ -1193,7 +1193,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
                 ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->GetMessage():: iOS device %s->%s detected", Request::GetDeviceType(), Request::GetUserAgent()));
                 $isAppleIosDevice = true;
             }
-          
+
             // Prefered format is MIME -OR- message is SMIME -OR- the device supports MIME (iPhone) and doesn't really understand HTML
             if ($bpReturnType == SYNC_BODYPREFERENCE_MIME || ($bpReturnType == SYNC_BODYPREFERENCE_HTML && $isAppleIosDevice) || $is_smime || in_array(SYNC_BODYPREFERENCE_MIME, $bodypreference)) {
                 $bpReturnType = SYNC_BODYPREFERENCE_MIME;
@@ -1380,14 +1380,14 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
                         $output->lastverbexecuted = SYNC_MAIL_LASTVERB_UNKNOWN;
                     }
                 }
-                
+
                 if (Request::GetProtocolVersion() >= 16.0) {
 
                     //set so message is fully exported
                     if (isset($stat["draft"]) && $stat["draft"]) {
                         $output->isdraft = true;
                     }
-                }                
+                }
             }
 
             $Mail_RFC822 = new Mail_RFC822();
@@ -2233,8 +2233,8 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
      */
     private function getSearchRestriction($cpo) {
         $searchText = $cpo->GetSearchFreeText();
-        $searchGreater = $cpo->GetSearchValueGreater() ? strftime("%Y-%m-%d", strtotime($cpo->GetSearchValueGreater())) : '';
-        $searchLess = $cpo->GetSearchValueLess() ? strftime("%Y-%m-%d", strtotime($cpo->GetSearchValueLess())) : '';
+        $searchGreater = $cpo->GetSearchValueGreater() ? date("Y-m-d", strtotime($cpo->GetSearchValueGreater())) : '';
+        $searchLess = $cpo->GetSearchValueLess() ? date("Y-m-d", strtotime($cpo->GetSearchValueLess())) : '';
 
         $filter = '';
         if ($searchGreater != '') {
@@ -3032,7 +3032,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
                 if ($l->attributes & LATT_MARKED) {
                     $attr['marked'] = true;
                 } elseif ($l->attributes & LATT_UNMARKED) {
-                    $attr['marked'] = false;    
+                    $attr['marked'] = false;
                 }
                 if ($l->attributes & LATT_HASCHILDREN) {
                     $attr['children'] = true;

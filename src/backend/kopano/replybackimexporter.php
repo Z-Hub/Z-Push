@@ -575,8 +575,8 @@ class ReplyBackImExporter implements IImportChanges, IExportChanges {
 
         // replace values of template
         $mail = str_replace("**USERFULLNAME**", $userinfo['fullname'], $mail);
-        $mail = str_replace("**DATE**", strftime(@constant('READ_ONLY_NOTIFY_DATE_FORMAT')), $mail);
-        $mail = str_replace("**TIME**", strftime(@constant('READ_ONLY_NOTIFY_TIME_FORMAT')), $mail);
+        $mail = str_replace("**DATE**", date(@constant('READ_ONLY_NOTIFY_DATE_FORMAT')), $mail);
+        $mail = str_replace("**TIME**", date(@constant('READ_ONLY_NOTIFY_TIME_FORMAT')), $mail);
         $mail = str_replace("**FOLDERNAME**", $foldername, $mail);
         $mail = str_replace("**MOBILETYPE**", Request::GetDeviceType(), $mail);
         $mail = str_replace("**MOBILEDEVICEID**", Request::GetDeviceID(), $mail);

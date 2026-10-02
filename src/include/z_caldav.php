@@ -158,8 +158,12 @@ class CalDAVClient {
 	 */
 	public function Disconnect() {
 		if ($this->curl !== false) {
-			curl_close($this->curl);
-			$this->curl = false;
+		    if (PHP_VERSION_ID >= 80000) {
+                unset($this->curl);
+            } else {
+                curl_close($this->curl); // accepted Compatibility Error, since we explicitly lock this behind a PHP version check
+            }
+            $this->curl = false;
 		}
 	}
 
@@ -217,7 +221,7 @@ class CalDAVClient {
 				ZLog::Write(LOGLEVEL_DEBUG, sprintf("XML Reponse:\n%s\n", $this->xmlResponse));
 			}
 
-			xml_parser_free($parser);
+			PHP_VERSION_ID < 80000 && xml_parser_free($parser); // accepted Compatibility Error, since we explicitly lock this behind a PHP version check
 		}
 	}
 
@@ -759,7 +763,7 @@ EOXML;
 	/**
 	 * Given XML for a calendar query, return an array of the events (/todos) in the
 	 * response.  Each event in the array will have a 'href', 'etag' and an optional '$response_type'
-	 * part (depending on the flag '$include_data'), where the 'href' is relative to the calendar and 
+	 * part (depending on the flag '$include_data'), where the 'href' is relative to the calendar and
 	 * the '$response_type' contains the
 	 * definition of the calendar data in iCalendar format.
 	 *
@@ -775,7 +779,7 @@ EOXML;
 		if ( !empty($url) ) {
 			$this->SetCalendar($url);
 		}
-		
+
 		//request the icalendar data if $include_data is true (default)
 		if ( $include_data ) {
 			$prop = '<C:calendar-data/>';
@@ -827,8 +831,8 @@ EOXML;
 	/**
 	 * Get a list of events in a range from $start to $finish.  The dates should be in the
 	 * format yyyymmddThhmmssZ and should be in GMT.  The events are returned as an
-	 * array of event parameter arrays. Unlike the original GetEvents, each event array will only contain the 'href' and 'etag' 
-	 * parts, where the 'href' is relative to the calendar. 
+	 * array of event parameter arrays. Unlike the original GetEvents, each event array will only contain the 'href' and 'etag'
+	 * parts, where the 'href' is relative to the calendar.
 	 *
 	 * @param timestamp $start The start time for the period
 	 * @param timestamp $finish The finish time for the period
@@ -874,7 +878,7 @@ EOFILTER;
 	 * @param string    $relative_url The URL relative to the base_url specified when the calendar was opened.  Default ''.
 	 *
 	 * @return array An array of the relative URLs and etags as [['href'], ['etag']]
-	 * 
+	 *
 	 * This function has been modified from the original GetTodos function; the function has been renamed to prevent regression errors
 	 */
 	function GetTodosList( $start = null, $finish = null, $completed = null, $cancelled = null, $relative_url = "" ) {
