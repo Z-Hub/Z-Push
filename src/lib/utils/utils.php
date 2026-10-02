@@ -7,6 +7,8 @@
 * Created   :   03.04.2008
 *
 * Copyright 2007 - 2016 Zarafa Deutschland GmbH
+* Copyright 2020 - 2022 grommunio GmbH
+* Copyright 2023 - 2025 Mat Wilson
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,

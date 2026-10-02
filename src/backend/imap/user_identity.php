@@ -7,6 +7,7 @@
 * Created   :   2014
 *
 * Copyright 2014 - 2016 Zarafa Deutschland GmbH
+* Copyright 2025 Mat Wilson
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,

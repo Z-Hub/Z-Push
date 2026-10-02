@@ -11,6 +11,7 @@
 * Copyright 2012 - 2014 Jean-Louis Dupond
 * Jean-Louis Dupond released this code as AGPLv3 here: https://github.com/dupondje/PHP-Push-2/issues/93
 * Copyright 2015 - Francisco Miguel Biete
+* Copyright 2024 Mat Wilson
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,

@@ -1,6 +1,7 @@
 <?php
 /*
  * Copyright 2005 - 2016  Zarafa B.V. and its licensors
+ * Copyright 2024 Mat Wilson
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License, version 3,
