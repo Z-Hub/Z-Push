@@ -42,6 +42,14 @@ define('IMAP_OPTIONS', '/notls/norsh');
 define('IMAP_AUTOSEEN_ON_DELETE', false);
 
 
+// Use IMAP IDLE (RFC 2177) in ChangesSink for near-instant push notifications.
+//      When false (default) the folders are polled every PING_INTERVAL seconds, as before.
+//      When true, one IDLE connection per synchronized folder is kept open for the duration of a Ping,
+//      and the backend falls back to polling for the rest of that Ping if IDLE fails for any reason.
+//      Requires an IMAP server that advertises the IDLE capability.
+define('IMAP_USE_IDLE', false);
+
+
 // IMPORTANT: BASIC IMAP FOLDERS [ask your mail admin]
         // We can have diferent cases (case insensitive):
         // 1.

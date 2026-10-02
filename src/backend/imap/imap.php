@@ -723,10 +723,10 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             return $notifications;
         }
 
-        // Prefer real IMAP IDLE (RFC 2177) when the server supports it. On any
+        // Use real IMAP IDLE (RFC 2177) when enabled with IMAP_USE_IDLE. On any
         // failure during setup or wait the sink is disabled for the rest of
         // this Ping and we fall through to the original polling code below.
-        if ($this->idleSink !== false) {
+        if (defined('IMAP_USE_IDLE') && IMAP_USE_IDLE && $this->idleSink !== false) {
             try {
                 if ($this->idleSink === null) {
                     $this->idleSink = new ImapIdleSink(IMAP_SERVER, IMAP_PORT, $this->username, $this->password);
