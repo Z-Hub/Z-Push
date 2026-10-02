@@ -8,6 +8,7 @@
 * Created   :   8/28/2017
 *
 * Copyright 2017 Karl Denninger
+* Copyright 2024 Mat Wilson
 *
 * Karl Denninger released this code as AGPLv3 here (ZP)
 *

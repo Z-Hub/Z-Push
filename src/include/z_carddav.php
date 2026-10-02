@@ -95,6 +95,8 @@
  * @version 0.6
  * @license http://www.gnu.org/licenses/agpl.html GNU AGPL v3 or later
  *
+ * Copyright 2024 Mat Wilson
+ * 
  */
 
 class carddav_backend
