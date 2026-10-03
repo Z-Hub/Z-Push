@@ -11,9 +11,19 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Psalm Security Scan
-        uses: docker://ghcr.io/psalm/psalm-security-scan:4.4.1
+        uses: docker://ghcr.io/psalm/psalm-security-scan
         
       - name: Import Security Analysis results into GitHub Security Code Scanning
         uses: github/codeql-action/upload-sarif@v2
         with:
           sarif_file: results.sarif
+
+  psalm:
+    name: Psalm
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Psalm
+        uses: docker://ghcr.io/psalm/psalm-github-actions
