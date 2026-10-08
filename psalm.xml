@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<psalm
+    errorLevel="8"
+    resolveFromConfigFile="true"
+    findUnusedCode="false"
+    findUnusedBaselineEntry="false"
+    allFunctionsGlobal="true"
+    allConstantsGlobal="true"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns="https://getpsalm.org/schema/config"
+>
+    <projectFiles>
+        <directory name="src" />
+        <directory name="tools" />
+        <ignoreFiles>
+            <directory name="src/vendor" />
+            <directory name="vendor" />
+        </ignoreFiles>
+    </projectFiles>
+</psalm>
