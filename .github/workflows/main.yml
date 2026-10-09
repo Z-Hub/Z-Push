@@ -14,6 +14,12 @@ jobs:
         run: |
           sed -i '/<MissingPureAnnotation[^>]*\/>/d' psalm.xml
           sed -i '/<MissingPureAnnotation>/,/<\/MissingPureAnnotation>/d' psalm.xml
+          sed -i '/<MissingAbstractPureAnnotation[^>]*\/>/d' psalm.xml
+          sed -i '/<MissingAbstractPureAnnotation>/,/<\/MissingAbstractPureAnnotation>/d' psalm.xml
+          sed -i '/<MissingImmutableAnnotation[^>]*\/>/d' psalm.xml
+          sed -i '/<MissingImmutableAnnotation>/,/<\/MissingImmutableAnnotation>/d' psalm.xml
+          sed -i '/<MissingInterfaceImmutableAnnotation[^>]*\/>/d' psalm.xml
+          sed -i '/<MissingInterfaceImmutableAnnotation>/,/<\/MissingInterfaceImmutableAnnotation>/d' psalm.xml
 
       - name: Psalm Security Scan
         uses: docker://ghcr.io/psalm/psalm-security-scan
