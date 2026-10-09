@@ -275,11 +275,5 @@
                 <file name="src/include/z_caldav.php" />
             </errorLevel>
         </TaintedHeader>
-        <TaintedTextWithQuotes>
-            <errorLevel type="suppress">
-                <file name="src/lib/core/zpush.php" />
-            </errorLevel>
-        </TaintedTextWithQuotes>
-        
     </issueHandlers>
 </psalm>
