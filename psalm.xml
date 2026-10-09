@@ -270,12 +270,6 @@
                 <file name="src/backend/ldap/ldap.php" />
             </errorLevel>
         </TaintedLdap>
-        <TaintedHtml>
-            <errorLevel type="suppress">
-                <file name="src/backend/ipcwincache/ipcwincacheprovider.php" />
-                <file name="src/lib/core/zpush.php" />
-            </errorLevel>
-        </TaintedHtml>
         <TaintedHeader>
             <errorLevel type="suppress">
                 <file name="src/include/z_caldav.php" />

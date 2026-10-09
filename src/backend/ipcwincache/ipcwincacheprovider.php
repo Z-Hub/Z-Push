@@ -164,7 +164,7 @@ class IpcWincacheProvider implements IIpcProvider {
         $key = $this->type.':'.$id;
 
         if (!wincache_ucache_set($key, $data)) {
-            ZLog::Write(LOGLEVEL_INFO, sprintf("%s->SetData(): failed to store data for key '%s': '%s'", get_class($this), $key, print_r($data, false)));
+            ZLog::Write(LOGLEVEL_INFO, sprintf("%s->SetData(): failed to store data for key '%s': '%s'", get_class($this), $key, print_r($data, true)));
             return false;
         }
 

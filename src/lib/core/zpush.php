@@ -822,9 +822,12 @@ class ZPush {
         ZLog::Write(LOGLEVEL_DEBUG,"ZPush::PrintZPushLegal()");
 
         if ($message)
-            $message = "<h3>". $message . "</h3>";
-        if ($additionalMessage)
-            $additionalMessage .= "<br>";
+            $message = "<h3>". htmlspecialchars($message, ENT_QUOTES) . "</h3>";
+        if ($additionalMessage) {
+            $additionalMessage = htmlspecialchars($additionalMessage, ENT_QUOTES) . "<br>";
+            $additionalMessage = str_replace("&lt;pre&gt;", "<pre>", $additionalMessage);
+            $additionalMessage = str_replace("&lt;/pre&gt;", "</pre>", $additionalMessage);
+        }
 
         header("Content-type: text/html");
         print <<<END
