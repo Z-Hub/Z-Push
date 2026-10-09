@@ -270,10 +270,5 @@
                 <file name="src/backend/ldap/ldap.php" />
             </errorLevel>
         </TaintedLdap>
-        <TaintedHeader>
-            <errorLevel type="suppress">
-                <file name="src/include/z_caldav.php" />
-            </errorLevel>
-        </TaintedHeader>
     </issueHandlers>
 </psalm>
