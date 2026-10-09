@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 jobs:
   psalm-security-scan:
-    name: Psalm
+    name: Psalm Security Scan
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code

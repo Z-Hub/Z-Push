@@ -15,6 +15,7 @@
         <ignoreFiles>
             <directory name="src/vendor" />
             <directory name="vendor" />
+            <directory name="src/backend/kopano" />
         </ignoreFiles>
     </projectFiles>
 </psalm>
