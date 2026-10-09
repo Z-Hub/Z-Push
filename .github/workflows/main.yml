@@ -10,6 +10,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Strip Psalm 6-only issue handlers for the 5.x scan
+        run: |
+          sed -i '/<MissingPureAnnotation[^>]*\/>/d' psalm.xml
+          sed -i '/<MissingPureAnnotation>/,/<\/MissingPureAnnotation>/d' psalm.xml
+
       - name: Psalm Security Scan
         uses: docker://ghcr.io/psalm/psalm-security-scan
         
