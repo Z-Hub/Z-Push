@@ -4,16 +4,37 @@ on: [push, pull_request]
 
 jobs:
   psalm-security-scan:
+    name: Psalm Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Strip Psalm 6-only issue handlers for the 5.x scan
+        run: |
+          sed -i '/<MissingPureAnnotation[^>]*\/>/d' psalm.xml
+          sed -i '/<MissingPureAnnotation>/,/<\/MissingPureAnnotation>/d' psalm.xml
+          sed -i '/<MissingAbstractPureAnnotation[^>]*\/>/d' psalm.xml
+          sed -i '/<MissingAbstractPureAnnotation>/,/<\/MissingAbstractPureAnnotation>/d' psalm.xml
+          sed -i '/<MissingImmutableAnnotation[^>]*\/>/d' psalm.xml
+          sed -i '/<MissingImmutableAnnotation>/,/<\/MissingImmutableAnnotation>/d' psalm.xml
+          sed -i '/<MissingInterfaceImmutableAnnotation[^>]*\/>/d' psalm.xml
+          sed -i '/<MissingInterfaceImmutableAnnotation>/,/<\/MissingInterfaceImmutableAnnotation>/d' psalm.xml
+
+      - name: Psalm Security Scan
+        uses: docker://ghcr.io/psalm/psalm-security-scan
+        
+      - name: Import Security Analysis results into GitHub Security Code Scanning
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: results.sarif
+
+  psalm:
     name: Psalm
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
 
-      - name: Psalm Security Scan
-        uses: docker://ghcr.io/psalm/psalm-security-scan:4.4.1
-        
-      - name: Import Security Analysis results into GitHub Security Code Scanning
-        uses: github/codeql-action/upload-sarif@v2
-        with:
-          sarif_file: results.sarif
+      - name: Psalm
+        uses: docker://ghcr.io/psalm/psalm-github-actions:6.19.2
