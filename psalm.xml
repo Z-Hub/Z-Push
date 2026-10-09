@@ -18,4 +18,223 @@
             <directory name="src/backend/kopano" />
         </ignoreFiles>
     </projectFiles>
+    <issueHandlers>
+        <!-- Cookie to be dropped in v3.0 -->
+        <TaintedCookie>
+            <errorLevel type="suppress">
+                <file name="src/autodiscover/autodiscover.php" />
+            </errorLevel>
+        </TaintedCookie>
+        <!-- psalm specific doesn't affect php -->
+        <MissingPureAnnotation errorLevel="suppress" />
+        <MissingImmutableAnnotation errorLevel="suppress" />
+        <MissingAbstractPureAnnotation errorLevel="suppress" />
+        <MissingInterfaceImmutableAnnotation errorLevel="suppress" />
+        <!-- 8.3+ to correct when at 8.3 minimum version -->
+        <MissingOverrideAttribute errorLevel="suppress" />
+        <!-- backends not part of autoload -->
+        <InvalidGlobal>
+            <errorLevel type="suppress">
+                <file name="src/backend/imap/config.php" />
+                <file name="src/backend/searchldap/config.php" />
+            </errorLevel>
+        </InvalidGlobal>
+        <!-- third part library -->
+        <UnsupportedPropertyReferenceUsage>
+            <errorLevel type="suppress">
+                <file name="src/backend/imap/mimePart.php" />
+            </errorLevel>
+        </UnsupportedPropertyReferenceUsage>
+        <!-- intended behaviour -->
+        <DuplicateClass>
+            <errorLevel type="suppress">
+                <file name="tools/dev/printwbxml.php" />
+                <file name="tools/gab2contacts/lib/contactworker.php" />
+                <file name="tools/gab2contacts/lib/kopano.php" />
+                <file name="tools/gab2contacts/lib/synccontact.php" />
+            </errorLevel>
+        </DuplicateClass>
+        <!-- safe but should be reviewed -->
+        <ParadoxicalCondition>
+            <errorLevel type="suppress">
+                <!-- third party library, safe to ignore -->
+                <file name="src/include/iCalendar.php" />
+                <!-- safe but should be reviewed -->
+                <file name="src/lib/request/provisioning.php" />
+            </errorLevel>
+        </ParadoxicalCondition>
+        <!-- Taints manually reviewed and deemed ok -->
+        <TaintedSSRF>
+            <errorLevel type="suppress">
+                <file name="src/include/z_caldav.php" />
+                <file name="src/include/z_carddav.php" />
+            </errorLevel>
+        </TaintedSSRF>
+        <!-- doc blocks to correct -->
+        <UndefinedDocblockClass>
+            <errorLevel type="suppress">
+                <file name="src/backend/caldav/caldav.php" />
+                <file name="src/backend/carddav/carddav.php" />
+                <file name="src/backend/combined/combined.php" />
+                <file name="src/backend/imap/Net/SMTP.php" />
+                <file name="src/backend/imap/imap.php" />
+                <file name="src/backend/imap/mimePart.php" />
+                <file name="src/backend/imap/mime_encode.php" />
+                <file name="src/backend/ipcmemcached/ipcmemcachedprovider.php" />
+                <file name="src/backend/maildir/maildir.php" />
+                <file name="src/backend/searchldap/searchldap.php" />
+                <file name="src/backend/sqlstatemachine/sqlstatemachine.php" />
+                <file name="src/backend/stickynote/stickynote.php" />
+                <file name="src/backend/vcarddir/vcarddir.php" />
+                <file name="src/include/z_caldav.php" />
+                <file name="src/lib/core/devicemanager.php" />
+                <file name="src/lib/core/statemanager.php" />
+                <file name="src/lib/core/streamer.php" />
+                <file name="src/lib/core/synccollections.php" />
+                <file name="src/lib/core/syncparameters.php" />
+                <file name="src/lib/core/zpush.php" />
+                <file name="src/lib/default/diffbackend/diffbackend.php" />
+                <file name="src/lib/default/filestatemachine.php" />
+                <file name="src/lib/default/searchprovider.php" />
+                <file name="src/lib/interface/isearchprovider.php" />
+                <file name="src/lib/interface/istatemachine.php" />
+                <file name="src/lib/request/ping.php" />
+                <file name="src/lib/request/request.php" />
+                <file name="src/lib/request/settings.php" />
+                <file name="src/lib/request/sync.php" />
+                <file name="src/lib/utils/timezoneutil.php" />
+                <file name="src/lib/utils/utils.php" />
+                <file name="src/lib/wbxml/wbxmldecoder.php" />
+                <file name="src/lib/webservice/webservice.php" />
+                <file name="src/lib/webservice/webservicedevice.php" />
+                <file name="tools/gab-sync/lib/syncworker.php" />
+            </errorLevel>
+        </UndefinedDocblockClass>
+        <InvalidParamDefault>
+            <errorLevel type="suppress">
+                <file name="src/backend/caldav/caldav.php" />
+                <file name="src/backend/combined/combined.php" />
+                <file name="src/backend/combined/importer.php" />
+                <file name="src/backend/sqlstatemachine/sqlstatemachine.php" />
+                <file name="src/include/z_caldav.php" />
+                <file name="src/lib/core/asdevice.php" />
+                <file name="src/lib/core/devicemanager.php" />
+                <file name="src/lib/core/loopdetection.php" />
+                <file name="src/lib/core/statemanager.php" />
+                <file name="src/lib/default/diffbackend/diffbackend.php" />
+                <file name="src/lib/default/diffbackend/importchangesdiff.php" />
+                <file name="src/lib/default/filestatemachine.php" />
+                <file name="src/lib/interface/ibackend.php" />
+                <file name="src/lib/interface/istatemachine.php" />
+                <file name="src/lib/request/request.php" />
+                <file name="src/lib/syncobjects/syncfolder.php" />
+                <file name="src/lib/utils/timezoneutil.php" />
+                <file name="src/lib/utils/utils.php" />
+                <file name="src/lib/utils/zpushadmin.php" />
+                <file name="src/z-push-admin.php" />
+                <file name="tools/gab-sync/lib/syncworker.php" />
+            </errorLevel>
+        </InvalidParamDefault>
+        <NullReference>
+            <errorLevel type="suppress">
+                <file name="src/backend/imap/imap.php" />
+            </errorLevel>
+        </NullReference>
+        <MissingTemplateParam>
+            <errorLevel type="suppress">
+                <file name="src/lib/core/synccollections.php" />
+            </errorLevel>
+        </MissingTemplateParam>
+        <!-- code issues to fix first -->
+        <UndefinedVariable>
+            <errorLevel type="suppress">
+                <!-- third party library, safe to ignore -->
+                <file name="src/backend/imap/Auth/SASL.php" />
+                <file name="src/backend/imap/Net/Socket.php" />
+                <!-- code issue to fix -->
+                <file name="src/backend/imap/mime_encode.php" />
+                <file name="src/backend/sqlstatemachine/sqlstatemachine.php" />
+            </errorLevel>
+        </UndefinedVariable>
+        <NoValue>
+            <errorLevel type="suppress">
+                <!-- third party library, safe to ignore -->
+                <file name="src/backend/imap/Net/SMTP.php" />
+                <file name="src/include/iCalendar.php" />
+                <!-- code issue to fix -->
+                <file name="src/backend/imap/Mail.php" />
+                <file name="src/lib/core/asdevice.php" />
+                <file name="src/lib/core/zpush.php" />
+                <file name="src/lib/request/provisioning.php" />
+                <file name="src/lib/utils/utils.php" />
+                <file name="src/lib/wbxml/wbxmlencoder.php" />
+                <file name="src/z-push-top.php" />
+            </errorLevel>
+        </NoValue>
+        <UndefinedClass>
+            <errorLevel type="suppress">
+                <file name="src/backend/imap/Mail/smtp.php" />
+                <file name="src/backend/ipcmemcached/ipcmemcachedprovider.php" />
+                <file name="src/include/z_caldav.php" />
+                <file name="src/lib/request/sync.php" />
+                <file name="src/lib/webservice/webservice.php" />
+                <file name="src/lib/webservice/webservicedevice.php" />
+            </errorLevel>
+        </UndefinedClass>
+        <UndefinedConstant>
+            <errorLevel type="suppress">
+                <!-- safe to ignore, constants part of unavailable PHP extensions -->
+                <file name="src/backend/imap/imap.php" />
+                <file name="src/backend/imap/user_identity.php" />
+                <file name="src/backend/ldap/ldap.php" />
+                <file name="src/backend/searchldap/searchldap.php" />
+                <file name="src/backend/stickynote/stickynote.php" />
+                <file name="src/lib/log/syslog.php" />
+                <!-- code to fix -->
+                <file name="src/include/z_RTF.php" />
+                <file name="src/lib/core/topcollector.php" />
+            </errorLevel>
+        </UndefinedConstant>
+        <TooFewArguments>
+            <errorLevel type="suppress">
+                <!-- false positive but should be reviewed -->
+                <file name="src/lib/core/streamer.php" />
+                <!-- actual issue-->
+                <file name="src/backend/ldap/ldap.php" />
+            </errorLevel>
+        </TooFewArguments>
+        <InvalidStaticInvocation>
+            <errorLevel type="suppress">
+                <file name="src/backend/maildir/maildir.php" />
+            </errorLevel>
+        </InvalidStaticInvocation>
+        <UndefinedFunction>
+            <errorLevel type="suppress">
+                <!-- third party library, safe to ignore -->
+                <file name="src/include/iCalendar.php" />
+                <!-- kopano related, ignore -->
+                <file name="tools/gab-sync/lib/kopano.php" />
+                <!-- code issue to fix -->
+                <file name="src/lib/request/sync.php" />
+            </errorLevel>
+        </UndefinedFunction>
+        <DuplicateArrayKey>
+            <errorLevel type="suppress">
+                <file name="src/include/rtfclass.php" />
+            </errorLevel>
+        </DuplicateArrayKey>
+        <!-- Taints needing review -->
+        <TaintedFile>
+            <errorLevel type="suppress">
+                <file name="src/include/z_caldav.php" />
+                <file name="src/include/z_carddav.php" />
+            </errorLevel>
+        </TaintedFile>
+        <TaintedLdap>
+            <errorLevel type="suppress">
+                <file name="src/backend/imap/user_identity.php" />
+                <file name="src/backend/ldap/ldap.php" />
+            </errorLevel>
+        </TaintedLdap>
+    </issueHandlers>
 </psalm>
