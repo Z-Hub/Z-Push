@@ -18,6 +18,9 @@
             <directory name="src/backend/kopano" />
         </ignoreFiles>
     </projectFiles>
+    <enableExtensions>
+        <extension name="soap" />
+    </enableExtensions>
     <issueHandlers>
         <!-- Cookie to be dropped in v3.0 -->
         <TaintedCookie>
@@ -68,6 +71,8 @@
             <errorLevel type="suppress">
                 <file name="src/include/z_caldav.php" />
                 <file name="src/include/z_carddav.php" />
+                <file name="src/lib/utils/utils.php" />
+
             </errorLevel>
         </TaintedSSRF>
         <!-- doc blocks to correct -->
@@ -108,6 +113,8 @@
                 <file name="src/lib/webservice/webservice.php" />
                 <file name="src/lib/webservice/webservicedevice.php" />
                 <file name="tools/gab-sync/lib/syncworker.php" />
+                <file name="src/backend/imap/Net/Socket.php" />
+                <file name="src/lib/wbxml/wbxmlencoder.php" />
             </errorLevel>
         </UndefinedDocblockClass>
         <InvalidParamDefault>
@@ -169,6 +176,7 @@
                 <file name="src/lib/utils/utils.php" />
                 <file name="src/lib/wbxml/wbxmlencoder.php" />
                 <file name="src/z-push-top.php" />
+                <file name="src/lib/core/streamer.php" />
             </errorLevel>
         </NoValue>
         <UndefinedClass>
@@ -179,6 +187,8 @@
                 <file name="src/lib/request/sync.php" />
                 <file name="src/lib/webservice/webservice.php" />
                 <file name="src/lib/webservice/webservicedevice.php" />
+                <file name="src/include/z_carddav.php" />
+                <file name="src/lib/utils/utils.php" />
             </errorLevel>
         </UndefinedClass>
         <UndefinedConstant>
@@ -223,11 +233,35 @@
                 <file name="src/include/rtfclass.php" />
             </errorLevel>
         </DuplicateArrayKey>
+        <MissingFile>
+            <errorLevel type="suppress">
+                <file name="src/backend/caldav/caldav.php" />
+                <file name="src/backend/carddav/carddav.php" />
+                <file name="src/backend/combined/combined.php" />
+                <file name="src/backend/imap/Mail/smtp.php" />
+                <file name="src/backend/imap/imap.php" />
+                <file name="src/backend/ipcmemcached/ipcmemcachedprovider.php" />
+                <file name="src/backend/ldap/ldap.php" />
+                <file name="src/backend/maildir/maildir.php" />
+                <file name="src/backend/searchldap/searchldap.php" />
+                <file name="src/backend/sqlstatemachine/sqlstatemachine.php" />
+                <file name="src/backend/stickynote/stickynote.php" />
+                <file name="src/backend/vcarddir/vcarddir.php" />
+                <file name="src/include/z_caldav.php" />
+                <file name="src/lib/webservice/webserviceusers.php" />
+                <file name="tools/gab-sync/lib/kopano.php" />
+                <file name="tools/list-shared-folders.php" />
+                <file name="tools/migrate-2.0.x-2.1.0.php" />
+                <file name="tools/migrate-filestates-to-db.php" />
+            </errorLevel>
+        </MissingFile>
         <!-- Taints needing review -->
         <TaintedFile>
             <errorLevel type="suppress">
                 <file name="src/include/z_caldav.php" />
                 <file name="src/include/z_carddav.php" />
+                <file name="src/lib/default/filestatemachine.php" />
+                <file name="src/lib/utils/utils.php" />
             </errorLevel>
         </TaintedFile>
         <TaintedLdap>
@@ -236,5 +270,22 @@
                 <file name="src/backend/ldap/ldap.php" />
             </errorLevel>
         </TaintedLdap>
+        <TaintedHtml>
+            <errorLevel type="suppress">
+                <file name="src/backend/ipcwincache/ipcwincacheprovider.php" />
+                <file name="src/lib/core/zpush.php" />
+            </errorLevel>
+        </TaintedHtml>
+        <TaintedHeader>
+            <errorLevel type="suppress">
+                <file name="src/include/z_caldav.php" />
+            </errorLevel>
+        </TaintedHeader>
+        <TaintedTextWithQuotes>
+            <errorLevel type="suppress">
+                <file name="src/lib/core/zpush.php" />
+            </errorLevel>
+        </TaintedTextWithQuotes>
+        
     </issueHandlers>
 </psalm>
