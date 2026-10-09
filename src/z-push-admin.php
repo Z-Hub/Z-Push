@@ -1492,7 +1492,7 @@ class ZPushAdminCLI {
                         if (strlen($d['name']) > 20) {
                             $d['name'] = substr($d['name'], 0, 18) . "..";
                         }
-                        printf("\tFolder: %s Sync: %s %s\n", str_pad($d['name'], 20), str_pad($d['status'], 13), $status);
+                        printf("\tFolder: %s Sync: %s %s\n", htmlspecialchars(str_pad($d['name'], 20), ENT_QUOTES), htmlspecialchars(str_pad($d['status'], 13), ENT_QUOTES), htmlspecialchars($status, ENT_QUOTES));
                     }
                 }
             }

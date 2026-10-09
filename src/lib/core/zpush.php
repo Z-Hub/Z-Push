@@ -821,10 +821,16 @@ class ZPush {
     static public function PrintZPushLegal($message = "", $additionalMessage = "") {
         ZLog::Write(LOGLEVEL_DEBUG,"ZPush::PrintZPushLegal()");
 
+        $message = htmlspecialchars($message, ENT_QUOTES);
+        $additionalMessage = htmlspecialchars($additionalMessage, ENT_QUOTES);
+
         if ($message)
             $message = "<h3>". $message . "</h3>";
-        if ($additionalMessage)
-            $additionalMessage .= "<br>";
+        if ($additionalMessage) {
+            $additionalMessage = $additionalMessage . "<br>";
+            $additionalMessage = str_replace("&lt;pre&gt;", "<pre>", $additionalMessage);
+            $additionalMessage = str_replace("&lt;/pre&gt;", "</pre>", $additionalMessage);
+        }
 
         header("Content-type: text/html");
         print <<<END

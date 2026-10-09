@@ -272,7 +272,9 @@ class CalDAVClient {
 		$headers = array();
 		$headers['content-type'] = 'Content-type: ' . $content_type;
 		foreach( $this->headers as $ii => $head ) {
-		  $headers[$ii] = $head;
+		  	/** @psalm-taint-escape header */
+			$cleanhead = str_replace(array("\r", "\n", "\0"), '', $head);
+			$headers[$ii] = $cleanhead;
 		}
 		curl_setopt($this->curl, CURLOPT_HTTPHEADER, $headers);
 
