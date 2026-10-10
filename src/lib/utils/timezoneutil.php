@@ -1319,8 +1319,12 @@ class TimezoneUtil {
             //If there is no timezone set, we use the default timezone
             $tz = timezone_open(date_default_timezone_get());
         }
-        //20110930T090000Z
-        $date = date_create_from_format('Ymd\THis\Z', $value, timezone_open("UTC"));
+        //2025-03-27T130000
+        $date = date_create_from_format('Y-m-d\THis', $value, $tz);
+        if (!$date) {
+            //20110930T090000Z
+            $date = date_create_from_format('Ymd\THis\Z', $value, timezone_open("UTC"));
+        }
         if (!$date) {
             //20110930T090000
             $date = date_create_from_format('Ymd\THis', $value, $tz);
@@ -1331,6 +1335,7 @@ class TimezoneUtil {
         }
         if (!$date) {
             ZLog::Write(LOGLEVEL_ERROR, sprintf("TimezoneUtil::MakeUTCDate(): failed to convert '%s' to date", $value));
+            return false;
         }
         return date_timestamp_get($date);
     }

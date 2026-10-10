@@ -347,9 +347,14 @@ class Mail_mimeDecode
                 case 'multipart/relative': //#20431 - android
                 case 'multipart/mixed':
                 case 'application/vnd.wap.multipart.related':
-                    if(!isset($content_type['other']['boundary'])){
-                        $this->_error = 'No boundary found for ' . $content_type['value'] . ' part';
-                        return false;
+                    if (!isset($content_type['other']['boundary'])) {
+                        if ($this->_include_bodies) {
+                            $encoding = isset($content_transfer_encoding['value']) ? $content_transfer_encoding['value'] : '7bit';
+                            $charset = isset($content_type['other']['charset']) ? $content_type['other']['charset'] : $this->_charset;
+                            $return->body = $this->_decode_bodies ? $this->_decodeBody($body, $encoding, $charset, false) : $body;
+                        }
+                        $this->_error = 'Boundary missing in part ' . $content_type['value'] . ', content treated as plain text.';
+                        break;
                     }
 
                     $default_ctype = (strtolower($content_type['value']) === 'multipart/digest') ? 'message/rfc822' : 'text/plain';
