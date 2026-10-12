@@ -264,11 +264,5 @@
                 <file name="src/lib/utils/utils.php" />
             </errorLevel>
         </TaintedFile>
-        <TaintedLdap>
-            <errorLevel type="suppress">
-                <file name="src/backend/imap/user_identity.php" />
-                <file name="src/backend/ldap/ldap.php" />
-            </errorLevel>
-        </TaintedLdap>
     </issueHandlers>
 </psalm>
