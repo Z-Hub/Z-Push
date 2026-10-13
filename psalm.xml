@@ -255,14 +255,5 @@
                 <file name="tools/migrate-filestates-to-db.php" />
             </errorLevel>
         </MissingFile>
-        <!-- Taints needing review -->
-        <TaintedFile>
-            <errorLevel type="suppress">
-                <file name="src/include/z_caldav.php" />
-                <file name="src/include/z_carddav.php" />
-                <file name="src/lib/default/filestatemachine.php" />
-                <file name="src/lib/utils/utils.php" />
-            </errorLevel>
-        </TaintedFile>
     </issueHandlers>
 </psalm>
