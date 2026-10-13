@@ -89,7 +89,8 @@ class ZPushAutodiscover {
             $userFullname = ($this->getAttribFromUserDetails($userDetails, 'fullname')) ? $this->getAttribFromUserDetails($userDetails, 'fullname') : $email;
             ZLog::Write(LOGLEVEL_WBXML, sprintf("Resolved user's '%s' fullname to '%s'", $username, $userFullname));
             $response = $this->createResponse($email, $userFullname);
-            setcookie("membername", $username);
+            // removed membername cookie, as it is not used anywhere and is throwing a taint in psalm
+            // setcookie("membername", $username);
         }
 
         catch (Exception $ex) {
