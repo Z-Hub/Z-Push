@@ -66,15 +66,6 @@
                 <file name="src/lib/request/provisioning.php" />
             </errorLevel>
         </ParadoxicalCondition>
-        <!-- Taints manually reviewed and deemed ok -->
-        <TaintedSSRF>
-            <errorLevel type="suppress">
-                <file name="src/include/z_caldav.php" />
-                <file name="src/include/z_carddav.php" />
-                <file name="src/lib/utils/utils.php" />
-
-            </errorLevel>
-        </TaintedSSRF>
         <!-- doc blocks to correct -->
         <UndefinedDocblockClass>
             <errorLevel type="suppress">
