@@ -437,7 +437,8 @@ class FileStateMachine implements IStateMachine {
         else
             throw new StateInvalidException("FileStateMachine->getFullFilePath(): Invalid state deviceid, type, key or in any combination");
 
-        return $this->getDirectoryForDevice($devid, $doNotCreateDirs) ."/". $internkey;
+        $cleaninternkey = basename($internkey);
+        return $this->getDirectoryForDevice($devid, $doNotCreateDirs) ."/". $cleaninternkey;
     }
 
     /**
@@ -453,8 +454,9 @@ class FileStateMachine implements IStateMachine {
      * @throws FatalMisconfigurationException   when configured directory is not writeable
      */
     private function getDirectoryForDevice($devid, $doNotCreateDirs = false) {
-        $firstLevel = substr(strtolower($devid), -1, 1);
-        $secondLevel = substr(strtolower($devid), -2, 1);
+        $cleandevid = basename($devid);
+        $firstLevel = substr(strtolower($cleandevid), -1, 1);
+        $secondLevel = substr(strtolower($cleandevid), -2, 1);
 
         $dir = STATE_DIR . $firstLevel . "/" . $secondLevel;
         if (is_dir($dir))
