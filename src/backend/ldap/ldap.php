@@ -52,7 +52,7 @@ class BackendLDAP extends BackendDiff {
                 return true;
             }
             else {
-                ZLog::Write(LOGLEVEL_INFO, sprintf("BackendLDAP->Logon(): User '%s' is not authenticated on LDAP. Error: ", $escapedusername, ldap_error($this->ldap_link)));
+                ZLog::Write(LOGLEVEL_INFO, sprintf("BackendLDAP->Logon(): User '%s' is not authenticated on LDAP. Error: %s", $escapedusername, ldap_error($this->ldap_link)));
                 return false;
             }
         }
@@ -585,7 +585,7 @@ class BackendLDAP extends BackendDiff {
      */
     private function _EscapeLDAP($string) {
         $escaped = is_scalar($string) ? (string)$string : '';
-        $escaped = ldap_escape($string, '', LDAP_ESCAPE_FILTER | LDAP_ESCAPE_DN);
+        $escaped = ldap_escape($escaped, '', LDAP_ESCAPE_FILTER | LDAP_ESCAPE_DN);
         $escaped = str_replace("\n", '\0a', $escaped);
         return $escaped;
     }
