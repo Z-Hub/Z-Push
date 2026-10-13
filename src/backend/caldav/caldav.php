@@ -59,7 +59,8 @@ class BackendCalDAV extends BackendDiff {
      */
     public function Logon($username, $domain, $password) {
         $encodedusername = Utils::urlEncodePathSegment($username);
-        $this->_caldav_path = str_replace('%u', $encodedusername, str_replace('%l', Utils::GetLocalPartFromEmail($encodedusername), CALDAV_PATH));
+        $encodedlocalpartfromemail = Utils::urlEncodePathSegment(Utils::GetLocalPartFromEmail($username));
+        $this->_caldav_path = str_replace('%u', $encodedusername, str_replace('%l', $encodedlocalpartfromemail, CALDAV_PATH));
         $url = sprintf("%s://%s:%d%s", CALDAV_PROTOCOL, CALDAV_SERVER, CALDAV_PORT, $this->_caldav_path);
         $this->_caldav = new CalDAVClient($url, $username, $password);
         if ($connected = $this->_caldav->CheckConnection()) {

@@ -1506,7 +1506,7 @@ class Utils {
      *
      * @psalm-taint-escape file
      */
-    public function urlEncodePathSegment($value) {
+    public static function urlEncodePathSegment($value) {
         $encodedvalue = rawurlencode($value);
         $encodedvalue = str_replace('%40', '@', $encodedvalue);
         return $encodedvalue;
