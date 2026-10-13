@@ -1594,6 +1594,7 @@ class Utils {
      * @access public
      * @return string
      *
+     * @psalm-taint-escape ssrf
      * @psalm-taint-escape file
      */
     public static function urlEncodePathSegment($value) {
