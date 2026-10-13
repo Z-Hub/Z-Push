@@ -22,12 +22,6 @@
         <extension name="soap" />
     </enableExtensions>
     <issueHandlers>
-        <!-- Cookie to be dropped in v3.0 -->
-        <TaintedCookie>
-            <errorLevel type="suppress">
-                <file name="src/autodiscover/autodiscover.php" />
-            </errorLevel>
-        </TaintedCookie>
         <!-- psalm specific doesn't affect php -->
         <MissingPureAnnotation errorLevel="suppress" />
         <MissingImmutableAnnotation errorLevel="suppress" />
