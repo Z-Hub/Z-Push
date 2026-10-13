@@ -85,7 +85,7 @@ try {
                     continue;
                 }
                 $folderUuid = $device->GetFolderUUID($syncfolderid);
-                fwrite(STDOUT, sprintf("%s,%s,%s,%s,%s,%d,%s,%s\n", $devid, $user, $syncfolder->Store, $syncfolderid, $folder['folderid'], $syncfolder->type, $folderUuid, $syncfolder->displayname))
+                fwrite(STDOUT, sprintf("%s,%s,%s,%s,%s,%d,%s,%s\n", $devid, $user, $syncfolder->Store, $syncfolderid, $folder['folderid'], $syncfolder->type, $folderUuid, $syncfolder->displayname));
             }
         }
     }
