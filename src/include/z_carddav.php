@@ -416,6 +416,7 @@ EOFCONTENTSEARCH;
     <D:sync-level>1</D:sync-level>
     <D:prop>
         <D:getetag/>
+        <D:getcontenttype/>
         <D:getlastmodified/>
     </D:prop>
 </D:sync-collection>
