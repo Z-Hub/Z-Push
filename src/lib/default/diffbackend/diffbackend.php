@@ -147,7 +147,7 @@ abstract class BackendDiff extends Backend {
      * @return string       id of the created/updated calendar obj
      * @throws StatusException
      */
-    public function MeetingResponse($requestid, $folderid, $response) {
+    public function MeetingResponse($requestid, $folderid, $response, $instanceId) {
         throw new StatusException(sprintf("BackendDiff->MeetingResponse('%s','%s','%s'): Error, this functionality is not supported by the diff backend", $requestid, $folderid, $response), SYNC_MEETRESPSTATUS_MAILBOXERROR);
     }
 
