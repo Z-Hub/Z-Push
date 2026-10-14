@@ -1334,7 +1334,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
                 // (e.g. RFC 5322 violators such as some IP cameras). Otherwise
                 // $output->datereceived would be null and EAS clients (iOS Mail etc.)
                 // display the sync time instead of the actual receipt time.
-                $overview = @imap_fetch_overview($this->mbox, $id, FT_UID);
+                $overview = @imap_fetch_overview($this->mbox, $uid, FT_UID);
                 $output->datereceived = (is_array($overview) && !empty($overview) && isset($overview[0]->udate)) ? $overview[0]->udate : null;
             }
 
