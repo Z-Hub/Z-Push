@@ -145,7 +145,12 @@ function getIdentityFromLdap($username, $domain, $identity, $encode = true) {
                 if ($ldap_bind) {
                     ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->getIdentityFromLdap() - Authenticated in LDAP"));
 
-                    $filter = str_replace('#username', $username, str_replace('#domain', $domain, IMAP_FROM_LDAP_QUERY));
+                    $escapedusername = ldap_escape($username, '', LDAP_ESCAPE_FILTER | LDAP_ESCAPE_DN);
+                    $escapedusername = str_replace("\n", '\0a', $escapedusername);
+                    $escapeddomain = ldap_escape($domain, '', LDAP_ESCAPE_FILTER | LDAP_ESCAPE_DN);
+                    $escapeddomain = str_replace("\n", '\0a', $escapeddomain);
+
+                    $filter = str_replace('#username', $escapedusername, str_replace('#domain', $escapeddomain, IMAP_FROM_LDAP_QUERY));
                     ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->getIdentityFromLdap() - Searching From with filter: %s", $filter));
 
                     $search = ldap_search($ldap_conn, IMAP_FROM_LDAP_BASE, $filter, unserialize(IMAP_FROM_LDAP_FIELDS));
