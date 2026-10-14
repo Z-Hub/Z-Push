@@ -1496,6 +1496,22 @@ class Utils {
         return datefmt_format($dateFormatUtc, $ts);
     }
 
+    /**
+     * Encodes a single URL path segment.
+     *
+     * @param string $value
+     *
+     * @access public
+     * @return string
+     *
+     * @psalm-taint-escape file
+     */
+    public function urlEncodePathSegment($value) {
+        $encodedvalue = rawurlencode($value);
+        $encodedvalue = str_replace('%40', '@', $encodedvalue);
+        return $encodedvalue;
+    }
+
 }
 
 // TODO Win1252/UTF8 functions are deprecated and will be removed sometime
