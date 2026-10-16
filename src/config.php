@@ -433,3 +433,14 @@
  *  https://www.php.net/manual/en/function.iconv.php
  */
     define('ICONV_OPTION', "");
+
+/**********************************************************************************
+ *  DAV SSL Verify option
+ *
+ * DAV_SSL_VERIFY_OFF:  Don't verify SSL certificate (not recommended)
+ * DAV_SSL_VERIFY_ON:   Verify SSL certificate 
+ * DAV_SSL_VERIFY_AUTO: Verify SSL certificate (default), but ignore if the 
+ *                      server is a localhost loopback (useful for self-signed 
+ *                      certificates on localhost)
+ */
+define('DAV_SSL_VERIFY', DAV_SSL_VERIFY_AUTO);
