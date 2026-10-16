@@ -226,8 +226,8 @@ class CalDAVClient {
 		if ($this->curl === false) {
 			$this->curl = curl_init();
 			curl_setopt($this->curl, CURLOPT_HEADER, true);
-			curl_setopt($this->curl, CURLOPT_SSL_VERIFYHOST, false);
-			curl_setopt($this->curl, CURLOPT_SSL_VERIFYPEER, false);
+			curl_setopt($this->curl, CURLOPT_SSL_VERIFYHOST, true);
+			curl_setopt($this->curl, CURLOPT_SSL_VERIFYPEER, true);
 			curl_setopt($this->curl, CURLOPT_RETURNTRANSFER, true);
 			curl_setopt($this->curl, CURLOPT_USERAGENT, self::USERAGENT);
 
@@ -277,6 +277,15 @@ class CalDAVClient {
 			$headers[$ii] = $cleanhead;
 		}
 		curl_setopt($this->curl, CURLOPT_HTTPHEADER, $headers);
+
+		/* check SSL verify setting and apply to curl */
+        $issslverify = (boolean) DAV_SSL_VERIFY;
+        $isloopback = Utils::IsLoopbackHost(parse_url($url, PHP_URL_HOST));
+        if (DAV_SSL_VERIFY === DAV_SSL_VERIFY_AUTO && $isloopback) {
+            $issslverify = false;
+        }
+        curl_setopt($this->curl, CURLOPT_SSL_VERIFYPEER, $issslverify);
+        curl_setopt($this->curl, CURLOPT_SSL_VERIFYHOST, $issslverify);
 
 		$this->xmlResponse = '';
 
