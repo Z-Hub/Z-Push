@@ -303,7 +303,12 @@ class Streamer implements Serializable {
                             }
                             else {
                                 // Do not output empty items. Not sure if we should output an empty tag with $encoder->startTag($map[self::STREAMER_ARRAY], false, true);
-                                if (strlen($element) > 0) {
+                                // PHP 8+: strlen() only accepts strings. Skip non-scalars instead of a TypeError.
+                                // The backend should parse these to strings before they reach Encode().
+                                if (!is_scalar($element)) {
+                                    ZLog::Write(LOGLEVEL_WARN, sprintf("Streamer->Encode(): skipping non-scalar array element on %s; the backend should parse this to a string before encoding", get_class($this)));
+                                }
+                                else if (strlen((string)$element) > 0) {
                                     $encoder->startTag($map[self::STREAMER_ARRAY]);
                                     $encoder->content($element);
                                     $encoder->endTag();
@@ -330,7 +335,14 @@ class Streamer implements Serializable {
                     }
 
                     // Simple type
-                    if(!isset($map[self::STREAMER_TYPE]) && strlen($this->{$map[self::STREAMER_VAR]}) == 0) {
+                    // PHP 8+: strlen() no longer accepts arrays (TypeError). Treat non-scalars as empty
+                    // and cast scalars so empty checks match PHP 7 coercion behaviour.
+                    // The backend should parse these to strings before they reach Encode().
+                    $propertyValue = $this->{$map[self::STREAMER_VAR]};
+                    if (!isset($map[self::STREAMER_TYPE]) && (!is_scalar($propertyValue) || strlen((string)$propertyValue) == 0)) {
+                        if (!is_scalar($propertyValue)) {
+                            ZLog::Write(LOGLEVEL_WARN, sprintf("Streamer->Encode(): skipping non-scalar property '%s' on %s; the backend should parse this to a string before encoding", $map[self::STREAMER_VAR], get_class($this)));
+                        }
                         // send empty tags
                         if (isset($map[self::STREAMER_PROP]) && $map[self::STREAMER_PROP] == self::STREAMER_TYPE_SEND_EMPTY)
                             $encoder->startTag($tag, false, true);
