@@ -1603,6 +1603,19 @@ class Utils {
         return $encodedvalue;
     }
 
+    /**
+     * returns true for loopback (localhost)
+     *
+     * @param string $host
+     *
+     * @access public
+     * @return boolean
+     *
+     */
+    public static function IsLoopbackHost($host) {
+        return ($host === 'localhost' || $host === '127.0.0.1' || $host === '[::1]');
+    }
+
 }
 
 // TODO Win1252/UTF8 functions are deprecated and will be removed sometime
