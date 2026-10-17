@@ -1380,6 +1380,52 @@ class TimezoneUtil {
     }
 
     /**
+     * Returns a PHP-supported IANA timezone for a Windows timezone name.
+     *
+     * @param string $winTz Timezone name in Windows, e.g. "W. Europe Standard Time"
+     *
+     * @access public
+     * @return string|false
+     */
+    public static function GetPhpTimezoneFromWinTZName($winTz = false) {
+        if ($winTz === false) {
+            return false;
+        }
+
+        $winTz = trim(str_replace("\0", "", (string)$winTz));
+        if ($winTz === "") {
+            return false;
+        }
+
+        $candidateNames = array($winTz);
+        foreach (self::$mstzones as $msdefs) {
+            if ($msdefs[0] == $winTz) {
+                foreach (self::$mstzones as $candidateDefs) {
+                    if ($candidateDefs[1] == $msdefs[1] && !in_array($candidateDefs[0], $candidateNames, true)) {
+                        $candidateNames[] = $candidateDefs[0];
+                    }
+                }
+                break;
+            }
+        }
+
+        $phpTimezoneIds = DateTimeZone::listIdentifiers();
+        foreach ($candidateNames as $candidateName) {
+            if (!isset(self::$phptimezones[$candidateName])) {
+                continue;
+            }
+
+            foreach (self::$phptimezones[$candidateName] as $phpTz) {
+                if (in_array($phpTz, $phpTimezoneIds, true)) {
+                    return $phpTz;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Returns official timezone name from windows timezone name.
      * E.g. "W Europe Standard Time" for "(GMT+01:00) Amsterdam, Berlin, Bern, Rome, Stockholm, Vienna".
      *
