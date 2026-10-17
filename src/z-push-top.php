@@ -102,8 +102,8 @@ class ZPushTop {
 	const COLOR_LIGHT_STATUS_BOLD = "\033[1;31m";
 	const COLOR_LIGHT_ACTIVE = "\033[1m";
 	const COLOR_LIGHT_OPEN = "\033[0m";
-	const COLOR_LIGHT_PUSH = "\033[0;31m";
-	const COLOR_LIGHT_UNKNOWN = "\033[1;31m";
+	const COLOR_LIGHT_PUSH = "\033[1;31m";
+	const COLOR_LIGHT_UNKNOWN = "\033[0;31m";
 	const COLOR_LIGHT_TERMINATED = "\033[1;30m";
 
 	const COLOR_DARK = "\033[0m";
