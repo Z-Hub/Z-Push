@@ -196,7 +196,7 @@ class ZPushAdmin {
 
             // set wipe status
             if ($device->GetWipeStatus() == SYNC_PROVISION_RWSTATUS_WIPED)
-                ZLog::Write(LOGLEVEL_INFO, sprintf("ZPushAdmin::WipeDevice(): device '%s' of user '%s' was alread sucessfully remote wiped on %s", $devid , $user, strftime("%Y-%m-%d %H:%M", $device->GetWipeActionOn())));
+                ZLog::Write(LOGLEVEL_INFO, sprintf("ZPushAdmin::WipeDevice(): device '%s' of user '%s' was alread sucessfully remote wiped on %s", $devid , $user, date("Y-m-d H:i", $device->GetWipeActionOn())));
             else
                 $device->SetWipeStatus(SYNC_PROVISION_RWSTATUS_PENDING, $requestedBy);
 
@@ -1022,7 +1022,7 @@ class ZPushAdmin {
 
                 if ($obsoleteState['type'] === IStateMachine::BACKENDSTORAGE)
                     continue;
-                
+
                 if (!in_array($obsoleteState['uuid'], $knownUuids)) {
                     if (is_numeric($obsoleteState['counter']))
                         $obsoleteState['counter']++;

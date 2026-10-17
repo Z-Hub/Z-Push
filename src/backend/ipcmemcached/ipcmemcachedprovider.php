@@ -270,7 +270,7 @@ class IpcMemcachedProvider implements IIpcProvider {
             $timestamp = file_get_contents(MEMCACHED_DOWN_LOCK_FILE);
             // is the lock file expired?
             if ($timestamp > time()) {
-                ZLog::Write(LOGLEVEL_WARN, sprintf("IpcMemcachedProvider(): Memcache service is marked as down until %s.", strftime("%d.%m.%Y %H:%M:%S", $timestamp)));
+                ZLog::Write(LOGLEVEL_WARN, sprintf("IpcMemcachedProvider(): Memcache service is marked as down until %s.", date("d.m.Y G:i:s", $timestamp)));
                 return $timestamp;
             }
             else {

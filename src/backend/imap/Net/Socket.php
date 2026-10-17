@@ -169,8 +169,6 @@ class Net_Socket
         $errno    = 0;
         $errstr   = '';
 
-        $old_track_errors = @ini_set('track_errors', 1);
-
         if ($timeout <= 0) {
             $timeout = @ini_get('default_socket_timeout');
         }
@@ -198,14 +196,12 @@ class Net_Socket
         }
 
         if (!$fp) {
-            if ($errno == 0 && !strlen($errstr) && isset($php_errormsg)) {
-                $errstr = $php_errormsg;
+            if ($errno == 0 && !strlen($errstr)) {
+                $errstr = error_get_last();
             }
-            @ini_set('track_errors', $old_track_errors);
             return $this->raiseError($errstr, $errno);
         }
 
-        @ini_set('track_errors', $old_track_errors);
         $this->fp = $fp;
         $this->setTimeout();
         return $this->setBlocking($this->blocking);
@@ -713,12 +709,20 @@ class Net_Socket
             }
 
             // 5.6.0    Added verify_peer_name. verify_peer default changed to TRUE.
-            if (version_compare(phpversion(), "5.6.0", ">="))
-                stream_context_set_option($this->fp, array('ssl' => array('verify_peer' => $verify_peer, 'verify_peer_name' => $verify_peer_name, 'allow_self_signed' => $allow_self_signed)));
-            else
+            if (version_compare(phpversion(), "5.6.0", ">=")) {
+                // 8.4.0    Added revision for corrected function name (a 's' was added to cut down on multi-signature functions)
+                if (version_compare(phpversion(), "8.4.0", ">=")) {
+                    stream_context_set_options($this->fp, array('ssl' => array('verify_peer' => $verify_peer, 'verify_peer_name' => $verify_peer_name, 'allow_self_signed' => $allow_self_signed)));
+                }
+                else {
+                    stream_context_set_option($this->fp, array('ssl' => array('verify_peer' => $verify_peer, 'verify_peer_name' => $verify_peer_name, 'allow_self_signed' => $allow_self_signed)));
+                }
+            } else {
                 stream_context_set_option($this->fp, array('ssl' => array('verify_peer' => $verify_peer, 'allow_self_signed' => $allow_self_signed)));
+            }
 
             return @stream_socket_enable_crypto($this->fp, $enabled, $type);
+
         } else {
             $msg = 'Net_Socket::enableCrypto() requires php version >= 5.1.0';
             return $this->raiseError($msg);
