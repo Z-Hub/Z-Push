@@ -285,7 +285,7 @@ class CalDAVClient {
             $issslverify = false;
         }
         curl_setopt($this->curl, CURLOPT_SSL_VERIFYPEER, $issslverify);
-        curl_setopt($this->curl, CURLOPT_SSL_VERIFYHOST, $issslverify);
+        curl_setopt($this->curl, CURLOPT_SSL_VERIFYHOST, $issslverify ? 2 : 0);
 
 		$this->xmlResponse = '';
 

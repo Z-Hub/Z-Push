@@ -833,7 +833,7 @@ EOFXSL;
             $issslverify = false;
         }
         curl_setopt($this->curl, CURLOPT_SSL_VERIFYPEER, $issslverify);
-        curl_setopt($this->curl, CURLOPT_SSL_VERIFYHOST, $issslverify);
+        curl_setopt($this->curl, CURLOPT_SSL_VERIFYHOST, $issslverify ? 2 : 0);
 
         $complete_response	= curl_exec($this->curl);
         $header_size		= curl_getinfo($this->curl, CURLINFO_HEADER_SIZE);
