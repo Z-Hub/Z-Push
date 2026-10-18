@@ -441,6 +441,11 @@ class ZPush {
             }
         }
 
+        // Check DAV SSL Verify option
+        if (!defined('DAV_SSL_VERIFY')) {
+            define('DAV_SSL_VERIFY', DAV_SSL_VERIFY_AUTO);
+        }
+                        
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("Used timezone '%s'", date_default_timezone_get()));
 
         // get the statemachine, which will also try to load the backend.. This could throw errors
