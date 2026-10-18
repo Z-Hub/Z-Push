@@ -780,7 +780,7 @@ EOFXSL;
         if ($this->curl === false) {
             $this->curl = curl_init();
             curl_setopt($this->curl, CURLOPT_HEADER, true);
-            curl_setopt($this->curl, CURLOPT_SSL_VERIFYHOST, true);
+            curl_setopt($this->curl, CURLOPT_SSL_VERIFYHOST, 2); // 2 is true, 1 is deprecated
             curl_setopt($this->curl, CURLOPT_SSL_VERIFYPEER, true);
             curl_setopt($this->curl, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($this->curl, CURLOPT_USERAGENT, self::USERAGENT.self::VERSION);
