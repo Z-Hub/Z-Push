@@ -1319,6 +1319,10 @@ class TimezoneUtil {
             //If there is no timezone set, we use the default timezone
             $tz = timezone_open(date_default_timezone_get());
         }
+        // Tolerate malformed values seen in invitations from other systems:
+        // ' 20240925T210000Z', '20250307T12:0000', '2026-05-26T09:20:11.5891152Z'
+        $value = strtoupper(trim((string) $value));
+        $value = preg_replace(array('/(\d)\.\d+(Z?)$/', '/[-:]/'), array('$1$2', ''), $value);
         //20110930T090000Z
         $date = date_create_from_format('Ymd\THis\Z', $value, timezone_open("UTC"));
         if (!$date) {
@@ -1331,6 +1335,8 @@ class TimezoneUtil {
         }
         if (!$date) {
             ZLog::Write(LOGLEVEL_ERROR, sprintf("TimezoneUtil::MakeUTCDate(): failed to convert '%s' to date", $value));
+            // date_timestamp_get(false) is a TypeError on PHP 8 and aborts the whole Sync
+            return false;
         }
         return date_timestamp_get($date);
     }
