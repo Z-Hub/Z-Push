@@ -29,10 +29,10 @@
 // config file
 require_once("backend/imap/config.php");
 require_once("backend/imap/imap_idle_sink.php");
-
 require_once("backend/imap/mime_calendar.php");
 require_once("backend/imap/mime_encode.php");
 require_once("backend/imap/user_identity.php");
+require_once("backend/imap/php-imap2/php-imap2.php");
 
 // Add the path for Andrew's Web Libraries to include_path
 // because it is required for the emails with ics attachments
