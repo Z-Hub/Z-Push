@@ -286,6 +286,24 @@ class Mail_mimeDecode
             }
         }
 
+        // Headers that RFC 5322 allows only once may still appear several times in broken mails
+        // (e.g. two From: or Subject: lines). Callers expect a string here, an array leads to
+        // a TypeError on PHP 8 or to the property being dropped. Keep the first value and
+        // join repeated address lists.
+        foreach (array('to', 'cc', 'bcc', 'reply-to') as $name) {
+            if (isset($return->headers[$name]) && is_array($return->headers[$name])) {
+                $return->headers[$name] = implode(', ', $return->headers[$name]);
+            }
+        }
+        foreach (array('from', 'sender', 'subject', 'date', 'message-id', 'in-reply-to', 'references',
+                       'thread-topic', 'thread-index', 'importance', 'priority', 'x-priority', 'content-class',
+                       'mime-version', 'content-type', 'content-transfer-encoding', 'content-disposition',
+                       'content-id', 'content-description', 'return-path') as $name) {
+            if (isset($return->headers[$name]) && is_array($return->headers[$name])) {
+                $return->headers[$name] = reset($return->headers[$name]);
+            }
+        }
+
 
         foreach ($headers as $key => $value) {
             $headers[$key]['name'] = strtolower($headers[$key]['name']);
