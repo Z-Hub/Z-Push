@@ -156,11 +156,12 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
      * @return boolean
      */
     public function Logoff() {
-        // Release IDLE sockets explicitly: a Ping that ends (normally,
-        // by forced obsolete timeout, or by lifetime expiry) must not
-        // leave its IDLE pool holding IMAP connections until the
-        // process is reaped. The sink destructor also closes, but
-        // Logoff is the guaranteed request-end path (index.php).
+        // Release IDLE sockets explicitly as cleanup when a request
+        // ends normally. This is not the fix for accumulated IDLE
+        // pools (that is a working IPC provider letting
+        // PingTracking end obsolete Pings); the sink destructor
+        // also closes on shutdown, and non-persistent sockets are
+        // closed by PHP at request end in any case.
         if ($this->idleSink instanceof ImapIdleSink) {
             $this->idleSink->closeAll();
         }
