@@ -164,7 +164,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
         if ($this->idleSink instanceof ImapIdleSink) {
             $this->idleSink->closeAll();
         }
-        $this->idleSink = false;
+        $this->idleSink = null;
         $this->close_connection();
         $this->SaveStorages();
     }
