@@ -49,6 +49,7 @@
                 <file name="tools/gab2contacts/lib/contactworker.php" />
                 <file name="tools/gab2contacts/lib/kopano.php" />
                 <file name="tools/gab2contacts/lib/synccontact.php" />
+                <file name="tools/gab-sync/lib/kopano.php" />
             </errorLevel>
         </DuplicateClass>
         <!-- safe but should be reviewed -->
@@ -209,6 +210,7 @@
                 <file name="src/include/iCalendar.php" />
                 <!-- kopano related, ignore -->
                 <file name="tools/gab-sync/lib/kopano.php" />
+                <file name="tools/gab2contacts/lib/kopano.php" />
                 <!-- code issue to fix -->
                 <file name="src/lib/request/sync.php" />
             </errorLevel>
@@ -235,6 +237,7 @@
                 <file name="src/include/z_caldav.php" />
                 <file name="src/lib/webservice/webserviceusers.php" />
                 <file name="tools/gab-sync/lib/kopano.php" />
+                <file name="tools/gab2contacts/lib/kopano.php" />
                 <file name="tools/list-shared-folders.php" />
                 <file name="tools/migrate-2.0.x-2.1.0.php" />
                 <file name="tools/migrate-filestates-to-db.php" />
