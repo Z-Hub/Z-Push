@@ -8,6 +8,8 @@
 *               server notifications (EXISTS / EXPUNGE / RECENT / FETCH).
 *               Each socket is reusable across multiple ChangesSink()
 *               calls within the same PHP request (one EAS Ping).
+*               A folder whose socket is closed by the server is
+*               reopened by reopenFolders() on the next ChangesSink().
 *
 * Created   :   2026
 *
@@ -31,6 +33,7 @@
 
 class ImapIdleSink {
     private $sockets = array();    // imapid => array('sock' => resource, 'idleTag' => string, 'lastIo' => int)
+    private $folders = array();    // imapid => time the folder was last opened; kept when its socket is closed
     private $tagCounter = 0;
     private $host;
     private $port;
@@ -40,6 +43,7 @@ class ImapIdleSink {
     private $verifyCert;
     private $connectTimeout = 5;
     private $ioTimeout = 30;
+    private $minReopenInterval = 60;  // a folder closed again sooner than this after opening is not reopened
 
     /**
      * @param string $host       IMAP server hostname or IP
@@ -173,7 +177,34 @@ class ImapIdleSink {
             'idleTag' => $tag,
             'lastIo'  => time(),
         );
+        $this->folders[$imapid] = time();
         return true;
+    }
+
+    /**
+     * Reopen the folders whose socket was closed by the server since they
+     * were added. IDLE reports nothing for the time a folder was not
+     * watched, so the caller should treat the reopened folders as changed.
+     * Throws Exception if a folder cannot be reopened, or if it was closed
+     * again less than $minReopenInterval seconds after it was opened
+     * (caller decides whether to fall back).
+     *
+     * @return array         list of reopened imapids
+     * @throws Exception
+     */
+    public function reopenFolders() {
+        $reopened = array();
+        foreach ($this->folders as $imapid => $opened) {
+            if (isset($this->sockets[$imapid])) {
+                continue;
+            }
+            if (time() - $opened < $this->minReopenInterval) {
+                throw new Exception("ImapIdleSink: connection for $imapid was closed by the server " . (time() - $opened) . "s after it was opened");
+            }
+            $this->addFolder($imapid);
+            $reopened[] = $imapid;
+        }
+        return $reopened;
     }
 
     /**
@@ -224,7 +255,8 @@ class ImapIdleSink {
             }
 
             if ($data === '') {
-                // Socket readable but empty = remote closed; drop and continue
+                // Socket readable but empty = remote closed; drop and continue.
+                // The folder stays in $this->folders, so reopenFolders() reopens it.
                 $this->dropFolder($imapid);
                 continue;
             }
@@ -247,6 +279,7 @@ class ImapIdleSink {
         foreach (array_keys($this->sockets) as $imapid) {
             $this->dropFolder($imapid);
         }
+        $this->folders = array();
     }
 
     public function getFolderCount() {
