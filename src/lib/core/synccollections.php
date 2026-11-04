@@ -866,6 +866,7 @@ class SyncCollections implements Iterator {
      * @access public
      * @return
      */
+    #[\ReturnTypeWillChange]
     public function rewind() : mixed {
         return reset($this->collections);
     }
@@ -896,6 +897,7 @@ class SyncCollections implements Iterator {
      * @access public
      * @return
      */
+    #[\ReturnTypeWillChange]
     public function next() : mixed {
         return next($this->collections);
     }
