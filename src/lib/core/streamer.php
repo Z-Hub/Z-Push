@@ -436,7 +436,7 @@ class Streamer implements Serializable {
      * @access public
      * @return array
      */
-    public function serialize() {
+    public function serialize() : ?string {
         $values = array();
         foreach ($this->mapping as $k=>$v) {
             if (isset($this->{$v[self::STREAMER_VAR]}))
@@ -452,7 +452,7 @@ class Streamer implements Serializable {
      * @access public
      * @return array
      */
-    public function unserialize($data) {
+    public function unserialize($data) : void {
         $this->__construct();
         $values = unserialize($data);
         foreach ($values as $k=>$v)
