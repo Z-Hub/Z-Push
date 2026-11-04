@@ -452,7 +452,7 @@ class Streamer implements Serializable {
      * @access public
      * @return array
      */
-    public function unserialize($data) : void {
+    public function unserialize($data) : bool {
         $this->__construct();
         $values = unserialize($data);
         foreach ($values as $k=>$v)

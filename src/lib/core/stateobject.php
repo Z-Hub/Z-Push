@@ -205,7 +205,7 @@ class StateObject implements Serializable {
      * @return array
      * @throws StateInvalidException
      */
-    public function unserialize($data) : void {
+    public function unserialize($data) : bool {
         // throw a StateInvalidException if unserialize fails
         ini_set('unserialize_callback_func', 'StateObject::ThrowStateInvalidException');
 

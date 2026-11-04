@@ -866,7 +866,7 @@ class SyncCollections implements Iterator {
      * @access public
      * @return
      */
-    public function rewind() : void {
+    public function rewind() : mixed {
         return reset($this->collections);
     }
 
@@ -896,7 +896,7 @@ class SyncCollections implements Iterator {
      * @access public
      * @return
      */
-    public function next() : void {
+    public function next() : mixed {
         return next($this->collections);
     }
 
