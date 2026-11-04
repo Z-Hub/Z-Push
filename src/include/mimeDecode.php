@@ -69,6 +69,7 @@
  * used "old" method of checking if called statically, as this is deprecated between php 5.0.0 and 5.3.0
  *   (isStatic of decode() around line 215)
  * Changed constructor name to __construct
+ * Collapse repeated single-instance headers to strings in _decode()
  */
 
 /**
@@ -286,10 +287,7 @@ class Mail_mimeDecode
             }
         }
 
-        // Headers that RFC 5322 allows only once may still appear several times in broken mails
-        // (e.g. two From: or Subject: lines). Callers expect a string here, an array leads to
-        // a TypeError on PHP 8 or to the property being dropped. Keep the first value and
-        // join repeated address lists.
+        // Repeated headers (broken mails): callers expect strings. Join address lists, otherwise keep the first value.
         foreach (array('to', 'cc', 'bcc', 'reply-to') as $name) {
             if (isset($return->headers[$name]) && is_array($return->headers[$name])) {
                 $return->headers[$name] = implode(', ', $return->headers[$name]);
@@ -302,8 +300,7 @@ class Mail_mimeDecode
                 $return->headers[$name] = reset($return->headers[$name]);
             }
         }
-        // The loop below parses every content header line in order, so the last one decides
-        // ctype_*, disposition and the transfer encoding. Keep the last value here as well.
+        // Keep the last value, as the loop below does for ctype_*, disposition and encoding.
         foreach (array('content-type', 'content-transfer-encoding', 'content-disposition') as $name) {
             if (isset($return->headers[$name]) && is_array($return->headers[$name])) {
                 $return->headers[$name] = end($return->headers[$name]);
