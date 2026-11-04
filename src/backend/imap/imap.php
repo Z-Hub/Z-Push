@@ -739,6 +739,19 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
                     }
                     ZLog::Write(LOGLEVEL_INFO, sprintf("BackendIMAP->ChangesSink: IDLE pool built with %d folder(s)", $this->idleSink->getFolderCount()));
                 }
+                else {
+                    // Reopen the folders whose connection the server closed during this Ping.
+                    // IDLE reports nothing for the time they were not watched, so they are
+                    // returned as changed and the caller checks them for real changes.
+                    $reopened = $this->idleSink->reopenFolders();
+                    if (!empty($reopened)) {
+                        foreach ($reopened as $imapid) {
+                            $notifications[] = $this->getFolderIdFromImapId($imapid);
+                        }
+                        ZLog::Write(LOGLEVEL_INFO, sprintf("BackendIMAP->ChangesSink: IDLE reopened %d folder(s) closed by the server", count($reopened)));
+                        return $notifications;
+                    }
+                }
                 $changed = $this->idleSink->wait($timeout);
                 foreach ($changed as $imapid) {
                     $notifications[] = $this->getFolderIdFromImapId($imapid);
