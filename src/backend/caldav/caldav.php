@@ -698,7 +698,8 @@ class BackendCalDAV extends BackendDiff {
                     break;
 
                 case "DURATION":
-                    if (!isset($message->endtime)) {
+                    // starttime is false if DTSTART could not be parsed, date_add(false) is a TypeError on PHP 8
+                    if (!isset($message->endtime) && is_int($message->starttime)) {
                         $start = date_create("@" . $message->starttime);
                         $val = str_replace("+", "", $property->Value());
                         $interval = new DateInterval($val);
@@ -979,10 +980,12 @@ class BackendCalDAV extends BackendDiff {
                 if ($property->Name() == "TRIGGER") {
                     $parameters = $property->Parameters();
                     if (array_key_exists("VALUE", $parameters) && $parameters["VALUE"] == "DATE-TIME") {
-                        $trigger = date_create("@" . TimezoneUtil::MakeUTCDate($property->Value()));
-                        $begin = date_create("@" . $message->starttime);
-                        $interval = date_diff($begin, $trigger);
-                        $message->reminder = $interval->format("%i") + $interval->format("%h") * 60 + intval($interval->format("%a")) * 60 * 24;
+                        // MakeUTCDate() returns false for values it cannot parse, date_diff(false) is a TypeError on PHP 8
+                        $trigger = TimezoneUtil::MakeUTCDate($property->Value());
+                        if (is_int($trigger) && is_int($message->starttime)) {
+                            $interval = date_diff(date_create("@" . $message->starttime), date_create("@" . $trigger));
+                            $message->reminder = $interval->format("%i") + $interval->format("%h") * 60 + intval($interval->format("%a")) * 60 * 24;
+                        }
                     }
                     elseif (!array_key_exists("VALUE", $parameters) || $parameters["VALUE"] == "DURATION") {
                         $val = $property->Value();
@@ -1738,7 +1741,7 @@ class BackendCalDAV extends BackendDiff {
                         $message->remindertime = TimezoneUtil::MakeUTCDate($property->Value());
                         $message->reminderset = "1";
                     }
-                    elseif (!array_key_exists("VALUE", $parameters) || $parameters["VALUE"] == "DURATION") {
+                    elseif ((!array_key_exists("VALUE", $parameters) || $parameters["VALUE"] == "DURATION") && is_int($message->utcstartdate)) {
                         $val = str_replace("-", "", $property->Value());
                         $interval = new DateInterval($val);
                         $start = date_create("@" . $message->utcstartdate);
