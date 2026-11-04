@@ -22,7 +22,7 @@ jobs:
           sed -i '/<MissingInterfaceImmutableAnnotation>/,/<\/MissingInterfaceImmutableAnnotation>/d' psalm.xml
 
       - name: Psalm Security Scan
-        uses: docker://ghcr.io/psalm/psalm-security-scan
+        uses: docker://ghcr.io/psalm/psalm-security-scan:5.25.0
         
       - name: Import Security Analysis results into GitHub Security Code Scanning
         uses: github/codeql-action/upload-sarif@v4
