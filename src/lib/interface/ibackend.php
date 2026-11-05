@@ -218,7 +218,7 @@ interface IBackend {
      * @return string       id of the created/updated calendar obj
      * @throws StatusException
      */
-    public function MeetingResponse($requestid, $folderid, $response);
+    public function MeetingResponse($requestid, $folderid, $response, $instanceId);
 
     /**
      * Indicates if the backend has a ChangesSink.
