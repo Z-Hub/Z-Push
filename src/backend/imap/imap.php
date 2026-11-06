@@ -156,6 +156,11 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
      * @return boolean
      */
     public function Logoff() {
+        // Explicit cleanup of IDLE sockets on normal request end.
+        if ($this->idleSink instanceof ImapIdleSink) {
+            $this->idleSink->closeAll();
+        }
+        $this->idleSink = null;
         $this->close_connection();
         $this->SaveStorages();
     }
