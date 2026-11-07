@@ -1285,8 +1285,9 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
                         break;
                     case SYNC_BODYPREFERENCE_MIME:
                         if ($is_smime) {
-                            if ($is_encrypted) {
+                            if ($is_encrypted && !(defined('IMAP_SMIME_ENCRYPTED_FULL_MESSAGE') && IMAP_SMIME_ENCRYPTED_FULL_MESSAGE)) {
                                 // #190, KD 2015-06-04 - If message body is encrypted only send the headers, as data should only be in the attachment
+                                // iOS 12 and later need the whole message to decrypt it, see IMAP_SMIME_ENCRYPTED_FULL_MESSAGE
                                 $data = $mail_headers;
                             }
                             else {
