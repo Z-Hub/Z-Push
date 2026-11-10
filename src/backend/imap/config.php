@@ -120,6 +120,12 @@ define('IMAP_FOLDER_ARCHIVE', 'ARCHIVE');
 // forward messages inline (default true - inlined)
 define('IMAP_INLINE_FORWARD', true);
 
+// Send encrypted S/MIME messages to the device whole, instead of only their headers.
+//      When false (default), a device that asks for MIME gets only the headers of an encrypted S/MIME message, as before.
+//      iOS 12 and later need the whole message to decrypt it: with false, iOS Mail reports "This message is encrypted.
+//      Install a profile containing your encryption identity to decrypt this message" even with the profile installed.
+define('IMAP_SMIME_ENCRYPTED_FULL_MESSAGE', false);
+
 // list of folders we want to exclude from sync. Names, or part of it, separated by |
 // example: dovecot.sieve|archive|spam
 define('IMAP_EXCLUDED_FOLDERS', '');
