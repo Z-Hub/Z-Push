@@ -157,8 +157,35 @@ class ExportChangesDiff extends DiffState implements IExportChanges{
                         // calls, we have a chance that the message has changed between both
                         // calls. This may cause our algorithm to 'double see' changes.
 
-                        $stat = $this->backend->StatMessage($this->folderid, $change["id"]);
-                        $message = $this->backend->GetMessage($this->folderid, $change["id"], $this->contentparameters);
+                        try {
+                            $stat = $this->backend->StatMessage($this->folderid, $change["id"]);
+                            $message = $this->backend->GetMessage($this->folderid, $change["id"], $this->contentparameters);
+                        }
+                        catch (StatusException $e) {
+                            // Transient fetch failure (e.g. a one-off empty FETCH response from
+                            // the IMAP server). The step below only advances when no exception
+                            // propagates, so an uncaught error would retry this single message
+                            // until the WBXML loop guard aborts the whole request.
+                            // Retry once after a short backoff; if it still fails, skip the
+                            // message for this pass - the next sync picks it up again.
+                            if ($e->getCode() != SYNC_ITEMOPERATIONSSTATUS_INVALIDATT) {
+                                throw $e;
+                            }
+                            ZLog::Write(LOGLEVEL_WARN, sprintf("ExportChangesDiff->Synchronize(): transient error reading message '%s' from folder '%s' (code: %d, %s), retrying once after backoff", $change["id"], $this->folderid, $e->getCode(), $e->getMessage()));
+                            sleep(3);
+                            try {
+                                $stat = $this->backend->StatMessage($this->folderid, $change["id"]);
+                                $message = $this->backend->GetMessage($this->folderid, $change["id"], $this->contentparameters);
+                            }
+                            catch (StatusException $e2) {
+                                if ($e2->getCode() != SYNC_ITEMOPERATIONSSTATUS_INVALIDATT) {
+                                    throw $e2;
+                                }
+                                ZLog::Write(LOGLEVEL_WARN, sprintf("ExportChangesDiff->Synchronize(): message '%s' from folder '%s' still not readable after retry (code: %d, %s), skipping it for this pass", $change["id"], $this->folderid, $e2->getCode(), $e2->getMessage()));
+                                $stat = false;
+                                $message = false;
+                            }
+                        }
 
                         // copy the flag to the message
                         if($message)
