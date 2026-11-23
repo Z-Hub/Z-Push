@@ -43,6 +43,7 @@ if (!function_exists('imap_open') && version_compare(PHP_VERSION, '8.3.0', '>=')
     require_once('Imap2/Mail.php');
     require_once('Imap2/Mailbox.php');
     require_once('Imap2/Message.php');
+    require_once('Imap2/SearchCriteria.php');
     require_once('Imap2/Thread.php');
     require_once('Imap2/Timeout.php');
 }
