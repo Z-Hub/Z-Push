@@ -17,6 +17,8 @@
             <directory name="src/vendor" />
             <directory name="vendor" />
             <directory name="src/backend/kopano" />
+            <!-- 8.3+ to correct when at 8.3 minimum version -->
+            <directory name="src/backend/imap/php-imap2" />
         </ignoreFiles>
     </projectFiles>
     <enableExtensions>
