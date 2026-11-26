@@ -31,6 +31,7 @@ class Find extends RequestProcessor {
      *
      * @param int $commandCode
      *
+     * @access public
      * @return bool
      */
     public function Handle($commandCode) {
@@ -194,8 +195,8 @@ class Find extends RequestProcessor {
             if ($searchtotal > 0) {
                 foreach ($rows as $u) {
                     // fetch the SyncObject for this result
-                    $message = self::$backend->Fetch(false, $u['longid'], $cpo);
-                    $mfolderid = self::$deviceManager->GetFolderIdForBackendId(bin2hex($message->ParentSourceKey));
+                    $message = self::$backend->Fetch($u['folderid'], $u['serverid'], $cpo);
+                    $mfolderid = self::$deviceManager->GetFolderIdForBackendId($u['folderid']);
 
                     self::$encoder->startTag(SYNC_FIND_RESULT);
                     self::$encoder->startTag(SYNC_FOLDERTYPE);
