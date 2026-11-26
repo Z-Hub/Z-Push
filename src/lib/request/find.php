@@ -218,9 +218,14 @@ class Find extends RequestProcessor {
                 }
             }
 
-            self::$encoder->startTag(SYNC_FIND_RANGE);
-            self::$encoder->content("0-" . $searchtotal);
-            self::$encoder->endTag();
+            // Range describes the returned page, not the estimated total.
+            $returnedCount = isset($rows) && is_array($rows) ? count($rows) : 0;
+            if ($returnedCount > 0) {
+                $rangeStart = (int) explode("-", (string) ($searchrange ?? $cpo->GetFindRange()))[0];
+                self::$encoder->startTag(SYNC_FIND_RANGE);
+                self::$encoder->content($rangeStart . "-" . ($rangeStart + $returnedCount - 1));
+                self::$encoder->endTag();
+            }
             if (isset($searchtotal) && $searchtotal > 0) {
                 self::$encoder->startTag(SYNC_FIND_TOTAL);
                 self::$encoder->content($searchtotal); // $searchtotal);
