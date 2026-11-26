@@ -113,18 +113,31 @@ class SyncFindProperties extends SyncObject {
 
     public static function GetObjectFromSyncMail($mail) {
         $fp = new SyncFindProperties();
-        $fp->subject = $mail->subject;
-        $fp->datereceived = $mail->datereceived;
-        $fp->displayto = $mail->displayto;
-        $fp->displaycc = $mail->Displaycc;
-        $fp->displaybcc = $mail->Displaybcc;
-        $fp->importance = $mail->importance;
-        $fp->read = $mail->read;
+        $fp->subject = $mail->subject ?? '';
+        $fp->datereceived = $mail->datereceived ?? null;
+        $fp->displayto = $mail->displayto ?? '';
+        $fp->displaycc = $mail->cc ?? $mail->Displaycc ?? '';
+        $fp->displaybcc = $mail->bcc ?? $mail->Displaybcc ?? '';
+        $fp->importance = $mail->importance ?? 1;
+        $fp->read = $mail->read ?? 0;
         // TODO: fix me
         $fp->isdraft = 0;
-        $fp->preview = stream_get_contents($mail->asbody->data, 254);
-        $fp->hasattachments = empty($mail->attachments) ? 0 : 1;
-        $fp->from = $mail->from;
+        $fp->preview = '';
+        $body = $mail->asbody->data ?? null;
+        if (is_resource($body) && get_resource_type($body) === 'stream') {
+            $metadata = stream_get_meta_data($body);
+            $position = !empty($metadata['seekable']) ? ftell($body) : false;
+            $preview = stream_get_contents($body, 254);
+            if ($position !== false) {
+                fseek($body, $position);
+            }
+            $fp->preview = $preview !== false ? $preview : '';
+        }
+        elseif (is_string($body)) {
+            $fp->preview = substr($body, 0, 254);
+        }
+        $fp->hasattachments = !empty($mail->asattachments) || !empty($mail->attachments) ? 1 : 0;
+        $fp->from = $mail->from ?? '';
 
         return $fp;
     }
