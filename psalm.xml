@@ -1,7 +1,6 @@
 <?xml version="1.0"?>
 <psalm
     errorLevel="8"
-    runTaintAnalysis="false"
     resolveFromConfigFile="true"
     findUnusedCode="false"
     findUnusedBaselineEntry="false"
