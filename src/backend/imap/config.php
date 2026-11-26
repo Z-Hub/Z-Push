@@ -7,6 +7,7 @@
 * Created   :   27.11.2012
 *
 * Copyright 2007 - 2016 Zarafa Deutschland GmbH
+* Copyright 2024 Mat Wilson
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -40,6 +41,16 @@ define('IMAP_OPTIONS', '/notls/norsh');
 // Mark messages as read when moving to Trash.
 //      BE AWARE that you will lose the unread flag, but some mail clients do this so the Trash folder doesn't get boldened
 define('IMAP_AUTOSEEN_ON_DELETE', false);
+
+
+// Use IMAP IDLE (RFC 2177) in ChangesSink for near-instant push notifications.
+//      When false (default) the folders are polled every PING_INTERVAL seconds, as before.
+//      When true, one IDLE connection per synchronized folder is kept open for the duration of a Ping,
+//      and the backend falls back to polling for the rest of that Ping if IDLE fails for any reason.
+//      Requires an IMAP server that advertises the IDLE capability.
+//      The IDLE connections follow the transport flags in IMAP_OPTIONS (/ssl, /tls, /notls, /novalidate-cert).
+//      Without /notls they are always encrypted: if STARTTLS is not offered, IDLE is not used.
+define('IMAP_USE_IDLE', false);
 
 
 // IMPORTANT: BASIC IMAP FOLDERS [ask your mail admin]

@@ -226,8 +226,8 @@ class CalDAVClient {
 		if ($this->curl === false) {
 			$this->curl = curl_init();
 			curl_setopt($this->curl, CURLOPT_HEADER, true);
-			curl_setopt($this->curl, CURLOPT_SSL_VERIFYHOST, false);
-			curl_setopt($this->curl, CURLOPT_SSL_VERIFYPEER, false);
+			curl_setopt($this->curl, CURLOPT_SSL_VERIFYHOST, 2); // 2 is true, 1 is deprecated
+			curl_setopt($this->curl, CURLOPT_SSL_VERIFYPEER, true);
 			curl_setopt($this->curl, CURLOPT_RETURNTRANSFER, true);
 			curl_setopt($this->curl, CURLOPT_USERAGENT, self::USERAGENT);
 
@@ -251,7 +251,8 @@ class CalDAVClient {
 
 		if ( !isset($url) ) $url = $this->base_url;
 		$url = preg_replace('{^https?://[^/]+}', '', $url);
-		$url = $this->server . $url;
+		// Make sure server has a trailing slash, before $url
+		$url = rtrim($this->server, '/') . '/' . ltrim($url, '/');
 
 		curl_setopt($this->curl, CURLOPT_URL, $url);
 		curl_setopt($this->curl, CURLOPT_CUSTOMREQUEST, $method);
@@ -271,9 +272,20 @@ class CalDAVClient {
 		$headers = array();
 		$headers['content-type'] = 'Content-type: ' . $content_type;
 		foreach( $this->headers as $ii => $head ) {
-		  $headers[$ii] = $head;
+		  	/** @psalm-taint-escape header */
+			$cleanhead = str_replace(array("\r", "\n", "\0"), '', $head);
+			$headers[$ii] = $cleanhead;
 		}
 		curl_setopt($this->curl, CURLOPT_HTTPHEADER, $headers);
+
+		/* check SSL verify setting and apply to curl */
+        $issslverify = (boolean) DAV_SSL_VERIFY;
+        $isloopback = Utils::IsLoopbackHost(parse_url($url, PHP_URL_HOST));
+        if (DAV_SSL_VERIFY === DAV_SSL_VERIFY_AUTO && $isloopback) {
+            $issslverify = false;
+        }
+        curl_setopt($this->curl, CURLOPT_SSL_VERIFYPEER, $issslverify);
+        curl_setopt($this->curl, CURLOPT_SSL_VERIFYHOST, $issslverify ? 2 : 0);
 
 		$this->xmlResponse = '';
 

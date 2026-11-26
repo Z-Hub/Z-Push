@@ -11,6 +11,7 @@
 * Copyright 2012 - 2014 Jean-Louis Dupond
 * Jean-Louis Dupond released this code as AGPLv3 here: https://github.com/dupondje/PHP-Push-2/issues/93
 * Copyright 2015 - Francisco Miguel Biete
+* Copyright 2024 Mat Wilson
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -36,8 +37,12 @@ class BackendLDAP extends BackendDiff {
     private $user;
 
     public function Logon($username, $domain, $password) {
-        $this->user = $username;
-        $user_dn = str_replace('%u', $username, LDAP_USER_DN);
+        $escapedusername = $this->_EscapeLDAP($username);
+        $escapeddomain = $this->_EscapeLDAP($domain);
+
+        $this->user = $escapedusername;
+        $user_dn = str_replace('%u', $escapedusername, LDAP_USER_DN);
+        $user_dn = str_replace('%d', $escapeddomain, $user_dn);
 
         // Connect
         if (defined('LDAP_SERVER_URI')) {
@@ -46,11 +51,11 @@ class BackendLDAP extends BackendDiff {
 
             // Authenticate
             if (ldap_bind($this->ldap_link, $user_dn, $password)) {
-                ZLog::Write(LOGLEVEL_INFO, sprintf("BackendLDAP->Logon(): User '%s' is authenticated on LDAP.", $username));
+                ZLog::Write(LOGLEVEL_INFO, sprintf("BackendLDAP->Logon(): User '%s' is authenticated on LDAP.", $escapedusername));
                 return true;
             }
             else {
-                ZLog::Write(LOGLEVEL_INFO, sprintf("BackendLDAP->Logon(): User '%s' is not authenticated on LDAP. Error: ", $username, ldap_error($this->ldap_link)));
+                ZLog::Write(LOGLEVEL_INFO, sprintf("BackendLDAP->Logon(): User '%s' is not authenticated on LDAP. Error: %s", $escapedusername, ldap_error($this->ldap_link)));
                 return false;
             }
         }
@@ -161,7 +166,8 @@ class BackendLDAP extends BackendDiff {
             $folder = explode(":", $base_dn);
             if ($folder[0] == $folderid) {
                 $base_dn = str_replace('%u', $this->user, $folder[1]);
-                $result_id = ldap_list($this->ldap_link, $base_dn, "(entryUUID=".$id.")");
+                $escapedid = $this->_EscapeLDAP($id);
+                $result_id = ldap_list($this->ldap_link, $base_dn, "(entryUUID=".$escapedid.")");
                 if ($result_id) {
                     $entry_id = ldap_first_entry($this->ldap_link, $result_id);
                     if ($entry_id) {
@@ -327,7 +333,8 @@ class BackendLDAP extends BackendDiff {
             $folder = explode(":", $base_dn);
             if ($folder[0] == $folderid) {
                 $base_dn = str_replace('%u', $this->user, $folder[1]);
-                $result_id = ldap_list($this->ldap_link, $base_dn, "(entryUUID=".$id.")", array("modifyTimestamp"));
+                $escapedid = $this->_EscapeLDAP($id);
+                $result_id = ldap_list($this->ldap_link, $base_dn, "(entryUUID=".$escapedid.")", array("modifyTimestamp"));
                 if ($result_id) {
                     $entry_id = ldap_first_entry($this->ldap_link, $result_id);
                     if ($entry_id) {
@@ -351,7 +358,8 @@ class BackendLDAP extends BackendDiff {
             if ($folder[0] == $folderid) {
                 $base_dn = str_replace('%u', $this->user, $folder[1]);
                 $ldap_attributes = $this->_GenerateLDAPArray($message);
-                $result_id = ldap_list($this->ldap_link, $base_dn, "(entryUUID=".$id.")", array("modifyTimestamp"));
+                $escapedid = $this->_EscapeLDAP($id);
+                $result_id = ldap_list($this->ldap_link, $base_dn, "(entryUUID=".$escapedid.")", array("modifyTimestamp"));
                 if ($result_id) {
                     $entry_id = ldap_first_entry($this->ldap_link, $result_id);
                     if ($entry_id) {
@@ -518,7 +526,8 @@ class BackendLDAP extends BackendDiff {
             $folder = explode(":", $base_dn);
             if ($folder[0] == $folderid) {
                 $base_dn = str_replace('%u', $this->user, $folder[1]);
-                $result_id = ldap_list($this->ldap_link, $base_dn, "(entryUUID=".$id.")", array("entryUUID"));
+                $escapedid = $this->_EscapeLDAP($id);
+                $result_id = ldap_list($this->ldap_link, $base_dn, "(entryUUID=".$escapedid.")", array("entryUUID"));
                 if ($result_id) {
                     $entry_id = ldap_first_entry($this->ldap_link, $result_id);
                     if ($entry_id) {
@@ -545,7 +554,8 @@ class BackendLDAP extends BackendDiff {
                 $new = str_replace('%u', $this->user, $folder[1]);
             }
         }
-        $result_id = ldap_list($this->ldap_link, $old, "(entryUUID=".$id.")", array("entryUUID"));
+        $escapedid = $this->_EscapeLDAP($id);
+        $result_id = ldap_list($this->ldap_link, $old, "(entryUUID=".$escapedid.")", array("entryUUID"));
         if ($result_id) {
             $entry_id = ldap_first_entry($this->ldap_link, $result_id);
             if ($entry_id) {
@@ -565,5 +575,21 @@ class BackendLDAP extends BackendDiff {
      */
     public function GetSupportedASVersion() {
         return ZPush::ASV_161;
+    }
+
+    /**
+     * Escapes a string for use in an LDAP filter or DN. This is important to 
+     * prevent LDAP injection attacks and ensure that special characters are 
+     * handled correctly.
+     *
+     * @access private
+     * @param string    $string     String to escape
+     * @return string               escaped string for LDAP filter and DN
+     */
+    private function _EscapeLDAP($string) {
+        $escaped = is_scalar($string) ? (string)$string : '';
+        $escaped = ldap_escape($escaped, '', LDAP_ESCAPE_FILTER | LDAP_ESCAPE_DN);
+        $escaped = str_replace("\n", '\0a', $escaped);
+        return $escaped;
     }
 }

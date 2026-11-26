@@ -7,6 +7,8 @@
 * Created   :   01.10.2007
 *
 * Copyright 2007 - 2016 Zarafa Deutschland GmbH
+* Copyright 2020 - 2022 grommunio GmbH
+* Copyright 2023 - 2024 Mat Wilson
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -1131,3 +1133,8 @@ define('AUTODISCOVER_LOGIN_EMAIL', 0);
 define('AUTODISCOVER_LOGIN_NO_DOT', 1);
 define('AUTODISCOVER_LOGIN_F_NO_DOT_LAST', 2);
 define('AUTODISCOVER_LOGIN_F_DOT_LAST', 3);
+
+// define DAV SSL verify constants, off, on and auto (ignore for loopback)
+define('DAV_SSL_VERIFY_OFF', 0);
+define('DAV_SSL_VERIFY_ON', 1);
+define('DAV_SSL_VERIFY_AUTO', 2);

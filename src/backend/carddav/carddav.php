@@ -7,6 +7,7 @@
 * Created   :   16.03.2013
 *
 * Copyright 2013 - 2016 Francisco Miguel Biete
+* Copyright 2024 Mat Wilson
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -77,10 +78,12 @@ class BackendCardDAV extends BackendDiff implements ISearchProvider {
      * @return boolean
      */
     public function Logon($username, $domain, $password) {
-        $this->url = CARDDAV_PROTOCOL . '://' . CARDDAV_SERVER . ':' . CARDDAV_PORT . str_replace("%d", $domain, str_replace("%u", $username, str_replace("%l", Utils::GetLocalPartFromEmail($username), CARDDAV_PATH)));
-        $this->default_url = CARDDAV_PROTOCOL . '://' . CARDDAV_SERVER . ':' . CARDDAV_PORT . str_replace("%d", $domain, str_replace("%u", $username, str_replace("%l", Utils::GetLocalPartFromEmail($username), CARDDAV_DEFAULT_PATH)));
+        $encodedusername = Utils::urlEncodePathSegment($username);
+        $encodedlocalpartfromemail = Utils::urlEncodePathSegment(Utils::GetLocalPartFromEmail($username));
+        $this->url = CARDDAV_PROTOCOL . '://' . CARDDAV_SERVER . ':' . CARDDAV_PORT . str_replace("%d", $domain, str_replace("%u", $encodedusername, str_replace("%l", $encodedlocalpartfromemail, CARDDAV_PATH)));
+        $this->default_url = CARDDAV_PROTOCOL . '://' . CARDDAV_SERVER . ':' . CARDDAV_PORT . str_replace("%d", $domain, str_replace("%u", $encodedusername, str_replace("%l", $encodedlocalpartfromemail, CARDDAV_DEFAULT_PATH)));
         if (defined('CARDDAV_GAL_PATH')) {
-            $this->gal_url = CARDDAV_PROTOCOL . '://' . CARDDAV_SERVER . ':' . CARDDAV_PORT . str_replace("%d", $domain, str_replace("%u", $username, str_replace("%l", Utils::GetLocalPartFromEmail($username), CARDDAV_GAL_PATH)));
+            $this->gal_url = CARDDAV_PROTOCOL . '://' . CARDDAV_SERVER . ':' . CARDDAV_PORT . str_replace("%d", $domain, str_replace("%u", $encodedusername, str_replace("%l", $encodedlocalpartfromemail, CARDDAV_GAL_PATH)));
         }
         else {
             $this->gal_url = false;

@@ -7,6 +7,8 @@
 * Created   :   16.02.2012
 *
 * Copyright 2007 - 2016 Zarafa Deutschland GmbH
+* Copyright 2020 - 2022 grommunio GmbH
+* Copyright 2023 - 2026 Mat Wilson
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -1536,8 +1538,11 @@ class Sync extends RequestProcessor {
                                 $response = $this->importer->ImportMessageChange($serverid, $message);
                             }
 
-                            // revert AS16 breaking change  
-                            //$response->serverid = $serverid;
+                            // set serverid if not set
+                            if (($response instanceof SyncObject) && property_exists($response, 'serverid') && !isset($response->serverid)) {
+                                $response->serverid = $serverid;
+                            } 
+
                             $actiondata["modifyids"][$serverid] = $response;
                             $actiondata["statusids"][$serverid] = SYNC_STATUS_SUCCESS;
                         }

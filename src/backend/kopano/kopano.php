@@ -10,6 +10,8 @@
 * Created   :   01.10.2011
 *
 * Copyright 2007 - 2016 Zarafa Deutschland GmbH
+* Copyright 2020 - 2022 grommunio GmbH
+* Copyright 2023 - 2024 Mat Wilson
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -966,7 +968,7 @@ class BackendKopano implements IBackend, ISearchProvider {
 
         $meetingrequest = new Meetingrequest($this->store, $mapimessage, $this->session);
 
-        if (Request::GetProtocolVersion() <= 14.0 && !$meetingrequest->isMeetingRequest() && !$meetingrequest->isMeetingRequestResponse() && !$meetingrequest->isMeetingCancellation()) {
+        if (Request::GetProtocolVersion() <= 14.0 && !$meetingrequest->isMeetingRequest() && !$meetingrequest->isMeetingRequestResponse() && !$meetingrequest->isMeetingCancellation())
             throw new StatusException(sprintf("BackendKopano->MeetingResponse('%s','%s', '%s'): Error, attempt to respond to non-meeting request", $requestid, $folderid, $response), SYNC_MEETRESPSTATUS_INVALIDMEETREQ);
 
         if($meetingrequest->isLocalOrganiser())

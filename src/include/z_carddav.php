@@ -95,6 +95,8 @@
  * @version 0.6
  * @license http://www.gnu.org/licenses/agpl.html GNU AGPL v3 or later
  *
+ * Copyright 2024 Mat Wilson
+ * 
  */
 
 class carddav_backend
@@ -416,6 +418,7 @@ EOFCONTENTSEARCH;
     <D:sync-level>1</D:sync-level>
     <D:prop>
         <D:getetag/>
+        <D:getcontenttype/>
         <D:getlastmodified/>
     </D:prop>
 </D:sync-collection>
@@ -483,8 +486,9 @@ EOFXMLINITIALSYNC;
      * @return	string				vCard (text/vcard)
      */
     private function get_vcard($vcard_href) {
-//         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCardDAV->carddav_backend->get_vcard"));
-        $url = $this->url_parts['scheme'] . '://' . $this->url_parts['host'] . ':' . $this->url_parts['port'] . $vcard_href;
+        // ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendCardDAV->carddav_backend->get_vcard"));
+        // Make sure server has a trailing slash, before vcard_href
+        $url = $this->url_parts['scheme'] . '://' . $this->url_parts['host'] . ':' . $this->url_parts['port'] . '/' . ltrim($vcard_href, '/');
         $result = $this->query($url, 'GET');
 
         switch ($result['http_code']) {
@@ -697,10 +701,11 @@ EOFXMLGETXMLVCARD;
                             $href = $response->href;
                         }
                         else {
-                            $href = null;
+                            $href = "";
                         }
 
-                        $url = str_replace($this->url_parts['path'], null, $this->url) . $href;
+                        // Make sure server has a trailing slash, before href
+                        $url = str_replace($this->url_parts['path'], null, $this->url) . '/' . ltrim($href, '/');
                         $simplified_xml->startElement('addressbook_element');
                         $simplified_xml->writeElement('display_name', $response->propstat->prop->displayname);
                         $simplified_xml->writeElement('url', $url);
@@ -777,8 +782,8 @@ EOFXSL;
         if ($this->curl === false) {
             $this->curl = curl_init();
             curl_setopt($this->curl, CURLOPT_HEADER, true);
-            curl_setopt($this->curl, CURLOPT_SSL_VERIFYHOST, false);
-            curl_setopt($this->curl, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($this->curl, CURLOPT_SSL_VERIFYHOST, 2); // 2 is true, 1 is deprecated
+            curl_setopt($this->curl, CURLOPT_SSL_VERIFYPEER, true);
             curl_setopt($this->curl, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($this->curl, CURLOPT_USERAGENT, self::USERAGENT.self::VERSION);
 
@@ -822,6 +827,15 @@ EOFXSL;
         else {
             curl_setopt($this->curl, CURLOPT_HTTPHEADER, array('Depth: '.$depth));
         }
+
+        /* check SSL verify setting and apply to curl */
+        $issslverify = (boolean) DAV_SSL_VERIFY;
+        $isloopback = Utils::IsLoopbackHost(parse_url($url, PHP_URL_HOST));
+        if (DAV_SSL_VERIFY === DAV_SSL_VERIFY_AUTO && $isloopback) {
+            $issslverify = false;
+        }
+        curl_setopt($this->curl, CURLOPT_SSL_VERIFYPEER, $issslverify);
+        curl_setopt($this->curl, CURLOPT_SSL_VERIFYHOST, $issslverify ? 2 : 0);
 
         $complete_response	= curl_exec($this->curl);
         $header_size		= curl_getinfo($this->curl, CURLINFO_HEADER_SIZE);

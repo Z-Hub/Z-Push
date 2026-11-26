@@ -7,6 +7,8 @@
 * Created   :   03.04.2008
 *
 * Copyright 2007 - 2016 Zarafa Deutschland GmbH
+* Copyright 2020 - 2022 grommunio GmbH
+* Copyright 2023 - 2025 Mat Wilson
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -1523,6 +1525,97 @@ class Utils {
         }
         return 0;
     }
+
+    /**
+	 * Returns the appropriate SyncObjectResponse object based on message class.
+	 *
+	 * @param string $messageClass
+	 *
+	 * @return object
+	 */
+	public static function GetResponseFromMessageClass($messageClass) {
+		$messageClass = strtolower($messageClass);
+
+		switch ($messageClass) {
+			case 'syncappointment':
+				return new SyncAppointmentResponse();
+
+			case 'synccontact':
+				return new SyncContactResponse();
+
+			case 'syncnote':
+				return new SyncNoteResponse();
+
+			case 'synctask':
+				return new SyncTaskResponse();
+
+			case 'syncmail':
+				return new SyncMailResponse();
+
+			default:
+				return null;
+		}
+
+		return new SyncMailResponse();
+	}
+
+    /**
+	 * Returns a copy to the appropriate SyncObjectResponse object from SyncObject based on the message class.
+	 *
+	 * @param  SyncObject  $message
+	 *
+	 * @return SyncObject
+	 */
+	public static function GetResponseFromObject($message) {
+
+        $messageClass = strtolower(get_class($message));
+
+        $response = Utils::GetResponseFromMessageClass($messageClass);
+
+        if ($response === null) {
+            return $message;
+        }
+
+        // Copy the message to the response object
+        foreach ($message as $key => $value) {
+            if (property_exists($response, $key)) {
+                $response->$key = $value;
+            }
+        }
+
+		return $response;
+	}
+
+    /**
+     * Encodes a single URL path segment.
+     *
+     * @param string $value
+     *
+     * @access public
+     * @return string
+     *
+     * @psalm-taint-escape ssrf
+     * @psalm-taint-escape file
+     */
+    public static function urlEncodePathSegment($value) {
+        $encodedvalue = rawurlencode($value);
+        $encodedvalue = str_replace('%40', '@', $encodedvalue);
+        return $encodedvalue;
+    }
+
+    /**
+     * returns true for loopback (localhost)
+     *
+     * @param string $host
+     *
+     * @access public
+     * @return boolean
+     *
+     */
+    public static function IsLoopbackHost($host) {
+        return ($host === 'localhost' || $host === '127.0.0.1' || $host === '[::1]');
+    }
+
 }
 
 // TODO Win1252/UTF8 functions are deprecated and will be removed sometime

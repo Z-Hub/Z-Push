@@ -8,6 +8,7 @@
 * Created   :   02.01.2012
 *
 * Copyright 2007 - 2016 Zarafa Deutschland GmbH
+* Copyright 2025 - 2026 Mat Wilson
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -26,6 +27,7 @@
 
 class ImportChangesDiff extends DiffState implements IImportChanges {
     private $folderid;
+    private $isdraftfolder;
 
     /**
      * Constructor
@@ -64,7 +66,7 @@ class ImportChangesDiff extends DiffState implements IImportChanges {
      * @param SyncObject    $message
      *
      * @access public
-     * @return boolean/string - failure / id of message
+     * @return boolean/SyncObject - failure / message
      * @throws StatusException
      */
     public function ImportMessageChange($id, $message) {
@@ -89,6 +91,15 @@ class ImportChangesDiff extends DiffState implements IImportChanges {
                 throw new StatusException(sprintf("ImportChangesDiff->ImportMessageChange('%s','%s'): Conflict detected. Data from PIM will be dropped! Server overwrites PIM. User is informed.", $id, get_class($message)), SYNC_STATUS_CONFLICTCLIENTSERVEROBJECT, null, LOGLEVEL_INFO);
         }
 
+        //set isdraft and isdraftfolder if folder is drafts
+        if($this->isdraftfolder === null) {
+            $folder = $this->backend->GetFolder($this->folderid);
+            $this->isdraftfolder = ($folder->type == SYNC_FOLDER_TYPE_DRAFTS);
+        }
+        if($this->isdraftfolder) {
+            $message->isdraft = true;
+        }
+
         $stat = $this->backend->ChangeMessage($this->folderid, $id, $message, $this->contentparameters);
 
         if(!is_array($stat))
@@ -97,7 +108,16 @@ class ImportChangesDiff extends DiffState implements IImportChanges {
         // Record the state of the message
         $this->updateState("change", $stat);
 
-        return $stat["id"];
+        $response = $this->backend->GetMessage($this->folderid, $stat["id"], $this->contentparameters);
+        $response = Utils::GetResponseFromObject($response);
+        if (property_exists($response, "serverid")) {
+            $response->serverid = $stat["id"];
+        }            
+        if (property_exists($response, "hasResponse")) {
+            $response->hasResponse = true;
+        }
+
+        return $response;
     }
 
     /**

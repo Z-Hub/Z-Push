@@ -8,6 +8,7 @@
 * Created   :   01.10.2007
 *
 * Copyright 2007 - 2016 Zarafa Deutschland GmbH
+* Copyright 2024 Mat Wilson
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -189,7 +190,7 @@ class Request {
         // process impersonation
         self::$authUser = self::$authUserString; // auth will fail when impersonating & KOE_CAPABILITY_IMPERSONATE is disabled
 
-        if (defined('KOE_CAPABILITY_IMPERSONATE') && KOE_CAPABILITY_IMPERSONATE && stripos(self::$authUserString, self::IMPERSONATE_DELIM) !== false) {
+        if (defined('KOE_CAPABILITY_IMPERSONATE') && KOE_CAPABILITY_IMPERSONATE && isset(self::$authUserString) && stripos(self::$authUserString, self::IMPERSONATE_DELIM) !== false) {
             list(self::$authUser, self::$impersonatedUser) = explode(self::IMPERSONATE_DELIM, self::$authUserString);
         }
 

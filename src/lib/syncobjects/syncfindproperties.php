@@ -1,12 +1,31 @@
 <?php
-/*
- * SPDX-License-Identifier: AGPL-3.0-only
- * SPDX-FileCopyrightText: Copyright 2022 grommunio GmbH
- *
- * WBXML mail entities that can be parsed directly (as a stream) from WBXML.
- * It is automatically decoded according to $mapping and the Sync WBXML
- * mappings.
- */
+/***********************************************
+* File      :   syncfindproperties.php
+* Project   :   Z-Push
+* Descr     :   WBXML mail entities that can be parsed directly (as a stream) from WBXML.
+*               It is automatically decoded according to $mapping and the Sync WBXML
+*               mappings.
+*
+* Created   :   15.12.2022
+*
+* Copyright 2007 - 2016 Zarafa Deutschland GmbH
+* Copyright 2022 grommunio GmbH
+* Copyright 2023 Mat Wilson
+*
+* This program is free software: you can redistribute it and/or modify
+* it under the terms of the GNU Affero General Public License, version 3,
+* as published by the Free Software Foundation.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+* GNU Affero General Public License for more details.
+*
+* You should have received a copy of the GNU Affero General Public License
+* along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*
+* Consult LICENSE file for details
+************************************************/
 
 class SyncFindProperties extends SyncObject {
     // AS 16.1 props
@@ -94,18 +113,31 @@ class SyncFindProperties extends SyncObject {
 
     public static function GetObjectFromSyncMail($mail) {
         $fp = new SyncFindProperties();
-        $fp->subject = $mail->subject;
-        $fp->datereceived = $mail->datereceived;
-        $fp->displayto = $mail->displayto;
-        $fp->displaycc = $mail->Displaycc;
-        $fp->displaybcc = $mail->Displaybcc;
-        $fp->importance = $mail->importance;
-        $fp->read = $mail->read;
+        $fp->subject = $mail->subject ?? '';
+        $fp->datereceived = $mail->datereceived ?? null;
+        $fp->displayto = $mail->displayto ?? '';
+        $fp->displaycc = $mail->cc ?? $mail->Displaycc ?? '';
+        $fp->displaybcc = $mail->bcc ?? $mail->Displaybcc ?? '';
+        $fp->importance = $mail->importance ?? 1;
+        $fp->read = $mail->read ?? 0;
         // TODO: fix me
         $fp->isdraft = 0;
-        $fp->preview = stream_get_contents($mail->asbody->data, 254);
-        $fp->hasattachments = empty($mail->attachments) ? 0 : 1;
-        $fp->from = $mail->from;
+        $fp->preview = '';
+        $body = $mail->asbody->data ?? null;
+        if (is_resource($body) && get_resource_type($body) === 'stream') {
+            $metadata = stream_get_meta_data($body);
+            $position = !empty($metadata['seekable']) ? ftell($body) : false;
+            $preview = stream_get_contents($body, 254);
+            if ($position !== false) {
+                fseek($body, $position);
+            }
+            $fp->preview = $preview !== false ? $preview : '';
+        }
+        elseif (is_string($body)) {
+            $fp->preview = substr($body, 0, 254);
+        }
+        $fp->hasattachments = !empty($mail->asattachments) || !empty($mail->attachments) ? 1 : 0;
+        $fp->from = $mail->from ?? '';
 
         return $fp;
     }

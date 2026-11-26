@@ -7,6 +7,8 @@
 * Created   :   12.04.2011
 *
 * Copyright 2007 - 2016 Zarafa Deutschland GmbH
+* Copyright 2020 - 2022 grommunio GmbH
+* Copyright 2023 - 2024 Mat Wilson
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -451,6 +453,11 @@ class ZPush {
         if (!defined('ICONV_OPTION')) {
             define('ICONV_OPTION', "");
         }
+
+        // Check DAV SSL Verify option
+        if (!defined('DAV_SSL_VERIFY')) {
+            define('DAV_SSL_VERIFY', DAV_SSL_VERIFY_AUTO);
+        }
                         
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("Used timezone '%s'", date_default_timezone_get()));
 
@@ -819,10 +826,16 @@ class ZPush {
     static public function PrintZPushLegal($message = "", $additionalMessage = "") {
         ZLog::Write(LOGLEVEL_DEBUG,"ZPush::PrintZPushLegal()");
 
+        $message = htmlspecialchars($message, ENT_QUOTES);
+        $additionalMessage = htmlspecialchars($additionalMessage, ENT_QUOTES);
+
         if ($message)
             $message = "<h3>". $message . "</h3>";
-        if ($additionalMessage)
-            $additionalMessage .= "<br>";
+        if ($additionalMessage) {
+            $additionalMessage = $additionalMessage . "<br>";
+            $additionalMessage = str_replace("&lt;pre&gt;", "<pre>", $additionalMessage);
+            $additionalMessage = str_replace("&lt;/pre&gt;", "</pre>", $additionalMessage);
+        }
 
         header("Content-type: text/html");
         print <<<END

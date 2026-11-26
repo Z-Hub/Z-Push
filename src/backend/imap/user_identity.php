@@ -7,6 +7,7 @@
 * Created   :   2014
 *
 * Copyright 2014 - 2016 Zarafa Deutschland GmbH
+* Copyright 2025 Mat Wilson
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -144,7 +145,12 @@ function getIdentityFromLdap($username, $domain, $identity, $encode = true) {
                 if ($ldap_bind) {
                     ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->getIdentityFromLdap() - Authenticated in LDAP"));
 
-                    $filter = str_replace('#username', $username, str_replace('#domain', $domain, IMAP_FROM_LDAP_QUERY));
+                    $escapedusername = ldap_escape($username, '', LDAP_ESCAPE_FILTER | LDAP_ESCAPE_DN);
+                    $escapedusername = str_replace("\n", '\0a', $escapedusername);
+                    $escapeddomain = ldap_escape($domain, '', LDAP_ESCAPE_FILTER | LDAP_ESCAPE_DN);
+                    $escapeddomain = str_replace("\n", '\0a', $escapeddomain);
+
+                    $filter = str_replace('#username', $escapedusername, str_replace('#domain', $escapeddomain, IMAP_FROM_LDAP_QUERY));
                     ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->getIdentityFromLdap() - Searching From with filter: %s", $filter));
 
                     $search = ldap_search($ldap_conn, IMAP_FROM_LDAP_BASE, $filter, unserialize(IMAP_FROM_LDAP_FIELDS));
@@ -208,9 +214,14 @@ function getIdentityFromSql($username, $domain, $identity, $encode = true) {
         $dbh = new PDO(IMAP_FROM_SQL_DSN, IMAP_FROM_SQL_USER, IMAP_FROM_SQL_PASSWORD, unserialize(IMAP_FROM_SQL_OPTIONS));
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->getIdentityFromSql() - Connected to SQL Database"));
 
-        $sql = str_replace('#username', $username, str_replace('#domain', $domain, IMAP_FROM_SQL_QUERY));
+        //replace config placeholdes with parameter placeholders
+        $sql = str_replace("'#username'", ":username", str_replace("'#domain'", ":domain", str_replace("'#username@#domain'", ":usernameatdomain", IMAP_FROM_SQL_QUERY)));
+        $usernameatdomain = $username . '@' . $domain;
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->getIdentityFromSql() - Searching From with filter: %s", $sql));
         $sth = $dbh->prepare($sql);
+        if(mb_strpos($sql, ':username') !== false) $sth->bindValue(':username', $username, PDO::PARAM_STR);
+        if(mb_strpos($sql, ':domain') !== false) $sth->bindValue(':domain', $domain, PDO::PARAM_STR);
+        if(mb_strpos($sql, ':usernameatdomain') !== false) $sth->bindValue(':usernameatdomain', $usernameatdomain, PDO::PARAM_STR);
         $sth->execute();
         $record = $sth->fetch(PDO::FETCH_ASSOC);
         if ($record) {

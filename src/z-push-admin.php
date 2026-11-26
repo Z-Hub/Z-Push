@@ -10,6 +10,7 @@
 * Created   :   14.05.2010
 *
 * Copyright 2007 - 2016 Zarafa Deutschland GmbH
+* Copyright 2024 Mat Wilson
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -1491,7 +1492,7 @@ class ZPushAdminCLI {
                         if (strlen($d['name']) > 20) {
                             $d['name'] = substr($d['name'], 0, 18) . "..";
                         }
-                        printf("\tFolder: %s Sync: %s %s\n", str_pad($d['name'], 20), str_pad($d['status'], 13), $status);
+                        fwrite(STDOUT, sprintf("\tFolder: %s Sync: %s %s\n", str_pad($d['name'], 20), str_pad($d['status'], 13), $status));
                     }
                 }
             }

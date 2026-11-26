@@ -7,6 +7,7 @@
 * Created   :   01.10.2007
 *
 * Copyright 2007 - 2016 Zarafa Deutschland GmbH
+* Copyright 2024 Mat Wilson
 *
 * This program is free software: you can redistribute it and/or modify
 * it under the terms of the GNU Affero General Public License, version 3,
@@ -432,3 +433,14 @@
  *  https://www.php.net/manual/en/function.iconv.php
  */
     define('ICONV_OPTION', "");
+
+/**********************************************************************************
+ *  DAV SSL Verify option
+ *
+ * DAV_SSL_VERIFY_OFF:  Don't verify SSL certificate (not recommended)
+ * DAV_SSL_VERIFY_ON:   Verify SSL certificate 
+ * DAV_SSL_VERIFY_AUTO: Verify SSL certificate (default), but ignore if the 
+ *                      server is a localhost loopback (useful for self-signed 
+ *                      certificates on localhost)
+ */
+define('DAV_SSL_VERIFY', DAV_SSL_VERIFY_AUTO);
