@@ -2,6 +2,20 @@
 
 \define('IMAP2_CHARSET', 'UTF-8');
 
+// Roundcube 1.7 uses array_first(), which PHP has from 8.5
+if (! \function_exists('array_first'))
+	{
+	function array_first(array $array) : mixed
+		{
+		foreach ($array as $value)
+			{
+			return $value;
+			}
+
+		return null;
+		}
+	}
+
 if (! \defined('NIL')) {
 	\define('NIL', 0);
 }
@@ -521,7 +535,7 @@ if (! \function_exists('imap_getsubscribed'))
   {
   function imap_getsubscribed(\IMAP\Connection $imap, string $reference, string $pattern) : array|false
 		{
-		return \PHPFUI\Imap2\Mailbox::getMailboxes($imap, $reference, $pattern);
+		return \PHPFUI\Imap2\Mailbox::getSubscribed($imap, $reference, $pattern);
 		}
   }
 
@@ -573,22 +587,22 @@ if (! \function_exists('imap_listscan'))
 		}
 	}
 
-//if (! \function_exists('imap_listsubscribed'))
-//  {
-//  function imap_listsubscribed(\IMAP\Connection $imap, string $reference, string $pattern) : array|false
-//		{
-//		return \PHPFUI\Imap2\Mailbox::listSubscribed($imap, $reference);
-//		}
-//  }
-//
-//if (! \function_exists('imap_lsub'))
-//  {
-//  function imap_lsub(\IMAP\Connection $imap, string $reference, string $pattern) : array|false
-//		{
-//		return \PHPFUI\Imap2\Mailbox::listSubscribed($imap, $reference);
-//		}
-//  }
-//
+if (! \function_exists('imap_listsubscribed'))
+  {
+  function imap_listsubscribed(\IMAP\Connection $imap, string $reference, string $pattern) : array|false
+		{
+		return \PHPFUI\Imap2\Mailbox::listSubscribed($imap, $reference, $pattern);
+		}
+  }
+
+if (! \function_exists('imap_lsub'))
+  {
+  function imap_lsub(\IMAP\Connection $imap, string $reference, string $pattern) : array|false
+		{
+		return \PHPFUI\Imap2\Mailbox::listSubscribed($imap, $reference, $pattern);
+		}
+  }
+
 //if (! \function_exists('imap_mail'))
 //  {
 //  function imap_mail(string $to, string $subject, string $message, ?string $additional_headers = null, ?string $cc = null, ?string $bcc = null, ?string $return_path = null) : bool
@@ -623,19 +637,19 @@ if (! \function_exists('imap_mail_move'))
 
 if (! \function_exists('imap_mailboxmsginfo'))
   {
-  function imap_mailboxmsginfo(\IMAP\Connection $imap) : stdclass
+  function imap_mailboxmsginfo(\IMAP\Connection $imap) : \stdClass
 		{
 		return \PHPFUI\Imap2\Mailbox::mailboxMsgInfo($imap);
 		}
   }
 
-//if (! \function_exists('imap_mime_header_decode'))
-//  {
-//  function imap_mime_header_decode(string $string) : array
-//		{
-//		throw new \Exception(__FUNCTION__ . ' is not implemented.');
-//		}
-//  }
+if (! \function_exists('imap_mime_header_decode'))
+  {
+  function imap_mime_header_decode(string $string) : array|false
+		{
+		return \PHPFUI\Imap2\Functions::mimeHeaderDecode($string);
+		}
+  }
 
 if (! \function_exists('imap_msgno'))
   {
@@ -762,21 +776,9 @@ if (! \function_exists('imap_rfc822_parse_headers'))
 
 if (! \function_exists('imap_rfc822_write_address'))
   {
-  function imap_rfc822_write_address(string $mailbox, string $hostname, string $personal) : string
+  function imap_rfc822_write_address(?string $mailbox, ?string $hostname, ?string $personal) : string
 		{
-		$ret = $mailbox;
-
-		if (! \filter_var($mailbox, FILTER_VALIDATE_EMAIL) && ! empty($hostname))
-			{
-			$ret .= '@' . $hostname;
-			}
-
-		if (! empty($personal))
-			{
-			$ret = \mb_encode_mimeheader($personal, 'UTF-8') . ' <' . $ret . '>';
-			}
-
-		return $ret;
+		return \PHPFUI\Imap2\Functions::writeAddress($mailbox, $hostname, $personal);
 		}
   }
 
@@ -831,9 +833,11 @@ if (! \function_exists('imap_setacl'))
 
 if (! \function_exists('imap_setflag_full'))
   {
-  function imap_setflag_full(\IMAP\Connection $imap, string $sequence, string $flag, int $options = 0) : bool
+  function imap_setflag_full(\IMAP\Connection $imap, string $sequence, string $flag, int $options = 0) : true
 		{
-		return \PHPFUI\Imap2\Message::setFlagFull($imap, $sequence, $flag, $options);
+		\PHPFUI\Imap2\Message::setFlagFull($imap, $sequence, $flag, $options);
+
+		return true;
 		}
   }
 
@@ -879,7 +883,7 @@ if (! \function_exists('imap_timeout'))
 
 if (! \function_exists('imap_uid'))
   {
-  function imap_uid(\IMAP\Connection $imap, int $message_num) : int
+  function imap_uid(\IMAP\Connection $imap, int $message_num) : int|false
 		{
 		return \PHPFUI\Imap2\Message::uid($imap, $message_num);
 		}
@@ -903,9 +907,9 @@ if (! \function_exists('imap_unsubscribe'))
 
 if (! \function_exists('imap_utf7_decode'))
   {
-  function imap_utf7_decode(string $string) : string
+  function imap_utf7_decode(string $string) : string|false
 		{
-		return \mb_convert_encoding($string, 'UTF7-IMAP', 'ISO-8859-1');
+		return \PHPFUI\Imap2\Functions::utf7Decode($string);
 		}
   }
 
@@ -913,7 +917,7 @@ if (! \function_exists('imap_utf7_encode'))
   {
   function imap_utf7_encode(string $string) : string
 		{
-		return \mb_convert_encoding($string, 'ISO-8859-1', 'UTF7-IMAP');
+		return \PHPFUI\Imap2\Functions::utf7Encode($string);
 		}
   }
 

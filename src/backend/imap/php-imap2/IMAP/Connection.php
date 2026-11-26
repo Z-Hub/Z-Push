@@ -165,6 +165,9 @@ class Connection
 
 		if (empty($success))
 			{
+			// like ext-imap, the server's reason is kept for imap_last_error(), without Roundcube's "SELECT: " prefix
+			$reason = (string)\preg_replace('/^SELECT: /', '', $this->client->error);
+			\PHPFUI\Imap2\Errors::appendError('' !== $reason ? $reason : "Can't open mailbox {$this->currentMailbox}");
 			$this->rewriteMailbox('<no_mailbox>');
 			}
 		}

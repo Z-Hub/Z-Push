@@ -1,226 +1,432 @@
 <?php
 
-/**
- * +-----------------------------------------------------------------------+
- * | This file is part of the Roundcube Webmail client                     |
- * |                                                                       |
- * | Copyright (C) The Roundcube Dev Team                                  |
- * | Copyright (C) Kolab Systems AG                                        |
- * |                                                                       |
- * | Licensed under the GNU General Public License version 3 or            |
- * | any later version with exceptions for skins & plugins.                |
- * | See the README file for a full license statement.                     |
- * |                                                                       |
- * | PURPOSE:                                                              |
- * |   E-mail message headers representation                               |
- * +-----------------------------------------------------------------------+
- * | Author: Aleksander Machniak <alec@alec.pl>                            |
- * +-----------------------------------------------------------------------+
- */
+/*
+ +-----------------------------------------------------------------------+
+ | This file is part of the Roundcube Webmail client                     |
+ |                                                                       |
+ | Copyright (C) The Roundcube Dev Team                                  |
+ | Copyright (C) Kolab Systems AG                                        |
+ |                                                                       |
+ | Licensed under the GNU General Public License version 3 or            |
+ | any later version with exceptions for skins & plugins.                |
+ | See the README file for a full license statement.                     |
+ |                                                                       |
+ | PURPOSE:                                                              |
+ |   E-mail message headers representation                               |
+ +-----------------------------------------------------------------------+
+ | Author: Aleksander Machniak <alec@alec.pl>                            |
+ +-----------------------------------------------------------------------+
+*/
 
 namespace PHPFUI\Imap2\Roundcube;
 
+// Ported from Roundcube 1.7.5 (program/lib/Roundcube). Changes: namespace, class names,
+// no Roundcube application object, and php-imap2's COMMAND_RAW_LASTLINE. See tools/port-roundcube.php.
+
 /**
  * Struct representing an e-mail message header
- *
- * @package    Framework
- * @subpackage Storage
  */
 class MessageHeader
 {
-	/**
-	 * Message additional recipients (bCc)
-	 */
-	public string $bcc;
+    /**
+     * Message sequence number
+     *
+     * @var ?int
+     */
+    public $id;
 
-	public $body;
+    /**
+     * Message unique identifier
+     *
+     * @var int|string|null
+     */
+    public $uid;
 
-	public $bodypart;
+    /**
+     * Message subject
+     *
+     * @var ?string
+     */
+    public $subject;
 
-	/**
-	 * IMAP bodystructure string
-	 */
-	public string $bodystructure;
+    /**
+     * Message sender (From)
+     *
+     * @var ?string
+     */
+    public $from;
 
-	/**
-	 * Message additional recipients (Cc)
-	 */
-	public string $cc;
+    /**
+     * Message recipient (To)
+     *
+     * @var ?string
+     */
+    public $to;
 
-	/**
-	 * Message charset
-	 */
-	public string $charset;
+    /**
+     * Message additional recipients (Cc)
+     *
+     * @var ?string
+     */
+    public $cc;
 
-	/**
-	 * Message Content-type
-	 */
-	public string $ctype;
+    /**
+     * Message hidden recipients (Bcc)
+     *
+     * @var ?string
+     */
+    public $bcc;
 
-	/**
-	 * Message date (Date)
-	 */
-	public string $date;
+    /**
+     * Message Reply-To header
+     *
+     * @var ?string
+     */
+    public $replyto;
 
-	/**
-	 * Message encoding
-	 */
-	public string $encoding;
+    /**
+     * Message In-Reply-To header
+     *
+     * @var ?string
+     */
+    public $in_reply_to;
 
-	public $envelope;
+    /**
+     * Message date (Date)
+     *
+     * @var ?string
+     */
+    public $date;
 
-	/**
-	 * Message flags
-	 */
-	public array $flags = [];
+    /**
+     * Message identifier (Message-ID)
+     *
+     * @var ?string
+     */
+    public $messageID;
 
-	/**
-	 * IMAP folder this message is stored in
-	 */
-	public string $folder;
+    /**
+     * Message size
+     *
+     * @var ?int
+     */
+    public $size;
 
-	/**
-	 * Message sender (From)
-	 */
-	public string $from;
+    /**
+     * Message encoding
+     *
+     * @var ?string
+     */
+    public $encoding;
 
-	/**
-	 * Message sequence number
-	 */
-	public int $id;
+    /**
+     * Message charset
+     *
+     * @var ?string
+     */
+    public $charset;
 
-	/**
-	 * Message In-Reply-To header
-	 */
-	public string $in_reply_to;
+    /**
+     * Message Content-type
+     *
+     * @var ?string
+     */
+    public $ctype;
 
-	/**
-	 * IMAP internal date
-	 */
-	public string $internaldate;
+    /**
+     * Message timestamp (based on message date)
+     *
+     * @var ?int
+     */
+    public $timestamp;
 
-	/**
-	 * Message receipt recipient
-	 */
-	public string $mdn_to;
+    /**
+     * IMAP bodystructure string
+     *
+     * @var ?array
+     */
+    public $bodystructure;
 
-	/**
-	 * Message identifier (Message-ID)
-	 */
-	public string $messageID;
+    /**
+     * IMAP body (RFC822.TEXT)
+     *
+     * @var ?string
+     */
+    public $body;
 
-	public $modseq;
+    /**
+     * IMAP part bodies
+     *
+     * @var array
+     */
+    public $bodypart = [];
 
-	/**
-	 * Other message headers
-	 */
-	public array $others = [];
+    /**
+     * IMAP internal date
+     *
+     * @var ?string
+     */
+    public $internaldate;
 
-	/**
-	 * Message priority (X-Priority)
-	 */
-	public int $priority;
+    /**
+     * Message References header
+     *
+     * @var ?string
+     */
+    public $references;
 
-	/**
-	 * Message References header
-	 */
-	public string $references = '';
+    /**
+     * Message priority (X-Priority)
+     *
+     * @var int
+     */
+    public $priority;
 
-	/**
-	 * Message Reply-To header
-	 */
-	public string $replyto;
+    /**
+     * Message receipt recipient
+     *
+     * @var ?string
+     */
+    public $mdn_to;
 
-	/**
-	 * Message size
-	 */
-	public int $size;
+    /**
+     * IMAP folder this message is stored in
+     *
+     * @var ?string
+     */
+    public $folder;
 
-	/**
-	 * Message subject
-	 */
-	public string $subject;
+    /**
+     * Other message headers
+     *
+     * @var array
+     */
+    public $others = [];
 
-	/**
-	 * Message timestamp (based on message date)
-	 */
-	public int $timestamp;
+    /**
+     * Message flags
+     *
+     * @var array
+     */
+    public $flags = [];
 
-	/**
-	 * Message recipient (To)
-	 */
-	public string $to;
+    /**
+     * Message annotations (RFC 5257)
+     *
+     * @var ?array
+     */
+    public $annotations;
 
-	/**
-	 * Message unique identifier
-	 */
-	public int $uid;
+    /**
+     * Extra flags (for the messages list)
+     *
+     * @var array
+     *
+     * @deprecated Use $flags
+     */
+    public $list_flags = [];
 
-	// map header to rcube_message_header object property
-	private $obj_headers = [
-		'date' => 'date',
-		'from' => 'from',
-		'to' => 'to',
-		'subject' => 'subject',
-		'reply-to' => 'replyto',
-		'cc' => 'cc',
-		'bcc' => 'bcc',
-		'mbox' => 'folder',
-		'folder' => 'folder',
-		'content-transfer-encoding' => 'encoding',
-		'in-reply-to' => 'in_reply_to',
-		'content-type' => 'ctype',
-		'charset' => 'charset',
-		'references' => 'references',
-		'return-receipt-to' => 'mdn_to',
-		'disposition-notification-to' => 'mdn_to',
-		'x-confirm-reading-to' => 'mdn_to',
-		'message-id' => 'messageID',
-		'x-priority' => 'priority',
-	];
+    /**
+     * Extra columns content (for the messages list)
+     *
+     * @var array
+     */
+    public $list_cols = [];
 
-	/**
-	 * Returns header value
-	 */
-	public function get(string $name, bool $decode = true)
-	{
-		$name = \strtolower($name);
+    /**
+     * Message structure
+     *
+     * @var ?\stdClass
+     */
+    public $structure;
 
-		if (isset($this->obj_headers[$name])) {
-			$value = $this->{$this->obj_headers[$name]};
-		}
-		else {
-			$value = $this->others[$name];
-		}
+    /**
+     * Message thread depth
+     *
+     * @var int
+     */
+    public $depth = 0;
 
-		if ($decode) {
-			if (\is_array($value)) {
-				foreach ($value as $key => $val) {
-					$val = Mime::decode_header($val, $this->charset);
-					$value[$key] = Charset::clean($val);
-				}
-			}
-			else {
-				$value = Mime::decode_header($value, $this->charset);
-				$value = Charset::clean($value);
-			}
-		}
+    /**
+     * Whether the message has references in the thread
+     *
+     * @var bool
+     */
+    public $has_children = false;
 
-		return $value;
-	}
+    /**
+     * Number of flagged children (in a thread)
+     *
+     * @var int
+     */
+    public $flagged_children = 0;
 
-	/**
-	 * Sets header value
-	 */
-	public function set(string $name, $value) : void
-	{
-		$name = \strtolower($name);
+    /**
+     * Number of unread children (in a thread)
+     *
+     * @var int
+     */
+    public $unread_children = 0;
 
-		if (isset($this->obj_headers[$name])) {
-			$this->{$this->obj_headers[$name]} = $value;
-		}
-		else {
-			$this->others[$name] = $value;
-		}
-	}
+    /**
+     * UID of the message parent (in a thread)
+     *
+     * @var int|string|null
+     */
+    public $parent_uid;
+
+    /**
+     * IMAP MODSEQ value
+     *
+     * @var ?int
+     */
+    public $modseq;
+
+    /**
+     * IMAP ENVELOPE
+     *
+     * @var ?string
+     */
+    public $envelope;
+
+    /**
+     * Header name to MessageHeader object property map
+     *
+     * @var array
+     */
+    private $obj_headers = [
+        'date' => 'date',
+        'from' => 'from',
+        'to' => 'to',
+        'subject' => 'subject',
+        'reply-to' => 'replyto',
+        'cc' => 'cc',
+        'bcc' => 'bcc',
+        'mbox' => 'folder',
+        'folder' => 'folder',
+        'content-transfer-encoding' => 'encoding',
+        'in-reply-to' => 'in_reply_to',
+        'content-type' => 'ctype',
+        'charset' => 'charset',
+        'references' => 'references',
+        'disposition-notification-to' => 'mdn_to',
+        'x-confirm-reading-to' => 'mdn_to',
+        'message-id' => 'messageID',
+        'x-priority' => 'priority',
+    ];
+
+    /**
+     * Returns header value
+     *
+     * @param string $name   Header name
+     * @param bool   $decode Decode the header content
+     *
+     * @return array|string|int|null Header content
+     */
+    public function get($name, $decode = true)
+    {
+        $name = strtolower($name);
+        $value = null;
+
+        if (isset($this->obj_headers[$name]) && isset($this->{$this->obj_headers[$name]})) {
+            $value = $this->{$this->obj_headers[$name]};
+        } elseif (isset($this->others[$name])) {
+            $value = $this->others[$name];
+        }
+
+        if ($decode && $value !== null) {
+            if (is_array($value)) {
+                foreach ($value as $key => $val) {
+                    $val = Mime::decode_header($val, $this->charset);
+                    $value[$key] = Charset::clean($val);
+                }
+            } else {
+                $value = Mime::decode_header($value, $this->charset);
+                $value = Charset::clean($value);
+            }
+        }
+
+        return $value;
+    }
+
+    /**
+     * Sets header value
+     *
+     * @param string $name  Header name
+     * @param string $value Header content
+     */
+    public function set($name, $value)
+    {
+        $name = strtolower($name);
+
+        if (isset($this->obj_headers[$name])) {
+            $this->{$this->obj_headers[$name]} = $value;
+        } else {
+            $this->others[$name] = $value;
+        }
+    }
+
+    /**
+     * Factory method to instantiate headers from a data array
+     *
+     * @param array $arr Hash array with header values
+     *
+     * @return MessageHeader instance filled with headers values
+     */
+    public static function from_array($arr)
+    {
+        $obj = new self();
+        foreach ($arr as $k => $v) {
+            $obj->set($k, $v);
+        }
+
+        return $obj;
+    }
+}
+
+/**
+ * Class for sorting an array of MessageHeader objects in a predetermined order.
+ */
+class MessageHeaderSorter
+{
+    /** @var array Message UIDs */
+    private $uids = [];
+
+    /**
+     * Set the predetermined sort order.
+     *
+     * @param array $index Numerically indexed array of IMAP UIDs
+     */
+    public function set_index($index)
+    {
+        $index = array_flip($index);
+
+        $this->uids = $index;
+    }
+
+    /**
+     * Sort the array of header objects
+     *
+     * @param array $headers Array of MessageHeader objects indexed by UID
+     */
+    public function sort_headers(&$headers)
+    {
+        uksort($headers, [$this, 'compare_uids']);
+    }
+
+    /**
+     * Sort method called by uksort()
+     *
+     * @param int $a Array key (UID)
+     * @param int $b Array key (UID)
+     */
+    public function compare_uids($a, $b)
+    {
+        // then find each sequence number in my ordered list
+        $posa = isset($this->uids[$a]) ? intval($this->uids[$a]) : -1;
+        $posb = isset($this->uids[$b]) ? intval($this->uids[$b]) : -1;
+
+        // return the relative position as the comparison value
+        return $posa - $posb;
+    }
 }

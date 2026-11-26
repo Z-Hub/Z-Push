@@ -301,22 +301,30 @@ class BodyStructure
 				}
 			}
 
-		if ( null === $body->description ) $body->description = null;
+		// Like ext-imap: properties without a value are left out, and so are zero line and byte counts
+		foreach (['subtype', 'description', 'id', 'disposition', 'dparameters', 'parameters'] as $name)
+			{
+			if ( null === $body->{$name} )
+				{
+				unset($body->{$name});
+				}
+			}
 
-		if ( null === $body->id ) $body->id = null;
-
-		if ( null === $body->disposition ) $body->disposition = null;
-
-		if ( null === $body->dparameters ) $body->dparameters = null;
-
-		if ( null === $body->parameters ) $body->parameters = null;
+		foreach (['lines', 'bytes'] as $name)
+			{
+			if ( empty($body->{$name}) )
+				{
+				unset($body->{$name});
+				}
+			}
 
 		return $body;
 		}
 
-	protected static function extractParameters(array $attributes, array $parameters) : array
+	protected static function extractParameters(mixed $attributes, array $parameters) : array
 		{
-		if (empty($attributes))
+		// a NIL parameter list arrives as null
+		if (empty($attributes) || ! \is_array($attributes))
 			{
 			return [];
 			}

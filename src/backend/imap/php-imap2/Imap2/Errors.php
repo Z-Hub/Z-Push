@@ -17,7 +17,7 @@ class Errors
 
   protected static array | false $errors = [];
 
-  protected static string | bool $lastError = false;
+  protected static string | false $lastError = false;
 
   public static function alerts() : array
 		{

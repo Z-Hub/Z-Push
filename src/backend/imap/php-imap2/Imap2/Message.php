@@ -56,8 +56,8 @@ class Message
 		{
 		$client = $imap->getClient();
 
+		// also clears the status cache of the selected mailbox
 		$client->clear_mailbox_cache();
-		$client->clear_status_cache();
 
 		return true;
 		}
@@ -65,27 +65,9 @@ class Message
 	/**
 	 * Clears flags on messages.
 	 */
-	public static function clearFlagFull(\IMAP\Connection $imap, array | string $sequence, $flag, $options = 0) : string | false
+	public static function clearFlagFull(\IMAP\Connection $imap, array | string $sequence, $flag, $options = 0) : bool
 		{
-		$client = $imap->getClient();
-
-		if (! ($options & ST_UID))
-			{
-			$messages = $client->fetch($imap->getMailboxName(), $sequence, false, ['UID']);
-
-			$uid = [];
-
-			foreach ($messages as $message)
-				{
-				$uid[] = $message->uid;
-				}
-
-			$sequence = \implode(',', $uid);
-			}
-
-		$client->unflag($imap->getMailboxName(), $sequence, \strtoupper(\substr($flag, 1)));
-
-		return false;
+		return self::modifyFlags($imap, $sequence, (string)$flag, (int)$options, false);
 		}
 
 	public static function delete(\IMAP\Connection $imap, array | string $messageNums, int $flags = 0)
@@ -212,54 +194,45 @@ class Message
 			return false;
 			}
 
-		if ('*' != $sequence && \count($messages) < \PHPFUI\Imap2\Functions::expectedNumberOfMessages($sequence))
-			{
-			return false;
-			}
-
+		// Like ext-imap: messages that do not exist are left out, so a missing UID gives an empty array
 		$overview = [];
 
 		foreach ($messages as $message)
 			{
-			$messageEntry = (object)[
-				'subject' => $message->envelope[1],
-				'from' => \PHPFUI\Imap2\Functions::writeAddressFromEnvelope($message->envelope[2]),
-				'to' => $message->get('to'),
-				'date' => $message->envelope[0],
-				'message_id' => $message->envelope[9],
-				'references' => $message->references,
-				'in_reply_to' => $message->envelope[8],
-				'size' => $message->size,
-				'uid' => $message->uid,
-				'msgno' => $message->id,
-				'recent' => (int)($message->flags['RECENT'] ?? 0),
-				'flagged' => (int)($message->flags['FLAGGED'] ?? 0),
-				'answered' => (int)($message->flags['ANSWERED'] ?? 0),
-				'deleted' => (int)($message->flags['DELETED'] ?? 0),
-				'seen' => (int)($message->flags['SEEN'] ?? 0),
-				'draft' => (int)($message->flags['DRAFT'] ?? 0),
-				'udate' => \strtotime($message->internaldate),
+			$envelope = \is_array($message->envelope ?? null) ? $message->envelope : [];
+
+			// ext-imap only sets these properties when the message has a value for them
+			$optional = [
+				'subject' => $envelope[1] ?? null,
+				// ext-imap gives only the first address of From and To
+				'from' => \PHPFUI\Imap2\Functions::writeAddressFromEnvelope(\PHPFUI\Imap2\Functions::firstAddress($envelope[2] ?? null)),
+				'to' => \PHPFUI\Imap2\Functions::writeAddressFromEnvelope(\PHPFUI\Imap2\Functions::firstAddress($envelope[5] ?? null)),
+				'date' => $envelope[0] ?? null,
+				'message_id' => $envelope[9] ?? null,
+				'references' => $message->references ?? null,
+				'in_reply_to' => $envelope[8] ?? null,
 			];
 
-			if (empty($messageEntry->subject))
+			$messageEntry = new \stdClass();
+
+			foreach ($optional as $name => $value)
 				{
-				$messageEntry->subject = null;
+				if (null !== $value && '' !== $value)
+					{
+					$messageEntry->{$name} = $value;
+					}
 				}
 
-			if (empty($messageEntry->references))
-				{
-				$messageEntry->references = null;
-				}
-
-			if (empty($messageEntry->in_reply_to))
-				{
-				$messageEntry->in_reply_to = null;
-				}
-
-			if (empty($messageEntry->to))
-				{
-				$messageEntry->to = null;
-				}
+			$messageEntry->size = $message->size;
+			$messageEntry->uid = $message->uid;
+			$messageEntry->msgno = $message->id;
+			$messageEntry->recent = (int)($message->flags['RECENT'] ?? 0);
+			$messageEntry->flagged = (int)($message->flags['FLAGGED'] ?? 0);
+			$messageEntry->answered = (int)($message->flags['ANSWERED'] ?? 0);
+			$messageEntry->deleted = (int)($message->flags['DELETED'] ?? 0);
+			$messageEntry->seen = (int)($message->flags['SEEN'] ?? 0);
+			$messageEntry->draft = (int)($message->flags['DRAFT'] ?? 0);
+			$messageEntry->udate = \strtotime($message->internaldate);
 
 			$overview[] = $messageEntry;
 			}
@@ -429,21 +402,35 @@ class Message
 		{
 		$client = $imap->getClient();
 
-		$result = $client->search($imap->getMailboxName(), $criteria, (bool)($flags & SE_UID));
+		try
+			{
+			$program = \PHPFUI\Imap2\SearchCriteria::toImap((string)$criteria, $charset);
+			}
+		catch (\InvalidArgumentException $e)
+			{
+			\PHPFUI\Imap2\Errors::appendError($e->getMessage());
+
+			return false;
+			}
+
+		$result = $client->search($imap->getMailboxName(), $program, (bool)($flags & SE_UID));
 
 		if (empty($result->count()))
 			{
 			return false;
 			}
 
-		$messages = $result->get();
+		$messages = [];
 
-		foreach ($messages as &$message)
+		foreach ($result->get() as $message)
 			{
-			$message = \is_numeric($message) ? (int)$message : $message;
+			if (\ctype_digit((string)$message))
+				{
+				$messages[] = (int)$message;
+				}
 			}
 
-		return $messages;
+		return $messages ?: false;
 		}
 
 	/**
@@ -451,51 +438,107 @@ class Message
 	 */
 	public static function setFlagFull(\IMAP\Connection $imap, array | string $sequence, string $flag, int $options = 0) : bool
 		{
+		return self::modifyFlags($imap, $sequence, $flag, $options, true);
+		}
+
+	/**
+	 * Sets or clears every flag in a space separated list, like "\Seen \Flagged $Forwarded"
+	 *
+	 * Each flag is stored as given, so system flags keep their backslash and keywords are not altered.
+	 * Like ext-imap the result does not depend on the server reply: failures are recorded for imap_errors().
+	 */
+	private static function modifyFlags(\IMAP\Connection $imap, array | string $sequence, string $flag, int $options, bool $set) : bool
+		{
 		$client = $imap->getClient();
+		$mailbox = $imap->getMailboxName();
 
 		if (! ($options & ST_UID))
 			{
-			$messages = $client->fetch($imap->getMailboxName(), $sequence, false, ['UID']);
+			$messages = $client->fetch($mailbox, $sequence, false, ['UID']);
 
 			$uid = [];
 
-			foreach ($messages as $message)
+			foreach ($messages ?: [] as $message)
 				{
 				$uid[] = $message->uid;
+				}
+
+			if (! $uid)
+				{
+				return true;
 				}
 
 			$sequence = \implode(',', $uid);
 			}
 
-		return $client->flag($imap->getMailboxName(), $sequence, \strtoupper(\substr($flag, 1)));
+		foreach (\preg_split('/\s+/', \trim($flag), -1, PREG_SPLIT_NO_EMPTY) ?: [] as $oneFlag)
+			{
+			$ok = $set ? $client->flag($mailbox, $sequence, $oneFlag) : $client->unflag($mailbox, $sequence, $oneFlag);
+
+			if (! $ok)
+				{
+				\PHPFUI\Imap2\Errors::appendError(($set ? 'Unable to set flag ' : 'Unable to clear flag ') . $oneFlag);
+				}
+			}
+
+		return true;
 		}
 
 	public static function sort(\IMAP\Connection $imap, $criteria, $reverse, int $flags = 0, $searchCriteria = null, ?string $charset = null) : array | false
 		{
-		$client = $imap->getClient();
+		$fields = [
+			SORTDATE => 'DATE',
+			SORTARRIVAL => 'ARRIVAL',
+			SORTFROM => 'FROM',
+			SORTSUBJECT => 'SUBJECT',
+			SORTTO => 'TO',
+			SORTCC => 'CC',
+			SORTSIZE => 'SIZE',
+		];
 
-		$result = $client->search($imap->getMailboxName(), $criteria, (bool)($flags & SE_UID));
-
-		if (empty($result->count()))
+		if (! isset($fields[$criteria]))
 			{
+			\PHPFUI\Imap2\Errors::appendError('Unknown sort criterion');
+
 			return false;
 			}
 
-		$messages = $result->get();
-
-		foreach ($messages as &$message)
+		try
 			{
-			$message = \is_numeric($message) ? (int)$message : $message;
+			$program = \PHPFUI\Imap2\SearchCriteria::toImap((string)$searchCriteria);
+			}
+		catch (\InvalidArgumentException $e)
+			{
+			\PHPFUI\Imap2\Errors::appendError($e->getMessage());
+
+			return false;
 			}
 
-		return $messages;
+		$client = $imap->getClient();
+
+		$result = $client->sort($imap->getMailboxName(), $fields[$criteria], 'ALL' === $program ? '' : $program, (bool)($flags & SE_UID), $charset ?: 'UTF-8');
+
+		$messages = [];
+
+		foreach ($result->get() as $message)
+			{
+			if (\ctype_digit((string)$message))
+				{
+				$messages[] = (int)$message;
+				}
+			}
+
+		return $reverse ? \array_reverse($messages) : $messages;
 		}
 
-	public static function uid(\IMAP\Connection $imap, int $messageNum) : int | string
+	/**
+	 * The UID of a message number, or false when there is no such message (as ext-imap)
+	 */
+	public static function uid(\IMAP\Connection $imap, int $messageNum) : int | false
 		{
-		$uid = self::idToUid($imap, $messageNum);
+		$uid = self::idToUid($imap, (string)$messageNum);
 
-		return \is_numeric($uid) ? (int)$uid : $uid;
+		return \ctype_digit($uid) ? (int)$uid : false;
 		}
 
 	/**
