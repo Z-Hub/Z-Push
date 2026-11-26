@@ -38,9 +38,11 @@ class BackendLDAP extends BackendDiff {
 
     public function Logon($username, $domain, $password) {
         $escapedusername = $this->_EscapeLDAP($username);
+        $escapeddomain = $this->_EscapeLDAP($domain);
 
         $this->user = $escapedusername;
         $user_dn = str_replace('%u', $escapedusername, LDAP_USER_DN);
+        $user_dn = str_replace('%d', $escapeddomain, $user_dn);
 
         // Connect
         if (defined('LDAP_SERVER_URI')) {

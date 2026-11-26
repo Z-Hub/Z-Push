@@ -30,7 +30,11 @@
 // LDAP server uri
 define("LDAP_SERVER_URI", "ldap://127.0.0.1:389/");
 
-// LDAP USER DN
+/* LDAP USER DN
+ * %u will be replaced with the username
+ * %d will be replaced with the domain
+ * example: uid=%u,ou=mailaccount,dc=%d,dc=com
+ */
 define('LDAP_USER_DN', 'uid=%u,ou=mailaccount,dc=phppush,dc=com');
 
 // LDAP BASE DNS
