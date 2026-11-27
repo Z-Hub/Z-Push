@@ -1228,6 +1228,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             $is_multipart = is_multipart($message);
             $is_smime = is_smime($message);
             $is_encrypted = $is_smime ? is_encrypted($message) : false;
+            $encrypted_headers_only = $is_encrypted && !(defined('IMAP_SMIME_ENCRYPTED_FULL_MESSAGE') && IMAP_SMIME_ENCRYPTED_FULL_MESSAGE);
             ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->GetMessage(): Message is multipart: %d, smime: %d, smime encrypted: %d", $is_multipart, $is_smime, $is_encrypted));
 
             //Select body type preference
@@ -1285,8 +1286,9 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
                         break;
                     case SYNC_BODYPREFERENCE_MIME:
                         if ($is_smime) {
-                            if ($is_encrypted) {
+                            if ($encrypted_headers_only) {
                                 // #190, KD 2015-06-04 - If message body is encrypted only send the headers, as data should only be in the attachment
+                                // iOS 12 and later need the whole message to decrypt it, see IMAP_SMIME_ENCRYPTED_FULL_MESSAGE
                                 $data = $mail_headers;
                             }
                             else {
@@ -1305,9 +1307,9 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
                 }
 
                 // truncate body, if requested.
-                // MIME should not be truncated, but encrypted messages are truncated always to the headers size
+                // MIME should not be truncated, but encrypted messages sent with their headers only are
                 if ($bpReturnType == SYNC_BODYPREFERENCE_MIME) {
-                    if ($is_encrypted) {
+                    if ($encrypted_headers_only) {
                         $output->asbody->truncated = 1;
                     }
                     else {
