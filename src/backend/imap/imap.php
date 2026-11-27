@@ -1067,6 +1067,10 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
      *
      * @access public
      * @return array/false  array with messages or false if folder is not available
+     * @throws StatusException  if the message list cannot be retrieved
+     *                          reliably (a broken IMAP connection that
+     *                          survived one recovery attempt) - never in
+     *                          the case of a genuinely empty folder
      */
     public function GetMessageList($folderid, $cutoffdate) {
         ZLog::Write(LOGLEVEL_DEBUG, sprintf("BackendIMAP->GetMessageList('%s','%s')", $folderid, $cutoffdate));
@@ -1077,6 +1081,7 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             throw new StatusException("Folderid not found in cache", SYNC_STATUS_FOLDERHIERARCHYCHANGED);
 
         $messages = array();
+        $search = array();
         $this->imap_reopen_folder($imapid, true);
 
         if ($cutoffdate > 0) {
@@ -1086,8 +1091,24 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             // search messages in time range
             $search = @imap_search($this->mbox, $searchCriteria);
             if ($search === false) {
-                ZLog::Write(LOGLEVEL_INFO, sprintf("BackendIMAP->GetMessageList('%s','%s'): 0 result for the search or error: %s", $folderid, $cutoffdate, imap_last_error()));
-                return $messages;
+                // imap_search() returns false on error (e.g. a broken
+                // connection) and an empty array on a genuine zero-hit
+                // result. The two cases used to be conflated and the
+                // error case was returned as an "empty folder", which
+                // the sync diff logic then turned into a delete change
+                // for every message. Fail closed instead: re-open the
+                // folder (fresh SELECT) and retry the search once.
+                ZLog::Write(LOGLEVEL_WARN, sprintf("BackendIMAP->GetMessageList('%s','%s'): search failed (%s), re-opening folder and retrying once", $folderid, $cutoffdate, imap_last_error()));
+                $this->imap_reopen_folder($imapid, true);
+                $search = @imap_search($this->mbox, $searchCriteria);
+                if ($search === false) {
+                    // Still failing after one recovery attempt: abort the
+                    // sync cleanly. The abort is caught by the request
+                    // handler, no sync state is written, and no deletions
+                    // are generated.
+                    ZLog::Write(LOGLEVEL_ERROR, sprintf("BackendIMAP->GetMessageList('%s','%s'): search still failing after recovery (%s), failing closed", $folderid, $cutoffdate, imap_last_error()));
+                    throw new StatusException(sprintf("BackendIMAP->GetMessageList(): IMAP search failed on folder '%s': %s", $folderid, imap_last_error()), SYNC_ITEMOPERATIONSSTATUS_SERVERERROR, null, LOGLEVEL_ERROR);
+                }
             }
 
             $sequence = implode(",", $search);
@@ -1109,6 +1130,21 @@ class BackendIMAP extends BackendDiff implements ISearchProvider {
             $error = imap_last_error();
             if (strlen($error) > 0 && imap_num_msg($this->mbox) > 0) {
                 ZLog::Write(LOGLEVEL_WARN, sprintf("BackendIMAP->GetMessageList('%s','%s'): Failed to retrieve overview: %s", $folderid, $cutoffdate, imap_last_error()));
+            }
+            // An empty/failed overview is not evidence of an empty folder
+            // when the search above positively matched messages or the
+            // connection is dead: recover once (fresh SELECT, retry) and
+            // fail closed if the retry also fails. A genuinely empty
+            // folder on a live connection keeps returning empty exactly
+            // as before.
+            if ((is_array($search) && count($search) > 0) || !$this->mbox || @imap_ping($this->mbox) === false) {
+                ZLog::Write(LOGLEVEL_WARN, sprintf("BackendIMAP->GetMessageList('%s','%s'): overview failed (%s), re-opening folder and retrying once", $folderid, $cutoffdate, imap_last_error()));
+                $this->imap_reopen_folder($imapid, true);
+                $overviews = @imap_fetch_overview($this->mbox, $sequence);
+                if (!is_array($overviews) || count($overviews) == 0) {
+                    ZLog::Write(LOGLEVEL_ERROR, sprintf("BackendIMAP->GetMessageList('%s','%s'): overview still failing after recovery (%s), failing closed", $folderid, $cutoffdate, imap_last_error()));
+                    throw new StatusException(sprintf("BackendIMAP->GetMessageList(): IMAP fetch failed on folder '%s': %s", $folderid, imap_last_error()), SYNC_ITEMOPERATIONSSTATUS_SERVERERROR, null, LOGLEVEL_ERROR);
+                }
             }
             return $messages;
         }
