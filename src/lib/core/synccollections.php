@@ -866,7 +866,8 @@ class SyncCollections implements Iterator {
      * @access public
      * @return
      */
-    public function rewind() {
+    #[\ReturnTypeWillChange]
+    public function rewind() : mixed {
         return reset($this->collections);
     }
 
@@ -876,7 +877,7 @@ class SyncCollections implements Iterator {
      * @access public
      * @return mixed
      */
-    public function current() {
+    public function current() : mixed {
         return current($this->collections);
     }
 
@@ -886,7 +887,7 @@ class SyncCollections implements Iterator {
      * @access public
      * @return scalar on success, or NULL on failure.
      */
-    public function key() {
+    public function key() : mixed {
         return key($this->collections);
     }
 
@@ -896,7 +897,8 @@ class SyncCollections implements Iterator {
      * @access public
      * @return
      */
-    public function next() {
+    #[\ReturnTypeWillChange]
+    public function next() : mixed {
         return next($this->collections);
     }
 
@@ -906,7 +908,7 @@ class SyncCollections implements Iterator {
      * @access public
      * @return boolean
      */
-    public function valid() {
+    public function valid() : bool {
         return (key($this->collections) != null && key($this->collections) != false);
     }
 

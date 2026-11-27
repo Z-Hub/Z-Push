@@ -252,6 +252,10 @@ class CalDAVClient {
 		if ( !isset($url) ) $url = $this->base_url;
 		$url = preg_replace('{^https?://[^/]+}', '', $url);
 		// Make sure server has a trailing slash, before $url
+		/**
+		 * @psalm-taint-escape ssrf
+		 * @psalm-taint-escape file
+		 */
 		$url = rtrim($this->server, '/') . '/' . ltrim($url, '/');
 
 		curl_setopt($this->curl, CURLOPT_URL, $url);

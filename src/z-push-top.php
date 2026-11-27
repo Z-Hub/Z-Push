@@ -199,6 +199,10 @@ class ZPushTop {
 				$this->colorMode = 'light';
 			}
 			else if (is_numeric($argv[$i])) {
+				/**
+				 * @psalm-taint-escape html
+				 * @psalm-taint-escape has_quotes
+				 */
 				$this->showTermSec = $argv[$i];
 			}
 		}

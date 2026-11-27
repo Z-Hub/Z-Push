@@ -39,7 +39,7 @@ class ReplaceNullcharFilter extends php_user_filter {
      * @return int
      *
      */
-    function filter($in, $out, &$consumed, $closing) {
+    function filter($in, $out, &$consumed, $closing) : int {
         while ($bucket = stream_bucket_make_writeable($in)) {
             $bucket->data = str_replace("\0", "", $bucket->data);
             $consumed += $bucket->datalen;
