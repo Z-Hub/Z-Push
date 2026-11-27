@@ -44,12 +44,9 @@ define('IMAP_AUTOSEEN_ON_DELETE', false);
 
 
 // Use IMAP IDLE (RFC 2177) in ChangesSink for near-instant push notifications.
-//      When false (default) the folders are polled every PING_INTERVAL seconds, as before.
-//      When true, one IDLE connection per synchronized folder is kept open for the duration of a Ping,
-//      and the backend falls back to polling for the rest of that Ping if IDLE fails for any reason.
-//      Requires an IMAP server that advertises the IDLE capability.
-//      The IDLE connections follow the transport flags in IMAP_OPTIONS (/ssl, /tls, /notls, /novalidate-cert).
-//      Without /notls they are always encrypted: if STARTTLS is not offered, IDLE is not used.
+//      When false (default) the folders are polled every PING_INTERVAL seconds.
+//      When true, each Ping keeps one connection per synchronized folder open, which needs a working IPC provider.
+//      See https://github.com/Z-Hub/Z-Push/wiki/IMAP-IDLE
 define('IMAP_USE_IDLE', false);
 
 
