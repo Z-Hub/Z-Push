@@ -198,6 +198,10 @@ class ZPushAdminCLI {
         if (self::$errormessage)
             return;
 
+        /**
+         * @psalm-taint-escape html
+         * @psalm-taint-escape has_quotes
+         */
         $options = getopt("u:d:a:t:sn:o:f:g::h", array('user:', 'device:', 'action:', 'type:', 'days-old:', 'days-ago:', 'shared', 'foldername:', 'store', 'folderid:', 'flags::', 'devicedriven', 'help'));
 
         // get 'user'
