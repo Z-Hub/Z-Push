@@ -440,6 +440,8 @@ class FileStateMachine implements IStateMachine {
         /** 
          * @psalm-taint-escape ssrf
          * @psalm-taint-escape file 
+         * @psalm-taint-escape url_component
+         * @psalm-taint-escape url_path
          */
         $cleaninternkey = basename($internkey);
         return $this->getDirectoryForDevice($devid, $doNotCreateDirs) ."/". $cleaninternkey;
@@ -461,6 +463,8 @@ class FileStateMachine implements IStateMachine {
         /** 
          * @psalm-taint-escape ssrf
          * @psalm-taint-escape file 
+         * @psalm-taint-escape url_component
+         * @psalm-taint-escape url_path
          */
         $cleandevid = basename($devid);
         $firstLevel = substr(strtolower($cleandevid), -1, 1);
